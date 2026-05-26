@@ -35,7 +35,7 @@ import {
 
 const callGeminiAI = async (prompt, retries = 5) => {
   let apiKey = ""; 
-  let modelName = "gemini-flash-latest";
+  let modelName = "gemini-3.5-flash";
   
   try {
     const isOutsideCanvas = typeof window !== 'undefined' && !window.location.hostname.includes("usercontent.goog");
@@ -43,7 +43,7 @@ const callGeminiAI = async (prompt, retries = 5) => {
         apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) 
                  ? import.meta.env.VITE_GEMINI_API_KEY 
                  : "AIzaSyAMV3l3SyPx2ftrKH2BQXSHkLtkZ3kJvkw"; 
-        modelName = "gemini-flash-latest"; 
+        modelName = "gemini-3.5-flash"; 
     }
   } catch (e) {}
   
@@ -461,10 +461,13 @@ const GlobalStyles = () => (
     @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
     @keyframes move-stars-up { from { background-position: 0 0; } to { background-position: 0 1000px; } }
     
-    .star-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; pointer-events: none; }
+    .star-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; pointer-events: none; transform: translate3d(0, 0, 0); will-change: background-position; }
     .stars-1 { background-image: radial-gradient(1.5px 1.5px at 20px 30px, #ffffff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 100px 150px, #ffffff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 250px 200px, #ffffff, rgba(0,0,0,0)); background-size: 300px 300px; animation: move-stars-up 60s linear infinite; opacity: 0.6; filter: brightness(1.2); }
     .stars-2 { background-image: radial-gradient(2px 2px at 150px 180px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 50px 50px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 300px 300px, #ffffff, rgba(0,0,0,0)); background-size: 400px 400px; animation: move-stars-up 40s linear infinite; opacity: 0.85; filter: brightness(1.2); }
     .stars-3 { background-image: radial-gradient(2.5px 2.5px at 80px 120px, #ffffff, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 200px 10px, #ffffff, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 400px 250px, #ffffff, rgba(0,0,0,0)); background-size: 500px 500px; animation: move-stars-up 20s linear infinite; opacity: 1.0; filter: brightness(1.5); }
+    .stars-silver-1 { background-image: radial-gradient(1.5px 1.5px at 20px 30px, #8a94a6, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 100px 150px, #a1a1aa, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 250px 200px, #cbd5e1, rgba(0,0,0,0)); background-size: 300px 300px; animation: move-stars-up 65s linear infinite; opacity: 0.8; }
+    .stars-silver-2 { background-image: radial-gradient(2px 2px at 150px 180px, #64748b, rgba(0,0,0,0)), radial-gradient(2px 2px at 50px 50px, #8a94a6, rgba(0,0,0,0)), radial-gradient(2px 2px at 300px 300px, #a1a1aa, rgba(0,0,0,0)); background-size: 400px 400px; animation: move-stars-up 45s linear infinite; opacity: 0.95; }
+    .stars-silver-3 { background-image: radial-gradient(2.5px 2.5px at 80px 120px, #475569, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 200px 10px, #64748b, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 400px 250px, #8a94a6, rgba(0,0,0,0)); background-size: 500px 500px; animation: move-stars-up 25s linear infinite; opacity: 1.0; }
     
     @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
     .animate-slide-up-fade { animation: slideUpFade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -695,7 +698,7 @@ const GlobalStyles = () => (
   `}</style>
 );
 
-const ThemeBackground = ({ theme }) => {
+const ThemeBackground = ({ theme, isSplash = false }) => {
     const context = useContext(ChurchContext);
     const animBgEnabled = context ? context.animBgEnabled : true;
     const papelParede = context?.db?.igreja?.papel_parede;
@@ -896,12 +899,22 @@ const ThemeBackground = ({ theme }) => {
             </div>
         );
     }
+    if (isSplash) {
+        return (
+            <div className="absolute inset-0 overflow-hidden bg-[#0f172a] bg-[radial-gradient(at_0%_0%,_hsla(253,16%,7%,1)_0,_transparent_50%),_radial-gradient(at_50%_0%,_hsla(242,47%,18%,1)_0,_transparent_50%)]">
+                <div className="star-layer stars-1" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
+                <div className="star-layer stars-2" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
+                <div className="star-layer stars-3" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
+                <div className={`absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[100px] ${animBgEnabled ? 'animate-float' : ''}`}></div>
+            </div>
+        );
+    }
     return (
-        <div className="absolute inset-0 overflow-hidden bg-[#0f172a] bg-[radial-gradient(at_0%_0%,_hsla(253,16%,7%,1)_0,_transparent_50%),_radial-gradient(at_50%_0%,_hsla(242,47%,18%,1)_0,_transparent_50%)]">
-            <div className="star-layer stars-1" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-            <div className="star-layer stars-2" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-            <div className="star-layer stars-3" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-            <div className={`absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[100px] ${animBgEnabled ? 'animate-float' : ''}`}></div>
+        <div className="absolute inset-0 overflow-hidden bg-white">
+            <div className="star-layer stars-silver-1" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
+            <div className="star-layer stars-silver-2" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
+            <div className="star-layer stars-silver-3" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
+            <div className={`absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-100/30 blur-[100px] ${animBgEnabled ? 'animate-float' : ''}`}></div>
         </div>
     );
 };
@@ -6060,23 +6073,150 @@ const ModuleDesenvolvedor = () => {
 };
 
 const ModuleAssistenteAI = () => {
+    const context = useContext(ChurchContext);
+    const addToast = context ? context.addToast : (msg: string) => alert(msg);
     const [mode, setMode] = useState('sermon');
     const [input, setInput] = useState('');
     const [tone, setTone] = useState('inspirador');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState('');
 
+    const aiTools = [
+        {
+            id: 'sermon',
+            label: 'Esboços de Sermões',
+            desc: 'Gere esboços estruturados de pregações para cultos e conferências.',
+            icon: BookOpenText,
+            placeholder: 'Ex: O poder da fé e da oração perseverante em momentos de tormenta (Salmo 46:1-3)...',
+            color: 'text-violet-600 bg-violet-100/50 border border-violet-200'
+        },
+        {
+            id: 'text',
+            label: 'Redator de Comunicados',
+            desc: 'Mensagens cativantes para WhatsApp, circulares e comunicados gerais.',
+            icon: Newspaper,
+            placeholder: 'Ex: Convite especial para o Culto da Família deste domingo às 19h com foco no fortalecimento do lar...',
+            color: 'text-emerald-600 bg-emerald-100/50 border border-emerald-200'
+        },
+        {
+            id: 'ideas',
+            label: 'Ideias & Eventos',
+            desc: 'Temas, dinâmicas, gincanas e roteiros criativos de eventos.',
+            icon: Sparkles,
+            placeholder: 'Ex: Ideias criativas e temas inspiradores para o congresso geral de jovens de 3 dias no fim do ano...',
+            color: 'text-amber-600 bg-amber-100/50 border border-amber-200'
+        },
+        {
+            id: 'devotional',
+            label: 'Devocionais & Células',
+            desc: 'Estudos detalhados com quebra-gelo, leitura bíblica e perguntas reflexivas.',
+            icon: Heart,
+            placeholder: 'Ex: Estudo de célula focado em viver com integridade baseando na passagem de Josué 24:14-15...',
+            color: 'text-rose-600 bg-rose-100/50 border border-rose-200'
+        },
+        {
+            id: 'counseling',
+            label: 'Apoio ao Aconselhamento',
+            desc: 'Roteiros de apoio espiritual e passagens bíblicas de refrigério.',
+            icon: MessageCircle,
+            placeholder: 'Ex: Um roteiro de consolo e encorajamento para um membro querido lidando com luto recente...',
+            color: 'text-sky-600 bg-sky-100/50 border border-sky-200'
+        },
+        {
+            id: 'bulletin',
+            label: 'Boletim & Informativo',
+            desc: 'Planeje avisos litúrgicos da semana, motivos de oração e calendário.',
+            icon: Calendar,
+            placeholder: 'Ex: Avisos sobre a consagração de sábado de manhã, ofertas de missões e conserto do telhado...',
+            color: 'text-indigo-600 bg-indigo-100/50 border border-indigo-200'
+        },
+        {
+            id: 'financial',
+            label: 'Gestão & Finanças IA',
+            desc: 'Planos e campanhas de dízimos/ofertas com sensibilidade bíblica.',
+            icon: Activity,
+            placeholder: 'Ex: Criar uma campanha bíblica de dízimos e ofertas para a compra dos novos bancos da igreja...',
+            color: 'text-fuchsia-600 bg-fuchsia-100/50 border border-fuchsia-200'
+        }
+    ];
+
+    const currentTool = aiTools.find(t => t.id === mode) || aiTools[0];
+
     const handleGenerate = async () => {
         if (!input.trim()) return;
         setLoading(true);
         let prompt = "";
         if (mode === 'sermon') {
-            prompt = `Atue como um teólogo experiente e pastor pentecostal. Crie um esboço de sermão detalhado sobre o tema/versículo: "${input}". Tom: ${tone}. Estrutura obrigatória: Título Criativo, Introdução Impactante, 3 Tópicos Principais (com referências bíblicas), Aplicação Prática e Conclusão. Use formatação Markdown.`;
+            prompt = `Atue como um teólogo experiente e pastor pentecostal de profunda sabedoria bíblica. Crie um esboço de sermão altamente detalhado, inspirador e estruturado sobre o tema/versículo: "${input}". Tom: ${tone}. 
+
+Estrutura obrigatória:
+1. TÍTULO CRIATIVO (impactante)
+2. INTRODUÇÃO (com gancho de atenção e relevância atual)
+3. VERSÍCULO BASE (leitura principal)
+4. TÓPICO 1 (Título, referências de suporte e aplicação)
+5. TÓPICO 2 (Título, referências de suporte e aplicação)
+6. TÓPICO 3 (Título, referências de suporte e aplicação)
+7. APLICAÇÃO PRÁTICA NA VIDA DO CRENTE (exemplos claros do quotidiano)
+8. CONCLUSÃO & APELO DE FÉ (chamada de decisão ou reflexão profunda)
+
+Retorne tudo em formatação Markdown elegante e fluida.`;
         } else if (mode === 'text') {
-            prompt = `Atue como secretário de igreja profissional. Escreva um texto para: "${input}". Contexto/Tom: ${tone}. O texto deve ser formal mas acolhedor, adequado para comunicação oficial ou redes sociais da igreja. Use formatação Markdown.`;
+            prompt = `Atue como secretário de igreja profissional e redator de alta performance de canais digitais. Escreva um informativo primoroso para: "${input}". Contexto/Tom: ${tone}. 
+Prepara para canais de WhatsApp, Boletim e Redes Sociais. Adicione emojis adequados se o tom permitir, separe em parágrafos de fácil leitura, inclua uma chamada à ação (CTA) e organize tudo em formato de mensagem muito acolhedora e clara.`;
         } else if (mode === 'ideas') {
-            prompt = `Atue como um consultor criativo para ministério eclesiástico. Gere 5 ideias criativas e inovadoras para: "${input}". Para cada ideia, inclua um título, uma breve descrição de como executar e um versículo base. Use formatação Markdown.`;
+            prompt = `Atue como um consultor e estrategista criativo para o ministério eclesiástico. Gere 5 ideias inovadoras, práticas e impactantes para: "${input}". 
+Para cada ideia proposta, inclua obrigatoriamente:
+- Nome Criativo da Ação
+- Versículo bíblico de inspiração
+- Método de Execução passo a passo
+- Resultado Esperado / Impacto Espiritual no ministério.
+
+Organize de forma legível e atraente usando formatação e espaçamento.`;
+        } else if (mode === 'devotional') {
+            prompt = `Atue como um líder de pequeno grupo, ministério de células ou professor da EBD. Crie um guia de estudo devocional rico para células baseado em: "${input}". Estilo/Tom teológico: ${tone}. 
+
+Estrutura obrigatória:
+- Quebra-Gelo (pergunta de introdução envolvendo e descontraída para iniciar a reunião)
+- Leitura Bíblica Base (capítulo ou versículos sugeridos)
+- Breve Explicação Teológica & Contexto do texto
+- 3 Perguntas de Aplicação Prática para discussão em grupo (focando em vivência diária)
+- Conclusão & Desafio Prático para a semana do participante
+- Motivos de Oração da semana.
+
+Use formatação Markdown elegante.`;
+        } else if (mode === 'counseling') {
+            prompt = `Atue como um conselheiro cristão e pastor acolhedor. Prepare um guia de aconselhamento espiritual personalizado para ajudar a lidar com a seguinte situação delicada de cuidado pastoral: "${input}". Estilo/Tom: ${tone}.
+
+Inclua no planejamento:
+- Palavra de Empatia & Acolhimento inicial
+- 3 Passagens e Promessas Bíblicas explicadas sob a ótica do amor divino
+- Conselhos práticos de ação pastoral para acompanhar o aconselhado
+- Uma oração modelo curta e tocante para trazer refrigério ao coração.
+
+Escreva com imensa delicadeza, sensibilidade e acolhimento em Markdown.`;
+        } else if (mode === 'bulletin') {
+            prompt = `Atue como design de assessoria de comunicação e liturgia da igreja. Elabore um boletim informativo completo e dinâmico com base nos seguintes dados e avisos informados: "${input}". Estilo/Tom: ${tone}.
+
+Inclua no boletim:
+- Versículo Temático do Boletim para meditação conjunta
+- Agenda principal em formato visual claro (Cultos, Consagração e Células)
+- Resumo dinâmico dos avisos oficiais da igreja de forma muito engajadora
+- Oração intercessora da semana (motivos para orar em família)
+- Palavra pastoral ou pensamento de inspiração curto.
+
+Use formatação Markdown limpa e dividida para fácil divisão na arte visual.`;
+        } else if (mode === 'financial') {
+            prompt = `Atue como administrador e consultor especializado em captação ética de recursos e finanças eclesiásticas saudáveis. Planeje uma campanha, orçamento ou orientação estruturada com base em: "${input}". Estilo/Tom: ${tone}.
+
+Forneça:
+- Título Motivacional da Campanha / Ação Administrativa
+- Justificativa e Fundamentação Bíblica de generosidade e mordomia
+- Cronograma Prático de Execução com a liderança e membros (passos práticos)
+- Sugestão de Comunicação Pública com transparência e clareza.
+
+Retorne em formato Markdown estimulante, profissional e focado em excelência.`;
         }
+        
         const response = await callGeminiAI(prompt);
         setResult(response);
         setLoading(false);
@@ -6084,76 +6224,170 @@ const ModuleAssistenteAI = () => {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance">
-            <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-500/30">
-                    <Sparkles size={28}/>
-                </div>
-                <div>
-                    <h2 className="text-3xl font-black text-slate-800 text-gradient">Assistente Pastoral IA</h2>
-                    <p className="text-sm text-slate-500 font-medium">Inteligência Artificial para auxiliar no ministério.</p>
+            <div className="flex justify-between items-start md:items-center gap-4 flex-col md:flex-row">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-500/30">
+                        <Sparkles size={28}/>
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-800 text-gradient">Pastoral & Gestão IA</h2>
+                        <p className="text-sm text-slate-500 font-medium">Inteligência Artificial avançada a serviço do seu ministério.</p>
+                    </div>
                 </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-hidden">
-                <div className="glass-modern p-6 rounded-[2.5rem] flex flex-col h-fit">
-                    <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
-                        <button onClick={() => setMode('sermon')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'sermon' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}>Sermões</button>
-                        <button onClick={() => setMode('text')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'text' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}>Redator</button>
-                        <button onClick={() => setMode('ideas')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'ideas' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}>Ideias</button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start h-full">
+                {/* Lateral: Stack de Recursos */}
+                <div className="lg:col-span-1 glass-modern p-5 rounded-[2rem] flex flex-col gap-3 max-h-[75vh] overflow-y-auto custom-scrollbar border border-slate-100">
+                    <div className="px-1 py-1">
+                        <span className="text-[10px] font-black tracking-widest text-indigo-500 uppercase">Selecione o Recurso de IA</span>
                     </div>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-2 block">
-                                {mode === 'sermon' ? 'Tema ou Versículo Chave' : mode === 'text' ? 'Objetivo do Texto' : 'O que você precisa organizar?'}
-                            </label>
-                            <textarea value={input} onChange={(e) => setInput(e.target.value)} className="w-full bg-white/50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none h-32" placeholder={mode === 'sermon' ? "Ex: O poder da oração em tempos de crise..." : mode === 'text' ? "Ex: Convite para o culto de jovens no sábado..." : "Ex: Ideias para gincana bíblica infantil..."}></textarea>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-2 block">Tom / Estilo</label>
-                            <select value={tone} onChange={(e) => setTone(e.target.value)} className="w-full bg-white/50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer">
-                                <option value="inspirador">Inspirador & Encorajador</option>
-                                <option value="teologico">Teológico & Profundo</option>
-                                <option value="evangelistico">Evangelístico (Apelo)</option>
-                                <option value="formal">Formal & Administrativo</option>
-                                <option value="jovem">Jovem & Descontraído</option>
-                                <option value="infantil">Linguagem Infantil</option>
-                            </select>
-                        </div>
-                        <Button onClick={handleGenerate} disabled={loading || !input} variant="primary" className="w-full py-4 mt-2 shadow-lg shadow-indigo-500/30">
-                            {loading ? <Loader2 size={20} className="animate-spin"/> : <Sparkles size={20}/>} {loading ? 'Gerando...' : 'Gerar com IA'}
-                        </Button>
-                    </div>
-                    <div className="mt-6 bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-                        <p className="text-[10px] font-bold text-indigo-600 uppercase mb-1 flex items-center gap-1"><Info size={12}/> Dica Pro</p>
-                        <p className="text-xs text-indigo-800/70 leading-relaxed">Seja específico no seu pedido para obter melhores resultados. A IA pode ajudar a desbloquear sua criatividade!</p>
+                    
+                    <div className="flex flex-col gap-2">
+                        {aiTools.map((tool) => {
+                            const ToolIcon = tool.icon;
+                            const isActive = mode === tool.id;
+                            return (
+                                <button
+                                    key={tool.id}
+                                    onClick={() => {
+                                        setMode(tool.id);
+                                        setInput('');
+                                        setResult('');
+                                    }}
+                                    className={`flex items-start text-left p-3.5 rounded-2xl border transition-all duration-300 ${
+                                        isActive 
+                                            ? 'bg-indigo-50/70 border-indigo-300 shadow-sm ring-1 ring-indigo-300' 
+                                            : 'bg-white/40 border-slate-100 hover:bg-slate-50/80 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <div className={`p-2 rounded-xl mr-3 shrink-0 ${tool.color}`}>
+                                        <ToolIcon size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className={`text-xs font-bold ${isActive ? 'text-indigo-900' : 'text-slate-800'}`}>{tool.label}</h4>
+                                        <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{tool.desc}</p>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
-                <div className="lg:col-span-2 glass-modern p-8 rounded-[2.5rem] flex flex-col h-full overflow-hidden relative">
-                    {!result && !loading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-60">
-                            <Sparkles size={64} className="mb-4 text-indigo-200"/>
-                            <p className="text-lg font-medium">O resultado aparecerá aqui...</p>
+
+                {/* Central: Painel de Trabalho e Resultado */}
+                <div className="lg:col-span-2 flex flex-col gap-6">
+                    {/* Painel de Entrada */}
+                    <div className="glass-modern p-6 rounded-[2rem] flex flex-col gap-4 border border-slate-100">
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                            <div className="flex items-center gap-2">
+                                <div className={`p-1.5 rounded-lg text-indigo-600 bg-indigo-50`}>
+                                    {React.createElement(currentTool.icon, { size: 16 })}
+                                </div>
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Configurar {currentTool.label}</h3>
+                            </div>
+                            
+                            <button
+                                onClick={() => setInput(currentTool.placeholder.replace('Ex: ', ''))}
+                                className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1.5 rounded-xl hover:bg-indigo-100 active:scale-95 transition-all flex items-center gap-1.5"
+                            >
+                                <Sparkles size={11} />
+                                Exemplo Prático
+                            </button>
                         </div>
-                    )}
-                    {loading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm z-10">
-                            <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-                            <p className="text-indigo-600 font-bold animate-pulse">Consultando a Inteligência Artificial...</p>
-                        </div>
-                    )}
-                    {result && (
-                        <div className="flex flex-col h-full">
-                            <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-200/50">
-                                <h3 className="font-bold text-lg text-slate-700">Resultado Gerado</h3>
-                                <div className="flex gap-2">
-                                    <button onClick={() => { copyToClipboard(result); addToast("Copiado!", "success"); }} className="p-2 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-xl transition-colors" title="Copiar"><Copy size={18}/></button>
-                                    <button onClick={() => setResult('')} className="p-2 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-xl transition-colors" title="Limpar"><Trash2 size={18}/></button>
+
+                        <div className="space-y-4">
+                            <div>
+                                <textarea
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    className="w-full bg-white/70 border border-slate-200 focus:border-indigo-500 rounded-2xl p-4 text-xs focus:ring-1 focus:ring-indigo-500 outline-none resize-none h-32 transition-colors placeholder:text-slate-400 font-medium leading-relaxed"
+                                    placeholder={currentTool.placeholder}
+                                ></textarea>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1.5 block">Tom e Perspectiva</label>
+                                    <select
+                                        value={tone}
+                                        onChange={(e) => setTone(e.target.value)}
+                                        className="w-full bg-white/70 border border-slate-200 focus:border-indigo-500 rounded-2xl p-3 text-xs focus:ring-1 focus:ring-indigo-500 outline-none appearance-none cursor-pointer font-semibold text-slate-700"
+                                    >
+                                        <option value="inspirador">Inspirador & Acolhedor</option>
+                                        <option value="teologico">Teológico & Reformado</option>
+                                        <option value="evangelistico">Evangelístico (Apelo Direto)</option>
+                                        <option value="formal">Formal & Administrativo</option>
+                                        <option value="jovem">Dinâmico & Descontraído</option>
+                                        <option value="infantil">Linguagem Simplificada (EBD Infantil)</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-end">
+                                    <Button
+                                        onClick={handleGenerate}
+                                        disabled={loading || !input.trim()}
+                                        variant="primary"
+                                        className="w-full py-3 h-[42px] font-bold text-xs bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-2xl shadow-md shadow-indigo-500/10 flex items-center justify-center gap-2"
+                                    >
+                                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 
+                                        {loading ? 'Consultando IA...' : 'Gerar com Inteligência Artificial'}
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-                                <div className="prose prose-sm max-w-none text-slate-700 whitespace-pre-wrap font-medium leading-relaxed">{result}</div>
-                            </div>
                         </div>
-                    )}
+                    </div>
+
+                    {/* Resultado */}
+                    <div className="glass-modern p-6 rounded-[2rem] flex flex-col min-h-[300px] justify-center relative border border-slate-100 overflow-hidden">
+                        {!result && !loading && (
+                            <div className="flex flex-col items-center justify-center text-slate-400 opacity-60 p-12 text-center animate-pulse">
+                                <Sparkles size={48} className="mb-3 text-indigo-300"/>
+                                <h4 className="font-bold text-slate-600 text-sm">Pronto para Gerar</h4>
+                                <p className="text-[10px] text-slate-500 max-w-xs mt-1 leading-relaxed">Insira os termos que você quer processar na caixa acima ou preencha o exemplo prático para receber as diretrizes organizadas pela IA.</p>
+                            </div>
+                        )}
+
+                        {loading && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm z-10 p-6 text-center">
+                                <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                                <h4 className="font-black text-indigo-900 text-sm">Processando Recursos Teológicos</h4>
+                                <p className="text-[10px] text-indigo-600/70 font-semibold animate-pulse uppercase tracking-wider mt-1">Isso pode levar alguns segundos...</p>
+                            </div>
+                        )}
+
+                        {result && (
+                            <div className="flex flex-col h-full animate-entrance">
+                                <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        <h3 className="font-bold text-xs uppercase tracking-wide text-slate-700">Resultado Gerado com Sucesso</h3>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => { copyToClipboard(result); addToast("Copiado!", "success"); }} 
+                                            className="p-2 hover:bg-slate-100 text-slate-500 hover:text-indigo-600 rounded-xl transition-all active:scale-90 flex items-center gap-1.5 text-[10px] font-bold border border-slate-100 bg-white" 
+                                            title="Copiar texto"
+                                        >
+                                            <Copy size={13}/>
+                                            Copiar
+                                        </button>
+                                        <button 
+                                            onClick={() => setResult('')} 
+                                            className="p-2 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-xl transition-all active:scale-90 flex items-center gap-1.5 text-[10px] font-bold border border-slate-100 bg-white" 
+                                            title="Limpar resultado"
+                                        >
+                                            <Trash2 size={13}/>
+                                            Limpar
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto max-h-[500px] custom-scrollbar bg-slate-50/50 p-5 rounded-2xl border border-slate-200/50 select-text">
+                                    <div className="prose prose-sm max-w-none text-slate-700 whitespace-pre-wrap font-medium leading-relaxed font-sans">{result}</div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -13312,7 +13546,7 @@ const PortalHome = ({ user, db, setView }) => {
                                         {devocional}
                                     </div>
                                     <div className="mt-6 flex gap-2 pt-4 border-t border-indigo-100/50">
-                                        <button onClick={() => { copyToClipboard(devocional); addToast('Copiado para a área de transferência!', 'success'); }} className="flex-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-3 py-2.5 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors flex justify-center items-center gap-1.5"><Copy size={16}/> Copiar</button>
+                                        <button onClick={() => { copyToClipboard(devocional); if (typeof window !== 'undefined') alert('Copiado para a área de transferência!'); }} className="flex-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-3 py-2.5 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors flex justify-center items-center gap-1.5"><Copy size={16}/> Copiar</button>
                                         <button onClick={gerarDevocional} disabled={loadingDev} className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors px-3 py-2.5 flex items-center gap-1.5 hover:bg-indigo-50 rounded-xl border border-transparent"><RefreshCw size={16}/></button>
                                     </div>
                                 </div>
@@ -15505,7 +15739,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
              style={{ backgroundColor: themeBg === 'default' ? '#0f172a' : 'transparent' }}>
             
             {/* NOVO: Fundo Animado do Splash com base no Tema selecionado */}
-            <ThemeBackground theme={themeBg} />
+            <ThemeBackground theme={themeBg} isSplash={true} />
 
             <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] z-0"></div>
 
