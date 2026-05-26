@@ -9389,6 +9389,8 @@ const ModulePortalPastor = () => {
     const [cofreSubTab, setCofreSubTab] = useState('atas'); // default to 'atas' to showcase the new feature!
     const [finMonthFilter, setFinMonthFilter] = useState(new Date().toISOString().slice(0, 7));
     const [finExactDateFilter, setFinExactDateFilter] = useState('');
+    const [finViewMode, setFinViewMode] = useState('categoria');
+    const [openCategories, setOpenCategories] = useState<{ [cat: string]: boolean }>({});
     const [ataForm, setAtaForm] = useState({
         titulo: '',
         tipo: 'Atendimento de Gabinete',
@@ -9660,7 +9662,7 @@ const ModulePortalPastor = () => {
                             </div>
 
                             {/* Sub-Tabs Selector inside Restricted Area */}
-                            <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-fit mb-6">
+                            <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-fit mb-6">
                                 <button onClick={() => setCofreSubTab('atas')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'atas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <FileText size={15}/> Atas de Gabinete & Reunião ({myAtas.length})
                                 </button>
@@ -9672,78 +9674,217 @@ const ModulePortalPastor = () => {
                                 </button>
                             </div>
 
-                            {cofreSubTab === 'financeiro' && (
-                                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                        <div>
-                                            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2"><DollarSign size={20} className="text-emerald-600"/> Resumo Financeiro</h3>
-                                            <p className="text-xs text-slate-400 font-medium">Acompanhe as entradas e saídas financeiras da igreja.</p>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                                                <button onClick={() => { setFinExactDateFilter(''); setFinMonthFilter(new Date().toISOString().slice(0, 7)); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter === '' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-800'}`}>Por Mês</button>
-                                                <button onClick={() => { setFinMonthFilter(''); setFinExactDateFilter(new Date().toISOString().split('T')[0]); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter !== '' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-800'}`}>Data Exata</button>
+                            {cofreSubTab === 'financeiro' && (() => {
+                                const listFiltered = (db.financeiro || []).filter(item => (item.data_pagamento || item.data_vencimento || item.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter));
+                                
+                                // Group logic
+                                const groups: { [key: string]: { category: string; totalEntradas: number; totalSaidas: number; items: any[] } } = {};
+                                listFiltered.forEach((item: any) => {
+                                    const cat = item.categoria || 'Geral';
+                                    if (!groups[cat]) {
+                                        groups[cat] = { category: cat, totalEntradas: 0, totalSaidas: 0, items: [] };
+                                    }
+                                    if (item.tipo === 'entrada') {
+                                        groups[cat].totalEntradas += (parseFloat(item.valor) || 0);
+                                    } else {
+                                        groups[cat].totalSaidas += (parseFloat(item.valor) || 0);
+                                    }
+                                    groups[cat].items.push(item);
+                                });
+                                const groupedList = Object.values(groups).sort((a, b) => (b.totalEntradas + b.totalSaidas) - (a.totalEntradas + a.totalSaidas));
+
+                                return (
+                                    <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
+                                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-6">
+                                            <div>
+                                                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2"><DollarSign size={20} className="text-emerald-600"/> Resumo Financeiro</h3>
+                                                <p className="text-xs text-slate-400 font-medium">Acompanhe as entradas e saídas financeiras de forma consolidada e detalhada.</p>
                                             </div>
-                                            {finExactDateFilter === '' ? (
-                                                <input type="month" value={finMonthFilter} onChange={(e) => setFinMonthFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors" />
-                                            ) : (
-                                                <input type="date" value={finExactDateFilter} onChange={(e) => setFinExactDateFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors" />
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex flex-col justify-between">
-                                            <span className="text-xs font-bold text-emerald-600 uppercase">Entradas {finExactDateFilter ? '(no dia)' : '(no mês)'}</span>
-                                            <div className="mt-2 text-2xl font-black text-emerald-700">R$ {(db.financeiro || []).filter(f => f.tipo === 'entrada' && (f.data_pagamento || f.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter)).reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
-                                        </div>
-                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 flex flex-col justify-between">
-                                            <span className="text-xs font-bold text-rose-600 uppercase">Saídas {finExactDateFilter ? '(no dia)' : '(no mês)'}</span>
-                                            <div className="mt-2 text-2xl font-black text-rose-700">R$ {(db.financeiro || []).filter(f => f.tipo === 'saida' && (f.status === 'pago') && (f.data_pagamento || f.data_vencimento || '').startsWith(finExactDateFilter || finMonthFilter)).reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
-                                        </div>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm text-left whitespace-nowrap">
-                                            <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
-                                                <tr>
-                                                    <th className="p-4">Data</th>
-                                                    <th className="p-4">Descrição</th>
-                                                    <th className="p-4">Categoria</th>
-                                                    <th className="p-4">Valor</th>
-                                                    <th className="p-4">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(db.financeiro || []).filter(f => (f.data_pagamento || f.data_vencimento || f.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter)).sort((a,b) => new Date(b.data_pagamento || b.data_vencimento || b.data_competencia).getTime() - new Date(a.data_pagamento || a.data_vencimento || a.data_competencia).getTime()).map(item => {
-                                                    const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
-                                                    const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
-                                                    return (
-                                                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                                        <td className="p-4">{new Date(item.data_pagamento || item.data_vencimento || item.data_competencia || new Date()).toLocaleDateString('pt-BR')}</td>
-                                                        <td className="p-4">{item.descricao}</td>
-                                                        <td className="p-4">{item.categoria}</td>
-                                                        <td className={`p-4 font-bold ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                            {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor || '0').toFixed(2)}
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <span className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1.5 transition-all ${isPending ? 'animate-pulse bg-amber-400/10 text-amber-700 border-amber-400/20' : isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                                                <span className={`w-1.5 h-1.5 rounded-full ${isPending ? 'bg-amber-500' : isSuccess ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
-                                                                {item.status || 'Concluído'}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                )})}
-                                                {(db.financeiro || []).filter(f => (f.data_pagamento || f.data_vencimento || f.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter)).length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={5} className="p-8 text-center text-slate-400 font-bold text-xs">
-                                                            Nenhuma operação financeira registrada neste período.
-                                                        </td>
-                                                    </tr>
+                                            
+                                            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                                                {/* Date filters */}
+                                                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between sm:justify-start overflow-hidden">
+                                                    <button onClick={() => { setFinExactDateFilter(''); setFinMonthFilter(new Date().toISOString().slice(0, 7)); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter === '' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}>Por Mês</button>
+                                                    <button onClick={() => { setFinMonthFilter(''); setFinExactDateFilter(new Date().toISOString().split('T')[0]); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter !== '' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}>Data Exata</button>
+                                                </div>
+                                                {finExactDateFilter === '' ? (
+                                                    <input type="month" value={finMonthFilter} onChange={(e) => setFinMonthFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto" />
+                                                ) : (
+                                                    <input type="date" value={finExactDateFilter} onChange={(e) => setFinExactDateFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto" />
                                                 )}
-                                            </tbody>
-                                        </table>
+                                            </div>
+                                        </div>
+
+                                        {/* Totalizers */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-100/80 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Entradas totais</span>
+                                                    <div className="text-xl font-black text-emerald-700 mt-1">R$ {listFiltered.filter(f => f.tipo === 'entrada').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
+                                                </div>
+                                                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-xl"><TrendingUp size={20}/></div>
+                                            </div>
+                                            <div className="bg-rose-50/60 p-5 rounded-2xl border border-rose-100/80 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Saídas totais</span>
+                                                    <div className="text-xl font-black text-rose-700 mt-1">R$ {listFiltered.filter(f => f.tipo === 'saida' && f.status === 'pago').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
+                                                </div>
+                                                <div className="p-2.5 bg-rose-500/10 text-rose-600 rounded-xl"><TrendingDown size={20}/></div>
+                                            </div>
+                                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 flex items-center justify-between sm:col-span-2 lg:col-span-1">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Saldo do período</span>
+                                                    {(() => {
+                                                        const ent = listFiltered.filter(f => f.tipo === 'entrada').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0);
+                                                        const sai = listFiltered.filter(f => f.tipo === 'saida' && f.status === 'pago').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0);
+                                                        const bal = ent - sai;
+                                                        return (
+                                                            <div className={`text-xl font-black mt-1 ${bal >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                                                R$ {bal.toFixed(2)}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <div className="p-2.5 bg-slate-200/50 text-slate-600 rounded-xl"><Layers size={20}/></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Mode view toggle (All/List vs Grouped Categories) */}
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                            <div className="text-xs text-slate-500 font-bold">
+                                                Exibindo {listFiltered.length} transações no período
+                                            </div>
+                                            <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1.5 w-full sm:w-auto font-bold select-none shadow-sm">
+                                                <button onClick={() => setFinViewMode('categoria')} className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black tracking-wide transition-all flex items-center justify-center gap-1.5 ${finViewMode === 'categoria' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                                                    <Layers size={14}/> Por Categoria (Mobile)
+                                                </button>
+                                                <button onClick={() => setFinViewMode('lista')} className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black tracking-wide transition-all flex items-center justify-center gap-1.5 ${finViewMode === 'lista' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                                                    <List size={14}/> Lista Completa
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Content View Mode conditional rendering */}
+                                        {finViewMode === 'categoria' ? (
+                                            <div className="space-y-4">
+                                                {groupedList.length > 0 ? (
+                                                    groupedList.map((gp, i) => {
+                                                        const isOpen = !!openCategories[gp.category];
+                                                        const catBalance = gp.totalEntradas - gp.totalSaidas;
+                                                        return (
+                                                            <div key={i} className="bg-slate-50 border border-slate-150 rounded-2xl overflow-hidden transition-all shadow-sm hover:border-slate-300">
+                                                                {/* Category Header Bar */}
+                                                                <button onClick={() => setOpenCategories(prev => ({ ...prev, [gp.category]: !isOpen }))} className="w-full p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 hover:bg-slate-100/80 transition-colors text-left">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                                                                            <Layers size={20}/>
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="font-extrabold text-slate-800 text-sm sm:text-base capitalize flex items-center gap-2">
+                                                                                {gp.category}
+                                                                                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-black">{gp.items.length}</span>
+                                                                            </h4>
+                                                                            <div className="flex gap-3 text-slate-400 font-bold text-[10px] sm:text-xs">
+                                                                                <span className="text-emerald-600">Entrada: R$ {gp.totalEntradas.toFixed(2)}</span>
+                                                                                <span className="text-rose-600">Saída: R$ {gp.totalSaidas.toFixed(2)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 mt-2 sm:mt-0">
+                                                                        <div className="text-right">
+                                                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Saldo</div>
+                                                                            <div className={`text-sm sm:text-base font-black ${catBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                R$ {catBalance.toFixed(2)}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-slate-400">
+                                                                            {isOpen ? <ChevronDown size={18} className="transform rotate-180 transition-transform"/> : <ChevronDown size={18} className="transition-transform"/>}
+                                                                        </div>
+                                                                    </div>
+                                                                </button>
+
+                                                                {/* Accordion content list of transactions */}
+                                                                {isOpen && (
+                                                                    <div className="bg-white border-t border-slate-100 px-4 py-2 divide-y divide-slate-100 animate-entrance">
+                                                                        {gp.items.map((item: any) => {
+                                                                            const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
+                                                                            const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
+                                                                            return (
+                                                                                <div key={item.id} className="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                                                    <div>
+                                                                                        <span className="text-[10px] font-bold text-slate-400 mr-2">{new Date(item.data_pagamento || item.data_vencimento || item.data_competencia || new Date()).toLocaleDateString('pt-BR')}</span>
+                                                                                        <span className="font-extrabold text-slate-800 text-xs sm:text-sm">{item.descricao}</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                                                                                        <span className={`text-xs font-extrabold ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                            {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor || '0').toFixed(2)}
+                                                                                        </span>
+                                                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1 transition-all ${isPending ? 'animate-pulse bg-amber-400/10 text-amber-700 border-amber-400/20' : isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                                            <span className={`w-1 h-1 rounded-full ${isPending ? 'bg-amber-500' : isSuccess ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                                                                            {item.status || 'Concluído'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div className="text-center p-12 bg-slate-50 border border-dashed border-slate-200 rounded-[2rem]">
+                                                        <p className="text-xs font-bold text-slate-400">Nenhuma operação financeira registrada neste período.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            /* List mode with table and/or scrolling list */
+                                            <div className="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+                                                <table className="w-full text-sm text-left whitespace-nowrap">
+                                                    <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
+                                                        <tr>
+                                                            <th className="p-4">Data</th>
+                                                            <th className="p-4">Descrição</th>
+                                                            <th className="p-4">Categoria</th>
+                                                            <th className="p-4">Valor</th>
+                                                            <th className="p-4">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {listFiltered.sort((a,b) => new Date(b.data_pagamento || b.data_vencimento || b.data_competencia).getTime() - new Date(a.data_pagamento || a.data_vencimento || a.data_competencia).getTime()).map(item => {
+                                                            const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
+                                                            const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
+                                                            return (
+                                                            <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                                                <td className="p-4">{new Date(item.data_pagamento || item.data_vencimento || item.data_competencia || new Date()).toLocaleDateString('pt-BR')}</td>
+                                                                <td className="p-4">{item.descricao}</td>
+                                                                <td className="p-4 capitalize">{item.categoria}</td>
+                                                                <td className={`p-4 font-bold ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                    {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor || '0').toFixed(2)}
+                                                                </td>
+                                                                <td className="p-4">
+                                                                    <span className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1.5 transition-all ${isPending ? 'animate-pulse bg-amber-400/10 text-amber-700 border-amber-400/20' : isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${isPending ? 'bg-amber-500' : isSuccess ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                                                        {item.status || 'Concluído'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        )})}
+                                                        {listFiltered.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan={5} className="p-8 text-center text-slate-400 font-bold text-xs">
+                                                                    Nenhuma operação financeira registrada neste período.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {cofreSubTab === 'esbocos' && (
                                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
