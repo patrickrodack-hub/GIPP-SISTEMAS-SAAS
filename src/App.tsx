@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import jsPDF from 'jspdf';
+import { toPng, toJpeg, toBlob } from 'html-to-image';
 import { 
   PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line
 } from 'recharts';
@@ -2117,38 +2119,24 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const { addToast } = useContext(ChurchContext);
     const contentRef = useRef(null);
 
-    useEffect(() => { 
-        if (!window.html2canvas) { 
-            const script = document.createElement('script'); 
-            script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js'; 
-            script.async = true; 
-            document.head.appendChild(script); 
-        } 
-    }, []);
-
     if (!isOpen) return null;
 
     const handleDownloadDocument = async () => {
-        if (!window.html2canvas) {
-            addToast("Aguarde o carregamento do motor de imagem...", "info");
-            return;
-        }
-
         addToast("Processando documento para download...", "info");
+        let originalClassName = '';
         try {
             const el = contentRef.current;
             // Guardar as classes originais e remover a escala para gerar a imagem em tamanho real A4
-            const originalClassName = el.className;
+            originalClassName = el.className;
             el.className = el.className.replace(/scale-75/g, '').replace(/sm:scale-90/g, '').replace(/transform/g, '');
             
             // Pequeno delay para garantir a renderização do DOM sem a escala
             await new Promise(r => setTimeout(r, 400));
             
-            const canvas = await window.html2canvas(el, {
-                scale: 3, // Qualidade alta
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: "#ffffff"
+            const dataUrl = await toPng(el, {
+                pixelRatio: 3, // Qualidade alta
+                backgroundColor: "#ffffff",
+                style: { transform: 'scale(1)', transformOrigin: 'top left' }
             });
             
             // Restaura a escala visual após a captura
@@ -2157,37 +2145,78 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             const link = document.createElement('a');
             const fileName = `documento_${mode}_${Date.now()}.png`;
             link.download = fileName;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             addToast("Download concluído!", "success");
         } catch (e) {
             console.error(e);
-            if (contentRef.current) contentRef.current.className = originalClassName;
+            if (contentRef.current && originalClassName) contentRef.current.className = originalClassName;
             addToast("Erro ao gerar arquivo. Tente novamente.", "error");
         }
     };
 
     const handleNativePrint = () => {
-        addToast("A gerar PDF Profissional. Escolha 'Salvar como PDF' ou a sua impressora.", "success");
+        addToast("A gerar PDF Profissional. Escolha 'Salvar como PDF' na caixa de diálogo.", "success");
         setTimeout(() => {
             window.print();
         }, 800);
     };
 
+    const handleJSPdfExport = async () => {
+        addToast("Processando PDF (Alta Resolução)...", "info");
+        let originalClassName = '';
+        try {
+            const el = contentRef.current;
+            originalClassName = el.className;
+            el.className = el.className.replace(/scale-75/g, '').replace(/sm:scale-90/g, '').replace(/transform/g, '');
+            
+            await new Promise(r => setTimeout(r, 400));
+            
+            const imgData = await toJpeg(el, {
+                quality: 0.98,
+                pixelRatio: 2, // Boa resolução
+                backgroundColor: "#ffffff",
+                style: { transform: 'scale(1)', transformOrigin: 'top left' }
+            });
+            
+            el.className = originalClassName;
+            
+            // Detecta orientação de acordo com a proporção da DIV de impressão
+            const isLandscape = el.offsetWidth > el.offsetHeight;
+            const pdf = new jsPDF({
+                orientation: isLandscape ? 'landscape' : 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (el.offsetHeight * pdfWidth) / el.offsetWidth;
+            
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Documento_${mode}_${new Date().getTime()}.pdf`);
+            
+            addToast("Exportação PDF concluída!", "success");
+        } catch (error) {
+            console.error("Erro PDF jsPDF/html-to-image:", error);
+            if (contentRef.current && originalClassName) contentRef.current.className = originalClassName; // rollback in case of error
+            addToast("Erro ao gerar arquivo PDF. Tente novamente.", "error");
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/80 z-[12000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance print:hidden">
             <div className="bg-slate-200 w-full max-w-7xl h-[95vh] rounded-[2rem] flex flex-col shadow-2xl overflow-hidden ring-4 ring-white/10 relative">
-                <div className="bg-white p-4 border-b border-slate-300 flex justify-between items-center px-8 z-20 shadow-sm">
+                <div className="bg-white p-4 border-b border-slate-300 flex justify-between items-center px-8 z-20 shadow-sm flex-wrap gap-2">
                     <h3 className="font-bold text-lg text-slate-700 flex items-center gap-2"><FileText size={20} className="text-indigo-600"/> Visualização de Documento</h3>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 sm:gap-3 flex-wrap">
                         <Button variant="ghost" onClick={onClose} className="border border-slate-300 hover:bg-slate-100 hidden sm:flex">Fechar</Button>
-                        <Button variant="success" onClick={handleNativePrint} className="shadow-lg flex items-center gap-2">
-                            <Printer size={20}/> Gerar PDF Oficial / Imprimir
+                        <Button variant="primary" onClick={handleJSPdfExport} className="shadow-lg flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700">
+                            <Download size={20}/> Baixar PDF 
                         </Button>
-                        <Button variant="primary" onClick={handleDownloadDocument} className="shadow-lg flex items-center gap-2">
-                            <Download size={20}/> Salvar Imagem
+                        <Button variant="success" onClick={handleNativePrint} className="shadow-lg flex items-center gap-2">
+                            <Printer size={20}/> Imprimir
                         </Button>
                     </div>
                 </div>
@@ -4397,13 +4426,8 @@ const DashboardModule = () => {
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
     const dashboardRef = useRef(null);
 
-    useEffect(() => { 
-        if (!window.html2canvas) { 
-            const script = document.createElement('script'); 
-            script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js'; 
-            script.async = true; 
-            document.head.appendChild(script); 
-        } 
+    useEffect(() => {
+        // Nothing here anymore
     }, []);
 
     const today = new Date();
@@ -4489,23 +4513,18 @@ const DashboardModule = () => {
     const tarefasMes = (db.tarefas || []).filter(t => t.data && t.data.startsWith(currentMonthStr)).sort((a,b) => new Date(a.data) - new Date(b.data));
 
     const handleExportDashboard = async () => {
-        if (!window.html2canvas) {
-            addToast("Aguarde o carregamento do motor de imagem...", "info");
-            return;
-        }
         setIsExporting(true);
         addToast("A gerar resumo visual. Aguarde...", "info");
         try {
             await new Promise(r => setTimeout(r, 400));
-            const canvas = await window.html2canvas(dashboardRef.current, {
-                scale: 2,
-                useCORS: true,
+            const dataUrl = await toPng(dashboardRef.current, {
+                pixelRatio: 2,
                 backgroundColor: "#f0f4f8",
-                logging: false
+                style: { transform: 'scale(1)', transformOrigin: 'top left' }
             });
             const link = document.createElement('a');
             link.download = `Resumo_GIPP_${monthNames[currentMonth]}_${currentYear}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             link.click();
             addToast("Resumo exportado com sucesso!", "success");
         } catch (e) {
@@ -7804,13 +7823,6 @@ const ModuleRedeSocial = () => {
     };
 
     useEffect(() => { 
-        if (!window.html2canvas) { 
-            const script = document.createElement('script'); 
-            script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js'; 
-            script.async = true; 
-            document.head.appendChild(script); 
-        }
-        
         // Ajuste de zoom responsivo inicial e ao redimensionar a janela
         const handleResize = () => autoFitZoom(canvasState.width, canvasState.height);
         window.addEventListener('resize', handleResize);
@@ -7898,23 +7910,21 @@ const ModuleRedeSocial = () => {
     };
 
     const handleExport = async () => {
-        if (!window.html2canvas) return addToast("Aguarde o carregamento do motor...", "info");
         setSelectedId(null); // Remove seleção antes de tirar o print
         addToast("A renderizar a sua arte em alta resolução...", "info");
         
         try {
             await new Promise(r => setTimeout(r, 500)); // Aguardar remover seleção
             
-            const canvas = await window.html2canvas(canvasRef.current, {
-                scale: 2, // High Quality
-                useCORS: true,
-                allowTaint: true,
+            const dataUrl = await toPng(canvasRef.current, {
+                pixelRatio: 2, // High Quality
                 backgroundColor: canvasState.bgColor,
+                style: { transform: 'scale(1)', transformOrigin: 'top left' }
             });
             
             const link = document.createElement('a');
             link.download = `Arte_GIPP_${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             link.click();
             addToast("Download concluído com sucesso!", "success");
         } catch (error) {
@@ -7925,24 +7935,21 @@ const ModuleRedeSocial = () => {
 
     // --- NOVA FUNÇÃO: PARTILHA DIRETA WHATSAPP ---
     const handleShareWhatsApp = async () => {
-        if (!window.html2canvas) return addToast("Aguarde o carregamento do motor...", "info");
         setSelectedId(null);
         addToast("A preparar a sua arte para o WhatsApp...", "info");
         
         try {
             await new Promise(r => setTimeout(r, 500));
             
-            const canvas = await window.html2canvas(canvasRef.current, {
-                scale: 2, 
-                useCORS: true,
-                allowTaint: true,
+            const blob = await toBlob(canvasRef.current, {
+                pixelRatio: 2, 
                 backgroundColor: canvasState.bgColor,
+                style: { transform: 'scale(1)', transformOrigin: 'top left' }
             });
             
-            canvas.toBlob(async (blob) => {
-                if (!blob) return addToast("Erro ao gerar imagem.", "error");
-                
-                const file = new File([blob], `Arte_GIPP_${Date.now()}.png`, { type: 'image/png' });
+            if (!blob) return addToast("Erro ao gerar imagem.", "error");
+            
+            const file = new File([blob], `Arte_GIPP_${Date.now()}.png`, { type: 'image/png' });
                 
                 // Verifica se a API de Share Nativa é suportada (Mobile e alguns Desktops)
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -7964,7 +7971,6 @@ const ModuleRedeSocial = () => {
                     addToast("Partilha direta não suportada no seu navegador. A transferir a imagem...", "warning");
                     handleExport();
                 }
-            }, 'image/png');
         } catch (error) {
             console.error(error);
             addToast("Erro ao processar a arte.", "error");
