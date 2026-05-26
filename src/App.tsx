@@ -1394,8 +1394,13 @@ const GenericTable = ({ data, columns, title, type, onDeleteOverride, customActi
                         );
                     } else if (c.key === 'status') {
                         const statusVal = safeText(item[c.key]);
+                        const isSuccess = ['pago','Ativo','Concluido','No Campo','Postado','Pronto', 'Validado'].some(v => statusVal.toLowerCase() === v.toLowerCase());
+                        const isPending = ['pendente', 'Em Progresso', 'Em Andamento'].some(v => statusVal.toLowerCase() === v.toLowerCase());
                         cellContent = (
-                             <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm ${['pago','Ativo','Concluido','No Campo','Postado','Pronto'].includes(statusVal) ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-amber-400/10 text-amber-700 border-amber-400/20'}`}>{statusVal}</span>
+                             <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1.5 transition-all ${isPending ? 'animate-pulse' : ''} ${isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-amber-400/10 text-amber-700 border-amber-400/20'}`}>
+                                 <span className={`w-1.5 h-1.5 rounded-full ${isSuccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                 {statusVal}
+                             </span>
                         );
                     } else {
                         cellContent = safeRender(item[c.key]);
@@ -9382,6 +9387,8 @@ const ModulePortalPastor = () => {
 
     // Form States for Atas (Área Restrita - Reuniões e Gabinete)
     const [cofreSubTab, setCofreSubTab] = useState('atas'); // default to 'atas' to showcase the new feature!
+    const [finMonthFilter, setFinMonthFilter] = useState(new Date().toISOString().slice(0, 7));
+    const [finExactDateFilter, setFinExactDateFilter] = useState('');
     const [ataForm, setAtaForm] = useState({
         titulo: '',
         tipo: 'Atendimento de Gabinete',
@@ -9660,9 +9667,85 @@ const ModulePortalPastor = () => {
                                 <button onClick={() => setCofreSubTab('esbocos')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'esbocos' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <BookOpenText size={15}/> Esboços de Sermão ({myEsbocos.length})
                                 </button>
+                                <button onClick={() => setCofreSubTab('financeiro')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'financeiro' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                    <DollarSign size={15}/> Financeiro
+                                </button>
                             </div>
 
-                            {cofreSubTab === 'esbocos' ? (
+                            {cofreSubTab === 'financeiro' && (
+                                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <div>
+                                            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2"><DollarSign size={20} className="text-emerald-600"/> Resumo Financeiro</h3>
+                                            <p className="text-xs text-slate-400 font-medium">Acompanhe as entradas e saídas financeiras da igreja.</p>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                                                <button onClick={() => { setFinExactDateFilter(''); setFinMonthFilter(new Date().toISOString().slice(0, 7)); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter === '' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-800'}`}>Por Mês</button>
+                                                <button onClick={() => { setFinMonthFilter(''); setFinExactDateFilter(new Date().toISOString().split('T')[0]); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter !== '' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-800'}`}>Data Exata</button>
+                                            </div>
+                                            {finExactDateFilter === '' ? (
+                                                <input type="month" value={finMonthFilter} onChange={(e) => setFinMonthFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors" />
+                                            ) : (
+                                                <input type="date" value={finExactDateFilter} onChange={(e) => setFinExactDateFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors" />
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex flex-col justify-between">
+                                            <span className="text-xs font-bold text-emerald-600 uppercase">Entradas {finExactDateFilter ? '(no dia)' : '(no mês)'}</span>
+                                            <div className="mt-2 text-2xl font-black text-emerald-700">R$ {(db.financeiro || []).filter(f => f.tipo === 'entrada' && (f.data_pagamento || f.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter)).reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
+                                        </div>
+                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 flex flex-col justify-between">
+                                            <span className="text-xs font-bold text-rose-600 uppercase">Saídas {finExactDateFilter ? '(no dia)' : '(no mês)'}</span>
+                                            <div className="mt-2 text-2xl font-black text-rose-700">R$ {(db.financeiro || []).filter(f => f.tipo === 'saida' && (f.status === 'pago') && (f.data_pagamento || f.data_vencimento || '').startsWith(finExactDateFilter || finMonthFilter)).reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left whitespace-nowrap">
+                                            <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
+                                                <tr>
+                                                    <th className="p-4">Data</th>
+                                                    <th className="p-4">Descrição</th>
+                                                    <th className="p-4">Categoria</th>
+                                                    <th className="p-4">Valor</th>
+                                                    <th className="p-4">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(db.financeiro || []).filter(f => (f.data_pagamento || f.data_vencimento || f.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter)).sort((a,b) => new Date(b.data_pagamento || b.data_vencimento || b.data_competencia).getTime() - new Date(a.data_pagamento || a.data_vencimento || a.data_competencia).getTime()).map(item => {
+                                                    const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
+                                                    const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
+                                                    return (
+                                                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                                        <td className="p-4">{new Date(item.data_pagamento || item.data_vencimento || item.data_competencia || new Date()).toLocaleDateString('pt-BR')}</td>
+                                                        <td className="p-4">{item.descricao}</td>
+                                                        <td className="p-4">{item.categoria}</td>
+                                                        <td className={`p-4 font-bold ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                            {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor || '0').toFixed(2)}
+                                                        </td>
+                                                        <td className="p-4">
+                                                            <span className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1.5 transition-all ${isPending ? 'animate-pulse bg-amber-400/10 text-amber-700 border-amber-400/20' : isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${isPending ? 'bg-amber-500' : isSuccess ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                                                {item.status || 'Concluído'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )})}
+                                                {(db.financeiro || []).filter(f => (f.data_pagamento || f.data_vencimento || f.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter)).length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={5} className="p-8 text-center text-slate-400 font-bold text-xs">
+                                                            Nenhuma operação financeira registrada neste período.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {cofreSubTab === 'esbocos' && (
                                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
                                     <div className="flex justify-between items-center">
                                         <div>
@@ -9699,7 +9782,9 @@ const ModulePortalPastor = () => {
                                         )}
                                     </div>
                                 </div>
-                            ) : (
+                            )}
+                            
+                            {cofreSubTab === 'atas' && (
                                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                         <div>
@@ -12150,8 +12235,8 @@ const ModuleBoletim = () => {
     const ministerios = db.departamentos || [];
 
     // Processar Agenda e Tarefas
-    const agendaMes = useMemo(() => (db.agenda || []).filter(a => a.data && a.data.startsWith(currentMonthStr)).sort((a, b) => new Date(a.data) - new Date(b.data)), [db.agenda, currentMonthStr]);
-    const tarefasMes = useMemo(() => (db.tarefas || []).filter(t => t.data && t.data.startsWith(currentMonthStr)).sort((a, b) => new Date(a.data) - new Date(b.data)), [db.tarefas, currentMonthStr]);
+    const agendaMes = useMemo(() => (db.agenda || []).filter(a => a.data && a.data.startsWith(currentMonthStr)).sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()), [db.agenda, currentMonthStr]);
+    const tarefasMes = useMemo(() => (db.tarefas || []).filter(t => t.data && t.data.startsWith(currentMonthStr)).sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()), [db.tarefas, currentMonthStr]);
 
     // Componente de Título de Seção (Estilo Portal)
     const SectionTitle = ({ children, icon: Icon, color = "blue" }) => (
@@ -12852,9 +12937,9 @@ const FullScreenToggle = ({ variant = 'default', className = "" }) => {
         const handleFullscreenChange = () => {
             setIsFullscreen(!!(
                 document.fullscreenElement || 
-                document.webkitFullscreenElement || 
-                document.mozFullScreenElement || 
-                document.msFullscreenElement
+                (document as any).webkitFullscreenElement || 
+                (document as any).mozFullScreenElement || 
+                (document as any).msFullscreenElement
             ));
         };
 
@@ -12869,12 +12954,12 @@ const FullScreenToggle = ({ variant = 'default', className = "" }) => {
     const toggleFullScreen = () => {
         try {
             const doc = window.document;
-            const docEl = doc.documentElement;
+            const docEl = doc.documentElement as any;
 
             const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
-            const cancelFullScreen = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+            const cancelFullScreen = doc.exitFullscreen || (doc as any).webkitExitFullscreen || (doc as any).mozCancelFullScreen || (doc as any).msExitFullscreen;
 
-            if (!doc.fullscreenElement && !doc.webkitFullscreenElement && !doc.mozFullScreenElement && !doc.msFullscreenElement) {
+            if (!doc.fullscreenElement && !(doc as any).webkitFullscreenElement && !(doc as any).mozFullScreenElement && !(doc as any).msFullscreenElement) {
                 if (requestFullScreen) {
                     const promise = requestFullScreen.call(docEl);
                     if (promise) {

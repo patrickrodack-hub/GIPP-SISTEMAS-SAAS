@@ -1,0 +1,30 @@
+1650-                        <FormInput label="Descrição da Despesa" value={data.descricao} onChange={v=>setData({...data, descricao:v})} required/>
+1651-                        <FormInput label="Especificação Detalhada" value={data.especificacao} onChange={v=>setData({...data, especificacao:v})} placeholder="Detalhes do serviço ou produto..."/>
+1652-                        
+1653-                        <div className="grid grid-cols-2 gap-4">
+1654-                             <FormInput label="Valor (R$)" type="number" step="0.01" value={data.valor} onChange={v=>setData({...data, valor:parseFloat(v)})} required/>
+1655:                             <FormSelect label="Status Inicial" value={data.status} onChange={v=>setData({...data, status:v})} options={[{label:'Pago', value:'pago'}, {label:'Pendente', value:'pendente'}]} />
+1656-                        </div>
+1657-                        
+1658-                        <div className="grid grid-cols-2 gap-4">
+1659-                            <FormInput label="Data Vencimento" type="date" value={data.data_vencimento} onChange={v=>setData({...data, data_vencimento:v})} required/>
+1660-                            {data.status === 'pago' && <FormInput label="Data Pagamento" type="date" value={data.data_pagamento} onChange={v=>setData({...data, data_pagamento:v})} />}
+--
+2988-    // --- NOVO: RELATÓRIO DE TAREFA / ESCALA COM ACOMPANHAMENTO DE PRESENÇAS ---
+2989-    if (mode === 'rel_tarefa_escala') {
+2990-        const { equipe, descricao, categoria, data: taskDate, status } = data;
+2991-        const confirmados = (equipe || []).filter(m => m.status_presenca === 'confirmado');
+2992-        const recusados = (equipe || []).filter(m => m.status_presenca === 'recusado');
+2993:        const pendentes = (equipe || []).filter(m => !m.status_presenca || m.status_presenca === 'pendente');
+2994-
+2995-        return (
+2996-            <PageContainer title="Relatório de Escala Oficial" subtitle={categoria || 'Tarefa Administrativa'}>
+2997-                <div className="border-4 border-slate-100 p-8 rounded-[2rem] bg-slate-50/30 mb-8 avoid-break">
+2998-                    <div className="flex justify-between items-start mb-6 border-b-2 border-slate-200 pb-6">
+--
+3011-                        <div className="bg-white p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm flex flex-col items-center">
+3012-                            <h4 className="text-3xl font-black text-emerald-600 mb-1">{confirmados.length}</h4>
+3013-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12}/> Confirmados</p>
+3014-                        </div>
+3015-                        <div className="bg-white p-4 rounded-xl border-l-4 border-amber-500 shadow-sm flex flex-col items-center">
+3016:                            <h4 className="text-3xl font-black text-amber-500 mb-1">{pendentes.length}</h4>
