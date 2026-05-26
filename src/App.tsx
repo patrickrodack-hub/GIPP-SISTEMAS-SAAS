@@ -9662,7 +9662,7 @@ const ModulePortalPastor = () => {
                             </div>
 
                             {/* Sub-Tabs Selector inside Restricted Area */}
-                            <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-fit mb-6">
+                            <div className="flex overflow-x-auto custom-scrollbar flex-nowrap md:flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-full md:max-w-fit mb-6">
                                 <button onClick={() => setCofreSubTab('atas')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'atas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <FileText size={15}/> Atas de Gabinete & Reunião ({myAtas.length})
                                 </button>
@@ -9852,7 +9852,15 @@ const ModulePortalPastor = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {listFiltered.sort((a,b) => new Date(b.data_pagamento || b.data_vencimento || b.data_competencia).getTime() - new Date(a.data_pagamento || a.data_vencimento || a.data_competencia).getTime()).map(item => {
+                                                        {listFiltered.sort((a, b) => {
+                                                            const getValidTime = (item: any) => {
+                                                                const dStr = item.data_pagamento || item.data_vencimento || item.data_competencia;
+                                                                if (!dStr) return 0;
+                                                                const time = new Date(dStr).getTime();
+                                                                return isNaN(time) ? 0 : time;
+                                                            };
+                                                            return getValidTime(b) - getValidTime(a);
+                                                        }).map(item => {
                                                             const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
                                                             const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
                                                             return (
@@ -12965,7 +12973,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
     };
 
     return (
-        <aside className={`glass-modern h-screen sticky top-0 transition-all duration-500 ease-in-out flex flex-col z-50 border-r border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${open ? 'w-80' : 'w-28'}`}>
+        <aside className={`glass-modern h-screen fixed md:sticky top-0 transition-all duration-500 ease-in-out flex flex-col z-50 border-r border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${open ? 'w-80 translate-x-0' : 'w-0 md:w-28 overflow-hidden border-r-0 md:border-r -translate-x-full md:translate-x-0'}`}>
              <div className={`flex border-b border-white/30 bg-white/20 ${open ? 'p-8 items-center justify-between' : 'py-6 px-4 flex-col items-center gap-6'}`}>
                 {open ? (
                     <div className="flex items-center gap-4">
@@ -15891,14 +15899,34 @@ const AppLayout = () => {
                 <ThemeBackground theme={osTheme} />
             </div>
             <Sidebar view={view} setView={setView} open={sidebarOpen} setOpen={setSidebarOpen} user={user} />
+            
+            {/* Backdrop para fechar o menu lateral ao clicar fora, em ecrãs móveis */}
+            {sidebarOpen && (
+                <div 
+                    className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-45 transition-opacity"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             <main className="flex-1 p-6 md:p-10 h-screen overflow-y-auto custom-scrollbar relative z-10">
-                {/* Cabeçalho Flutuante com Central de Notificações */}
-                <div className="sticky top-0 z-[60] flex justify-end gap-3 mb-6 pointer-events-none print:hidden">
-                    <div className="pointer-events-auto"><OsThemeToggle /></div>
-                    <div className="pointer-events-auto"><AnimBgToggle /></div>
-                    <div className="pointer-events-auto"><ThemeToggle /></div>
-                    <div className="pointer-events-auto"><FullScreenToggle /></div>
-                    <NotificationCenter />
+                {/* Cabeçalho Flutuante com Central de Notificações e Botão do Menu Lateral */}
+                <div className="sticky top-0 z-[60] flex justify-between md:justify-end items-center gap-3 mb-6 print:hidden">
+                    {!sidebarOpen && (
+                        <button 
+                            onClick={() => setSidebarOpen(true)} 
+                            className="md:hidden p-3 rounded-2xl bg-white/80 backdrop-blur border border-slate-200/50 text-slate-700 hover:text-indigo-600 shadow-sm pointer-events-auto flex items-center justify-center transition-all"
+                            title="Abrir Menu"
+                        >
+                            <Menu size={18} />
+                        </button>
+                    )}
+                    <div className="flex items-center gap-2 pointer-events-none ml-auto">
+                        <div className="pointer-events-auto"><OsThemeToggle /></div>
+                        <div className="pointer-events-auto"><AnimBgToggle /></div>
+                        <div className="pointer-events-auto"><ThemeToggle /></div>
+                        <div className="pointer-events-auto"><FullScreenToggle /></div>
+                        <NotificationCenter />
+                    </div>
                 </div>
                 
                 {hasPermission(access) ? (
