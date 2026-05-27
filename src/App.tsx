@@ -1842,12 +1842,16 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                 <FormSelect label="Cargo Eclesiástico" value={data.cargo} onChange={v=>setData({...data, cargo:v})} options={['Membro', 'Auxiliar', 'Diácono', 'Presbítero', 'Evangelista', 'Missionário', 'Pastor']} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
+                                <FormSelect label="Função Administrativa" value={data.funcao_administrativa || 'NENHUMA'} onChange={v=>setData({...data, funcao_administrativa:v})} options={['NENHUMA', 'PASTOR PRESIDENTE', 'PASTOR AUXILIAR', 'SECRETARIO', 'TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR', 'ADVOGADO', 'AUXILIAR', 'LIDER DE DEPARTAMENTO']} />
                                 <FormInput label="Nº Carteirinha" value={data.numero_registro} onChange={v=>setData({...data, numero_registro:v})} />
-                                <FormSelect label="Status de Atividade" value={data.status} onChange={v=>setData({...data, status:v})} options={['Ativo', 'Inativo']} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
+                                <FormSelect label="Status de Atividade" value={data.status} onChange={v=>setData({...data, status:v})} options={['Ativo', 'Inativo']} />
                                 <FormInput label="Data de Batismo" type="date" value={data.data_batismo} onChange={v=>setData({...data, data_batismo:v})} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormInput label="Data de Admissão" type="date" value={data.data_admissao} onChange={v=>setData({...data, data_admissao:v})} />
+                                <div />
                             </div>
                         </div>
                     </div>
@@ -2889,7 +2893,12 @@ const PrintSystem = ({ mode, data }) => {
                             if (!f.visible) return null;
                             let content = '';
                             if (f.id === 'nome') content = membro.nome;
-                            if (f.id === 'cargo') content = membro.cargo || 'Membro';
+                            if (f.id === 'cargo') {
+                                const cargoBase = membro.cargo || 'Membro';
+                                content = (membro.funcao_administrativa && membro.funcao_administrativa !== 'NENHUMA') 
+                                    ? `${cargoBase} (${membro.funcao_administrativa})` 
+                                    : cargoBase;
+                            }
                             if (f.id === 'cpf') content = membro.cpf;
                             if (f.id === 'registro') content = membro.numero_registro;
                             if (f.id === 'igreja') content = data.igreja.nome;
@@ -3464,10 +3473,11 @@ const PrintSystem = ({ mode, data }) => {
                         <h3 className="font-bold text-sm bg-slate-800 text-white p-1 px-2 uppercase tracking-widest">3. Dados Eclesiásticos</h3>
                         <div className="grid grid-cols-4 border-l border-t border-slate-400">
                              <Box label="Cargo Eclesiástico" value={m.cargo} span={2}/>
+                             <Box label="Função Administrativa" value={m.funcao_administrativa || 'NENHUMA'} span={2}/>
                              <Box label="Nº Registro/Cart." value={m.numero_registro} span={2}/>
+                             <Box label="Status Atual" value={m.status} span={2}/>
                              <Box label="Data de Batismo" value={formatDateLocal(m.data_batismo)} span={2}/>
                              <Box label="Data de Admissão" value={formatDateLocal(m.data_admissao)} span={2}/>
-                             <Box label="Status Atual" value={m.status} span={4}/>
                         </div>
                     </div>
                 </div>
@@ -6905,7 +6915,7 @@ const ModuleMembros = memo(() => {
         (!m.congregacao_id && congregacaoFilter === 'sede')
     );
 
-    const cols = [{header:'', key:'foto'}, {header:'Nome', key:'nome', render: (m) => <div className="font-bold text-slate-700">{safeText(m.nome)}<div className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">{safeText(m.cargo)} • {!m.congregacao_id || m.congregacao_id === 'sede' ? 'SEDE' : db.congregacoes.find(c=>c.id===m.congregacao_id)?.nome}</div></div>}, {header:'Contato', key:'telefone'}, {header:'Status', key:'status'}]; 
+    const cols = [{header:'', key:'foto'}, {header:'Nome', key:'nome', render: (m) => <div className="font-bold text-slate-700">{safeText(m.nome)}<div className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">{safeText(m.cargo)}{m.funcao_administrativa && m.funcao_administrativa !== 'NENHUMA' ? ` (${safeText(m.funcao_administrativa)})` : ''} • {!m.congregacao_id || m.congregacao_id === 'sede' ? 'SEDE' : db.congregacoes.find(c=>c.id===m.congregacao_id)?.nome}</div></div>}, {header:'Contato', key:'telefone'}, {header:'Status', key:'status'}]; 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance">
             <div className="flex justify-between items-center bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm flex-wrap gap-4">
@@ -13377,7 +13387,7 @@ const ModuleCarteirinha = () => {
                                 if (!f.visible) return null;
                                 let content = '';
                                 if (f.id === 'nome') content = 'NOME DO MEMBRO AQUI';
-                                if (f.id === 'cargo') content = 'CARGO OFICIAL';
+                                if (f.id === 'cargo') content = 'CARGO (FUNÇÃO ADM)';
                                 if (f.id === 'cpf') content = '000.000.000-00';
                                 if (f.id === 'registro') content = 'REG: 123456';
                                 if (f.id === 'igreja') content = db.igreja.nome || 'NOME DA IGREJA';
@@ -15278,6 +15288,11 @@ const PortalHome = ({ user, db, setView }) => {
                         <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-sm w-fit mx-auto md:mx-0">
                             {currentUser.cargo || 'Membro Ativo'}
                         </span>
+                        {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
+                            <span className="bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-sm w-fit mx-auto md:mx-0">
+                                ADM: {currentUser.funcao_administrativa}
+                            </span>
+                        )}
                         <span className="text-xs text-slate-400 font-bold hidden md:inline-block">•</span>
                         <span className="text-xs font-bold text-slate-400 flex items-center justify-center md:justify-start gap-1">
                             <MapPin size={12}/> {db.igreja.nome}
@@ -17590,12 +17605,17 @@ const MemberPortalLayout = () => {
         return true;
     };
 
-    const isPastor = user?.cargo?.toLowerCase().includes('pastor') || user?.funcao?.toLowerCase().includes('pastor') || user?.nivel === 'master' || user?.nivel === 'pastor';
+    const isPastor = user?.cargo?.toLowerCase().includes('pastor') || 
+                     user?.funcao?.toLowerCase().includes('pastor') || 
+                     user?.nivel === 'master' || 
+                     user?.nivel === 'pastor' ||
+                     (user?.funcao_administrativa && ['PASTOR PRESIDENTE', 'PASTOR AUXILIAR'].includes(user.funcao_administrativa.toUpperCase()));
 
     const isTesoureiro = user?.cargo?.toLowerCase().includes('tesour') || 
                           user?.funcao?.toLowerCase().includes('tesour') || 
                           user?.nivel === 'master' || 
                           user?.nivel === 'tesour' || 
+                          (user?.funcao_administrativa && ['TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR'].includes(user.funcao_administrativa.toUpperCase())) ||
                           (user?.permissoes && (user.permissoes.includes('access_fin_entradas') || user.permissoes.includes('access_fin_analise') || user.permissoes.includes('access_fin_cadastros'))) ||
                           (db.igreja?.tesoureiro1 && user?.nome && db.igreja.tesoureiro1.toLowerCase().trim() === user.nome.toLowerCase().trim()) || 
                           (db.igreja?.tesoureiro2 && user?.nome && db.igreja.tesoureiro2.toLowerCase().trim() === user.nome.toLowerCase().trim());
@@ -17680,7 +17700,9 @@ const MemberPortalLayout = () => {
                         <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{user.nome.charAt(0)}</div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">{user.nome.split(' ')[0]}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase truncate">{user.cargo || 'Membro'}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase truncate">
+                                {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro')}
+                            </p>
                         </div>
                     </div>
                     <button onClick={logout} className="w-full flex items-center justify-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-50 font-bold transition-colors"><LogOut size={20}/> Terminar Sessão</button>
@@ -18663,7 +18685,44 @@ export default function App() {
   };
   const openModal = (type, item = null) => { setModalType(type); setEditingItem(item && item.id ? item : null); setFormData(item || {}); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditingItem(null); setFormData({}); };
-  const hasPermission = (perm) => { if (!user) return false; if (perm === 'public' || user.nivel === 'master') return true; return user.permissoes?.includes(perm); };
+  const hasPermission = (perm) => { 
+      if (!user) return false; 
+      if (perm === 'public' || user.nivel === 'master') return true; 
+      
+      if (user.funcao_administrativa) {
+          const role = user.funcao_administrativa.toUpperCase();
+          if (role === 'PASTOR PRESIDENTE' || role === 'PASTOR AUXILIAR') {
+              const pastorPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes'];
+              if (pastorPerms.includes(perm)) return true;
+          }
+          if (role === 'SECRETARIO') {
+              const secPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_boletim', 'access_sec_relatorios'];
+              if (secPerms.includes(perm)) return true;
+          }
+          if (role === 'TESOUREIRO' || role === 'CONTADOR') {
+              const financialPerms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_sec_relatorios'];
+              if (financialPerms.includes(perm)) return true;
+          }
+          if (role === 'ADMINISTRADOR') {
+              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros'];
+              if (adminPerms.includes(perm)) return true;
+          }
+          if (role === 'ADVOGADO') {
+              const lawyerPerms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios'];
+              if (lawyerPerms.includes(perm)) return true;
+          }
+          if (role === 'LIDER DE DEPARTAMENTO') {
+              const deptPerms = ['access_ministerios', 'access_sec_agenda'];
+              if (deptPerms.includes(perm)) return true;
+          }
+          if (role === 'AUXILIAR') {
+              const auxPerms = ['access_sec_agenda', 'access_ebd'];
+              if (auxPerms.includes(perm)) return true;
+          }
+      }
+      
+      return user.permissoes?.includes(perm); 
+  };
   
   const calculateStats = (dataObj) => {
       return {
