@@ -15133,7 +15133,7 @@ const PortalFinanceiro = ({ user, db }) => {
             <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><DollarSign size={28} className="text-emerald-500"/> Meus Dízimos e Ofertas</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-300 text-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] hover:-translate-y-1 flex items-center justify-between border border-emerald-400 md:col-span-1">
+                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-500 text-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.2)] hover:-translate-y-1 flex items-center justify-between border border-emerald-400/50 md:col-span-1">
                     <div>
                         <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1">Total Reconhecido</p>
                         <h3 className="text-3xl font-black truncate">R$ {totalContribuido.toFixed(2)}</h3>
@@ -15142,7 +15142,7 @@ const PortalFinanceiro = ({ user, db }) => {
                 </div>
 
                 {/* --- MÓDULO INOVADOR DE PIX COM VALOR EXATO --- */}
-                <div className="md:col-span-2 bg-white hover:bg-gradient-to-br hover:from-white hover:to-emerald-50/50 rounded-[2rem] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] transition-all duration-500 border border-emerald-200 overflow-hidden relative group">
+                <div className="md:col-span-2 bg-white hover:bg-gradient-to-br hover:from-white hover:to-emerald-50/50 rounded-[2rem] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 transition-all duration-500 border border-emerald-100 overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-0"></div>
                     
                     <div className="p-8 relative z-10">
@@ -15211,7 +15211,7 @@ const PortalFinanceiro = ({ user, db }) => {
                 </div>
             </div>
 
-            <div className="bg-white hover:bg-gradient-to-br hover:from-white hover:to-slate-50 transition-all duration-500 rounded-3xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] border border-slate-200 p-8 overflow-hidden">
+            <div className="bg-white hover:bg-gradient-to-br hover:from-white hover:to-slate-50 transition-all duration-500 rounded-3xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.2)] border border-slate-100 p-8 overflow-hidden">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-slate-700">Meu Histórico Financeiro</h3>
                     <span className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">Transações</span>
@@ -16833,6 +16833,94 @@ const MemberPortalLayout = () => {
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
+    const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark';
+
+    const getHeaderStyles = () => {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
+            return "bg-black/80 border-b border-white/10 text-white";
+        }
+        if (osTheme === 'winxp') {
+            return "bg-[#3d7bad]/85 border-b border-blue-400/30 text-white";
+        }
+        if (osTheme === 'win95') {
+            return "bg-[#008080]/85 border-b border-teal-900/30 text-white";
+        }
+        return "bg-white/90 border-b border-slate-200/50 text-slate-800";
+    };
+
+    const getFooterStyles = () => {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
+            return "bg-black/90 border-t border-white/10 text-white/70";
+        }
+        if (osTheme === 'winxp') {
+            return "bg-[#3d7bad]/95 border-t border-blue-450/40 text-white/80";
+        }
+        if (osTheme === 'win95') {
+            return "bg-[#008080]/95 border-t border-teal-900/40 text-white/80";
+        }
+        return "bg-white/95 border-t border-slate-200/50 text-slate-500";
+    };
+
+    const getBottomSheetStyles = () => {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
+            return "bg-slate-900 text-white border-t border-white/10";
+        }
+        if (osTheme === 'winxp') {
+            return "bg-[#1c5a93] text-white border-t border-blue-400";
+        }
+        if (osTheme === 'win95') {
+            return "bg-[#008080] text-white border-t border-teal-300";
+        }
+        return "bg-white text-slate-900 border-t border-slate-200";
+    };
+
+    const getBottomSheetTextStyles = () => {
+        if (isThemeDark || osTheme === 'winxp' || osTheme === 'win95') {
+            return {
+                title: "text-white",
+                sub: "text-slate-300",
+                buttonActive: "bg-emerald-500 border-emerald-500 text-white",
+                buttonInactive: "bg-white/5 border-white/10 hover:bg-white/10 text-white"
+            };
+        }
+        return {
+            title: "text-slate-800",
+            sub: "text-slate-400",
+            buttonActive: "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-500/25",
+            buttonInactive: "bg-slate-50 border-slate-100 hover:border-slate-200 hover:bg-slate-100/50 text-slate-700"
+        };
+    };
+
+    const getBottomNavItemStyles = (active, hoverColor) => {
+        if (active) {
+            if (isThemeDark || osTheme === 'winxp' || osTheme === 'win95') {
+                return {
+                    text: "text-emerald-300 font-extrabold",
+                    iconBg: "bg-emerald-500/25 scale-110 shadow-sm",
+                    icon: "text-emerald-300"
+                };
+            }
+            return {
+                text: "text-emerald-700 font-extrabold",
+                iconBg: "bg-emerald-50 scale-110 shadow-xs",
+                icon: "text-emerald-600"
+            };
+        } else {
+            if (isThemeDark || osTheme === 'winxp' || osTheme === 'win95') {
+                return {
+                    text: "text-white/60 hover:text-white/95 font-medium",
+                    iconBg: "bg-transparent hover:bg-white/5",
+                    icon: `text-white/60 ${hoverColor}`
+                };
+            }
+            return {
+                text: "text-slate-400 hover:text-slate-600 font-medium",
+                iconBg: "bg-transparent hover:bg-slate-50",
+                icon: `text-slate-400 ${hoverColor}`
+            };
+        }
+    };
+
     // --- LÓGICA DE BLOQUEIO DE LICENÇA ---
     const isLicenseValid = () => {
         if (db.igreja?.licenca_status === 'bloqueado') return false;
@@ -16925,22 +17013,22 @@ const MemberPortalLayout = () => {
             </aside>
 
             {/* Mobile Header (Strict Flex Item - Fixado) */}
-            <header className="md:hidden shrink-0 bg-white/90 backdrop-blur-md p-4 flex justify-between items-center shadow-sm border-b border-slate-200/50 z-40">
+            <header className={`md:hidden shrink-0 backdrop-blur-md p-4 flex justify-between items-center shadow-sm z-40 transition-all duration-300 ${getHeaderStyles()}`}>
                 <div className="flex items-center gap-3">
-                    {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs"><Building2 size={16}/></div>}
-                    <span className="font-bold text-slate-800 text-sm tracking-tight truncate max-w-[150px]">{db.igreja.nome}</span>
+                    {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain rounded-lg" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs"><Building2 size={16}/></div>}
+                    <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <OsThemeToggle variant="mobile" />
                     <AnimBgToggle variant="mobile" />
                     <ThemeToggle variant="mobile" />
                     <FullScreenToggle variant="mobile" />
-                    <button onClick={logout} className="text-rose-500 p-2 bg-rose-50 rounded-lg"><LogOut size={18}/></button>
+                    <button onClick={logout} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"><LogOut size={18}/></button>
                 </div>
             </header>
 
             {/* Main Content (Área Rolável) */}
-            <main className="flex-1 h-full overflow-y-auto custom-scrollbar relative z-10 pb-safe">
+            <main className="flex-1 h-full overflow-y-auto custom-scrollbar relative z-10">
                 {/* Desktop Floating Toggle */}
                 <div className="hidden md:flex absolute top-6 right-6 z-50 pointer-events-auto gap-3">
                     <OsThemeToggle />
@@ -16949,16 +17037,17 @@ const MemberPortalLayout = () => {
                     <FullScreenToggle />
                 </div>
                 
-                <div className="p-4 md:p-10 max-w-5xl mx-auto pb-6">
+                <div className="p-4 md:p-10 max-w-5xl mx-auto pb-28 md:pb-10">
                     {renderView()}
                 </div>
             </main>
 
             {/* Mobile Bottom Nav (Strict Flex Item - Fixado) */}
-            <nav className="md:hidden shrink-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 flex justify-between overflow-x-auto custom-scrollbar flex-nowrap gap-1 p-2 z-40 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+            <nav className={`md:hidden shrink-0 w-full backdrop-blur-md flex justify-between overflow-x-auto custom-scrollbar flex-nowrap gap-1 p-2 z-40 pb-safe shadow-[0_-10px_45px_rgba(0,0,0,0.08)] transition-all duration-300 ${getFooterStyles()}`}>
                 {mobileBottomItems.map(item => {
                     const isMore = item.id === 'portal_more';
                     const active = isMore ? showMoreMenu : view === item.id;
+                    const itemStyles = getBottomNavItemStyles(active, item.hoverColor);
                     return (
                         <button 
                             key={item.id} 
@@ -16969,60 +17058,63 @@ const MemberPortalLayout = () => {
                                     setView(item.id);
                                 }
                             }} 
-                            className={`flex flex-col items-center p-2 min-w-[60px] flex-1 shrink-0 transition-colors group ${active ? 'text-emerald-600 font-extrabold' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex flex-col items-center p-2 min-w-[60px] flex-1 shrink-0 transition-all duration-300 group ${itemStyles.text}`}
                         >
-                            <div className={`p-1.5 rounded-full mb-1 transition-all ${active ? 'bg-emerald-50 scale-110' : 'bg-transparent group-hover:bg-slate-50'}`}>
-                                <item.icon size={20} className={`transition-colors duration-300 ${active ? '' : item.hoverColor}`}/>
+                            <div className={`p-1.5 rounded-full mb-1 transition-all duration-300 ${itemStyles.iconBg}`}>
+                                <item.icon size={20} className={`transition-colors duration-300 ${itemStyles.icon}`}/>
                             </div>
-                            <span className="text-[10px] font-bold">{item.label}</span>
+                            <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
                         </button>
                     );
                 })}
             </nav>
 
             {/* Bottom sheet para visualização no celular */}
-            {showMoreMenu && (
-                <div 
-                    className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity" 
-                    onClick={() => setShowMoreMenu(false)}
-                >
+            {showMoreMenu && (() => {
+                const sheetText = getBottomSheetTextStyles();
+                return (
                     <div 
-                        className="bg-white w-full max-w-lg rounded-t-[2.5rem] p-6 pb-8 shadow-2xl relative border-t border-slate-200 flex flex-col gap-6 animate-entrance"
-                        onClick={(e) => e.stopPropagation()}
+                        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 backdrop-blur-xs transition-opacity" 
+                        onClick={() => setShowMoreMenu(false)}
                     >
-                        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto"></div>
-                        <div className="flex justify-between items-center px-2">
-                            <div>
-                                <h3 className="font-black text-slate-800 text-lg">Menu do Portal</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Todos os recursos</p>
+                        <div 
+                            className={`w-full max-w-lg rounded-t-[2.5rem] p-6 pb-8 shadow-2xl relative flex flex-col gap-6 animate-entrance transition-all duration-300 ${getBottomSheetStyles()}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className={`w-12 h-1 rounded-full mx-auto ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'bg-white/20' : 'bg-slate-200'}`}></div>
+                            <div className="flex justify-between items-center px-2">
+                                <div>
+                                    <h3 className={`font-black text-lg ${sheetText.title}`}>Menu do Portal</h3>
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${sheetText.sub}`}>Todos os recursos</p>
+                                </div>
+                                <button onClick={() => setShowMoreMenu(false)} className={`p-2 rounded-full transition-colors ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white/70 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200'}`}>
+                                    <X size={18}/>
+                                </button>
                             </div>
-                            <button onClick={() => setShowMoreMenu(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors">
-                                <X size={18}/>
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 overflow-y-auto max-h-[60vh] p-1 custom-scrollbar">
-                            {navItems.map(item => {
-                                const active = view === item.id;
-                                return (
-                                    <button 
-                                        key={item.id} 
-                                        onClick={() => {
-                                            setView(item.id);
-                                            setShowMoreMenu(false);
-                                        }}
-                                        className={`flex flex-col items-center justify-center p-4 rounded-3xl border transition-all text-center gap-2 group ${active ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'bg-slate-50 border-slate-100 hover:border-slate-200 hover:bg-slate-100/50 text-slate-700'}`}
-                                    >
-                                        <div className={`p-2.5 rounded-2xl transition-colors ${active ? 'bg-white/20 text-white' : 'bg-white text-slate-500 shadow-xs border border-slate-100 group-hover:bg-slate-50'}`}>
-                                            <item.icon size={20} />
-                                        </div>
-                                        <span className={`text-[10px] font-extrabold leading-tight ${active ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
-                                    </button>
-                                );
-                            })}
+                            <div className="grid grid-cols-3 gap-3 overflow-y-auto max-h-[60vh] p-1 custom-scrollbar">
+                                {navItems.map(item => {
+                                    const active = view === item.id;
+                                    return (
+                                        <button 
+                                            key={item.id} 
+                                            onClick={() => {
+                                                setView(item.id);
+                                                setShowMoreMenu(false);
+                                            }}
+                                            className={`flex flex-col items-center justify-center p-4 rounded-3xl border transition-all text-center gap-2 group ${active ? sheetText.buttonActive : sheetText.buttonInactive}`}
+                                        >
+                                            <div className={`p-2.5 rounded-2xl transition-all duration-300 ${active ? 'bg-white/25 text-white scale-110' : (isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'bg-white/5 text-white/75 group-hover:bg-white/10' : 'bg-white text-slate-500 shadow-xs border border-slate-100 group-hover:bg-slate-50')}`}>
+                                                <item.icon size={20} />
+                                            </div>
+                                            <span className={`text-[10px] font-extrabold leading-tight ${active ? 'text-white' : (isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white/90' : 'text-slate-700')}`}>{item.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
