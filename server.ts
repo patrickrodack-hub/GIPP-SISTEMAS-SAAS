@@ -15,8 +15,16 @@ async function startServer() {
     try {
       const { prompt } = req.body;
       
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+        return res.status(400).json({ 
+          error: "A chave de API do Gemini ('GEMINI_API_KEY') não foi definida ou está vazia. " +
+                 "Por favor, acesse o painel de Configurações (Settings) no canto superior direito do Google AI Studio e adicione a chave 'GEMINI_API_KEY' com sua chave de API válida para habilitar os recursos de Inteligência Artificial." 
+        });
+      }
+      
       const ai = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: apiKey,
         httpOptions: {
           headers: {
             'User-Agent': 'aistudio-build',
