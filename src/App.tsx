@@ -67,7 +67,7 @@ const fallbackConfig = {
   appId: "1:229490807877:web:9ef442ee1012050fcbbf2c"
 };
 
-const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+const rawConfig = typeof (window as any).__firebase_config !== 'undefined' ? (window as any).__firebase_config : '{}';
 const firebaseConfig = rawConfig !== '{}' ? JSON.parse(rawConfig) : fallbackConfig;
 
 let app, auth, dbFirestore;
@@ -90,7 +90,7 @@ try {
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlAppId = urlParams.get('id');
-const baseAppId = (typeof __app_id !== 'undefined' && __app_id) ? String(__app_id) : 'default-app-id';
+const baseAppId = (typeof (window as any).__app_id !== 'undefined' && (window as any).__app_id) ? String((window as any).__app_id) : 'default-app-id';
 const appId = urlAppId || baseAppId;
 
 const DynamicTheme = ({ color }) => {
@@ -689,218 +689,219 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     const animBgEnabled = context ? context.animBgEnabled : true;
     const papelParede = context?.db?.igreja?.papel_parede;
     const osTheme = context?.osTheme || 'default';
+    
+    // Configurações personalizadas do usuário
+    const animacaoTipoSelected = context?.db?.igreja?.tipo_animacao || 'auto';
+    const activeAnim = animBgEnabled ? (animacaoTipoSelected === 'auto' ? (isSplash ? 'splash' : theme) : animacaoTipoSelected) : 'none';
+    
+    // Opacidade da película de contraste (de 0 a 100, padrão 40)
+    const overlayOpacity = context?.db?.igreja?.papel_parede_opacidade !== undefined ? Number(context?.db?.igreja?.papel_parede_opacidade) : 40;
+    
+    // Classes de cores base em caso de não haver papel de parede
+    const getBaseThemeStyles = () => {
+        if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
+        if (theme === 'winxp') return "bg-[#5998D6]";
+        if (theme === 'win95') return "bg-[#008080]";
+        if (theme === 'premium_black') return "bg-[#050505]";
+        if (theme === 'msdos') return "bg-[#000022]";
+        if (isSplash) return "bg-[#0f172a] bg-[radial-gradient(at_0%_0%,_hsla(253,16%,7%,1)_0,_transparent_50%),_radial-gradient(at_50%_0%,_hsla(242,47%,18%,1)_0,_transparent_50%)]";
+        return "bg-white"; // default
+    };
 
-    if (!animBgEnabled && papelParede) {
-        const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black';
-        return (
-            <div 
-                className="absolute inset-0 bg-[#0f172a]" 
-                style={{ 
-                    backgroundImage: `url(${papelParede})`, 
-                    backgroundSize: 'cover', 
-                    backgroundPosition: 'center', 
-                    backgroundRepeat: 'no-repeat' 
-                }}
-            >
-                {/* Película de contraste para o Modo Escuro Profissional */}
-                {isDarkTheme && (
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[0.5px]" />
-                )}
-            </div>
-        );
-    }
+    const WinxpButterfly = ({ className = "", style = {} }) => (
+        <div className={`relative pointer-events-none select-none ${className}`} style={{ width: '16px', height: '16px', ...style }}>
+            <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+                <path d="M50 40 C35 20, 10 30, 25 55 C35 70, 48 65, 50 60 C52 65, 65 70, 75 55 C90 30, 65 20, 50 40 Z" />
+            </svg>
+        </div>
+    );
 
-    if (theme === 'win11') {
-        return (
-            <div className="absolute inset-0 overflow-hidden bg-[#f3f4f6] dark:bg-[#111111]">
-                <div className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] bg-blue-400/30 dark:bg-blue-600/20 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen" style={animBgEnabled ? { animation: 'aurora-blob-1 20s infinite ease-in-out' } : undefined}></div>
-            </div>
-        );
-    }
-    if (theme === 'winxp') {
-        const WinxpButterfly = ({ className = "", style = {} }) => (
-            <div className={`relative pointer-events-none select-none ${className}`} style={{ width: '16px', height: '16px', ...style }}>
-                <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-                    <path d="M50 40 C35 20, 10 30, 25 55 C35 70, 48 65, 50 60 C52 65, 65 70, 75 55 C90 30, 65 20, 50 40 Z" />
-                </svg>
-            </div>
-        );
+    const Win95Logo = () => (
+        <div className="relative flex flex-wrap gap-0.5 pointer-events-none select-none" style={{ width: '28px', height: '28px', transformStyle: 'preserve-3d' }}>
+            <div className="w-[12px] h-[12px] bg-[#ff3333] border border-black/10" style={{ borderRadius: '40% 65% 40% 65% / 40% 65% 40% 65%' }} />
+            <div className="w-[12px] h-[12px] bg-[#33cc33] border border-black/10" style={{ borderRadius: '65% 40% 65% 40% / 65% 40% 65% 40%' }} />
+            <div className="w-[12px] h-[12px] bg-[#3366ff] border border-black/10" style={{ borderRadius: '65% 40% 65% 40% / 65% 40% 65% 40%' }} />
+            <div className="w-[12px] h-[12px] bg-[#ffcc00] border border-black/10" style={{ borderRadius: '40% 65% 40% 65% / 40% 65% 40% 65%' }} />
+            <div className="absolute top-0.5 left-0.5 -z-10 w-[24px] h-[24px] bg-black/30" style={{ transform: 'translateZ(-1px)' }} />
+        </div>
+    );
 
-        return (
-            <div className="absolute inset-0 overflow-hidden bg-[#5998D6]">
-                <style>{`
-                    @keyframes xp-drift-cloud {
-                        0% { transform: translateX(0); }
-                        100% { transform: translateX(calc(100vw + 400px)); }
-                    }
-                    @keyframes xp-flutter {
-                        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-                        25% { transform: translate(30px, -45px) rotate(15deg); }
-                        50% { transform: translate(60px, -20px) rotate(-10deg); }
-                        75% { transform: translate(25px, 25px) rotate(20deg); }
-                    }
-                    @keyframes xp-flutter-fast {
-                        0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-                        33% { transform: translate(-35px, -55px) rotate(-20deg) scale(0.9); }
-                        66% { transform: translate(35px, -30px) rotate(30deg) scale(1.1); }
-                    }
-                `}</style>
+    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black';
+
+    return (
+        <div className={`absolute inset-0 overflow-hidden ${papelParede ? '' : getBaseThemeStyles()}`}>
+            {/* Renderiza o papel de parede se estiver configurado */}
+            {papelParede && (
+                <div 
+                    className="absolute inset-0"
+                    style={{ 
+                        backgroundImage: `url(${papelParede})`, 
+                        backgroundSize: 'cover', 
+                        backgroundPosition: 'center', 
+                        backgroundRepeat: 'no-repeat' 
+                    }}
+                >
+                    {/* Película de contraste */}
+                    {overlayOpacity > 0 && (
+                        <div 
+                            className="absolute inset-0 bg-black backdrop-blur-[0.5px]" 
+                            style={{ opacity: overlayOpacity / 100 }}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* Backdrops originais de sistema caso papel de parede não esteja ativo */}
+            {!papelParede && theme === 'winxp' && (
                 <div 
                     className="absolute inset-0 bg-cover bg-center" 
                     style={{ backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/2/21/Bliss_%28Windows_XP%29.png')`, backgroundPosition: '50% 65%' }}
                 />
-                
-                {animBgEnabled && (
-                    <>
-                        {/* Shimmering Sun Light Ray in the top-left */}
-                        <div 
-                            className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-yellow-100/20 filter blur-[80px]" 
-                            style={{ animation: 'pulse-glow 6s infinite ease-in-out' }}
-                        />
-                        <div 
-                            className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-yellow-200/10 filter blur-[40px]" 
-                        />
-                        
-                        {/* Cloud Layer 1 - Slow & Far */}
-                        <div className="absolute top-[8%] left-[-250px] w-56 h-12 bg-white/45 rounded-full filter blur-[6px]"
-                             style={{ animation: 'xp-drift-cloud 55s linear infinite', animationDelay: '0s' }} />
-                        
-                        {/* Cloud Layer 2 - Medium speed */}
-                        <div className="absolute top-[18%] left-[-300px] w-64 h-16 bg-white/50 rounded-full filter blur-[5px]"
-                             style={{ animation: 'xp-drift-cloud 40s linear infinite', animationDelay: '-12s' }} />
+            )}
 
-                        {/* Cloud Layer 3 - Faster & nearer */}
-                        <div className="absolute top-[28%] left-[-200px] w-48 h-10 bg-white/40 rounded-full filter blur-[4px]"
-                             style={{ animation: 'xp-drift-cloud 30s linear infinite', animationDelay: '-5s' }} />
+            {/* ANIMAÇÃO SELECIONADA OU AUTOMÁTICA */}
+            {(activeAnim === 'win11' || activeAnim === 'aurora') && (
+                <div className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] bg-blue-400/30 dark:bg-blue-600/20 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen" style={{ animation: 'aurora-blob-1 20s infinite ease-in-out' }}></div>
+            )}
 
-                        {/* Cloud Layer 4 - Extra slow and high */}
-                        <div className="absolute top-[3%] left-[-350px] w-80 h-20 bg-white/30 rounded-full filter blur-[8px]"
-                             style={{ animation: 'xp-drift-cloud 80s linear infinite', animationDelay: '-25s' }} />
+            {activeAnim === 'winxp' && (
+                <>
+                    <style>{`
+                        @keyframes xp-drift-cloud {
+                            0% { transform: translateX(0); }
+                            100% { transform: translateX(calc(100vw + 400px)); }
+                        }
+                        @keyframes xp-flutter {
+                            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                            25% { transform: translate(30px, -45px) rotate(15deg); }
+                            50% { transform: translate(60px, -20px) rotate(-10deg); }
+                            75% { transform: translate(25px, 25px) rotate(20deg); }
+                        }
+                        @keyframes xp-flutter-fast {
+                            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+                            33% { transform: translate(-35px, -55px) rotate(-20deg) scale(0.9); }
+                            66% { transform: translate(35px, -30px) rotate(30deg) scale(1.1); }
+                        }
+                    `}</style>
+                    {/* Linha solar */}
+                    <div 
+                        className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-yellow-100/20 filter blur-[80px]" 
+                        style={{ animation: 'pulse-glow 6s infinite ease-in-out' }}
+                    />
+                    <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-yellow-200/10 filter blur-[40px]" />
+                    
+                    {/* Nuves do XP */}
+                    <div className="absolute top-[8%] left-[-250px] w-56 h-12 bg-white/45 rounded-full filter blur-[6px]"
+                         style={{ animation: 'xp-drift-cloud 55s linear infinite', animationDelay: '0s' }} />
+                    <div className="absolute top-[18%] left-[-300px] w-64 h-16 bg-white/50 rounded-full filter blur-[5px]"
+                         style={{ animation: 'xp-drift-cloud 40s linear infinite', animationDelay: '-12s' }} />
+                    <div className="absolute top-[28%] left-[-200px] w-48 h-10 bg-white/40 rounded-full filter blur-[4px]"
+                         style={{ animation: 'xp-drift-cloud 30s linear infinite', animationDelay: '-5s' }} />
+                    <div className="absolute top-[3%] left-[-350px] w-80 h-20 bg-white/30 rounded-full filter blur-[8px]"
+                         style={{ animation: 'xp-drift-cloud 80s linear infinite', animationDelay: '-25s' }} />
 
-                        {/* Bliss Butterflies fluttering around */}
-                        <div className="absolute bottom-[20%] left-[15%] w-6 h-6 text-amber-500 pointer-events-none"
-                             style={{ animation: 'xp-flutter 12s ease-in-out infinite' }}>
-                            <WinxpButterfly />
-                        </div>
-                        <div className="absolute bottom-[28%] right-[25%] w-5 h-5 text-sky-400 pointer-events-none"
-                             style={{ animation: 'xp-flutter-fast 9s ease-in-out infinite', animationDelay: '-3s' }}>
-                            <WinxpButterfly />
-                        </div>
-                        
-                        {/* Gentle shining sparkles over the green grass */}
-                        <div className="absolute bottom-[10%] left-[35%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-60" style={{ animationDuration: '3s' }} />
-                        <div className="absolute bottom-[15%] right-[45%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-40" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }} />
-                    </>
-                )}
-            </div>
-        );
-    }
-    if (theme === 'win95') {
-        const Win95Logo = () => (
-            <div className="relative flex flex-wrap gap-0.5 pointer-events-none select-none" style={{ width: '28px', height: '28px', transformStyle: 'preserve-3d' }}>
-                <div className="w-[12px] h-[12px] bg-[#ff3333] border border-black/10" style={{ borderRadius: '40% 65% 40% 65% / 40% 65% 40% 65%' }} />
-                <div className="w-[12px] h-[12px] bg-[#33cc33] border border-black/10" style={{ borderRadius: '65% 40% 65% 40% / 65% 40% 65% 40%' }} />
-                <div className="w-[12px] h-[12px] bg-[#3366ff] border border-black/10" style={{ borderRadius: '65% 40% 65% 40% / 65% 40% 65% 40%' }} />
-                <div className="w-[12px] h-[12px] bg-[#ffcc00] border border-black/10" style={{ borderRadius: '40% 65% 40% 65% / 40% 65% 40% 65%' }} />
-                <div className="absolute top-0.5 left-0.5 -z-10 w-[24px] h-[24px] bg-black/30" style={{ transform: 'translateZ(-1px)' }} />
-            </div>
-        );
+                    {/* Borboletas */}
+                    <div className="absolute bottom-[20%] left-[15%] w-6 h-6 text-amber-500 pointer-events-none"
+                         style={{ animation: 'xp-flutter 12s ease-in-out infinite' }}>
+                        <WinxpButterfly />
+                    </div>
+                    <div className="absolute bottom-[28%] right-[25%] w-5 h-5 text-sky-400 pointer-events-none"
+                         style={{ animation: 'xp-flutter-fast 9s ease-in-out infinite', animationDelay: '-3s' }}>
+                        <WinxpButterfly />
+                    </div>
+                    
+                    {/* Brilhos de relva */}
+                    <div className="absolute bottom-[10%] left-[35%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-60" style={{ animationDuration: '3s' }} />
+                    <div className="absolute bottom-[15%] right-[45%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-40" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }} />
+                </>
+            )}
 
-        return (
-            <div className="absolute inset-0 overflow-hidden bg-[#008080]">
-                <style>{`
-                    @keyframes win95-star-1 {
-                        0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
-                        15% { opacity: 0.7; }
-                        100% { transform: translate(-40vw, -30vh) scale(3.5); opacity: 0; }
-                    }
-                    @keyframes win95-star-2 {
-                        0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
-                        15% { opacity: 0.7; }
-                        100% { transform: translate(40vw, 30vh) scale(3.5); opacity: 0; }
-                    }
-                    @keyframes win95-star-3 {
-                        0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
-                        15% { opacity: 0.7; }
-                        100% { transform: translate(-30vw, 35vh) scale(3.5); opacity: 0; }
-                    }
-                    @keyframes win95-star-4 {
-                        0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
-                        15% { opacity: 0.7; }
-                        100% { transform: translate(30vw, -35vh) scale(3.5); opacity: 0; }
-                    }
-                    @keyframes win95-logo-left {
-                        0% { transform: translate(-50%, -50%) scale(0.1) rotate(0deg); opacity: 0; }
-                        12% { opacity: 1; }
-                        100% { transform: translate(-38vw, -12vh) scale(3.8) rotate(-30deg); opacity: 0; }
-                    }
-                    @keyframes win95-logo-right {
-                        0% { transform: translate(-50%, -50%) scale(0.1) rotate(0deg); opacity: 0; }
-                        12% { opacity: 1; }
-                        100% { transform: translate(38vw, 18vh) scale(3.8) rotate(30deg); opacity: 0; }
-                    }
-                    @keyframes win95-logo-top {
-                        0% { transform: translate(-50%, -50%) scale(0.1) rotate(0deg); opacity: 0; }
-                        12% { opacity: 1; }
-                        100% { transform: translate(12vw, -42vh) scale(3.2) rotate(45deg); opacity: 0; }
-                    }
-                `}</style>
-                
-                {animBgEnabled && (
-                    <>
-                        {/* Star particles flying towards you */}
-                        <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-white/95 rounded-none" style={{ animation: 'win95-star-1 4s linear infinite', animationDelay: '0s' }} />
-                        <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-white/90 rounded-none mix-blend-screen" style={{ animation: 'win95-star-2 5s linear infinite', animationDelay: '1.2s' }} />
-                        <div className="absolute top-1/2 left-1/2 w-5 h-5 bg-white/80 rounded-none" style={{ animation: 'win95-star-3 3.5s linear infinite', animationDelay: '2.3s' }} />
-                        <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-white/95 rounded-none" style={{ animation: 'win95-star-4 6s linear infinite', animationDelay: '0.5s' }} />
-                        
-                        <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-teal-200/50 rounded-none" style={{ animation: 'win95-star-1 4.5s linear infinite', animationDelay: '2.5s' }} />
-                        <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-red-200/50 rounded-none" style={{ animation: 'win95-star-2 3.8s linear infinite', animationDelay: '0.8s' }} />
-                        
-                        {/* Flying Windows 95 Logos */}
-                        <div className="absolute top-1/2 left-1/2" style={{ animation: 'win95-logo-left 6.5s linear infinite', animationDelay: '0s' }}>
-                            <Win95Logo />
-                        </div>
-                        <div className="absolute top-1/2 left-1/2" style={{ animation: 'win95-logo-right 8s linear infinite', animationDelay: '2.5s' }}>
-                            <Win95Logo />
-                        </div>
-                        <div className="absolute top-1/2 left-1/2" style={{ animation: 'win95-logo-top 7.5s linear infinite', animationDelay: '4.8s' }}>
-                            <Win95Logo />
-                        </div>
-                        
-                        <div className="absolute top-1/2 left-1/2 scale-110" style={{ animation: 'win95-logo-left 10s linear infinite', animationDelay: '3.8s' }}>
-                            <Win95Logo />
-                        </div>
-                    </>
-                )}
-            </div>
-        );
-    }
-    if (theme === 'premium_black') {
-        return (
-            <div className="absolute inset-0 overflow-hidden bg-[#050505]">
-                <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(192, 192, 192, 0.08) 0%, transparent 40%)' }}></div>
-                <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
-                <div className={`absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[150px] bg-[#D4AF37]/5 ${animBgEnabled ? 'animate-pulse-glow' : ''}`} style={animBgEnabled ? { animationDuration: '8s' } : undefined}></div>
-            </div>
-        );
-    }
-    if (isSplash) {
-        return (
-            <div className="absolute inset-0 overflow-hidden bg-[#0f172a] bg-[radial-gradient(at_0%_0%,_hsla(253,16%,7%,1)_0,_transparent_50%),_radial-gradient(at_50%_0%,_hsla(242,47%,18%,1)_0,_transparent_50%)]">
-                <div className="star-layer stars-1" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-                <div className="star-layer stars-2" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-                <div className="star-layer stars-3" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-                <div className={`absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[100px] ${animBgEnabled ? 'animate-float' : ''}`}></div>
-            </div>
-        );
-    }
-    return (
-        <div className="absolute inset-0 overflow-hidden bg-white">
-            <div className="star-layer stars-silver-1" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-            <div className="star-layer stars-silver-2" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-            <div className="star-layer stars-silver-3" style={animBgEnabled ? undefined : { animation: 'none' }}></div>
-            <div className={`absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-100/30 blur-[100px] ${animBgEnabled ? 'animate-float' : ''}`}></div>
+            {activeAnim === 'win95' && (
+                <>
+                    <style>{`
+                        @keyframes win95-star-1 {
+                            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+                            15% { opacity: 0.7; }
+                            100% { transform: translate(-40vw, -30vh) scale(3.5); opacity: 0; }
+                        }
+                        @keyframes win95-star-2 {
+                            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+                            15% { opacity: 0.7; }
+                            100% { transform: translate(40vw, 30vh) scale(3.5); opacity: 0; }
+                        }
+                        @keyframes win95-star-3 {
+                            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+                            15% { opacity: 0.7; }
+                            100% { transform: translate(-30vw, 35vh) scale(3.5); opacity: 0; }
+                        }
+                        @keyframes win95-star-4 {
+                            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+                            15% { opacity: 0.7; }
+                            100% { transform: translate(30vw, -35vh) scale(3.5); opacity: 0; }
+                        }
+                        @keyframes win95-logo-left {
+                            0% { transform: translate(-50%, -50%) scale(0.1) rotate(0deg); opacity: 0; }
+                            12% { opacity: 1; }
+                            100% { transform: translate(-38vw, -12vh) scale(3.8) rotate(-30deg); opacity: 0; }
+                        }
+                        @keyframes win95-logo-right {
+                            0% { transform: translate(-50%, -50%) scale(0.1) rotate(0deg); opacity: 0; }
+                            12% { opacity: 1; }
+                            100% { transform: translate(38vw, 18vh) scale(3.8) rotate(30deg); opacity: 0; }
+                        }
+                        @keyframes win95-logo-top {
+                            0% { transform: translate(-50%, -50%) scale(0.1) rotate(0deg); opacity: 0; }
+                            12% { opacity: 1; }
+                            100% { transform: translate(12vw, -42vh) scale(3.2) rotate(45deg); opacity: 0; }
+                        }
+                    `}</style>
+                    <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-white/95 rounded-none" style={{ animation: 'win95-star-1 4s linear infinite', animationDelay: '0s' }} />
+                    <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-white/90 rounded-none mix-blend-screen" style={{ animation: 'win95-star-2 5s linear infinite', animationDelay: '1.2s' }} />
+                    <div className="absolute top-1/2 left-1/2 w-5 h-5 bg-white/80 rounded-none" style={{ animation: 'win95-star-3 3.5s linear infinite', animationDelay: '2.3s' }} />
+                    <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-white/95 rounded-none" style={{ animation: 'win95-star-4 6s linear infinite', animationDelay: '0.5s' }} />
+                    <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-teal-200/50 rounded-none" style={{ animation: 'win95-star-1 4.5s linear infinite', animationDelay: '2.5s' }} />
+                    <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-red-200/50 rounded-none" style={{ animation: 'win95-star-2 3.8s linear infinite', animationDelay: '0.8s' }} />
+                    
+                    <div className="absolute top-1/2 left-1/2" style={{ animation: 'win95-logo-left 6.5s linear infinite', animationDelay: '0s' }}>
+                        <Win95Logo />
+                    </div>
+                    <div className="absolute top-1/2 left-1/2" style={{ animation: 'win95-logo-right 8s linear infinite', animationDelay: '2.5s' }}>
+                        <Win95Logo />
+                    </div>
+                    <div className="absolute top-1/2 left-1/2" style={{ animation: 'win95-logo-top 7.5s linear infinite', animationDelay: '4.8s' }}>
+                        <Win95Logo />
+                    </div>
+                    <div className="absolute top-1/2 left-1/2 scale-110" style={{ animation: 'win95-logo-left 10s linear infinite', animationDelay: '3.8s' }}>
+                        <Win95Logo />
+                    </div>
+                </>
+            )}
+
+            {activeAnim === 'premium_black' && (
+                <>
+                    <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(192, 192, 192, 0.08) 0%, transparent 40%)' }}></div>
+                    <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
+                    <div className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[150px] bg-[#D4AF37]/5 animate-pulse-glow" style={{ animationDuration: '8s' }}></div>
+                </>
+            )}
+
+            {(activeAnim === 'stars' || activeAnim === 'splash' || (activeAnim === 'default' && !papelParede)) && (
+                <>
+                    <div className="star-layer stars-1"></div>
+                    <div className="star-layer stars-2"></div>
+                    <div className="star-layer stars-3"></div>
+                    <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[100px] animate-float"></div>
+                </>
+            )}
+
+            {activeAnim === 'default' && papelParede && (
+                <>
+                    <div className="star-layer stars-silver-1"></div>
+                    <div className="star-layer stars-silver-2"></div>
+                    <div className="star-layer stars-silver-3"></div>
+                    <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-100/30 blur-[100px] animate-float"></div>
+                </>
+            )}
         </div>
     );
 };
@@ -962,7 +963,7 @@ const ChurchContext = createContext();
 
 const playMenuSound = () => {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
@@ -976,7 +977,7 @@ const playMenuSound = () => {
 
 const playNotificationSound = () => {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
         const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
@@ -986,7 +987,10 @@ const playNotificationSound = () => {
     } catch(e) { }
 };
 
-class ErrorBoundary extends React.Component {
+class ErrorBoundary extends React.Component<any, any> {
+  state: any;
+  props: any;
+  setState: any;
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
   componentDidCatch(error, errorInfo) { console.error("ErrorBoundary caught an error", error, errorInfo); }
@@ -1126,23 +1130,23 @@ const Button = ({ children, onClick, variant = 'primary', className = '', ...pro
   return (<button className={`relative overflow-hidden px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 ${variants[variant]} ${className}`} onClick={onClick} {...props}>{children}</button>); 
 };
 
-const FormInput = ({ label, value, onChange, type = "text", required = false, className="", placeholder="" }) => {
+const FormInput = ({ label, value, onChange, type = "text", required = false, className="", placeholder="", ...props }: { label: any; value: any; onChange: any; type?: string; required?: boolean; className?: string; placeholder?: string; [key: string]: any }) => {
     const safeVal = (typeof value === 'object' && value !== null) ? (value.value || value.label || '') : (value || '');
     return ( 
       <div className={`mb-6 group ${className}`}>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label} {required && <span className="text-rose-500">*</span>}</label>
-        <input type={type} className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm" value={safeVal} onChange={e => onChange(e.target.value)} required={required} placeholder={placeholder}/>
+        <input type={type} className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm" value={safeVal} onChange={e => onChange(e.target.value)} required={required} placeholder={placeholder} {...props}/>
       </div> 
     );
 };
 
-const FormSelect = ({ label, value, onChange, options, className="" }) => {
+const FormSelect = ({ label, value, onChange, options, className="", ...props }: { label: any; value: any; onChange: any; options: any; className?: string; [key: string]: any }) => {
     const safeVal = (typeof value === 'object' && value !== null) ? (value.value || '') : (value || '');
     return ( 
       <div className={`mb-6 group ${className}`}>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label}</label>
         <div className="relative">
-          <select className="input-futuristic w-full rounded-2xl p-4 text-sm bg-white/50 appearance-none cursor-pointer text-slate-700 shadow-sm pr-10 backdrop-blur-sm" value={safeVal} onChange={e => onChange(e.target.value)}>
+          <select className="input-futuristic w-full rounded-2xl p-4 text-sm bg-white/50 appearance-none cursor-pointer text-slate-700 shadow-sm pr-10 backdrop-blur-sm" value={safeVal} onChange={e => onChange(e.target.value)} {...props}>
             <option value="">Selecione...</option>
             {options.map((opt, idx) => {
                 const isObj = typeof opt === 'object' && opt !== null;
@@ -1258,7 +1262,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, onCancel, title, message, co
         </div> 
         <div className="p-8 bg-white/60 backdrop-blur-md flex flex-col sm:flex-row gap-4 border-t border-white/50">
           <Button variant="ghost" onClick={(e) => { e.stopPropagation(); if (onCancel) onCancel(); onClose(); }} className="flex-1 border border-slate-200 bg-white hover:bg-slate-50">{cancelText}</Button>
-          <Button variant={variant} onClick={(e) => { e.stopPropagation(); if (onConfirm) onConfirm(); onClose(); }} className="flex-1">{confirmText}</Button>
+          <Button variant={variant as any} onClick={(e) => { e.stopPropagation(); if (onConfirm) onConfirm(); onClose(); }} className="flex-1">{confirmText}</Button>
         </div> 
       </div> 
     </div> 
@@ -1266,7 +1270,25 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, onCancel, title, message, co
 };
 
 // --- GENERIC TABLE ---
-const GenericTable = ({ data, columns, title, type, onDeleteOverride, customActions, showDeleted = false, onSelectionChange }) => { 
+const GenericTable = ({ 
+  data, 
+  columns, 
+  title, 
+  type, 
+  onDeleteOverride = undefined, 
+  customActions = undefined, 
+  showDeleted = false, 
+  onSelectionChange = undefined 
+}: { 
+  data: any; 
+  columns: any; 
+  title: any; 
+  type: any; 
+  onDeleteOverride?: any; 
+  customActions?: any; 
+  showDeleted?: boolean; 
+  onSelectionChange?: any; 
+}) => { 
   const { openModal, deleteItem, user } = useContext(ChurchContext); 
   const [searchTerm, setSearchTerm] = useState(''); 
   const [selectedIds, setSelectedIds] = useState([]);
@@ -2261,7 +2283,7 @@ const PrintSystem = ({ mode, data }) => {
     );
 
     // ESTRUTURA GLOBAL DE PÁGINA REFORMULADA (Evita a tabela gigante que corrompia as quebras de página)
-    const PageContainer = ({ title, subtitle, customHeader, children }) => {
+    const PageContainer = ({ title = undefined, subtitle = undefined, customHeader = undefined, children = undefined, ...props }: { title?: any; subtitle?: any; customHeader?: any; children?: any; [key: string]: any }) => {
         const header = customHeader || (
             <div className="mb-6 avoid-break">
                 <OfficialHeader />
@@ -3117,7 +3139,7 @@ const PrintSystem = ({ mode, data }) => {
             if (f.tipo === 'entrada') entradas += val;
             if (f.tipo === 'saida' && f.status === 'pago') saidas += val;
             return f;
-        }).sort((a,b) => new Date(a.data_competencia || a.data_vencimento) - new Date(b.data_competencia || b.data_vencimento));
+        }).sort((a,b) => new Date(a.data_competencia || a.data_vencimento || 0).getTime() - new Date(b.data_competencia || b.data_vencimento || 0).getTime());
         const saldo = entradas - saidas;
         
         let titleSuffix = 'Controle Financeiro Geral';
@@ -3534,7 +3556,7 @@ const PrintSystem = ({ mode, data }) => {
         
         // Só pegar pagos/recebidos reais (se for saída, status='pago')
         const realizadas = filtered.filter(f => f.tipo === 'entrada' || (f.tipo === 'saida' && f.status === 'pago'));
-        realizadas.sort((a,b) => new Date(a.data_competencia || a.data_vencimento || '') - new Date(b.data_competencia || b.data_vencimento || ''));
+        realizadas.sort((a,b) => new Date(a.data_competencia || a.data_vencimento || 0).getTime() - new Date(b.data_competencia || b.data_vencimento || 0).getTime());
 
         let tIn = 0, tOut = 0;
 
@@ -4058,7 +4080,7 @@ const SharedEmailModule = ({ user, isAdmin }) => {
             );
         }
 
-        return list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [allEmails, currentFolder, isAdmin, user.id, searchQuery]);
 
     const unreadCount = allEmails.filter(e => 
@@ -4073,7 +4095,7 @@ const SharedEmailModule = ({ user, isAdmin }) => {
                 const email = allEmails.find(e => e.id === id);
                 if (!email) continue;
                 
-                const updates = {};
+                const updates: any = {};
                 const isSender = email.senderId === user.id;
                 const isRecipient = isAdmin ? email.recipientType === 'usuario' : email.recipientId === user.id;
 
@@ -4510,11 +4532,11 @@ const DashboardModule = () => {
 
     const despesasVencer = (db.financeiro || []).filter(filterByCongregacao).filter(f => {
         return f.tipo === 'saida' && f.status === 'pendente' && f.data_vencimento && f.data_vencimento.startsWith(currentMonthStr);
-    }).sort((a,b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+    }).sort((a,b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
 
     const totalDespesasVencer = despesasVencer.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
-    const agendaMes = (db.agenda || []).filter(filterByCongregacao).filter(a => a.data && a.data.startsWith(currentMonthStr)).sort((a,b) => new Date(a.data) - new Date(b.data));
-    const tarefasMes = (db.tarefas || []).filter(t => t.data && t.data.startsWith(currentMonthStr)).sort((a,b) => new Date(a.data) - new Date(b.data));
+    const agendaMes = (db.agenda || []).filter(filterByCongregacao).filter(a => a.data && a.data.startsWith(currentMonthStr)).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+    const tarefasMes = (db.tarefas || []).filter(t => t.data && t.data.startsWith(currentMonthStr)).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
     const handleExportDashboard = async () => {
         setIsExporting(true);
@@ -4894,7 +4916,7 @@ const ModuleIgreja = () => {
         {id: 3, label: 'Assinatura (Licença)', icon: ShieldCheck}
     ];
 
-    const TabButton = ({ item }) => (
+    const TabButton: any = ({ item }) => (
         <button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}>
             <item.icon size={18}/> {item.label}
         </button>
@@ -5286,9 +5308,9 @@ const ModuleDesenvolvedor = () => {
     const [loadingTenants, setLoadingTenants] = useState(false);
 
     const defaultPlanos = {
-        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai'],
-        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios'],
-        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira']
+        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual'],
+        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'config_visual'],
+        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual']
     };
 
     const defaultValores = { basico: 97, standard: 147, avancado: 197 };
@@ -5329,7 +5351,8 @@ const ModuleDesenvolvedor = () => {
         {id: 'relatorios', label: 'Relatórios PDF'},
         {id: 'config_backup', label: 'Backup Geral'},
         {id: 'auditoria', label: 'Auditoria & Logs'},
-        {id: 'lixeira', label: 'Lixeira Virtual'}
+        {id: 'lixeira', label: 'Lixeira Virtual'},
+        {id: 'config_visual', label: 'Personalização Visual'}
     ];
 
     const handleSavePlanosConfig = async () => {
@@ -5453,7 +5476,7 @@ const ModuleDesenvolvedor = () => {
     const handleSaveConfig = async () => {
         try {
             // Prevenção do erro de "undefined" no Firebase
-            const payload = {};
+            const payload: any = {};
             if (data.cor_tema !== undefined) payload.cor_tema = data.cor_tema;
             if (data.prestador_servico !== undefined) payload.prestador_servico = data.prestador_servico;
 
@@ -5541,7 +5564,7 @@ const ModuleDesenvolvedor = () => {
         if (!vencimento) return { dias: 0, text: 'Vitalício', color: 'emerald' };
         const dHoje = new Date();
         const dVenc = new Date(vencimento + 'T00:00:00');
-        const diffTime = dVenc - dHoje;
+        const diffTime = dVenc.getTime() - dHoje.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         if (diffDays < 0) return { dias: Math.abs(diffDays), text: `${Math.abs(diffDays)} dias em atraso`, color: 'rose' };
@@ -6795,7 +6818,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         const dizimos = db.financeiro.filter(f => f.tipo === 'entrada' && f.categoria?.toLowerCase().includes('dízimo') && !(f.conciliado === false && String(f.descricao).includes('via Portal')));
 
         return db.membros.filter(m => m.status !== 'Inativo').map(membro => {
-            const dizimosMembro = dizimos.filter(d => d.membro_id === membro.id).sort((a,b) => new Date(b.data_competencia) - new Date(a.data_competencia));
+            const dizimosMembro = dizimos.filter(d => d.membro_id === membro.id).sort((a,b) => new Date(b.data_competencia).getTime() - new Date(a.data_competencia).getTime());
             const ultimoDizimo = dizimosMembro.length > 0 ? dizimosMembro[0] : null;
             const totalDizimado = dizimosMembro.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
 
@@ -6820,8 +6843,8 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         {id: 4, label: 'Gestão de Despesas', icon: CreditCard},
         {id: 5, label: 'Análise de Dizimistas', icon: Target} // NOVO MENU INCLUÍDO
     ];
-    const TabButton = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
-    const StatCard = ({ title, value, sub, icon: Icon, color, active }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
+    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const StatCard = ({ title, value, sub = undefined, icon: Icon, color, active = undefined }: { title: any; value: any; sub?: any; icon: any; color: any; active?: any }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
     const handleBaixarDespesa = async (item) => { if (!window.confirm(`Confirmar pagamento de R$ ${parseFloat(item.valor).toFixed(2)} para ${item.descricao}?`)) return; try { await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', item.id), { status: 'pago', data_pagamento: new Date().toISOString().split('T')[0] }, { merge: true }); logAction('BAIXA_FINANCEIRA', `Marcou despesa como paga: ${item.descricao}`, 'financeiro', item.id); addToast("Despesa baixada com sucesso!", "success"); } catch(e) { console.error(e); addToast("Erro ao baixar despesa.", "error"); } };
 
     const handleDownloadAnexo = (base64Str, type) => {
@@ -7550,7 +7573,7 @@ const ModuleEBD = () => {
     const licoesFiltradasTotal = (db.ebd?.licoes || []).filter(l => turmasFiltradas.some(t => t.id === l.turma_id));
 
     const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}];
-    const TabButton = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
 
     const handleGenerateLessonPlan = async (licao) => {
         setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: licao.capa || null });
@@ -7571,7 +7594,7 @@ const ModuleEBD = () => {
         
         Utilize formatação Markdown bem estruturada e rica.`;
         
-        const result = await callGeminiAI(prompt, 5, true);
+        const result = await callGeminiAI(prompt, 5);
         
         let texto = result;
         let capaUrl = licao.capa || null;
@@ -8096,7 +8119,7 @@ const ModuleRedeSocial = () => {
 
     const addTextElement = (type) => {
         const id = Date.now().toString();
-        let newEl = { id, type: 'text', color: '#ffffff', textAlign: 'center', left: 50, letterSpacing: 2, shadow: false };
+        let newEl: any = { id, type: 'text', color: '#ffffff', textAlign: 'center', left: 50, letterSpacing: 2, shadow: false };
         
         if (type === 'heading') newEl = { ...newEl, text: 'NOVO TÍTULO', fontSize: 80, fontFamily: 'Outfit', fontWeight: 900, top: 40 };
         if (type === 'subheading') newEl = { ...newEl, text: 'Novo Subtítulo', fontSize: 32, fontFamily: 'Plus Jakarta Sans', fontWeight: 700, top: 60 };
@@ -8569,6 +8592,264 @@ const ModuleRedeSocial = () => {
     );
 };
 
+const GALLERY_WALLPAPERS = [
+    { name: 'Sem Papel de Parede', value: null, thumb: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=10&w=200&auto=format&fit=crop' },
+    { name: 'Montanhas Majestosas', value: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=40&w=300&auto=format&fit=crop' },
+    { name: 'Noite Estrelada', value: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=40&w=300&auto=format&fit=crop' },
+    { name: 'Igreja do Monte', value: 'https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?q=40&w=300&auto=format&fit=crop' },
+    { name: 'Abstrato Geométrico', value: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=40&w=300&auto=format&fit=crop' },
+    { name: 'Suave Aurora Gradiente', value: 'https://images.unsplash.com/photo-1531315630201-bb15abeb1653?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1531315630201-bb15abeb1653?q=40&w=300&auto=format&fit=crop' },
+    { name: 'Madeira Escura Orgânica', value: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?q=40&w=300&auto=format&fit=crop' },
+];
+
+const ANIMATION_OPTIONS = [
+    { id: 'auto', name: 'Automático (Tema)', icon: RefreshCw, desc: 'Adapta-se ao estilo clássico, moderno ou escuro de acordo com o tema selecionado.' },
+    { id: 'none', name: 'Nenhuma (Estático)', icon: Ban, desc: 'Para computadores mais lentos ou maior foco. Desativa todas as movimentações.' },
+    { id: 'aurora', name: 'Aurora Boreal Fluida', icon: Sparkles, desc: 'Grandes bolhas coloridas brilhantes de movimentação orgânica contínua.' },
+    { id: 'winxp', name: 'XP Bliss (Nuvens reais)', icon: Smile, desc: 'Brilho solar, nuvens que cruzam o monitor e borboletas flutuantes na tela.' },
+    { id: 'win95', name: 'Windows 95 Starfield', icon: Zap, desc: 'Estrelas clássicas e logotipos voadores de velocidade hipersônica retrô.' },
+    { id: 'premium_black', name: 'Brilho Dourado (Premium)', icon: Activity, desc: 'Moderna e sofisticada pulsação de luz dourada indireta excelente para salas escuras.' },
+    { id: 'stars', name: 'Chuva de Estrelas Prateadas', icon: Star, desc: 'Animação de céu limpo com micro estrelas que brilham em ritmos alternados.' },
+];
+
+const ModuleConfigVisual = () => {
+    const { db, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
+    const configData = db.igreja || {};
+    
+    const [selectedWall, setSelectedWall] = useState(configData.papel_parede || null);
+    const [selectedAnim, setSelectedAnim] = useState(configData.tipo_animacao || 'auto');
+    const [opacityFilter, setOpacityFilter] = useState(configData.papel_parede_opacidade !== undefined ? Number(configData.papel_parede_opacidade) : 40);
+    const [customUrl, setCustomUrl] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    // Sincroniza estados caso d_igreja mude externamente
+    useEffect(() => {
+        if (configData.papel_parede !== undefined) {
+            setSelectedWall(configData.papel_parede);
+        }
+        if (configData.tipo_animacao !== undefined) {
+            setSelectedAnim(configData.tipo_animacao);
+        }
+        if (configData.papel_parede_opacidade !== undefined) {
+            setOpacityFilter(Number(configData.papel_parede_opacidade));
+        }
+    }, [db.igreja]);
+
+    const handleSaveConfig = async (wall = selectedWall, anim = selectedAnim, opacity = opacityFilter) => {
+        setSaving(true);
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
+                papel_parede: wall,
+                tipo_animacao: anim,
+                papel_parede_opacidade: opacity
+            }, { merge: true });
+            
+            addToast("Preferências visuais atualizadas com sucesso!", "success");
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao gravar novas configurações visuais.", "error");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 800 * 1024) { 
+                alert("Para melhor performance, escolha imagens de até 800KB.");
+                return; 
+            }
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result as string;
+                setSelectedWall(base64);
+                handleSaveConfig(base64, selectedAnim, opacityFilter);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleUrlSubmit = (e) => {
+        e.preventDefault();
+        if (!customUrl.startsWith('http://') && !customUrl.startsWith('https://')) {
+            addToast("Insira um endereço web de imagem válido (começando com http ou https).", "error");
+            return;
+        }
+        setSelectedWall(customUrl);
+        handleSaveConfig(customUrl, selectedAnim, opacityFilter);
+        setCustomUrl('');
+    };
+
+    return (
+        <div className="h-full flex flex-col space-y-8 animate-entrance font-sans text-slate-800 pb-12">
+            {/* Header decorativo */}
+            <div className="flex justify-between items-center bg-white/70 backdrop-blur-xl p-6 rounded-[2rem] border border-white/80 shadow-xs">
+                <div className="flex items-center gap-4">
+                    <div className="p-4 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl text-white shadow-md shadow-indigo-200">
+                        <Palette size={32}/>
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Experiência Visual & Temas</h2>
+                        <p className="text-sm text-slate-500 font-medium">Personalize a atmosfera visual do sistema com papéis de parede e estilos de animação.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Quadrante 1: Papel de Parede */}
+                <div className="lg:col-span-12 xl:col-span-7 bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                        <ImageIcon className="text-indigo-600" size={24}/>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800">1. Papel de Parede do Portal</h3>
+                            <p className="text-xs text-slate-500 font-medium">Selecione uma imagem para cobrir os fundos das páginas do sistema.</p>
+                        </div>
+                    </div>
+
+                    {/* Previa e Controles de Contraste */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                        <div className="md:col-span-5 relative h-36 w-full rounded-2xl overflow-hidden shadow-inner border border-slate-200/60 bg-slate-200 flex items-center justify-center">
+                            {selectedWall ? (
+                                <>
+                                    <div className="absolute inset-0 bg-cover bg-center transition-all duration-300" style={{ backgroundImage: `url(${selectedWall})` }} />
+                                    {opacityFilter > 0 && <div className="absolute inset-0 bg-black transition-all duration-300" style={{ opacity: opacityFilter / 100 }} />}
+                                    <span className="relative z-10 px-3 py-1.5 rounded-full bg-slate-900/80 text-white text-[10px] font-black uppercase tracking-widest leading-none">Live Prévia</span>
+                                </>
+                            ) : (
+                                <div className="text-center text-slate-400 p-4">
+                                    <ImageIcon className="mx-auto mb-2 opacity-40" size={28}/>
+                                    <span className="text-[11px] font-bold">Fundo Padrão Sólido</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="md:col-span-7 flex flex-col space-y-4">
+                            <div>
+                                <label className="text-xs font-black text-slate-700 block mb-1">Película de Contraste (Opacidade Escura)</label>
+                                <p className="text-[11px] text-slate-450 leading-relaxed mb-3">Escurece o papel de parede para garantir que os textos do menu e os cards fiquem perfeitamente visíveis.</p>
+                                <div className="flex items-center gap-4">
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="90" 
+                                        step="10" 
+                                        value={opacityFilter} 
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value);
+                                            setOpacityFilter(val);
+                                            handleSaveConfig(selectedWall, selectedAnim, val);
+                                        }}
+                                        className="flex-1 h-2 bg-slate-250 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none"
+                                    />
+                                    <span className="text-xs font-black bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-100 font-mono w-12 text-center">{opacityFilter}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Galeria de presets */}
+                    <div>
+                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Galeria de Fundos de Alta Qualidade</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {GALLERY_WALLPAPERS.map((item, idx) => {
+                                const isSelected = selectedWall === item.value;
+                                return (
+                                    <button 
+                                        key={idx} 
+                                        onClick={() => {
+                                            setSelectedWall(item.value);
+                                            handleSaveConfig(item.value, selectedAnim, opacityFilter);
+                                        }}
+                                        className={`group relative flex flex-col h-24 rounded-2xl overflow-hidden border-2 text-left transition-all ${isSelected ? 'border-indigo-600 shadow-md shadow-indigo-100 ring-2 ring-indigo-600/20' : 'border-slate-100 hover:border-slate-300'}`}
+                                    >
+                                        <div className="absolute inset-0 bg-cover bg-center bg-slate-100 group-hover:scale-105 transition-transform duration-300" style={{ backgroundImage: `url(${item.thumb})` }} />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
+                                            <span className="text-[10px] font-bold text-white leading-tight truncate w-full">{item.name}</span>
+                                        </div>
+                                        {isSelected && (
+                                            <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-1 shadow-md">
+                                                <CheckCircle size={12} className="fill-white text-indigo-600"/>
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Envios personalizados */}
+                    <div className="pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <span className="text-xs font-black text-slate-700 block mb-2">Upload de Imagem Própria</span>
+                            <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50/10 cursor-pointer transition-all text-center">
+                                <Upload className="text-indigo-500 mb-2" size={24}/>
+                                <span className="text-xs font-black text-slate-700">Escolher arquivo JPG/PNG</span>
+                                <span className="text-[10px] text-slate-400 mt-1">Máximo 800 KB recomendado</span>
+                                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden"/>
+                            </label>
+                        </div>
+
+                        <div>
+                            <span className="text-xs font-black text-slate-700 block mb-2">Endereço de Imagem Web (URL)</span>
+                            <form onSubmit={handleUrlSubmit} className="flex flex-col space-y-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="https://exemplo.com/imagem.jpg" 
+                                    value={customUrl} 
+                                    onChange={(e) => setCustomUrl(e.target.value)}
+                                    className="w-full text-xs px-4 py-3.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 border border-slate-200 rounded-2xl outline-none font-medium transition-all"
+                                />
+                                <Button type="submit" variant="ghost" className="border border-slate-200 py-3 text-xs flex justify-center items-center gap-2 hover:bg-slate-50 font-bold">
+                                    <ImagePlus size={16}/> Configurar via Link URL
+                                </Button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quadrante 2: Efeito de Animação de Fundo */}
+                <div className="lg:col-span-12 xl:col-span-5 bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                        <Sparkles className="text-indigo-600" size={24}/>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800">2. Estilos de Animação</h3>
+                            <p className="text-xs text-slate-550 font-medium">Decida quais efeitos visuais flutuarão sobre o fundo escolhido.</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col space-y-3 max-h-[500px] overflow-y-auto pr-1.5 custom-scrollbar">
+                        {ANIMATION_OPTIONS.map((opt) => {
+                            const isSelected = selectedAnim === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => {
+                                        setSelectedAnim(opt.id);
+                                        handleSaveConfig(selectedWall, opt.id, opacityFilter);
+                                    }}
+                                    className={`flex items-start gap-4 p-4 rounded-3xl border-2 text-left transition-all ${isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
+                                >
+                                    <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                        <opt.icon size={20}/>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs sm:text-sm font-black text-slate-800 leading-none">{opt.name}</span>
+                                            {isSelected && <span className="text-[9px] font-black uppercase text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md leading-none tracking-wider">Ativo</span>}
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5 font-medium">{opt.desc}</p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ModuleBackup = () => {
     const { startExport, handleImportRequest } = useContext(ChurchContext);
     return (<div className="glass-modern p-10 rounded-[2.5rem] flex flex-col items-center justify-center text-center animate-entrance min-h-[500px]"><Database size={80} className="text-slate-300 mb-6"/><h2 className="text-3xl font-black text-slate-800 mb-2">Backup & Dados</h2><p className="text-slate-500 max-w-md mb-8">Mantenha seus dados seguros exportando periodicamente.</p><div className="flex gap-4"><Button variant="primary" onClick={startExport}><DownloadCloud size={20}/> Exportar Dados (JSON)</Button><Button variant="secondary" onClick={handleImportRequest}><UploadCloud size={20}/> Importar Backup</Button></div></div>);
@@ -8595,7 +8876,7 @@ const ModuleUtilitarios = () => {
         {id: 2, label: 'Fornecedores', icon: Truck}
     ];
 
-    const TabButton = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance">
@@ -8768,7 +9049,7 @@ const ModuleConciliacaoBancaria = () => {
     }).sort((a, b) => {
         const dA = new Date(a.data_pagamento || a.data_competencia || a.data_vencimento || 0);
         const dB = new Date(b.data_pagamento || b.data_competencia || b.data_vencimento || 0);
-        return dA - dB;
+        return dA.getTime() - dB.getTime();
     });
 
     // 2. Calcula o saldo corrente perfeitamente linha a linha
@@ -8799,7 +9080,7 @@ const ModuleConciliacaoBancaria = () => {
         if (startDate && d < startDate) return false;
         if (endDate && d > endDate) return false;
         return true;
-    }).sort((a,b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+    }).sort((a,b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
 
     // Stats Oficiais Baseados no Filtro
     const saldoAtualCalculado = runningBalance; // Saldo real na data final do filtro (ou atual)
@@ -8817,7 +9098,7 @@ const ModuleConciliacaoBancaria = () => {
         if (endDate && (f.data_competencia || f.data_pagamento || f.data_vencimento) > endDate) return false;
 
         return f.conciliado === false;
-    }).sort((a,b) => new Date(a.data_competencia || a.data_pagamento || 0) - new Date(b.data_competencia || b.data_pagamento || 0));
+    }).sort((a,b) => new Date(a.data_competencia || a.data_pagamento || 0).getTime() - new Date(b.data_competencia || b.data_pagamento || 0).getTime());
 
     const handleValidateSelected = () => {
         if (selectedIds.length === 0) return addToast("Selecione pelo menos um registro.", "warning");
@@ -9515,7 +9796,7 @@ const ModulePortalPastor = () => {
 
                     <div className="grid gap-4">
                         {myAgenda.length > 0 ? (
-                            myAgenda.sort((a,b) => new Date(a.data + 'T' + a.hora) - new Date(b.data + 'T' + b.hora)).map((item, index) => {
+                            myAgenda.sort((a,b) => new Date(a.data + 'T' + (a.hora || '00:00')).getTime() - new Date(b.data + 'T' + (b.hora || '00:00')).getTime()).map((item, index) => {
                                 const isPast = new Date(item.data) < new Date(new Date().toISOString().split('T')[0]);
                                 return (
                                     <div key={index} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-indigo-400 transition-all group">
@@ -9963,7 +10244,7 @@ const ModulePortalPastor = () => {
                                                 const matchesSearch = safeText(item.titulo).toLowerCase().includes(searchAtaQuery.toLowerCase()) || safeText(item.pessoas).toLowerCase().includes(searchAtaQuery.toLowerCase());
                                                 const matchesType = filterAtaTipo === 'all' || item.tipo === filterAtaTipo;
                                                 return matchesSearch && matchesType;
-                                            }).sort((a,b) => new Date(b.data) - new Date(a.data)).map((ata, i) => (
+                                            }).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((ata, i) => (
                                                 <div key={ata.id || i} className="bg-slate-50 p-6 rounded-3xl border border-slate-200/60 hover:border-indigo-400 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group">
                                                     <div className="space-y-3 flex-1">
                                                         <div className="flex flex-wrap items-center gap-2">
@@ -10656,7 +10937,7 @@ const ModuleMinisterios = () => {
     const [tab, setTab] = useState(1);
     const ministerios = db.departamentos || [];
     const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Cadastros', icon: Building2}, {id: 3, label: 'Componentes', icon: Users}, {id: 4, label: 'Agenda & Tarefas', icon: Calendar}];
-    const TabButton = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
     const handleDeleteMember = async (ministerioId, membroIndex) => { const ministerio = ministerios.find(m => m.id === ministerioId); if (!ministerio) return; const novosMembros = [...(ministerio.membros || [])]; novosMembros.splice(membroIndex, 1); await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'departamentos', ministerioId), { membros: novosMembros }, { merge: true }); addToast("Membro removido.", "success"); };
 
     // Dashboard Calculations
@@ -10750,7 +11031,7 @@ const ModuleMissoes = () => {
         {id: 7, label: 'Agenda & Tarefas', icon: Calendar}
     ];
     
-    const TabButton = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
 
     // Dashboard Calculations
     const totalMissionarios = missionariosList.length;
@@ -10760,7 +11041,7 @@ const ModuleMissoes = () => {
     const participantesCarne = new Set((db.carnes || []).filter(filterByCong).map(c => c.membro_id)).size;
 
     // Agenda & Tarefas Lógica
-    const agendaGeral = (db.missoes.agenda || []).filter(filterByCong).sort((a,b) => new Date(a.data || '9999-12-31') - new Date(b.data || '9999-12-31'));
+    const agendaGeral = (db.missoes.agenda || []).filter(filterByCong).sort((a,b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
     const totalAgenda = agendaGeral.length;
     const eventosList = agendaGeral.filter(a => a.tipo === 'Evento' || !a.tipo); // Compatibilidade com antigos
     const tarefasList = agendaGeral.filter(a => a.tipo === 'Tarefa' || a.tipo === 'Escala Missionária' || a.tipo === 'Lembrete');
@@ -11113,7 +11394,7 @@ const ModuleCarnes = () => {
         {id: 4, label: 'Listagem & Impressão', icon: Printer},
         {id: 5, label: 'Análise de Engajamento', icon: Target}
     ];
-    const TabButton = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
     const handlePayParcela = async (carneId, parcelaIdx) => { const carne = carnes.find(c => c.id === carneId); if (!carne) return; const novasParcelas = [...carne.parcelas]; const statusAtual = novasParcelas[parcelaIdx].status; novasParcelas[parcelaIdx].status = statusAtual === 'pago' ? 'pendente' : 'pago'; novasParcelas[parcelaIdx].data_pagamento = statusAtual === 'pago' ? null : new Date().toISOString().split('T')[0]; await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'carnes', carneId), { parcelas: novasParcelas }, { merge: true }); logAction('BAIXA_CARNE', `Alterou status da parcela ${parcelaIdx+1} do carnê ${carne.titulo}`, 'carnes', carneId); addToast("Status atualizado!", "success"); };
 
     // Dashboard Calculations
@@ -11543,6 +11824,36 @@ const ModuleCarteirinha = () => {
         setPreviewOpen(true);
     };
 
+    const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (err) => reject(err);
+        });
+    };
+
     const handleBgUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -11709,7 +12020,7 @@ const ModuleAuditoria = memo(() => {
     const { db } = useContext(ChurchContext);
     
     // Ordenar do mais recente para o mais antigo
-    const logsOrdenados = [...(db.auditoria || [])].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+    const logsOrdenados = [...(db.auditoria || [])].sort((a, b) => new Date(b.data_hora).getTime() - new Date(a.data_hora).getTime());
 
     const columns = [
         { header: 'Data/Hora', key: 'data_hora', render: l => { const d = new Date(l.data_hora); return <div className="text-xs"><b>{d.toLocaleDateString('pt-BR')}</b><br/><span className="text-slate-400">{d.toLocaleTimeString('pt-BR')}</span></div>; } },
@@ -11960,7 +12271,7 @@ const ModuleCelulas = () => {
         {id: 5, label: 'Relatórios', icon: FileText}
     ];
 
-    const TabButton = ({ item }) => (
+    const TabButton: any = ({ item }) => (
         <button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'bg-white text-slate-500 hover:bg-purple-50 hover:text-purple-600'}`}>
             <item.icon size={18}/> {item.label}
         </button>
@@ -12175,7 +12486,7 @@ const ModuleCelulas = () => {
                             <Button onClick={() => openModal('celula_evento')} variant="primary"><Plus size={18}/> Novo Evento</Button>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar grid md:grid-cols-2 lg:grid-cols-3 gap-5 p-2">
-                            {celulas.flatMap(cel => (cel.agenda || []).map(evt => ({...evt, cel_nome: cel.nome}))).sort((a,b) => new Date(a.data) - new Date(b.data)).map((evt, idx) => (
+                            {celulas.flatMap(cel => (cel.agenda || []).map(evt => ({...evt, cel_nome: cel.nome}))).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime()).map((evt, idx) => (
                                 <div key={idx} className="glass-card p-6 rounded-[2rem] border-l-4 border-l-purple-500 flex flex-col group hover:shadow-lg transition-all">
                                     <div className="flex justify-between items-start mb-3">
                                         <span className="text-[10px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 px-3 py-1 rounded-lg border border-purple-200 shadow-sm">{evt.cel_nome}</span>
@@ -12876,9 +13187,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'config_visual'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual']
         };
 
         const PLAN_MODULES = db.igreja?.planos_config || defaultPlanos;
@@ -12923,7 +13234,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         config_backup: 'group-hover:text-emerald-500',
         auditoria: 'group-hover:text-slate-500',
         lixeira: 'group-hover:text-rose-500',
-        desenvolvedor: 'group-hover:text-emerald-400'
+        desenvolvedor: 'group-hover:text-emerald-400',
+        config_visual: 'group-hover:text-purple-500'
     };
 
     const MenuItem = ({ id, icon: Icon, label }) => {
@@ -13035,6 +13347,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                 {hasPermission('master') && (
                     <div>
                         <MenuGroup label="Sistema Avançado" />
+                        {checkPlan('config_visual') && <MenuItem id="config_visual" icon={Palette} label="Personalização Visual" />}
                         {checkPlan('config_backup') && <MenuItem id="config_backup" icon={Database} label="Backup Geral" />}
                         {checkPlan('auditoria') && <MenuItem id="auditoria" icon={ShieldCheck} label="Auditoria & Logs" />}
                         {checkPlan('lixeira') && <MenuItem id="lixeira" icon={Trash2} label="Lixeira Virtual" />}
@@ -13181,7 +13494,7 @@ const NotificationCenter = () => {
             despesas.forEach(d => {
                 if (!d.data_vencimento) return;
                 const vDate = new Date(d.data_vencimento + 'T00:00:00'); 
-                const diffTime = vDate - today;
+                const diffTime = vDate.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
                 if (diffDays < 0) {
@@ -13210,7 +13523,7 @@ const NotificationCenter = () => {
              pendentes.forEach(t => {
                  if(!t.data) return;
                  const tDate = new Date(t.data + 'T00:00:00');
-                 const diffTime = tDate - today;
+                 const diffTime = tDate.getTime() - today.getTime();
                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                  if (diffDays >= 0 && diffDays <= 3) {
                      notifs.push({ id: `tar_${t.id}`, type: 'primary', icon: CheckSquare, title: 'Tarefa Agendada', desc: t.descricao, time: diffDays === 0 ? 'Hoje' : `Em ${diffDays} dias`, color: 'indigo' });
@@ -13406,7 +13719,7 @@ const PortalHome = ({ user, db, setView }) => {
     limiteAgenda.setDate(limiteAgenda.getDate() + 7);
     const limiteStr = limiteAgenda.toISOString().split('T')[0];
     
-    const proximosEventos = (db.agenda || []).filter(e => e.data >= hoje && e.data <= limiteStr).sort((a,b) => new Date(a.data) - new Date(b.data));
+    const proximosEventos = (db.agenda || []).filter(e => e.data >= hoje && e.data <= limiteStr).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
     proximosEventos.forEach(e => {
          inboxItems.push({
             id: `evt_${e.id}`,
@@ -13440,7 +13753,7 @@ const PortalHome = ({ user, db, setView }) => {
     inboxItems.sort((a, b) => {
         if (a.isNew && !b.isNew) return -1;
         if (!a.isNew && b.isNew) return 1;
-        return new Date(a.date) - new Date(b.date);
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
 
     // --- LÓGICA DE GAMIFICAÇÃO (MEDALHAS E CONQUISTAS) ---
@@ -13511,7 +13824,7 @@ const PortalHome = ({ user, db, setView }) => {
     const unlockedCursosCount = cursosConcluidosMes.length;
     const totalBadgesCount = BADGE_DEFS.length + CURSOS_DISPONIVEIS.length;
 
-    const totalCursosModules = CURSOS_DISPONIVEIS.reduce((sum, curso) => sum + (curso.modulesCount || 10), 0); // Assuming 10 modules per course if not specified
+    const totalCursosModules = CURSOS_DISPONIVEIS.reduce((sum, curso: any) => sum + (curso.modulesCount || 10), 0); // Assuming 10 modules per course if not specified
     const modulosConcluidosSoma = (currentUser.modulos_concluidos || []).length;
     
     // Atualização da lógica de nível espiritual incluindo andamento dos cursos
@@ -13945,7 +14258,7 @@ const PortalFinanceiro = ({ user, db }) => {
 
     const minhasContribuicoes = (db.financeiro || [])
         .filter(f => f.tipo === 'entrada' && (f.membro_id === user.id || f.membro_nome === user.nome))
-        .sort((a, b) => new Date(b.data_competencia || 0) - new Date(a.data_competencia || 0));
+        .sort((a, b) => new Date(b.data_competencia || 0).getTime() - new Date(a.data_competencia || 0).getTime());
     
     const totalContribuido = minhasContribuicoes.filter(f => f.status === 'pago').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
 
@@ -14214,7 +14527,7 @@ const PortalFinanceiro = ({ user, db }) => {
 const PortalAgenda = ({ user, db }) => {
     const { setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
     const hoje = new Date().toISOString().split('T')[0];
-    const eventos = (db.agenda || []).filter(e => e.data >= hoje).sort((a,b) => new Date(a.data) - new Date(b.data));
+    const eventos = (db.agenda || []).filter(e => e.data >= hoje).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
     const handleRSVP = async (evtId, status) => {
         const evt = db.agenda.find(e => e.id === evtId);
@@ -14290,7 +14603,7 @@ const PortalTarefas = ({ user, db }) => {
     
     const minhasTarefas = (db.tarefas || []).filter(t => 
         (t.equipe || []).some(m => m.id === user.id || m.nome === user.nome)
-    ).sort((a, b) => new Date(a.data || '9999-12-31') - new Date(b.data || '9999-12-31'));
+    ).sort((a, b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
 
     const handleRSVP = async (taskId, status) => {
         const task = db.tarefas.find(t => t.id === taskId);
@@ -14395,8 +14708,8 @@ const PortalEBD = ({ user, db }) => {
     
     // NOVO: Permite aos membros acessar a biblioteca de lições de forma livre mesmo sem matrícula
     const licoesDisponiveis = minhaTurma 
-        ? (db.ebd?.licoes || []).filter(l => l.turma_id === minhaTurma.id).sort((a,b) => new Date(b.data) - new Date(a.data)) 
-        : (db.ebd?.licoes || []).sort((a,b) => new Date(b.data) - new Date(a.data)).slice(0, 15);
+        ? (db.ebd?.licoes || []).filter(l => l.turma_id === minhaTurma.id).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()) 
+        : (db.ebd?.licoes || []).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 15);
 
     const handleGenerateLessonPlan = async (licao) => {
         setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: licao.capa || null });
@@ -14417,7 +14730,7 @@ const PortalEBD = ({ user, db }) => {
         
         Utilize formatação Markdown bem estruturada e rica.`;
         
-        const result = await callGeminiAI(prompt, 5, true);
+        const result = await callGeminiAI(prompt, 5);
         
         let texto = result;
         let capaUrl = licao.capa || null;
@@ -15555,7 +15868,7 @@ const PortalMural = ({ user, db }) => {
     const [novoPost, setNovoPost] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
-    const posts = (db.mural || []).sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0));
+    const posts = (db.mural || []).sort((a, b) => new Date(b.data || 0).getTime() - new Date(a.data || 0).getTime());
 
     const handlePost = async () => {
         if (!novoPost.trim()) return addToast("Escreva algo antes de publicar.", "warning");
@@ -16025,7 +16338,8 @@ const AppLayout = () => {
         'lixeira': { component: ModuleLixeira, access: 'master' },
         'sobre': { component: ModuleSobre, access: 'public' },
         'portal_pastor': { component: ModulePortalPastor, access: 'public' },
-        'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' }
+        'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
+        'config_visual': { component: ModuleConfigVisual, access: 'master' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
     const access = MODULE_REGISTRY[view]?.access || 'public';
@@ -16267,7 +16581,7 @@ export default function App() {
       document.documentElement.lang = 'pt-BR';
       document.documentElement.setAttribute('translate', 'no');
       
-      let metaTranslate = document.querySelector('meta[name="google"]');
+      let metaTranslate = document.querySelector('meta[name="google"]') as HTMLMetaElement | null;
       if (!metaTranslate) {
           metaTranslate = document.createElement('meta');
           metaTranslate.name = 'google';
@@ -16378,10 +16692,10 @@ export default function App() {
   useEffect(() => {
       const autoFullScreen = () => {
           try {
-              const docEl = window.document.documentElement;
+              const docEl = window.document.documentElement as any;
               const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
-              
-              if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+              const docAny = document as any;
+              if (!docAny.fullscreenElement && !docAny.webkitFullscreenElement && !docAny.mozFullScreenElement && !docAny.msFullscreenElement) {
                   if (requestFullScreen) {
                       const promise = requestFullScreen.call(docEl);
                       if (promise) {
@@ -16413,8 +16727,8 @@ export default function App() {
         if (isAuthenticating) return;
         isAuthenticating = true;
         try { 
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token); 
+            if (typeof (window as any).__initial_auth_token !== 'undefined' && (window as any).__initial_auth_token) {
+                await signInWithCustomToken(auth, (window as any).__initial_auth_token); 
             } else {
                 await signInAnonymously(auth); 
             }
@@ -16484,7 +16798,7 @@ export default function App() {
               q, 
               (qs) => {
                   const list = []; const trashList = [];
-                  qs.forEach((doc) => { const data = { id: doc.id, ...doc.data() }; if (!data.deleted) list.push(data); else trashList.push({ ...data, _collection_key: key }); });
+                  qs.forEach((doc) => { const data: any = { id: doc.id, ...doc.data() }; if (!data.deleted) list.push(data); else trashList.push({ ...data, _collection_key: key }); });
                   
                   pendingUpdates[key] = { list, trashList };
 
@@ -16547,7 +16861,7 @@ export default function App() {
       document.addEventListener('contextmenu', handleContextMenu);
 
       // 2. Travar o Viewport estritamente (impede o zoom com os dedos no telemóvel e duplo clique)
-      let metaViewport = document.querySelector('meta[name=viewport]');
+      let metaViewport = document.querySelector('meta[name=viewport]') as HTMLMetaElement | null;
       if (!metaViewport) {
           metaViewport = document.createElement('meta');
           metaViewport.name = 'viewport';
@@ -16614,7 +16928,7 @@ export default function App() {
       const iconeOficial = db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png";
 
       // Favicon Padrão
-      let favicon = document.querySelector("link[rel~='icon']");
+      let favicon = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
       if (!favicon) {
           favicon = document.createElement('link');
           favicon.rel = 'icon';
@@ -16623,13 +16937,13 @@ export default function App() {
       favicon.href = iconeOficial;
 
       // Apple Touch Icon
-      let appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+      let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement | null;
       if (appleIcon) {
           appleIcon.href = iconeOficial;
       }
 
       // Atualizar o Manifest existente (se houver)
-      const manifestLink = document.getElementById('gipp-pwa-manifest');
+      const manifestLink = document.getElementById('gipp-pwa-manifest') as HTMLLinkElement | null;
       if (manifestLink) {
           const manifest = {
             name: "GIPP - Gestão de Igreja",
@@ -16658,9 +16972,10 @@ export default function App() {
 
       // --- MOTOR EXECUTÁVEL: Tentar Forçar Ecrã Inteiro de forma segura ---
       try {
-          const docEl = window.document.documentElement;
+          const docEl = window.document.documentElement as any;
           const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
-          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          const docAny = document as any;
+          if (!docAny.fullscreenElement && !docAny.webkitFullscreenElement) {
               if (requestFullScreen) {
                   await requestFullScreen.call(docEl);
               }
@@ -16797,7 +17112,7 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = (event) => {
           try {
-              const json = JSON.parse(event.target.result);
+              const json = JSON.parse(event.target.result as string);
               // Validação extra para garantir que não se importou um ficheiro corrompido
               if (!json.igreja && !json.membros) throw new Error("Formato inválido");
               setBackupState({ isOpen: true, mode: 'import', stage: 'initial', progress: 0, stats: calculateStats(json), fileData: json });
