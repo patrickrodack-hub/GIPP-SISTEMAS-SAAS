@@ -1135,7 +1135,11 @@ const FormInput = ({ label, value, onChange, type = "text", required = false, cl
     return ( 
       <div className={`mb-6 group ${className}`}>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label} {required && <span className="text-rose-500">*</span>}</label>
-        <input type={type} className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm" value={safeVal} onChange={e => onChange(e.target.value)} required={required} placeholder={placeholder} {...props}/>
+        <input type={type} className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm" value={safeVal} onChange={e => {
+          let val = e.target.value;
+          if (type === 'text' || type === 'search' || !type) val = typeof val === 'string' ? val.toUpperCase() : val;
+          onChange(val);
+        }} required={required} placeholder={placeholder} {...props}/>
       </div> 
     );
 };
@@ -1367,7 +1371,7 @@ const GenericTable = ({
             <div className="flex gap-4 w-full md:w-auto items-center">
             <div className="relative flex-1 md:w-72 group search-container">
                 <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20}/>
-                <input type="text" placeholder="Pesquisar..." className="pl-12 pr-4 py-3 border border-white/50 bg-white/40 rounded-2xl w-full focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none text-sm transition-all shadow-inner backdrop-blur-sm font-medium text-slate-700 placeholder:text-slate-400" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
+                <input type="text" placeholder="Pesquisar..." className="pl-12 pr-4 py-3 border border-white/50 bg-white/40 rounded-2xl w-full focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none text-sm transition-all shadow-inner backdrop-blur-sm font-medium text-slate-700 placeholder:text-slate-400" value={searchTerm} onChange={e=>setSearchTerm((e.target.value || "").toUpperCase())}/>
             </div>
             <Button onClick={exportToCSV} variant="secondary" className="shadow-sm whitespace-nowrap px-4" title="Exportar para Excel (CSV)"><DownloadCloud size={20}/></Button>
             {title && !showDeleted && <Button onClick={() => openModal(type)} variant="primary" className="shadow-lg shadow-indigo-500/30 whitespace-nowrap"><Plus size={20}/> Novo</Button>}
@@ -1579,7 +1583,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                 </div>
                                 <div className="flex-1">
                                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Função na Escala</label>
-                                     <input type="text" className="input-futuristic w-full p-2.5 rounded-xl text-sm" placeholder="Ex: Dirigente, Louvor..." value={tempMember.funcao} onChange={e => setTempMember({...tempMember, funcao: e.target.value})}/>
+                                     <input type="text" className="input-futuristic w-full p-2.5 rounded-xl text-sm" placeholder="Ex: Dirigente, Louvor..." value={tempMember.funcao} onChange={e => setTempMember({...tempMember, funcao: (e.target.value || "").toUpperCase()})}/>
                                 </div>
                                 <button onClick={() => { if(!tempMember.id) return; const memberObj = db.membros.find(m => m.id === tempMember.id); const newTeam = [...(data.equipe || [])]; if(newTeam.find(t => t.id === tempMember.id)) { alert("Membro já adicionado."); return; } newTeam.push({ id: tempMember.id, nome: memberObj.nome || 'Membro', cargo_eclesiastico: memberObj.cargo || 'Membro', funcao_escala: tempMember.funcao || memberObj.cargo || 'Membro' }); setData({...data, equipe: newTeam}); setTempMember({id: '', funcao: ''}); }} className="bg-indigo-500 text-white p-2.5 rounded-xl hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-200" type="button"><Plus size={20}/></button>
                             </div>
@@ -1773,7 +1777,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
 
                          <div className="mb-2">
                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1">Relatório Detalhado (Testemunhos, Ofertas, Oração)</label>
-                             <textarea className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y min-h-[150px] shadow-sm" value={data.relatorio || ''} onChange={e => setData({...data, relatorio: e.target.value})} placeholder="Descreva como foi a reunião..." required></textarea>
+                             <textarea className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y min-h-[150px] shadow-sm" value={data.relatorio || ''} onChange={e => setData({...data, relatorio: (e.target.value || "").toUpperCase()})} placeholder="Descreva como foi a reunião..." required></textarea>
                          </div>
                      </div>
                  );
@@ -2064,7 +2068,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                         <ChevronDown size={14} className="absolute right-2 top-3 text-slate-400 pointer-events-none"/>
                                     </div>
                                 </div>
-                                <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Função</label><input type="text" className="input-futuristic w-full p-2.5 rounded-xl text-sm" placeholder="Ex: Preletor, Apoio..." value={tempMember.funcao} onChange={e => setTempMember({...tempMember, funcao: e.target.value})}/></div>
+                                <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Função</label><input type="text" className="input-futuristic w-full p-2.5 rounded-xl text-sm" placeholder="Ex: Preletor, Apoio..." value={tempMember.funcao} onChange={e => setTempMember({...tempMember, funcao: (e.target.value || "").toUpperCase()})}/></div>
                                 <button onClick={() => { if(!tempMember.id) return; const newTeam = [...(data.equipe || [])]; if(newTeam.find(t => t.id === tempMember.id)) { alert("Pessoa já adicionada."); return; } newTeam.push({ id: tempMember.id, nome: tempMember.nome, telefone: tempMember.telefone, funcao_escala: tempMember.funcao || 'Apoio' }); setData({...data, equipe: newTeam}); setTempMember({id: '', nome: '', telefone: '', funcao: ''}); }} className="bg-indigo-500 text-white p-2.5 rounded-xl hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-200" type="button"><Plus size={20}/></button>
                             </div>
                             <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
@@ -2088,7 +2092,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                          <FormInput label="Observações / Pedido de Oração" value={data.obs} onChange={v=>setData({...data, obs:v})} placeholder="Detalhes importantes da visita..."/>
                          <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 mt-2">
                              <div className="flex justify-between items-center mb-2"><label className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Plano de Integração (CRM)</label><Button type="button" onClick={async () => { setLoadingAiPlan(true); const prompt = `Atue como um pastor especialista em consolidação de novos convertidos. Crie um plano de acompanhamento prático de 4 semanas para este visitante que esteve na nossa igreja: Nome: ${data.nome || 'Visitante'}. Status atual: ${data.status || 'Recente'}. Observações: ${data.obs || 'Nenhuma'}. Retorne apenas o plano passo-a-passo em formato Markdown, curto e inspirador.`; const res = await callGeminiAI(prompt); setData({...data, plano_integracao: res}); setLoadingAiPlan(false); }} disabled={loadingAiPlan} variant="ghost" className="bg-white text-indigo-600 border border-indigo-200 text-[10px] py-1.5 px-3">{loadingAiPlan ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14}/>} ✨ Gerar Plano com IA</Button></div>
-                             <textarea className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y min-h-[100px]" value={data.plano_integracao || ''} onChange={e => setData({...data, plano_integracao: e.target.value})} placeholder="Escreva ou gere com IA os passos sugeridos para consolidar este visitante..."></textarea>
+                             <textarea className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-y min-h-[100px]" value={data.plano_integracao || ''} onChange={e => setData({...data, plano_integracao: (e.target.value || "").toUpperCase()})} placeholder="Escreva ou gere com IA os passos sugeridos para consolidar este visitante..."></textarea>
                          </div>
                      </div>
                  );
@@ -6836,12 +6840,57 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         }).sort((a,b) => b.total_dizimado - a.total_dizimado);
     }, [db.financeiro, db.membros, tab]);
 
+    // NOVO: Cálculo de membros Inadimplentes (Carnês & Entradas Pendentes)
+    const lembretesAtrasados = useMemo(() => {
+        if(tab !== 6) return [];
+        const hoje = new Date().toISOString().split('T')[0];
+        let pending = [];
+        
+        // Extrai todos os carnês e parcelas em atraso
+        db.membros.forEach(membro => {
+            const carnesMembro = (db.carnes || []).filter(c => c.membro_id === membro.id);
+            let atrasosDesc = [];
+            let vlAtrasado = 0;
+            
+            carnesMembro.forEach(c => {
+                (c.parcelas || []).forEach(p => {
+                    if (p.status !== 'pago' && p.vencimento < hoje) {
+                        atrasosDesc.push(`Carne: ${c.titulo} (Parc. ${p.numero})`);
+                        vlAtrasado += parseFloat(p.valor) || 0;
+                    }
+                });
+            });
+
+            const entradasMembro = (db.financeiro || []).filter(f => f.membro_id === membro.id && f.tipo === 'entrada' && f.status === 'pendente' && (f.data_competencia || '') < hoje);
+            entradasMembro.forEach(e => {
+                atrasosDesc.push(`Entrada Pendente: ${e.descricao}`);
+                vlAtrasado += parseFloat(e.valor) || 0;
+            });
+            
+            if (atrasosDesc.length > 0) {
+                pending.push({
+                    membro_id: membro.id,
+                    nome: membro.nome,
+                    telefone: membro.telefone || '',
+                    qtd_atrasos: atrasosDesc.length,
+                    descricoes: atrasosDesc.join(', '),
+                    valor_total: vlAtrasado
+                });
+            }
+        });
+        
+        return pending.sort((a,b) => b.valor_total - a.valor_total);
+    }, [db.financeiro, db.carnes, db.membros, tab]);
+
+    const [isAgendamentoAutomAtivo, setIsAgendamentoAutomAtivo] = useState(false);
+
     const menuItems = [
         {id: 1, label: 'Dashboard', icon: LayoutDashboard}, 
         {id: 2, label: 'Entradas', icon: ArrowUpCircle}, 
         {id: 3, label: 'Saídas', icon: ArrowDownCircle}, 
         {id: 4, label: 'Gestão de Despesas', icon: CreditCard},
-        {id: 5, label: 'Análise de Dizimistas', icon: Target} // NOVO MENU INCLUÍDO
+        {id: 5, label: 'Análise de Dizimistas', icon: Target},
+        {id: 6, label: 'Lembretes & Cobranças', icon: Bell}
     ];
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
     const StatCard = ({ title, value, sub = undefined, icon: Icon, color, active = undefined }: { title: any; value: any; sub?: any; icon: any; color: any; active?: any }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
@@ -6874,7 +6923,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                     {tab !== 5 && (
                         <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200 flex-1 md:flex-none shadow-sm">
                             <Calendar size={18} className="text-indigo-600"/>
-                            <input type="month" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 w-full"/>
+                            <input type="month" value={filterDate} onChange={e => setFilterDate((e.target.value || "").toUpperCase())} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 w-full"/>
                         </div>
                     )}
                  </div>
@@ -6941,7 +6990,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                 </div>
                                 <div className="relative flex-1 min-w-[200px]">
                                     <Search className="absolute left-3 top-2.5 text-slate-400" size={16}/>
-                                    <input type="text" placeholder="Buscar por descrição ou membro..." value={searchFiltroNome} onChange={e => setSearchFiltroNome(e.target.value)} className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg w-full text-sm outline-none focus:border-emerald-500 shadow-sm bg-white"/>
+                                    <input type="text" placeholder="Buscar por descrição ou membro..." value={searchFiltroNome} onChange={e => setSearchFiltroNome((e.target.value || "").toUpperCase())} className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg w-full text-sm outline-none focus:border-emerald-500 shadow-sm bg-white"/>
                                 </div>
                                 <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm focus-within:border-emerald-500 transition-colors">
                                     <span className="px-3 text-[10px] font-bold text-slate-400 uppercase bg-slate-100 border-r border-slate-200 h-full flex items-center">Data Exata</span>
@@ -6971,7 +7020,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                 </div>
                                 <div className="relative flex-1 min-w-[200px]">
                                     <Search className="absolute left-3 top-2.5 text-slate-400" size={16}/>
-                                    <input type="text" placeholder="Buscar por descrição ou fornecedor..." value={searchFiltroNome} onChange={e => setSearchFiltroNome(e.target.value)} className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg w-full text-sm outline-none focus:border-rose-500 shadow-sm bg-white"/>
+                                    <input type="text" placeholder="Buscar por descrição ou fornecedor..." value={searchFiltroNome} onChange={e => setSearchFiltroNome((e.target.value || "").toUpperCase())} className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg w-full text-sm outline-none focus:border-rose-500 shadow-sm bg-white"/>
                                 </div>
                                 <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm focus-within:border-rose-500 transition-colors">
                                     <span className="px-3 text-[10px] font-bold text-slate-400 uppercase bg-slate-100 border-r border-slate-200 h-full flex items-center">Data Exata</span>
@@ -7004,7 +7053,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                 </div>
                                 <div className="relative flex-1 min-w-[200px]">
                                     <Search className="absolute left-3 top-2.5 text-slate-400" size={16}/>
-                                    <input type="text" placeholder="Buscar por descrição ou fornecedor..." value={searchFiltroNome} onChange={e => setSearchFiltroNome(e.target.value)} className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg w-full text-sm outline-none focus:border-slate-500 shadow-sm bg-white"/>
+                                    <input type="text" placeholder="Buscar por descrição ou fornecedor..." value={searchFiltroNome} onChange={e => setSearchFiltroNome((e.target.value || "").toUpperCase())} className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg w-full text-sm outline-none focus:border-slate-500 shadow-sm bg-white"/>
                                 </div>
                                 <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm focus-within:border-slate-500 transition-colors">
                                     <span className="px-3 text-[10px] font-bold text-slate-400 uppercase bg-slate-100 border-r border-slate-200 h-full flex items-center">Data Exata</span>
@@ -7095,6 +7144,57 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                         window.open(`https://wa.me/55${(item.telefone||'').replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
                                     }} className="p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-200" title="Contactar no WhatsApp">
                                         <MessageCircle size={18}/>
+                                    </button>
+                                )}
+                                onDeleteOverride={() => {}}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* --- Lembretes de Pagamento / Cobrança --- */}
+                {tab === 6 && (
+                    <div className="h-full flex flex-col space-y-6 animate-entrance">
+                        <div className="glass-modern p-6 rounded-[2rem] border border-amber-100 bg-gradient-to-br from-amber-50/50 to-white flex-shrink-0">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <h3 className="font-bold text-amber-800 flex items-center gap-2"><Bell size={18}/> Gestão de Inadimplência e Lembretes Automáticos</h3>
+                                    <p className="text-xs text-amber-600/80 mt-1">Configure o envio de mensagens de aviso via WhatsApp para membros com pagamentos pendentes.</p>
+                                </div>
+                                
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Envio Automático (Sábados)</span>
+                                    <button 
+                                        onClick={() => {
+                                            setIsAgendamentoAutomAtivo(!isAgendamentoAutomAtivo);
+                                            if(!isAgendamentoAutomAtivo) addToast("Os lembretes agora serão enviados automaticamente aos inadimplentes.", "success");
+                                            else addToast("Agendamento automático desativado.", "info");
+                                        }}
+                                        className={`w-14 h-8 flex items-center rounded-full p-1 shadow-inner transition-colors duration-300 ease-in-out ${isAgendamentoAutomAtivo ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                    >
+                                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${isAgendamentoAutomAtivo ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden">
+                             <GenericTable 
+                                title={`Membros com Lançamentos Atrasados (${lembretesAtrasados.length})`}
+                                type="lembrete" 
+                                data={lembretesAtrasados} 
+                                columns={[
+                                    {header:'Membro', key:'nome', render: m => <span className="font-bold text-slate-800">{m.nome}</span>},
+                                    {header:'Motivo(s) do Atraso', key:'descricoes', render: m => <span className="text-xs text-slate-500 truncate max-w-[200px] whitespace-pre-wrap block">{m.descricoes}</span>},
+                                    {header:'Qtd. Lançamentos', key:'qtd_atrasos', render: m => <span className="text-amber-600 font-bold">{m.qtd_atrasos} registros</span>},
+                                    {header:'Valor P/ Acerto', key:'valor_total', render: m => <span className="font-mono font-bold text-rose-600">R$ {m.valor_total.toFixed(2)}</span>}
+                                ]} 
+                                customActions={(item) => (
+                                    <button onClick={() => {
+                                        const msg = `A Paz do Senhor, ${item.nome.split(' ')[0]}! Aqui é da secretaria da ${db.igreja.nome}. Consta em nosso sistema um lembrete em aberto referente a: ${item.descricoes} no valor total de R$ ${item.valor_total.toFixed(2)}. Precisando de apoio ou de um novo prazo, estamos à inteira disposição. Deus abençoe!`;
+                                        window.open(`https://wa.me/55${(item.telefone||'').replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
+                                    }} className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white rounded-xl transition-all shadow-sm border border-amber-200 flex items-center gap-2" title="Contactar e Enviar Lembrete via WhatsApp">
+                                        <Bell size={16}/> <span className="text-xs font-bold uppercase hidden md:inline">Enviar Aviso</span>
                                     </button>
                                 )}
                                 onDeleteOverride={() => {}}
@@ -7330,7 +7430,7 @@ const ModuleSecretariaIntegrada = () => {
                              </div>
                              <div className="flex-1 flex flex-col">
                                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mensagem Final</label>
-                                 <textarea className="flex-1 w-full border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-2" value={msgTemplate} onChange={e => setMsgTemplate(e.target.value)} placeholder="Digite sua mensagem aqui... Use {nome} para personalizar."></textarea>
+                                 <textarea className="flex-1 w-full border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-2" value={msgTemplate} onChange={e => setMsgTemplate((e.target.value || "").toUpperCase())} placeholder="Digite sua mensagem aqui... Use {nome} para personalizar."></textarea>
                                  <div className="flex gap-2 mb-4">
                                      <Button 
                                          onClick={async () => {
@@ -7647,7 +7747,7 @@ const ModuleEBD = () => {
                 {tab === 1 && (
                     <div className="flex items-center gap-3 bg-white/40 p-2 rounded-2xl border border-white/50">
                         <Calendar size={18} className="text-indigo-600 ml-2"/>
-                        <input type="month" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700"/>
+                        <input type="month" value={filterDate} onChange={e => setFilterDate((e.target.value || "").toUpperCase())} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700"/>
                     </div>
                 )}
             </div>
@@ -10281,7 +10381,7 @@ const ModulePortalPastor = () => {
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2">Sua Mensagem / Diretiva Pastoral</label>
-                                <textarea value={mensagemTexto} onChange={e=>setMensagemTexto(e.target.value)} required placeholder="Pronto para enviar instruções, encorajamentos ou escalas diretamente ao ministério..." rows={6} className="w-full p-4 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all shadow-sm resize-none" />
+                                <textarea value={mensagemTexto} onChange={e=>setMensagemTexto((e.target.value || "").toUpperCase())} required placeholder="Pronto para enviar instruções, encorajamentos ou escalas diretamente ao ministério..." rows={6} className="w-full p-4 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all shadow-sm resize-none" />
                             </div>
                             <button type="submit" disabled={loadingMsg} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20 flex items-center justify-center gap-2">
                                 {loadingMsg ? <Loader2 size={16} className="animate-spin"/> : <Send size={16}/>}
@@ -10404,7 +10504,7 @@ const ModulePortalPastor = () => {
                                                         <button onClick={() => { setFinMonthFilter(''); setFinExactDateFilter(new Date().toISOString().split('T')[0]); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter !== '' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}>Data Exata</button>
                                                     </div>
                                                     {finExactDateFilter === '' ? (
-                                                        <input type="month" value={finMonthFilter} onChange={(e) => setFinMonthFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto" />
+                                                        <input type="month" value={finMonthFilter} onChange={(e) => setFinMonthFilter((e.target.value || "").toUpperCase())} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto" />
                                                     ) : (
                                                         <input type="date" value={finExactDateFilter} onChange={(e) => setFinExactDateFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto" />
                                                     )}
@@ -10697,7 +10797,7 @@ const ModulePortalPastor = () => {
                                     {/* Filters & Search */}
                                     <div className="grid md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                         <div className="relative">
-                                            <input type="text" placeholder="Pesquisar por assunto ou participante..." value={searchAtaQuery} onChange={e=>setSearchAtaQuery(e.target.value)} className="w-full h-11 px-4 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none text-slate-700 shadow-sm" />
+                                            <input type="text" placeholder="Pesquisar por assunto ou participante..." value={searchAtaQuery} onChange={e=>setSearchAtaQuery((e.target.value || "").toUpperCase())} className="w-full h-11 px-4 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none text-slate-700 shadow-sm" />
                                         </div>
                                         <div>
                                             <select value={filterAtaTipo} onChange={e=>setFilterAtaTipo(e.target.value)} className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none text-slate-700 shadow-sm">
@@ -10782,7 +10882,7 @@ const ModulePortalPastor = () => {
                         <form onSubmit={handleSaveAgenda} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Título do Agendamento</label>
-                                <input type="text" value={agendaForm.titulo} onChange={e=>setAgendaForm({...agendaForm, titulo: e.target.value})} required placeholder="Ex: Aconselhamento do Irmão Marcos" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                <input type="text" value={agendaForm.titulo} onChange={e=>setAgendaForm({...agendaForm, titulo: (e.target.value || "").toUpperCase()})} required placeholder="Ex: Aconselhamento do Irmão Marcos" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -10807,12 +10907,12 @@ const ModulePortalPastor = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Local</label>
-                                    <input type="text" value={agendaForm.local} onChange={e=>setAgendaForm({...agendaForm, local: e.target.value})} placeholder="Ex: Gabinete Pastoral" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                    <input type="text" value={agendaForm.local} onChange={e=>setAgendaForm({...agendaForm, local: (e.target.value || "").toUpperCase()})} placeholder="Ex: Gabinete Pastoral" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Descrição / Notas complementares</label>
-                                <textarea value={agendaForm.descricao} onChange={e=>setAgendaForm({...agendaForm, descricao: e.target.value})} placeholder="Pequeno detalhe ou motivo do agendamento..." rows={3} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none" />
+                                <textarea value={agendaForm.descricao} onChange={e=>setAgendaForm({...agendaForm, descricao: (e.target.value || "").toUpperCase()})} placeholder="Pequeno detalhe ou motivo do agendamento..." rows={3} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none" />
                             </div>
                             <div className="flex gap-4 pt-4">
                                 <button type="button" onClick={()=>setShowAgendaModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
@@ -10834,7 +10934,7 @@ const ModulePortalPastor = () => {
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Título do Sermão / Pensamento</label>
-                                    <input type="text" value={esbocoForm.titulo} onChange={e=>setEsbocoForm({...esbocoForm, titulo: e.target.value})} required placeholder="Ex: O Milagre da Perseverança com Fé" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                    <input type="text" value={esbocoForm.titulo} onChange={e=>setEsbocoForm({...esbocoForm, titulo: (e.target.value || "").toUpperCase()})} required placeholder="Ex: O Milagre da Perseverança com Fé" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Status</label>
@@ -10846,7 +10946,7 @@ const ModulePortalPastor = () => {
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Texto de Homilética, Versículos e Notas do Esboço</label>
-                                <textarea value={esbocoForm.conteudo} onChange={e=>setEsbocoForm({...esbocoForm, conteudo: e.target.value})} required placeholder="Escreva os pontos principais de homilética, citações bíblicas e conclusões para pregar..." rows={10} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
+                                <textarea value={esbocoForm.conteudo} onChange={e=>setEsbocoForm({...esbocoForm, conteudo: (e.target.value || "").toUpperCase()})} required placeholder="Escreva os pontos principais de homilética, citações bíblicas e conclusões para pregar..." rows={10} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
                             </div>
                             <div className="flex gap-4 pt-4">
                                 <button type="button" onClick={()=>setShowEsbocoModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
@@ -10871,7 +10971,7 @@ const ModulePortalPastor = () => {
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div className="col-span-2 md:col-span-1">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Assunto ou Título da Ata</label>
-                                    <input type="text" value={ataForm.titulo} onChange={e=>setAtaForm({...ataForm, titulo: e.target.value})} required placeholder="Ex: Aconselhamento de Casal / Reunião do Presbitério" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                    <input type="text" value={ataForm.titulo} onChange={e=>setAtaForm({...ataForm, titulo: (e.target.value || "").toUpperCase()})} required placeholder="Ex: Aconselhamento de Casal / Reunião do Presbitério" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
                                 </div>
                                 <div className="col-span-2 md:col-span-1">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Tipo de Atendimento / Encontro</label>
@@ -10906,22 +11006,22 @@ const ModulePortalPastor = () => {
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Assistidos / Membros Presentes (Pessoas que participaram)</label>
-                                <textarea value={ataForm.pessoas} onChange={e=>setAtaForm({...ataForm, pessoas: e.target.value})} required placeholder="Escreva os nomes dos membros ou presentes (um por linha ou separados por vírgula)..." rows={2} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
+                                <textarea value={ataForm.pessoas} onChange={e=>setAtaForm({...ataForm, pessoas: (e.target.value || "").toUpperCase()})} required placeholder="Escreva os nomes dos membros ou presentes (um por linha ou separados por vírgula)..." rows={2} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Conteúdo da Ata (Tudo o que foi pautado, conversado ou confessado)</label>
-                                <textarea value={ataForm.conteudo} onChange={e=>setAtaForm({...ataForm, conteudo: e.target.value})} required placeholder="Insira o resumo completo dos assuntos falados. Este bloco principal é impresso no documento oficial de Ata." rows={8} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" />
+                                <textarea value={ataForm.conteudo} onChange={e=>setAtaForm({...ataForm, conteudo: (e.target.value || "").toUpperCase()})} required placeholder="Insira o resumo completo dos assuntos falados. Este bloco principal é impresso no documento oficial de Ata." rows={8} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" />
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Encaminhamentos Eclesiásticos, Orientações & Decisões Tomadas</label>
-                                <textarea value={ataForm.decisoes} onChange={e=>setAtaForm({...ataForm, decisoes: e.target.value})} placeholder="Decisões tomadas, compromissos firmados ou punições/disciplinas aplicadas (também serão impressos)." rows={2} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
+                                <textarea value={ataForm.decisoes} onChange={e=>setAtaForm({...ataForm, decisoes: (e.target.value || "").toUpperCase()})} placeholder="Decisões tomadas, compromissos firmados ou punições/disciplinas aplicadas (também serão impressos)." rows={2} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-rose-500 uppercase tracking-wider ml-1 mb-1.5 flex items-center gap-1"><Shield size={14}/> Anotações de Gabinete Privadíssimas do Pastor (NÃO impressas na Ata)</label>
-                                <textarea value={ataForm.notas_privadas} onChange={e=>setAtaForm({...ataForm, notas_privadas: e.target.value})} placeholder="Escreva percepções particulares suas, detalhes confidenciais confessionais e anotações espirituais. Elas serão salvas no cofre mas NÃO aparecerão na Ata para impressão ou PDF oficial." rows={3} className="w-full p-4 rounded-xl border border-rose-200 outline-none text-xs font-bold bg-rose-50/30 focus:border-rose-400 transition-all text-rose-800 font-sans" />
+                                <textarea value={ataForm.notas_privadas} onChange={e=>setAtaForm({...ataForm, notas_privadas: (e.target.value || "").toUpperCase()})} placeholder="Escreva percepções particulares suas, detalhes confidenciais confessionais e anotações espirituais. Elas serão salvas no cofre mas NÃO aparecerão na Ata para impressão ou PDF oficial." rows={3} className="w-full p-4 rounded-xl border border-rose-200 outline-none text-xs font-bold bg-rose-50/30 focus:border-rose-400 transition-all text-rose-800 font-sans" />
                             </div>
 
                             <div className="flex gap-4 pt-4">
@@ -11163,7 +11263,7 @@ const ModuleRelatorios = memo(() => {
                                              {loadingAiAta ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14}/>} ✨ Redigir Formalmente com IA
                                          </Button>
                                      </div>
-                                     <textarea className="w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm h-64 focus:ring-2 focus:ring-stone-500 outline-none resize-y shadow-inner leading-loose" value={inputs.texto_ata || ''} onChange={e => setInputs({...inputs, texto_ata: e.target.value})} placeholder={`Pode digitar apenas tópicos rápidos e a IA fará o resto. Ex: Reunião iniciou às 19h, aprovamos compra do telão, pastor João orou no fim...`}></textarea>
+                                     <textarea className="w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm h-64 focus:ring-2 focus:ring-stone-500 outline-none resize-y shadow-inner leading-loose" value={inputs.texto_ata || ''} onChange={e => setInputs({...inputs, texto_ata: (e.target.value || "").toUpperCase()})} placeholder={`Pode digitar apenas tópicos rápidos e a IA fará o resto. Ex: Reunião iniciou às 19h, aprovamos compra do telão, pastor João orou no fim...`}></textarea>
                                 </div>
                             )}
 
@@ -11765,7 +11865,7 @@ const ModuleMissoes = () => {
                                 <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
                                      <div className="lg:col-span-1 glass-modern p-6 rounded-[2.5rem] flex flex-col h-full overflow-hidden">
                                          <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><Users size={20} className="text-indigo-500"/> Lista de Contatos</h3>
-                                         <input type="text" placeholder="Buscar contato..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none mb-4 shadow-sm"/>
+                                         <input type="text" placeholder="Buscar contato..." value={searchTerm} onChange={e=>setSearchTerm((e.target.value || "").toUpperCase())} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none mb-4 shadow-sm"/>
                                          
                                          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
                                             {filteredContacts.map((c, i) => (
@@ -11789,8 +11889,8 @@ const ModuleMissoes = () => {
                                          <div className="mt-4 pt-4 border-t border-slate-200">
                                              <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Adicionar Contato Avulso</p>
                                              <div className="flex gap-2">
-                                                 <input type="text" placeholder="Nome" value={newExtName} onChange={e=>setNewExtName(e.target.value)} className="w-1/2 bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none"/>
-                                                 <input type="text" placeholder="Telefone" value={newExtPhone} onChange={e=>setNewExtPhone(e.target.value)} className="w-1/2 bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none"/>
+                                                 <input type="text" placeholder="Nome" value={newExtName} onChange={e=>setNewExtName((e.target.value || "").toUpperCase())} className="w-1/2 bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none"/>
+                                                 <input type="text" placeholder="Telefone" value={newExtPhone} onChange={e=>setNewExtPhone((e.target.value || "").toUpperCase())} className="w-1/2 bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none"/>
                                              </div>
                                              <Button onClick={handleAddExternal} variant="secondary" className="w-full mt-2 text-xs py-2"><Plus size={14}/> Adicionar</Button>
                                          </div>
@@ -11807,7 +11907,7 @@ const ModuleMissoes = () => {
                                              </div>
                                          </div>
                                          <div className="flex-1 flex flex-col">
-                                             <textarea className="flex-1 w-full border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-4 shadow-inner" value={msgTemplate} onChange={e => setMsgTemplate(e.target.value)} placeholder="Digite sua mensagem aqui... Use {nome} para personalizar."></textarea>
+                                             <textarea className="flex-1 w-full border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-4 shadow-inner" value={msgTemplate} onChange={e => setMsgTemplate((e.target.value || "").toUpperCase())} placeholder="Digite sua mensagem aqui... Use {nome} para personalizar."></textarea>
                                              <div className="flex gap-2 mb-6">
                                                  <Button onClick={async () => { if (!msgTemplate) return addToast("Digite uma mensagem primeiro.", "warning"); setLoadingAi(true); addToast("✨ A processar com IA...", "info"); const result = await callGeminiAI(`Melhore a seguinte mensagem de WhatsApp missionária. Estilo: Encorajador e Espiritual. Mantenha a variável {nome}. Remova aspas. Mensagem original: "${msgTemplate}"`); setMsgTemplate(result.replace(/^"|"$/g, '').trim()); setLoadingAi(false); addToast("✨ Mensagem aprimorada!", "success"); }} disabled={loadingAi} variant="ghost" className="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 py-2.5 flex-1 shadow-sm">
                                                      {loadingAi ? <Loader2 size={16} className="animate-spin"/> : <Sparkles size={16}/>} ✨ IA Encorajador
@@ -14122,7 +14222,7 @@ const PortalPerfil = ({ user, db, setView }) => {
             <form onSubmit={handleSave} className="space-y-4">
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Nome Completo</label>
-                    <input type="text" value={formData.nome} onChange={e=>setFormData({...formData, nome: e.target.value})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
+                    <input type="text" value={formData.nome} onChange={e=>setFormData({...formData, nome: (e.target.value || "").toUpperCase()})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
                 </div>
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">E-mail</label>
@@ -14131,7 +14231,7 @@ const PortalPerfil = ({ user, db, setView }) => {
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Telemóvel / Celular</label>
-                        <input type="text" value={formData.telefone} onChange={e=>setFormData({...formData, telefone: e.target.value})} placeholder="(11) 98765-4321" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
+                        <input type="text" value={formData.telefone} onChange={e=>setFormData({...formData, telefone: (e.target.value || "").toUpperCase()})} placeholder="(11) 98765-4321" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Aniversário</label>
@@ -17968,7 +18068,7 @@ export default function App() {
                                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-slate-700 font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
                                         placeholder={loginMode === 'admin' ? "O seu login de acesso" : "Ex: João da Silva"} 
                                         value={loginData.user} 
-                                        onChange={e => { setLoginData({...loginData, user: e.target.value}); if(loginMode==='membro') setShowMemberDropdown(true); }} 
+                                        onChange={e => { setLoginData({...loginData, user: e.target.value.toUpperCase()}); if(loginMode==='membro') setShowMemberDropdown(true); }} 
                                         onFocus={() => { if(loginMode==='membro') setShowMemberDropdown(true); }}
                                         onBlur={() => setTimeout(() => setShowMemberDropdown(false), 200)}
                                     />
@@ -18035,7 +18135,7 @@ export default function App() {
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" 
                                     placeholder="Ex: João da Silva" 
                                     value={firstAccessData.nome} 
-                                    onChange={e => { setFirstAccessData({...firstAccessData, nome: e.target.value}); setShowFirstAccessDropdown(true); }}
+                                    onChange={e => { setFirstAccessData({...firstAccessData, nome: e.target.value.toUpperCase()}); setShowFirstAccessDropdown(true); }}
                                     onFocus={() => setShowFirstAccessDropdown(true)}
                                     onBlur={() => setTimeout(() => setShowFirstAccessDropdown(false), 200)}
                                 />
