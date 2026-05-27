@@ -15133,7 +15133,7 @@ const PortalFinanceiro = ({ user, db }) => {
             <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><DollarSign size={28} className="text-emerald-500"/> Meus Dízimos e Ofertas</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-300 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-1 flex items-center justify-between border border-emerald-400 md:col-span-1">
+                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-300 text-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] hover:-translate-y-1 flex items-center justify-between border border-emerald-400 md:col-span-1">
                     <div>
                         <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1">Total Reconhecido</p>
                         <h3 className="text-3xl font-black truncate">R$ {totalContribuido.toFixed(2)}</h3>
@@ -15142,7 +15142,7 @@ const PortalFinanceiro = ({ user, db }) => {
                 </div>
 
                 {/* --- MÓDULO INOVADOR DE PIX COM VALOR EXATO --- */}
-                <div className="md:col-span-2 bg-white hover:bg-gradient-to-br hover:from-white hover:to-emerald-50/50 rounded-[2rem] shadow-sm hover:shadow-md transition-all duration-500 border border-emerald-200 overflow-hidden relative group">
+                <div className="md:col-span-2 bg-white hover:bg-gradient-to-br hover:from-white hover:to-emerald-50/50 rounded-[2rem] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] transition-all duration-500 border border-emerald-200 overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-0"></div>
                     
                     <div className="p-8 relative z-10">
@@ -15211,7 +15211,7 @@ const PortalFinanceiro = ({ user, db }) => {
                 </div>
             </div>
 
-            <div className="bg-white hover:bg-gradient-to-br hover:from-white hover:to-slate-50 transition-all duration-500 rounded-3xl shadow-sm hover:shadow-md border border-slate-200 p-8 overflow-hidden">
+            <div className="bg-white hover:bg-gradient-to-br hover:from-white hover:to-slate-50 transition-all duration-500 rounded-3xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] border border-slate-200 p-8 overflow-hidden">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-slate-700">Meu Histórico Financeiro</h3>
                     <span className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">Transações</span>
