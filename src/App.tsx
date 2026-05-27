@@ -13895,8 +13895,49 @@ const PortalCarteirinha = ({ user, igreja }) => {
 };
 
 const PortalFinanceiro = ({ user, db }) => {
-    const { addToast, dbFirestore, appId, collection, addDoc, logAction } = useContext(ChurchContext);
+    const { addToast, dbFirestore, appId, collection, addDoc, logAction, setDoc, doc } = useContext(ChurchContext);
     
+    // Funções para manipular comprovantes de contribuição pelo membro
+    const handleUploadComprovante = (e, item) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        if (file.size > 500 * 1024) {
+            addToast("O comprovante deve ter no máximo 500KB.", "warning");
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            try {
+                const base64Data = reader.result;
+                if (!item.id) {
+                    addToast("Não foi possível encontrar a ID do registro.", "error");
+                    return;
+                }
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', item.id), { comprovante: base64Data }, { merge: true });
+                logAction('EDIÇÃO', `Membro alterou/enviou comprovante das dízimas/oferta: R$ ${item.valor}`, 'financeiro', item.id);
+                addToast("Comprovante enviado com sucesso!", "success");
+            } catch (error) {
+                console.error(error);
+                addToast("Erro ao guardar o comprovante no sistema.", "error");
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const downloadComprovante = (base64Str, category) => {
+        try {
+            const a = document.createElement('a');
+            a.href = base64Str;
+            a.download = `comprovante_${category.toLowerCase()}_${Date.now()}`;
+            a.click();
+            addToast("A abrir comprovativo...", "success");
+        } catch (e) {
+            addToast("Erro ao abrir comprovativo.", "error");
+        }
+    };
+
     // Estado para o fluxo de nova contribuição PIX Inteligente
     const [novaOferta, setNovaOferta] = useState({ valor: '', categoria: 'Dízimo', etapa: 1, payload: '' });
     const [isSaving, setIsSaving] = useState(false);
@@ -13958,7 +13999,7 @@ const PortalFinanceiro = ({ user, db }) => {
     };
 
     return (
-        <div className="space-y-6 animate-entrance pb-10">
+        <div id="portal_financas" className="space-y-6 animate-entrance pb-10">
             <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><DollarSign size={28} className="text-emerald-500"/> Meus Dízimos e Ofertas</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -14054,6 +14095,7 @@ const PortalFinanceiro = ({ user, db }) => {
                                     <th className="pb-3 pr-4">Tipo/Categoria</th>
                                     <th className="pb-3 pr-4 text-right">Valor (R$)</th>
                                     <th className="pb-3 text-center">Status (Tesouraria)</th>
+                                    <th className="pb-3 text-center">Ação</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -14077,6 +14119,42 @@ const PortalFinanceiro = ({ user, db }) => {
                                                     <CheckCheck size={10}/> Confirmado
                                                 </span>
                                             )}
+                                        </td>
+                                        <td className="py-4 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                {f.comprovante ? (
+                                                    <button
+                                                        onClick={() => downloadComprovante(f.comprovante, f.categoria)}
+                                                        className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-xl border border-indigo-100 transition-colors shadow-sm select-none"
+                                                        title="Ver Comprovante"
+                                                    >
+                                                        <Eye size={13} />
+                                                        <span>Ver</span>
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-400 font-medium italic">Sem anexo</span>
+                                                )}
+
+                                                {pendenteValidacao && (
+                                                    <>
+                                                        <label
+                                                            htmlFor={`replace-file-${f.id || i}`}
+                                                            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl border border-emerald-100 cursor-pointer transition-colors shadow-sm select-none"
+                                                            title={f.comprovante ? "Substituir Comprovante" : "Anexar Comprovante"}
+                                                        >
+                                                            <Upload size={13} />
+                                                            <span>{f.comprovante ? "Substituir" : "Enviar"}</span>
+                                                        </label>
+                                                        <input
+                                                            type="file"
+                                                            id={`replace-file-${f.id || i}`}
+                                                            className="hidden"
+                                                            accept="image/*,application/pdf"
+                                                            onChange={(e) => handleUploadComprovante(e, f)}
+                                                        />
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                     );
@@ -15623,6 +15701,7 @@ const PortalMural = ({ user, db }) => {
 const MemberPortalLayout = () => {
     const { view, setView, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
 
     // --- LÓGICA DE BLOQUEIO DE LICENÇA ---
     const isLicenseValid = () => {
@@ -15652,6 +15731,19 @@ const MemberPortalLayout = () => {
     ];
 
     const navItems = isPastor ? [...baseNavItems, { id: 'portal_pastor', icon: BookOpenText, label: 'Portal Pastor', hoverColor: 'group-hover:text-amber-500' }] : baseNavItems;
+
+    const mobileBottomItems = [
+        { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
+        { id: 'portal_financas', icon: DollarSign, label: 'Dízimos', hoverColor: 'group-hover:text-emerald-600' },
+    ];
+
+    if (isPastor) {
+        mobileBottomItems.push({ id: 'portal_pastor', icon: BookOpenText, label: 'Pastor', hoverColor: 'group-hover:text-amber-500' });
+    } else {
+        mobileBottomItems.push({ id: 'portal_tarefas', icon: CheckSquare, label: 'Escalas', hoverColor: 'group-hover:text-rose-500' });
+    }
+
+    mobileBottomItems.push({ id: 'portal_more', icon: Menu, label: 'Mais', hoverColor: 'group-hover:text-slate-500' });
 
     const renderView = () => {
         switch(view) {
@@ -15734,15 +15826,73 @@ const MemberPortalLayout = () => {
 
             {/* Mobile Bottom Nav (Strict Flex Item - Fixado) */}
             <nav className="md:hidden shrink-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 flex justify-between overflow-x-auto custom-scrollbar flex-nowrap gap-1 p-2 z-40 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-                {navItems.map(item => (
-                    <button key={item.id} onClick={() => setView(item.id)} className={`flex flex-col items-center p-2 min-w-[65px] shrink-0 transition-colors group ${view === item.id ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                        <div className={`p-1.5 rounded-full mb-1 transition-all ${view === item.id ? 'bg-emerald-50 scale-110' : 'bg-transparent group-hover:bg-slate-50'}`}>
-                            <item.icon size={20} className={`transition-colors duration-300 ${view === item.id ? '' : item.hoverColor}`}/>
-                        </div>
-                        <span className="text-[10px] font-bold">{item.label}</span>
-                    </button>
-                ))}
+                {mobileBottomItems.map(item => {
+                    const isMore = item.id === 'portal_more';
+                    const active = isMore ? showMoreMenu : view === item.id;
+                    return (
+                        <button 
+                            key={item.id} 
+                            onClick={() => {
+                                if (isMore) {
+                                    setShowMoreMenu(true);
+                                } else {
+                                    setView(item.id);
+                                }
+                            }} 
+                            className={`flex flex-col items-center p-2 min-w-[60px] flex-1 shrink-0 transition-colors group ${active ? 'text-emerald-600 font-extrabold' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                            <div className={`p-1.5 rounded-full mb-1 transition-all ${active ? 'bg-emerald-50 scale-110' : 'bg-transparent group-hover:bg-slate-50'}`}>
+                                <item.icon size={20} className={`transition-colors duration-300 ${active ? '' : item.hoverColor}`}/>
+                            </div>
+                            <span className="text-[10px] font-bold">{item.label}</span>
+                        </button>
+                    );
+                })}
             </nav>
+
+            {/* Bottom sheet para visualização no celular */}
+            {showMoreMenu && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+                    onClick={() => setShowMoreMenu(false)}
+                >
+                    <div 
+                        className="bg-white w-full max-w-lg rounded-t-[2.5rem] p-6 pb-8 shadow-2xl relative border-t border-slate-200 flex flex-col gap-6 animate-entrance"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto"></div>
+                        <div className="flex justify-between items-center px-2">
+                            <div>
+                                <h3 className="font-black text-slate-800 text-lg">Menu do Portal</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Todos os recursos</p>
+                            </div>
+                            <button onClick={() => setShowMoreMenu(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors">
+                                <X size={18}/>
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 overflow-y-auto max-h-[60vh] p-1 custom-scrollbar">
+                            {navItems.map(item => {
+                                const active = view === item.id;
+                                return (
+                                    <button 
+                                        key={item.id} 
+                                        onClick={() => {
+                                            setView(item.id);
+                                            setShowMoreMenu(false);
+                                        }}
+                                        className={`flex flex-col items-center justify-center p-4 rounded-3xl border transition-all text-center gap-2 group ${active ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'bg-slate-50 border-slate-100 hover:border-slate-200 hover:bg-slate-100/50 text-slate-700'}`}
+                                    >
+                                        <div className={`p-2.5 rounded-2xl transition-colors ${active ? 'bg-white/20 text-white' : 'bg-white text-slate-500 shadow-xs border border-slate-100 group-hover:bg-slate-50'}`}>
+                                            <item.icon size={20} />
+                                        </div>
+                                        <span className={`text-[10px] font-extrabold leading-tight ${active ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
