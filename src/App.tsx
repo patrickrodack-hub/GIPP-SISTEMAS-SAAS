@@ -9372,7 +9372,7 @@ const ModulePortalPastor = () => {
     };
 
     // Form States for Atas (Área Restrita - Reuniões e Gabinete)
-    const [cofreSubTab, setCofreSubTab] = useState('atas'); // default to 'atas' to showcase the new feature!
+    const [cofreSubTab, setCofreSubTab] = useState('financeiro'); // default to 'financeiro' as requested by the pastor
     const [finMonthFilter, setFinMonthFilter] = useState(new Date().toISOString().slice(0, 7));
     const [finExactDateFilter, setFinExactDateFilter] = useState('');
     const [finViewMode, setFinViewMode] = useState('categoria');
@@ -9649,16 +9649,16 @@ const ModulePortalPastor = () => {
 
                             {/* Sub-Tabs Selector inside Restricted Area */}
                             <div className="flex overflow-x-auto custom-scrollbar flex-nowrap md:flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-full md:max-w-fit mb-6">
-                                <button onClick={() => setCofreSubTab('atas')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'atas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
-                                    <FileText size={15}/> Atas de Gabinete & Reunião ({myAtas.length})
-                                </button>
-                                <button onClick={() => setCofreSubTab('esbocos')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'esbocos' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
-                                    <BookOpenText size={15}/> Esboços de Sermão ({myEsbocos.length})
-                                </button>
                                 <button onClick={() => setCofreSubTab('financeiro')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'financeiro' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <DollarSign size={15}/> Financeiro
                                 </button>
-                            </div>
+                                <button onClick={() => setCofreSubTab('atas')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'atas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                    <FileText size={15}/> Atas de Gabinete & Reunião ({myAtas.length})
+                                 </button>
+                                 <button onClick={() => setCofreSubTab('esbocos')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'esbocos' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                     <BookOpenText size={15}/> Esboços de Sermão ({myEsbocos.length})
+                                 </button>
+                             </div>
 
                             {cofreSubTab === 'financeiro' && (() => {
                                 const listFiltered = (db.financeiro || []).filter(item => (item.data_pagamento || item.data_vencimento || item.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter));
