@@ -34,37 +34,23 @@ import {
 } from 'firebase/auth';
 
 const callGeminiAI = async (prompt, retries = 5) => {
-  let apiKey = ""; 
-  let modelName = "gemini-3.5-flash";
-  
-  try {
-    const isOutsideCanvas = typeof window !== 'undefined' && !window.location.hostname.includes("usercontent.goog");
-    if (isOutsideCanvas) {
-        apiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) 
-                 ? import.meta.env.VITE_GEMINI_API_KEY 
-                 : "AIzaSyAMV3l3SyPx2ftrKH2BQXSHkLtkZ3kJvkw"; 
-        modelName = "gemini-3.5-flash"; 
-    }
-  } catch (e) {}
-  
   const delays = [1000, 2000, 4000, 8000, 16000];
-  const payload = {
-    contents: [{ role: "user", parts: [{ text: String(prompt) }] }],
-    systemInstruction: { parts: [{ text: "Você é um assistente especialista, teológico e administrativo." }] }
-  };
 
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
-      );
+      const response = await fetch("/api/gemini/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: String(prompt) })
+      });
+      
       if (!response.ok) {
           const errData = await response.json().catch(() => null);
-          throw new Error(errData?.error?.message || `HTTP error! status: ${response.status}`);
+          throw new Error(errData?.error || `HTTP error! status: ${response.status}`);
       }
+      
       const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar resposta. Tente novamente.";
+      return data.text || "Não foi possível gerar resposta. Tente novamente.";
     } catch (error) {
       if (i === retries - 1) return `Erro na IA: ${error.message}`;
       await new Promise(resolve => setTimeout(resolve, delays[i]));
