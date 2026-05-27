@@ -9981,6 +9981,7 @@ const ModuleConciliacaoBancaria = () => {
 
 const ModulePortalPastor = () => {
     const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const isPastorPresidente = user?.funcao_administrativa?.toUpperCase() === 'PASTOR PRESIDENTE' || user?.nivel === 'master';
     const [activeTab, setActiveTab] = useState('agenda'); // agenda, mensagens, cofre
     
     // Form States for Agenda
@@ -10160,7 +10161,7 @@ const ModulePortalPastor = () => {
     };
 
     // Form States for Atas (Área Restrita - Reuniões e Gabinete)
-    const [cofreSubTab, setCofreSubTab] = useState('financeiro'); // default to 'financeiro' as requested by the pastor
+    const [cofreSubTab, setCofreSubTab] = useState(isPastorPresidente ? 'financeiro' : 'atas'); // default to 'financeiro' structure for pastor president but restricted otherwise
     const [finMonthFilter, setFinMonthFilter] = useState(new Date().toISOString().slice(0, 7));
     const [finExactDateFilter, setFinExactDateFilter] = useState('');
     const [finViewMode, setFinViewMode] = useState('lista'); // Default to 'lista' so it is immediately transparent and visible on mobile
@@ -10435,9 +10436,11 @@ const ModulePortalPastor = () => {
                 <button onClick={() => setActiveTab('agenda')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'agenda' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Calendar size={16}/> Minha Agenda
                 </button>
-                <button onClick={() => setActiveTab('financeiro_pastor')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'financeiro_pastor' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
-                    <DollarSign size={16}/> Lançamento Rápido
-                </button>
+                {isPastorPresidente && (
+                    <button onClick={() => setActiveTab('financeiro_pastor')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'financeiro_pastor' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                        <DollarSign size={16}/> Lançamento Rápido
+                    </button>
+                )}
                 <button onClick={() => setActiveTab('mensagens')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'mensagens' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Send size={16}/> Enviar Mensagem
                 </button>
@@ -10498,169 +10501,177 @@ const ModulePortalPastor = () => {
             )}
 
             {activeTab === 'financeiro_pastor' && (
-                <div className="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-150 shadow-md space-y-6 animate-scale-in">
-                    <div>
-                        <h3 className="font-extrabold text-slate-905 text-lg flex items-center gap-2">
-                            <DollarSign size={20} className="text-emerald-500 bg-emerald-50 p-1 rounded-lg shrink-0" /> Novo Lançamento Rápido
-                        </h3>
-                        <p className="text-xs text-slate-450 font-medium leading-relaxed mt-1">Lançamento direto no financeiro da igreja com total integração ao extrato da secretaria e conciliação bancária.</p>
-                    </div>
-
-                    <form onSubmit={handleSavePastorFinanceiro} className="space-y-4">
+                isPastorPresidente ? (
+                    <div className="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-150 shadow-md space-y-6 animate-scale-in">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Transação</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setPastorFinForm(prev => ({ ...prev, tipo: 'entrada', categoria: 'Dízimo' }))}
-                                    className={`py-2.5 rounded-xl text-xs font-black tracking-wide border transition-all ${pastorFinForm.tipo === 'entrada' ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-500/10 float-none' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}`}
-                                >
-                                    Receita (Entrada)
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setPastorFinForm(prev => ({ ...prev, tipo: 'saida', categoria: 'Prebenda Pastoral' }))}
-                                    className={`py-2.5 rounded-xl text-xs font-black tracking-wide border transition-all ${pastorFinForm.tipo === 'saida' ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10 float-none' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}`}
-                                >
-                                    Despesa (Saída)
-                                </button>
-                            </div>
+                            <h3 className="font-extrabold text-slate-905 text-lg flex items-center gap-2">
+                                <DollarSign size={20} className="text-emerald-500 bg-emerald-50 p-1 rounded-lg shrink-0" /> Novo Lançamento Rápido
+                            </h3>
+                            <p className="text-xs text-slate-450 font-medium leading-relaxed mt-1">Lançamento direto no financeiro da igreja com total integração ao extrato da secretaria e conciliação bancária.</p>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Valor do Documento</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">R$</span>
+                        <form onSubmit={handleSavePastorFinanceiro} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Transação</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPastorFinForm(prev => ({ ...prev, tipo: 'entrada', categoria: 'Dízimo' }))}
+                                        className={`py-2.5 rounded-xl text-xs font-black tracking-wide border transition-all ${pastorFinForm.tipo === 'entrada' ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-500/10 float-none' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}`}
+                                    >
+                                        Receita (Entrada)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPastorFinForm(prev => ({ ...prev, tipo: 'saida', categoria: 'Prebenda Pastoral' }))}
+                                        className={`py-2.5 rounded-xl text-xs font-black tracking-wide border transition-all ${pastorFinForm.tipo === 'saida' ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10 float-none' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}`}
+                                    >
+                                        Despesa (Saída)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Valor do Documento</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        required
+                                        placeholder="0,00"
+                                        value={pastorFinForm.valor}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, valor: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 pl-11 pr-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-black text-slate-700 transition-all bg-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Descrição / Finalidade</label>
                                 <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
+                                    type="text"
                                     required
-                                    placeholder="0,00"
-                                    value={pastorFinForm.valor}
-                                    onChange={e => setPastorFinForm(prev => ({ ...prev, valor: (e.target.value || "").toUpperCase() }))}
-                                    className="w-full h-11 pl-11 pr-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-black text-slate-700 transition-all bg-white"
+                                    placeholder="Ex: Oferta de domingo, prebenda..."
+                                    value={pastorFinForm.descricao}
+                                    onChange={e => setPastorFinForm(prev => ({ ...prev, descricao: (e.target.value || "").toUpperCase() }))}
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold text-slate-700 transition-all bg-white"
                                 />
                             </div>
-                        </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Descrição / Finalidade</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ex: Oferta de domingo, prebenda..."
-                                value={pastorFinForm.descricao}
-                                onChange={e => setPastorFinForm(prev => ({ ...prev, descricao: (e.target.value || "").toUpperCase() }))}
-                                className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold text-slate-700 transition-all bg-white"
-                            />
-                        </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Categoria</label>
+                                <select
+                                    value={pastorFinForm.categoria}
+                                    onChange={e => setPastorFinForm(prev => ({ ...prev, categoria: (e.target.value || "").toUpperCase() }))}
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                                >
+                                    {pastorFinForm.tipo === 'entrada' ? (
+                                        <>
+                                            <option value="Dízimo">Dízimo</option>
+                                            <option value="Oferta">Oferta Geral</option>
+                                            <option value="Missões">Oferta de Missões</option>
+                                            <option value="Campanha">Campanha / Envelopes</option>
+                                            <option value="Doações">Doações Extraordinárias</option>
+                                            <option value="Outros">Outras Receitas</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="Prebenda Pastoral">Prebenda Pastoral</option>
+                                            <option value="Ajuda de Custo">Ajuda de Custo</option>
+                                            <option value="Aluguel do Templo">Aluguel do Templo</option>
+                                            <option value="Cesta Básica / Ação Social">Ação Social / Assistência</option>
+                                            <option value="Material de Ensino">Material Didático / EBD</option>
+                                            <option value="Eventos e Festividades">Festas / Eventos</option>
+                                            <option value="Luz / Água / Telefone">Utilidades (Luz/Água/Internet)</option>
+                                            <option value="Reforma e Equipamentos">Reforma e Conservação</option>
+                                            <option value="Outros">Outras Despesas</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Categoria</label>
-                            <select
-                                value={pastorFinForm.categoria}
-                                onChange={e => setPastorFinForm(prev => ({ ...prev, categoria: (e.target.value || "").toUpperCase() }))}
-                                className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                            {pastorFinForm.tipo === 'entrada' && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Membro Associado (Opcional)</label>
+                                    <select
+                                        value={pastorFinForm.membro_id}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, membro_id: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                                    >
+                                        <option value="">-- Contribuição Geral (Sem Membro) --</option>
+                                        {(db.membros || []).slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map((m: any) => (
+                                            <option key={m.id} value={m.id}>{m.nome} ({m.cargo || 'Membro'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Meio de Transação</label>
+                                <select
+                                    value={pastorFinForm.forma_pagamento}
+                                    onChange={e => setPastorFinForm(prev => ({ ...prev, forma_pagamento: (e.target.value || "").toUpperCase() }))}
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                                >
+                                    <option value="PIX">PIX</option>
+                                    <option value="Dinheiro">Dinheiro Físico</option>
+                                    <option value="Transferência Bancária">Transferência / TED</option>
+                                    <option value="Cartão de Crédito/Débito">Cartão de Débito/Crédito</option>
+                                    <option value="Boleto">Boleto Bancário</option>
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Competência</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={pastorFinForm.data_competencia}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, data_competencia: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold text-slate-700 transition-all bg-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                                    <select
+                                        value={pastorFinForm.status}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, status: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold bg-white text-slate-700 transition-all"
+                                    >
+                                        <option value="pago">Liquidado (Efetuado)</option>
+                                        <option value="pendente">Pendente / Agendado</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={pastorFinSaving}
+                                className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-wider text-white transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${pastorFinForm.tipo === 'entrada' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/10' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10'}`}
                             >
-                                {pastorFinForm.tipo === 'entrada' ? (
+                                {pastorFinSaving ? (
                                     <>
-                                        <option value="Dízimo">Dízimo</option>
-                                        <option value="Oferta">Oferta Geral</option>
-                                        <option value="Missões">Oferta de Missões</option>
-                                        <option value="Campanha">Campanha / Envelopes</option>
-                                        <option value="Doações">Doações Extraordinárias</option>
-                                        <option value="Outros">Outras Receitas</option>
+                                        <Loader2 size={16} className="animate-spin" /> Registrando...
                                     </>
                                 ) : (
                                     <>
-                                        <option value="Prebenda Pastoral">Prebenda Pastoral</option>
-                                        <option value="Ajuda de Custo">Ajuda de Custo</option>
-                                        <option value="Aluguel do Templo">Aluguel do Templo</option>
-                                        <option value="Cesta Básica / Ação Social">Ação Social / Assistência</option>
-                                        <option value="Material de Ensino">Material Didático / EBD</option>
-                                        <option value="Eventos e Festividades">Festas / Eventos</option>
-                                        <option value="Luz / Água / Telefone">Utilidades (Luz/Água/Internet)</option>
-                                        <option value="Reforma e Equipamentos">Reforma e Conservação</option>
-                                        <option value="Outros">Outras Despesas</option>
+                                        <Plus size={16} /> Gravar Transação
                                     </>
                                 )}
-                            </select>
-                        </div>
-
-                        {pastorFinForm.tipo === 'entrada' && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Membro Associado (Opcional)</label>
-                                <select
-                                    value={pastorFinForm.membro_id}
-                                    onChange={e => setPastorFinForm(prev => ({ ...prev, membro_id: (e.target.value || "").toUpperCase() }))}
-                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
-                                >
-                                    <option value="">-- Contribuição Geral (Sem Membro) --</option>
-                                    {(db.membros || []).slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map((m: any) => (
-                                        <option key={m.id} value={m.id}>{m.nome} ({m.cargo || 'Membro'})</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Meio de Transação</label>
-                            <select
-                                value={pastorFinForm.forma_pagamento}
-                                onChange={e => setPastorFinForm(prev => ({ ...prev, forma_pagamento: (e.target.value || "").toUpperCase() }))}
-                                className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
-                            >
-                                <option value="PIX">PIX</option>
-                                <option value="Dinheiro">Dinheiro Físico</option>
-                                <option value="Transferência Bancária">Transferência / TED</option>
-                                <option value="Cartão de Crédito/Débito">Cartão de Débito/Crédito</option>
-                                <option value="Boleto">Boleto Bancário</option>
-                            </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Competência</label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={pastorFinForm.data_competencia}
-                                    onChange={e => setPastorFinForm(prev => ({ ...prev, data_competencia: (e.target.value || "").toUpperCase() }))}
-                                    className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold text-slate-700 transition-all bg-white"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
-                                <select
-                                    value={pastorFinForm.status}
-                                    onChange={e => setPastorFinForm(prev => ({ ...prev, status: (e.target.value || "").toUpperCase() }))}
-                                    className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold bg-white text-slate-700 transition-all"
-                                >
-                                    <option value="pago">Liquidado (Efetuado)</option>
-                                    <option value="pendente">Pendente / Agendado</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={pastorFinSaving}
-                            className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-wider text-white transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${pastorFinForm.tipo === 'entrada' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/10' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10'}`}
-                        >
-                            {pastorFinSaving ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" /> Registrando...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus size={16} /> Gravar Transação
-                                </>
-                            )}
-                        </button>
-                    </form>
-                </div>
+                            </button>
+                        </form>
+                    </div>
+                ) : (
+                    <div className="max-w-2xl mx-auto bg-white p-12 text-center rounded-[2rem] border border-slate-200 shadow-sm">
+                        <Lock className="mx-auto text-amber-500 mb-4" size={48}/>
+                        <h4 className="font-extrabold text-slate-800 text-lg">Acesso Restrito ao Pastor Presidente</h4>
+                        <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">Esta área é restrita para dízimos, ofertas e conciliação bancária do Pastor Presidente.</p>
+                    </div>
+                )
             )}
 
             {activeTab === 'mensagens' && (
@@ -10760,9 +10771,11 @@ const ModulePortalPastor = () => {
 
                             {/* Sub-Tabs Selector inside Restricted Area */}
                             <div className="flex overflow-x-auto custom-scrollbar flex-nowrap md:flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-full md:max-w-fit mb-6">
-                                <button onClick={() => setCofreSubTab('financeiro')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'financeiro' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
-                                    <DollarSign size={15}/> Financeiro
-                                </button>
+                                {isPastorPresidente && (
+                                    <button onClick={() => setCofreSubTab('financeiro')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'financeiro' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                        <DollarSign size={15}/> Financeiro
+                                    </button>
+                                )}
                                 <button onClick={() => setCofreSubTab('atas')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'atas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
                                     <FileText size={15}/> Atas de Gabinete & Reunião ({myAtas.length})
                                  </button>
@@ -10771,7 +10784,7 @@ const ModulePortalPastor = () => {
                                  </button>
                              </div>
 
-                            {cofreSubTab === 'financeiro' && (() => {
+                            {cofreSubTab === 'financeiro' && (isPastorPresidente ? (() => {
                                 const listFiltered = (db.financeiro || []).filter(item => (item.data_pagamento || item.data_vencimento || item.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter));
                                 
                                 // Group logic
@@ -11042,7 +11055,13 @@ const ModulePortalPastor = () => {
                                         )}
                                     </div>
                             );
-                        })()}
+                        })() : (
+                            <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200 shadow-sm animate-entrance">
+                                <Lock className="mx-auto text-amber-500 mb-4" size={48}/>
+                                <h4 className="font-extrabold text-slate-800 text-lg">Acesso Financeiro Bloqueado</h4>
+                                <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">Apenas o Pastor Presidente possui permissão para visualizar a área financeira do cofre.</p>
+                            </div>
+                        ))}
 
                             {cofreSubTab === 'esbocos' && (
                                 <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
