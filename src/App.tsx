@@ -5056,6 +5056,51 @@ const ModuleIgreja = () => {
     const [data, setData] = useState(db.igreja || {});
     const [tab, setTab] = useState(1);
     const [verificandoPix, setVerificandoPix] = useState(false);
+    const [newKeywords, setNewKeywords] = useState("");
+    const [newResponse, setNewResponse] = useState("");
+
+    const handleAddFaq = () => {
+        if (!newKeywords.trim() || !newResponse.trim()) {
+            addToast("Preencha as palavras-chave e a resposta automatizada da regra.", "warning");
+            return;
+        }
+        const newRule = {
+            id: String(Date.now()),
+            keywords: newKeywords,
+            response: newResponse
+        };
+        setData(prev => ({
+            ...prev,
+            bot_faq: [...(prev.bot_faq || []), newRule]
+        }));
+        setNewKeywords("");
+        setNewResponse("");
+        addToast("Nova regra de FAQ adicionada! Salve as alterações para persistir em Firestore.", "info");
+    };
+
+    const handleRemoveFaq = (id: string) => {
+        setData(prev => ({
+            ...prev,
+            bot_faq: (prev.bot_faq || []).filter((item: any) => item.id !== id)
+        }));
+        addToast("Regra removida. Lembre-se de salvar as alterações para persistir.", "info");
+    };
+
+    const handleBotAvatarUpload = (e: any) => {
+        const file = e.target.files[0];
+        if (file) {
+             if (file.size > 500 * 1024) { 
+                 alert("A imagem do avatar deve ter no máximo 500KB.");
+                 return; 
+             }
+             const reader = new FileReader();
+             reader.onloadend = () => {
+                 setData(prev => ({...prev, bot_avatar: reader.result}));
+                 addToast("Avatar customizado carregado com sucesso!", "success");
+             };
+             reader.readAsDataURL(file);
+        }
+    };
 
     useEffect(() => {
         if (db.igreja) {
@@ -5075,6 +5120,11 @@ const ModuleIgreja = () => {
                 secretario2_cargo: '2º SECRETÁRIO / DIÁCONO',
                 tesoureiro1_cargo: '1º TESOUREIRO / PRESBÍTERO',
                 tesoureiro2_cargo: '2º TESOUREIRO / DIÁCONO',
+                bot_name: db.igreja?.bot_name || 'Sofia (Assistente Virtual)',
+                bot_avatar: db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200',
+                bot_welcome: db.igreja?.bot_welcome || 'Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?',
+                bot_instructions: db.igreja?.bot_instructions || '',
+                bot_faq: db.igreja?.bot_faq || [],
                 ...db.igreja
             };
             setData(prev => ({ ...defaults, ...prev, ...db.igreja }));
@@ -5084,7 +5134,8 @@ const ModuleIgreja = () => {
     const menuItems = [
         {id: 1, label: 'Sede e Diretoria', icon: Building2},
         {id: 2, label: 'Congregações e Filiais', icon: MapPin},
-        {id: 3, label: 'Assinatura (Licença)', icon: ShieldCheck}
+        {id: 3, label: 'Assinatura (Licença)', icon: ShieldCheck},
+        {id: 4, label: 'Assistente Virtual', icon: MessageSquare}
     ];
 
     const TabButton: any = ({ item }) => (
@@ -5562,6 +5613,162 @@ const ModuleIgreja = () => {
                                     {verificandoPix ? 'A verificar pagamento no banco...' : 'Já Paguei (Verificar Automaticamente)'}
                                 </Button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {tab === 4 && (
+                    <div className="glass-modern p-8 rounded-[2.5rem] overflow-y-auto custom-scrollbar h-full space-y-8 animate-entrance">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                            {/* Card 1: Aparência e Identidade */}
+                            <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                                <span className="text-xs font-black tracking-widest text-indigo-700 uppercase block mb-1">Aparência da Assistente Virtual</span>
+                                <p className="text-xs text-slate-500 font-medium pb-4 border-b">Customize a imagem facial, o nome e o modelo de atendimento do chatbot de suporte técnico para os operadores.</p>
+                                
+                                <FormInput 
+                                    label="Nome da Assistente Virtual" 
+                                    value={data.bot_name || ''} 
+                                    onChange={v=>setData({...data, bot_name: v})} 
+                                    placeholder="Ex: Sara (Assistente Virtual)" 
+                                />
+
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar da Assistente</label>
+                                    <div className="grid grid-cols-4 gap-4">
+                                        {[
+                                            { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
+                                            { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
+                                            { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
+                                        ].map((av) => (
+                                            <button 
+                                                type="button"
+                                                key={av.name} 
+                                                onClick={() => setData({...data, bot_avatar: av.url})}
+                                                className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 bg-white relative overflow-hidden group ${data.bot_avatar === av.url ? 'border-indigo-600 scale-105 shadow-md shadow-indigo-600/10' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-indigo-300'}`}
+                                            >
+                                                <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
+                                                <span className="text-[10px] font-bold text-slate-700">{av.name}</span>
+                                                {data.bot_avatar === av.url && (
+                                                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
+                                                )}
+                                            </button>
+                                        ))}
+
+                                        {/* Custom Upload Option */}
+                                        <label className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 bg-white cursor-pointer relative overflow-hidden group ${(![
+                                            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
+                                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+                                            "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
+                                        ].includes(data.bot_avatar) && data.bot_avatar) ? 'border-indigo-600' : 'border-dashed border-slate-300 hover:border-indigo-300'}`}>
+                                            {(![
+                                                "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
+                                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+                                                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
+                                            ].includes(data.bot_avatar) && data.bot_avatar) ? (
+                                                <img src={data.bot_avatar} alt="Custom" className="w-12 h-12 rounded-xl object-cover" />
+                                            ) : (
+                                                <div className="w-12 h-12 bg-slate-50 border rounded-xl flex items-center justify-center"><Upload size={20} className="text-slate-400"/></div>
+                                            )}
+                                            <span className="text-[10px] font-bold text-slate-700">Outro</span>
+                                            <input type="file" className="hidden" accept="image/*" onChange={handleBotAvatarUpload}/>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mensagem Inicial de Boas-vindas</label>
+                                    <textarea 
+                                        value={data.bot_welcome || ''} 
+                                        onChange={e=>setData({...data, bot_welcome: e.target.value})}
+                                        className="w-full text-slate-700 bg-white border border-slate-200 rounded-2xl p-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-20"
+                                        placeholder="Ex: Olá! Sou o assistente virtual..."
+                                    />
+                                </div>
+
+                                <div className="space-y-4 pt-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Instruções Customizadas para IA (Prompt de Sistema)</label>
+                                    <textarea 
+                                        value={data.bot_instructions || ''} 
+                                        onChange={e=>setData({...data, bot_instructions: e.target.value})}
+                                        className="w-full text-slate-700 bg-white border border-slate-200 rounded-2xl p-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-28"
+                                        placeholder="Diga à inteligência como se comportar ou regras internas adicionais da sua igreja (ex: horários dos cultos, regras de membresia)."
+                                    />
+                                    <p className="text-[10px] text-slate-400 font-medium">Estes dados alimentarão o modelo Gemini AI quando o usuário solicitar suporte técnico.</p>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Base de Conhecimento e FAQ */}
+                            <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 flex flex-col h-full">
+                                <div>
+                                    <span className="text-xs font-black tracking-widest text-indigo-700 uppercase block mb-1">Base de Conhecimento (FAQ Automatizado)</span>
+                                    <p className="text-xs text-slate-500 font-medium pb-4 border-b">Configure respostas instantâneas automáticas mapeando palavras-chave específicas encontradas na dúvida do usuário.</p>
+                                </div>
+
+                                <div className="space-y-4 bg-white p-5 rounded-2xl border shadow-sm">
+                                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Adicionar Regra de FAQ</span>
+                                    <FormInput 
+                                        label="Palavras-chave (Separadas por vírgulas)" 
+                                        value={newKeywords} 
+                                        onChange={setNewKeywords} 
+                                        placeholder="ex: pix, pagar, conta, dízimos" 
+                                        className="!mb-3 text-xs"
+                                    />
+                                    <div className="space-y-1">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Resposta Automatizada Instantânea</label>
+                                        <textarea
+                                            value={newResponse}
+                                            onChange={e=>setNewResponse(e.target.value)}
+                                            rows={3}
+                                            className="w-full text-slate-700 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                                            placeholder="Digite a resposta que a IA retornará imediatamente..."
+                                        />
+                                    </div>
+                                    <Button onClick={handleAddFaq} variant="primary" className="w-full py-2.5 text-xs shadow-indigo-500/10">
+                                        <Plus size={14}/> Adicionar Regra
+                                    </Button>
+                                </div>
+
+                                <div className="flex-1 space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1 pt-2">
+                                    <span className="text-xs font-black text-slate-400 tracking-wider block uppercase">Regras Cadastradas</span>
+                                    
+                                    {(!data.bot_faq || data.bot_faq.length === 0) ? (
+                                        <div className="text-center py-6 text-slate-400 bg-white border border-dashed rounded-2xl flex flex-col items-center">
+                                            <Newspaper size={32} className="mb-2 opacity-30"/>
+                                            <span className="text-xs font-medium">Nenhuma regra customizada. O chatbot usará as regras padrão do sistema e a Inteligência Artificial.</span>
+                                        </div>
+                                    ) : (
+                                        data.bot_faq.map((rule: any) => (
+                                            <div key={rule.id} className="bg-white border rounded-2xl p-4 shadow-sm flex justify-between items-start gap-4 animate-entrance">
+                                                <div className="space-y-1 flex-1">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(rule.keywords || '').split(',').map((kw: string, idx: number) => (
+                                                            <span key={idx} className="bg-indigo-50 text-indigo-700 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                                {kw.trim()}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 font-medium leading-relaxed pt-1 whitespace-pre-wrap">{rule.response}</p>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleRemoveFaq(rule.id)}
+                                                    className="p-1.5 text-rose-500 hover:text-white hover:bg-rose-500 hover:scale-105 rounded-lg border border-rose-200 hover:border-transparent transition-all shrink-0"
+                                                    title="Excluir Regra"
+                                                >
+                                                    <Trash size={14}/>
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Save Trigger Card */}
+                        <div className="mt-8 flex justify-end pt-6 border-t pb-10">
+                            <Button onClick={handleSave} variant="primary" className="shadow-lg px-8 py-4 text-lg">
+                                <Save size={24}/> Salvar Alterações
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -6863,10 +7070,59 @@ Retorne em formato Markdown estimulante, profissional e focado em excelência.`;
     );
 };
 
+const findAutomaticAnswer = (messageText: string, igrejaData: any) => {
+    const textBase = messageText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Combining default FAQs with custom FAQs
+    const defaultFaqs = [
+        {
+            keywords: ['dizimo', 'oferta', 'pix', 'conta', 'banco', 'financeiro', 'pagamento_dizimo'],
+            response: `Para registrar dízimos e ofertas, você pode usar a nossa chave PIX oficial: ${igrejaData?.chave_pix || 'Chave não cadastrada'}. \nNossos dados bancários são: Banco: ${igrejaData?.banco || 'Não informado'}, Agência: ${igrejaData?.agencia || 'Não informado'}, Conta: ${igrejaData?.conta || 'Não informado'}. No módulo "Financeiro" você faz toda a gestão de entradas, despesas e relatórios.`
+        },
+        {
+            keywords: ['membro', 'cadastro', 'cadastrar', 'ficha', 'carteirinha', 'credencial'],
+            response: "Você pode gerenciar os membros da igreja em Secretaria -> Membros. Lá é possível cadastrar novos fiéis, carregar fotos, registrar históricos de batismo e gerar credenciais/carteirinhas de membro profissionais em PDF prontas para impressão."
+        },
+        {
+            keywords: ['celula', 'lider', 'relatorio', 'presenca', 'reuniao de celula'],
+            response: "No módulo 'Células', você pode acompanhar todos os pequenos grupos, registrar relatórios de reuniões presenciais (número de membros, visitantes e decisões), e definir líderes coordenadores."
+        },
+        {
+            keywords: ['backup', 'exportar', 'seguranca', 'salvar', 'dados'],
+            response: "A segurança dos seus dados é prioritária. Você pode efetuar um backup completo do banco de dados em formato JSON a qualquer momento acessando o Painel de Controle e clicando na opção de Exportar Backup local."
+        },
+        {
+            keywords: ['suporte', 'atendimento', 'falar com humano', 'ajuda', 'desenvolvedor', 'erro', 'problema'],
+            response: "Entendido! Se a sua dúvida não pôde ser resolvida de forma automatizada, este chat foi encaminhado ao suporte do desenvolvedor humano. Fique à vontade para detalhar o problema, responderemos o mais rápido possível!"
+        }
+    ];
+
+    const customFaqs = igrejaData?.bot_faq || [];
+    const allFaqs = [...customFaqs, ...defaultFaqs];
+
+    for (const faq of allFaqs) {
+        if (faq.keywords) {
+            let kwList: string[] = [];
+            if (Array.isArray(faq.keywords)) {
+                kwList = faq.keywords;
+            } else if (typeof faq.keywords === 'string') {
+                kwList = faq.keywords.split(',').map((k: string) => k.trim());
+            }
+            
+            const matched = kwList.some((kw: string) => {
+                const cleanKw = kw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return cleanKw.length > 2 && textBase.includes(cleanKw);
+            });
+            if (matched) return faq.response;
+        }
+    }
+    return null;
+};
+
 const FloatingChatWidget = () => {
     const context = useContext(ChurchContext);
     if (!context || !context.user) return null;
-    const { db, user, dbFirestore, appId, callGeminiAI, setDbState } = context;
+    const { db, user, dbFirestore, appId, callGeminiAI, addToast } = context;
     const [isOpen, setIsOpen] = useState(false);
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
@@ -6879,6 +7135,10 @@ const FloatingChatWidget = () => {
     const messages = chat ? chat.messages : [];
     const status = chat?.status || 'bot';
 
+    const botName = db.igreja?.bot_name || 'Sofia (Assistente Virtual)';
+    const botAvatar = db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200';
+    const botWelcome = db.igreja?.bot_welcome || 'Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje hoje?';
+
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -6888,11 +7148,12 @@ const FloatingChatWidget = () => {
     const handleSend = async () => {
         if (!text.trim()) return;
         setLoading(true);
+        const userText = text;
         const newMessage = {
             id: String(Date.now()),
             sender_type: 'user',
             sender_name: user.nome,
-            text: text,
+            text: userText,
             timestamp: new Date().toISOString()
         };
         
@@ -6911,26 +7172,46 @@ const FloatingChatWidget = () => {
         };
 
         try {
+            // Save user message first to Firebase
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', chatId), chatData);
             
             // Generate bot response if status is bot
             if (status === 'bot') {
-                const aiPrompt = `Você é um assistente virtual de suporte do sistema GIPP (Gestão de Igreja). 
-Responda a seguinte dúvida ou solicitação do usuário de forma clara, educada e profissional:
-Dúvida: "${text}"
-Histórico do Atendimento (últimas 3 menagens): ${messages.slice(-3).map((m: any) => `${m.sender_name}: ${m.text}`).join('\n')}
-Gere uma resposta curta (máximo 2 parágrafos) ajudando o usuário no que for preciso ou informando que um analista verificará.`;
-                const aiResponse = await callGeminiAI(aiPrompt);
+                // Step 1: Check keywords in Local FAQ first!
+                const matchedResponse = findAutomaticAnswer(userText, db.igreja);
                 
+                let botReply = "";
+                if (matchedResponse) {
+                    // Simulate thinking delay for better UX
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    botReply = matchedResponse;
+                } else {
+                    // Step 2: Fallback to calling Gemini AI with enriched church parameters
+                    const churchInstructions = db.igreja?.bot_instructions || '';
+                    const aiPrompt = `Você é o assistente virtual de suporte técnico chamado '${botName}' do sistema GIPP (Gestão Integrada de Assembleias de Deus e Igrejas Pentecostais), prestando assistência para a membresia da igreja '${db.igreja?.nome || 'nossa igreja Partner'}'.
+Informações Adicionais para Contexto:
+- Nome da Igreja: ${db.igreja?.nome || 'Assembleia de Deus'}
+- Pastor Presidente: ${db.igreja?.pastor || 'Não informado'}
+- Chave PIX Cadastrada: ${db.igreja?.chave_pix || 'Não configurada'}
+- Denominação / Convenção: ${db.igreja?.canon_denom || 'Assembleia de Deus'} / ${db.igreja?.canon_convencao_estadual || 'Não informada'}
+- Diretriz de Comportamento / FAQ Extra: ${churchInstructions}
+
+Mensagem/Dúvida do Usuário: "${userText}"
+Histórico recente do chat (últimas mensagens): ${messages.slice(-3).map((m: any) => `${m.sender_name}: ${m.text}`).join('\n')}
+
+Gere uma resposta de suporte operacional muito educada, curta (máximo de 2 parágrafos objetivos), focada em ajudar o operador. Se a solicitação relatar algum problema de falha grave, oriente de forma empática e informe que a pendência também foi sinalizada aos desenvolvedores para intervenção humana em breve.`;
+                    
+                    botReply = await callGeminiAI(aiPrompt);
+                }
+
                 const botMessage = {
                     id: String(Date.now() + 1),
                     sender_type: 'bot',
-                    sender_name: 'IA Suporte',
-                    text: aiResponse,
+                    sender_name: botName,
+                    text: botReply,
                     timestamp: new Date().toISOString()
                 };
                 
-                // Fetch the latest state directly before updating again
                 chatData.messages.push(botMessage);
                 chatData.updated_at = new Date().toISOString();
                 await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', chatId), chatData);
@@ -6942,71 +7223,98 @@ Gere uma resposta curta (máximo 2 parágrafos) ajudando o usuário no que for p
         }
     };
 
+    const lastMsgAlt = messages[messages.length - 1];
+    const hasUnread = lastMsgAlt && lastMsgAlt.sender_type !== 'user';
+
     return (
         <div className="fixed bottom-6 right-6 z-[9999]">
             {isOpen && (
-                <div className="bg-white border shadow-2xl rounded-3xl w-[350px] h-[500px] flex flex-col mb-4 overflow-hidden animate-entrance right-0 origin-bottom-right">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 flex items-center justify-between">
+                <div className="bg-white border text-slate-800 shadow-2xl rounded-3xl w-[360px] h-[520px] flex flex-col mb-4 overflow-hidden animate-entrance right-0 origin-bottom-right">
+                    {/* Header estilo telecomunicações */}
+                    <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 text-white p-4 flex items-center justify-between shadow-md">
                         <div className="flex items-center gap-3">
-                            <img src={db.igreja?.bot_avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=Support"} className="w-10 h-10 rounded-full bg-white/20 p-1 object-cover" alt="Avatar"/>
+                            <div className="relative">
+                                <img src={botAvatar} className="w-10 h-10 rounded-full border-2 border-white/20 bg-white/20 object-cover" alt="Avatar Assistente"/>
+                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-indigo-600 rounded-full"></span>
+                            </div>
                             <div>
-                                <h3 className="font-bold text-sm">Fale Conosco</h3>
-                                <div className="text-[10px] text-blue-100 flex items-center gap-1 font-medium bg-white/10 px-2 py-0.5 rounded-full mt-0.5">
-                                    <span className={`w-2 h-2 rounded-full ${status === 'bot' ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                                    {status === 'bot' ? 'Assistente Virtual (Online)' : 'Atendimento Humano'}
+                                <h3 className="font-bold text-sm tracking-wide">{botName}</h3>
+                                <div className="text-[10px] text-indigo-100 flex items-center gap-1 font-medium bg-white/10 px-2 py-0.5 rounded-full mt-0.5 w-fit">
+                                    {status === 'bot' ? 'Autobot Inteligente Ativo' : 'Suporte Humano Conectado'}
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full"><X size={18}/></button>
+                        <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full">
+                            <X size={18}/>
+                        </button>
                     </div>
                     
+                    {/* Chat Messages flow */}
                     <div className="flex-1 overflow-y-auto p-4 bg-[#f8fafc] space-y-4 text-sm custom-scrollbar">
+                        {/* Welcome message bubble */}
                         <div className="flex flex-col items-start gap-1">
-                            <div className="bg-white border rounded-2xl rounded-tl-none p-3 shadow-sm text-slate-700 font-medium">
-                                Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?
+                            <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{botName}</span>
+                            </div>
+                            <div className="bg-white border rounded-2xl rounded-tl-none p-3 shadow-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed">
+                                {botWelcome}
                             </div>
                         </div>
+
                         {messages.map((m: any, i: number) => (
                             <div key={m.id || i} className={`flex flex-col gap-1 ${m.sender_type === 'user' ? 'items-end' : 'items-start'}`}>
                                 <div className="text-[9px] font-bold text-slate-400 px-1">{m.sender_type === 'user' ? 'Você' : m.sender_name}</div>
-                                <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] shadow-sm ${m.sender_type === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border text-slate-700 rounded-tl-none font-medium'}`}>
-                                    <div className="whitespace-pre-wrap">{m.text}</div>
+                                <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] shadow-sm ${m.sender_type === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border text-slate-700 rounded-tl-none font-medium'}`}>
+                                    <div className="whitespace-pre-wrap leading-relaxed text-xs md:text-sm">{m.text}</div>
                                 </div>
                                 <span className="text-[9px] text-slate-400 px-1 font-medium">{new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             </div>
                         ))}
+
                         {loading && (
-                            <div className="flex gap-1 text-slate-400 px-2 my-2">
-                                <span className="animate-bounce">●</span><span className="animate-bounce" style={{animationDelay:'0.2s'}}>●</span><span className="animate-bounce" style={{animationDelay:'0.4s'}}>●</span>
+                            <div className="flex gap-1.5 text-indigo-600 px-3 py-1 bg-white rounded-full border shadow-sm w-fit items-center animate-pulse">
+                                <span className="text-[10px] font-black uppercase tracking-wider">Digitando</span>
+                                <span className="animate-bounce">●</span>
+                                <span className="animate-bounce" style={{animationDelay:'0.2s'}}>●</span>
+                                <span className="animate-bounce" style={{animationDelay:'0.4s'}}>●</span>
                             </div>
                         )}
                         <div ref={bottomRef}></div>
                     </div>
                     
+                    {/* Message input */}
                     <div className="p-3 bg-white border-t flex gap-2 items-center">
                         <input 
                             type="text" 
-                            className="flex-1 border-0 bg-slate-100 rounded-xl py-3 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
-                            placeholder="Escreva sua dúvida..."
+                            className="flex-1 border-0 bg-slate-100 rounded-xl py-3 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-shadow text-slate-800 placeholder-slate-400"
+                            placeholder="Escreva sua dúvida ou mensagem de suporte..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSend()}
                             disabled={loading}
                         />
-                        <button onClick={handleSend} disabled={loading || !text.trim()} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm">
+                        <button 
+                            type="button"
+                            onClick={handleSend} 
+                            disabled={loading || !text.trim()} 
+                            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-md flex items-center justify-center shrink-0"
+                        >
                             <Send size={18}/>
                         </button>
                     </div>
                 </div>
             )}
             
+            {/* Pulsing launcher button */}
             <button 
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`${isOpen ? 'bg-slate-800' : 'bg-blue-600 hover:bg-blue-700'} text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center justify-center relative ml-auto`}
+                className={`${isOpen ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105 active:scale-95'} text-white p-4.5 rounded-full shadow-2xl transition-all flex items-center justify-center relative ml-auto`}
+                title="Fale Conosco"
             >
                 {isOpen ? <X size={24}/> : <MessageCircle size={28}/>}
-                {!isOpen && messages.length > 0 && messages[messages.length - 1].sender_type !== 'user' && (
-                    <span className="absolute top-0 right-0 w-4 h-4 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
+                {!isOpen && hasUnread && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white animate-pulse text-[10px] font-black text-white flex items-center justify-center shadow-lg">!</span>
                 )}
             </button>
         </div>
@@ -7024,6 +7332,12 @@ const ModuleDevSuporte = () => {
     // Sort chats by recent
     const sortedChats = [...chats].sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     const currentChat = chats.find((c: any) => c.id === selectedChatId);
+
+    // Compute simple support performance metrics
+    const totalCalls = chats.length;
+    const totalBotCalls = chats.filter((c: any) => c.status === 'bot').length;
+    const totalHumanCalls = chats.filter((c: any) => c.status === 'human').length;
+    const totalMsgs = chats.reduce((acc: number, cur: any) => acc + (cur.messages || []).length, 0);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -7044,7 +7358,7 @@ const ModuleDevSuporte = () => {
         
         const updatedChat = {
             ...currentChat,
-            status: 'human', // assumes human is helping now
+            status: 'human', // Developer taking over changes status to human
             updated_at: new Date().toISOString(),
             messages: [...currentChat.messages, msg]
         };
@@ -7052,7 +7366,7 @@ const ModuleDevSuporte = () => {
         setReplyText("");
         try {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', currentChat.id), updatedChat);
-            addToast("Mensagem enviada com sucesso.", "success");
+            addToast("Mensagem de suporte enviada e modo manual ativado.", "success");
         } catch (e) {
             console.error(e);
             addToast("Erro ao enviar mensagem.", "error");
@@ -7067,90 +7381,118 @@ const ModuleDevSuporte = () => {
         };
         try {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', chat.id), updatedChat);
-            addToast(`O Assistente AI foi ${updatedChat.status === 'bot' ? 'ativado' : 'desativado'} para este chat.`, "success");
+            addToast(`Resposta Automática do Robô AI foi ${updatedChat.status === 'bot' ? 'habilitada' : 'desabilitada'} para este canal.`, "success");
         } catch (e) {
             console.error(e);
         }
     };
     
     const preProgrammed = [
-        "Olá, vou verificar essa situação agora mesmo.",
-        "Poderia me enviar um print da tela com o erro, por favor?",
-        "O problema foi resolvido! Pode testar novamente.",
-        "Obrigado pelo contato! Estamos à disposição.",
-        "Sua demanda foi registrada e a equipe técnica já está analisando."
+        "Olá, vou verificar essa situação agora mesmo junto com o sistema.",
+        "Poderia me enviar mais detalhes do erro que você obteve, por favor?",
+        "O problema de banco de dados foi resolvido pelo suporte! Pode efetuar login novamente.",
+        "Obrigado pelo seu retorno! Estamos sempre prontos para apoiar sua igreja.",
+        "Sua demanda de backup/financeiro foi registrada e nossa equipe técnica está analisando."
     ];
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance max-w-7xl mx-auto w-full">
+            {/* Header */}
             <div className="flex items-center gap-4 border-b pb-4">
                 <div className="p-3 bg-fuchsia-50 rounded-2xl text-fuchsia-600 shadow-sm"><Headset size={32}/></div>
                 <div>
-                    <h2 className="text-2xl font-black text-slate-800">Portal de Suporte do Desenvolvedor</h2>
-                    <p className="text-slate-500 text-sm font-medium">Acompanhe e responda às dúvidas dos administradores das igrejas em tempo real.</p>
+                    <h2 className="text-2xl font-black text-slate-800">Portal de Suporte Técnico do Desenvolvedor</h2>
+                    <p className="text-slate-500 text-sm font-medium">Controle canais abertos, veja mensagens automáticas e tome controle manual das requisições de suporte.</p>
+                </div>
+            </div>
+
+            {/* Dashboard Mini metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-1">
+                <div className="bg-gradient-to-br from-fuchsia-100 to-fuchsia-50 p-4 rounded-2xl border border-fuchsia-200 shadow-sm flex flex-col">
+                    <span className="text-[10px] font-black text-fuchsia-700 uppercase tracking-widest">Atendimentos Totais</span>
+                    <span className="text-2xl font-black text-fuchsia-900 mt-1">{totalCalls}</span>
+                </div>
+                <div className="bg-gradient-to-br from-indigo-100 to-indigo-50 p-4 rounded-2xl border border-indigo-200 shadow-sm flex flex-col">
+                    <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Sob Robô AI</span>
+                    <span className="text-2xl font-black text-indigo-900 mt-1">{totalBotCalls}</span>
+                </div>
+                <div className="bg-gradient-to-br from-amber-100 to-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm flex flex-col">
+                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Sob Controle Manual</span>
+                    <span className="text-2xl font-black text-amber-900 mt-1">{totalHumanCalls}</span>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-100 to-emerald-50 p-4 rounded-2xl border border-emerald-200 shadow-sm flex flex-col">
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Mensagens Excedidas</span>
+                    <span className="text-2xl font-black text-emerald-900 mt-1">{totalMsgs}</span>
                 </div>
             </div>
             
+            {/* Main view area */}
             <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden max-h-[80vh]">
+                {/* Lateral left sidebar list */}
                 <div className="w-full md:w-1/3 min-w-[320px] bg-white rounded-3xl border shadow-sm flex flex-col overflow-hidden h-full">
                     <div className="p-5 bg-slate-50 border-b flex justify-between items-center">
-                        <span className="font-black text-slate-700 tracking-wide">ATENDIMENTOS ATIVOS</span>
+                        <span className="font-black text-slate-700 tracking-wide text-xs">LISTAGEM DE TICKETS</span>
                         <span className="bg-fuchsia-100 text-fuchsia-700 px-3 py-1 rounded-full text-xs font-bold">{chats.length}</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3 bg-slate-50/20">
                         {sortedChats.length === 0 && (
                             <div className="p-8 text-center text-slate-400 flex flex-col items-center">
                                 <MessageCircle size={40} className="mb-3 opacity-30"/>
-                                <span className="font-medium">Nenhum chamado de suporte.</span>
+                                <span className="font-semibold text-sm">Nenhum chamado de suporte aberto.</span>
                             </div>
                         )}
                         {sortedChats.map((c: any) => (
                             <button 
                                 key={c.id} 
                                 onClick={() => setSelectedChatId(c.id)}
-                                className={`w-full text-left p-4 rounded-2xl mb-3 transition-all ${selectedChatId === c.id ? 'bg-fuchsia-50/50 border-fuchsia-200 shadow-sm ring-1 ring-fuchsia-200' : 'bg-white hover:bg-slate-50 border-slate-100 shadow-sm'} border`}
+                                className={`w-full text-left p-4 rounded-2xl transition-all ${selectedChatId === c.id ? 'bg-fuchsia-50/40 border-fuchsia-200 shadow-sm ring-2 ring-fuchsia-200/50' : 'bg-white hover:bg-slate-50 border-slate-100 shadow-sm'} border flex flex-col gap-2`}
                             >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="font-bold text-sm text-slate-800 truncate pr-2">{c.user_name}</span>
-                                    <span className={`text-[9px] px-2.5 py-1 rounded-lg font-black tracking-widest shrink-0 ${c.status === 'bot' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                        {c.status === 'bot' ? 'IA' : 'HUMANO'}
+                                <div className="flex justify-between items-center w-full">
+                                    <span className="font-bold text-sm text-slate-800 truncate flex-1">{c.user_name}</span>
+                                    <span className={`text-[9px] px-2.5 py-1 rounded-lg font-black tracking-widest shrink-0 uppercase ${c.status === 'bot' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {c.status === 'bot' ? 'Robô AI' : 'Manual'}
                                     </span>
                                 </div>
-                                <div className="text-xs text-slate-500 truncate font-medium bg-slate-50 p-2 rounded-lg">
-                                    {c.messages[c.messages.length - 1]?.text || 'Nenhuma mensagem'}
+                                <div className="text-xs text-slate-500 truncate font-medium bg-slate-50 p-2 rounded-lg leading-relaxed">
+                                    {c.messages[c.messages.length - 1]?.text || 'Sem mensagens.'}
                                 </div>
-                                <div className="text-[10px] text-slate-400 mt-2 font-medium text-right">
-                                    Atualizado: {new Date(c.updated_at).toLocaleString()}
+                                <div className="text-[10px] text-slate-400 font-medium text-right mt-1">
+                                    Última interação: {new Date(c.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                 </div>
                             </button>
                         ))}
                     </div>
                 </div>
                 
+                {/* Right detailed conversation window */}
                 <div className="flex-1 bg-white rounded-3xl border shadow-sm flex flex-col overflow-hidden h-full">
                     {currentChat ? (
                         <>
-                            <div className="p-5 bg-slate-50 border-b flex justify-between items-center z-10 shadow-sm">
+                            {/* Window header */}
+                            <div className="p-5 bg-slate-50 border-b flex justify-between items-center z-10 shadow-sm flex-wrap gap-2">
                                 <div>
-                                    <h3 className="font-black text-slate-800 text-lg">Chamado: {currentChat.user_name}</h3>
-                                    <p className="text-xs text-slate-500 font-medium">Iniciado em: {new Date(currentChat.messages[0]?.timestamp).toLocaleString()}</p>
+                                    <h3 className="font-black text-slate-800 text-base md:text-lg">Canal: {currentChat.user_name}</h3>
+                                    <p className="text-[10px] text-slate-500 font-bold">Identificação ID: {currentChat.id}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <label className={`text-xs font-bold flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl transition-colors border shadow-sm select-none ${currentChat.status === 'bot' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600'}`}>
-                                        <input type="checkbox" checked={currentChat.status === 'bot'} onChange={() => handleToggleBot(currentChat)} className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"/>
+                                    <label className={`text-[10px] font-black tracking-wider flex items-center gap-2 cursor-pointer px-4.5 py-2.5 rounded-xl transition-colors border shadow-sm select-none ${currentChat.status === 'bot' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                        <input type="checkbox" checked={currentChat.status === 'bot'} onChange={() => handleToggleBot(currentChat)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"/>
                                         DEIXAR IA RESPONDER AUTOMATICAMENTE
                                     </label>
                                 </div>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-6 custom-scrollbar relative">
+                            {/* Conversations Body */}
+                            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 space-y-6 custom-scrollbar relative">
                                 <div className="text-center">
-                                    <span className="bg-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Início do Atendimento</span>
+                                    <span className="bg-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Suporte Iniciado</span>
                                 </div>
                                 {currentChat.messages.map((m: any, i: number) => (
                                     <div key={m.id || i} className={`flex flex-col gap-1 ${m.sender_type !== 'user' ? 'items-end' : 'items-start'}`}>
-                                        <div className="text-[10px] font-black tracking-wider text-slate-400 uppercase px-1">{m.sender_type === 'user' ? 'Usuário / ' + m.sender_name : m.sender_name}</div>
-                                        <div className={`p-4 py-3 rounded-2xl max-w-[75%] shadow-sm ${m.sender_type === 'bot' ? 'bg-emerald-600 rounded-tr-none text-white' : m.sender_type === 'dev' ? 'bg-fuchsia-600 rounded-tr-none text-white' : 'bg-white border rounded-tl-none text-slate-700'}`}>
+                                        <div className="text-[10px] font-black tracking-wider text-slate-400 uppercase px-1">
+                                            {m.sender_type === 'user' ? 'Administrador / ' + m.sender_name : m.sender_name}
+                                        </div>
+                                        <div className={`p-4 py-3 rounded-2xl max-w-[75%] shadow-sm ${m.sender_type === 'bot' ? 'bg-indigo-600 rounded-tr-none text-white' : m.sender_type === 'dev' ? 'bg-fuchsia-600 rounded-tr-none text-white' : 'bg-white border rounded-tl-none text-slate-700'}`}>
                                             <div className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed">{m.text}</div>
                                         </div>
                                         <div className="text-[9px] text-slate-400 font-bold px-1">{new Date(m.timestamp).toLocaleString()}</div>
@@ -7159,9 +7501,11 @@ const ModuleDevSuporte = () => {
                                 <div ref={bottomRef}></div>
                             </div>
                             
+                            {/* Actions & input trigger */}
                             <div className="p-4 bg-white border-t">
+                                {/* Fast preset responses */}
                                 <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-2">
-                                    <span className="text-[9px] font-black uppercase text-slate-400 self-center tracking-widest shrink-0 mr-1"><Zap size={10} className="inline mr-1"/>Rápidas:</span>
+                                    <span className="text-[9px] font-black uppercase text-slate-400 self-center tracking-widest shrink-0 mr-1 flex items-center gap-1">Fast Reply:</span>
                                     {preProgrammed.map((pr, i) => (
                                         <button key={i} onClick={() => setReplyText(pr)} className="whitespace-nowrap px-4 py-2 bg-slate-50 border hover:bg-fuchsia-50 hover:border-fuchsia-200 hover:text-fuchsia-700 rounded-xl text-[11px] font-bold text-slate-600 transition-colors shadow-sm">
                                             {pr}
@@ -7170,14 +7514,14 @@ const ModuleDevSuporte = () => {
                                 </div>
                                 <div className="flex gap-3">
                                     <textarea
-                                        className="flex-1 border bg-slate-50 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 resize-none shadow-inner"
+                                        className="flex-1 border bg-slate-50 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 resize-none shadow-inner text-slate-800"
                                         rows={2}
                                         placeholder="Digite a resposta manual para o usuário..."
                                         value={replyText}
                                         onChange={e => setReplyText(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendDev())}
                                     />
-                                    <button onClick={handleSendDev} disabled={!replyText.trim()} className="bg-fuchsia-600 text-white rounded-2xl px-6 hover:bg-fuchsia-700 disabled:opacity-50 transition-all shadow-md flex items-center justify-center">
+                                    <button onClick={handleSendDev} disabled={!replyText.trim()} className="bg-fuchsia-600 text-white rounded-2xl px-6 hover:bg-fuchsia-700 disabled:opacity-50 transition-all shadow-md flex items-center justify-center shrink-0">
                                         <Send size={24}/>
                                     </button>
                                 </div>
@@ -7186,7 +7530,7 @@ const ModuleDevSuporte = () => {
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50">
                             <Headset size={64} className="mb-4 text-slate-300"/>
-                            <p className="font-medium text-slate-500">Selecione um chamado ao lado para visualizar e interagir.</p>
+                            <p className="font-medium text-slate-500 text-sm">Selecione um chamado de suporte ao lado para visualizar e interagir.</p>
                         </div>
                     )}
                 </div>
@@ -19666,7 +20010,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled };
+  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI };
 
   if (!user) { 
     return ( 
