@@ -16677,6 +16677,29 @@ const PortalCarteirinha = ({ user, igreja }) => {
 const PortalFinanceiro = ({ user, db }) => {
     const { addToast, dbFirestore, appId, collection, addDoc, logAction, setDoc, doc } = useContext(ChurchContext);
     
+    // Helpres para máscara de moeda BRL (BRL Currency Mask Helpers)
+    const parseBRLToFloat = (value: string | number) => {
+        if (!value) return 0;
+        if (typeof value === 'number') return value;
+        const cleanValue = value.replace(/\D/g, "");
+        if (!cleanValue) return 0;
+        return parseInt(cleanValue, 10) / 100;
+    };
+
+    const formatBRL = (value: string | number) => {
+        if (value === undefined || value === null) return "";
+        let cleanValue = "";
+        if (typeof value === 'number') {
+            cleanValue = Math.round(value * 100).toString();
+        } else {
+            cleanValue = value.replace(/\D/g, "");
+        }
+        if (!cleanValue) return "";
+        const cents = parseInt(cleanValue, 10);
+        const floatValue = cents / 100;
+        return floatValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
     // Funções para manipular comprovantes de contribuição pelo membro
     const handleUploadComprovante = (e, item) => {
         const file = e.target.files?.[0];
@@ -16751,10 +16774,11 @@ const PortalFinanceiro = ({ user, db }) => {
 
     const handleGerarPix = () => {
         if (!chavePix) return addToast("A igreja ainda não configurou uma chave PIX.", "warning");
-        if (!novaOferta.valor || parseFloat(novaOferta.valor) <= 0) return addToast("Introduza um valor válido.", "warning");
+        const numericValue = parseBRLToFloat(novaOferta.valor);
+        if (numericValue <= 0) return addToast("Introduza um valor válido.", "warning");
         
         // Gera o payload exato com o valor preenchido pelo membro
-        const payload = generatePixPayload(chavePix, db.igreja?.nome, db.igreja?.cidade, novaOferta.valor);
+        const payload = generatePixPayload(chavePix, db.igreja?.nome, db.igreja?.cidade, numericValue.toString());
         setNovaOferta({ ...novaOferta, etapa: 2, payload });
     };
 
@@ -16768,9 +16792,10 @@ const PortalFinanceiro = ({ user, db }) => {
         setIsSaving(true);
         const dataAtual = new Date().toISOString().split('T')[0];
         try {
+            const numericValue = parseBRLToFloat(novaOferta.valor);
             const novaEntrada = {
                 tipo: 'entrada',
-                valor: parseFloat(novaOferta.valor),
+                valor: numericValue,
                 categoria: novaOferta.categoria,
                 descricao: `Contribuição via Portal (${novaOferta.categoria})`,
                 data_competencia: dataAtual,
@@ -16784,7 +16809,7 @@ const PortalFinanceiro = ({ user, db }) => {
             };
 
             const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro'), novaEntrada);
-            logAction('CRIAÇÃO', `Membro enviou notificação de pagamento PIX de R$ ${novaOferta.valor}`, 'financeiro', docRef.id);
+            logAction('CRIAÇÃO', `Membro enviou notificação de pagamento PIX de ${formatBRL(novaOferta.valor)}`, 'financeiro', docRef.id);
             
             addToast('Notificação enviada! A aguardar conferência da Tesouraria.', 'success');
             setNovaOferta({ valor: '', categoria: 'Dízimo', etapa: 1, payload: '' });
@@ -16822,13 +16847,17 @@ const PortalFinanceiro = ({ user, db }) => {
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor a Transferir (R$)</label>
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor a Transferir</label>
                                         <input 
-                                            type="number" 
-                                            step="0.01" 
-                                            placeholder="Ex: 150.00"
+                                            type="text" 
+                                            inputMode="numeric"
+                                            placeholder="R$ 0,00"
                                             value={novaOferta.valor}
-                                            onChange={(e) => setNovaOferta({...novaOferta, valor: (e.target.value || "").toUpperCase()})}
+                                            onChange={(e) => {
+                                                const raw = e.target.value;
+                                                const formatted = formatBRL(raw);
+                                                setNovaOferta({...novaOferta, valor: formatted});
+                                            }}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-emerald-600 font-black text-lg focus:border-emerald-500 outline-none shadow-inner"
                                         />
                                     </div>
@@ -16857,7 +16886,7 @@ const PortalFinanceiro = ({ user, db }) => {
                                 </div>
                                 <div className="flex-1 text-center md:text-left w-full">
                                     <h3 className="font-black text-emerald-600 text-lg mb-1">PIX Pronto a Pagar</h3>
-                                    <p className="text-xs text-slate-500 font-bold mb-4 uppercase tracking-wider">{novaOferta.categoria} • <span className="text-slate-800">R$ {parseFloat(novaOferta.valor).toFixed(2)}</span></p>
+                                    <p className="text-xs text-slate-500 font-bold mb-4 uppercase tracking-wider">{novaOferta.categoria} • <span className="text-slate-800">{formatBRL(novaOferta.valor)}</span></p>
                                     
                                     <Button onClick={copyPix} variant="secondary" className="w-full justify-center mb-3 bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700">
                                         <Copy size={16}/> Copiar "PIX Copia e Cola"
