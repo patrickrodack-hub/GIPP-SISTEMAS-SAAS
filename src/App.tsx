@@ -15012,7 +15012,7 @@ const ThemeToggle = ({ variant = 'default', className = "" }) => {
 
 // --- CENTRAL DE NOTIFICAÇÕES INTELIGENTE ---
 const NotificationCenter = () => {
-    const { db } = useContext(ChurchContext);
+    const { db, user } = useContext(ChurchContext);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -15052,7 +15052,7 @@ const NotificationCenter = () => {
             aniversariantes.forEach(a => {
                  const diaNasc = parseInt(a.data_nascimento.split('-')[2]);
                  if (diaNasc === hojeDia) {
-                     notifs.push({ id: `aniv_${a.id}`, type: 'success', icon: Gift, title: 'Aniversariante Hoje', desc: `${a.nome} faz anos hoje!`, time: 'Hoje', color: 'emerald' });
+                     notifs.push({ id: `aniv_${a.id}`, type: 'success', icon: Gift, title: 'Aniversante Hoje', desc: `${a.nome} faz anos hoje!`, time: 'Hoje', color: 'emerald' });
                  } else if (diaNasc > hojeDia && diaNasc <= hojeDia + 5) {
                      notifs.push({ id: `aniv_${a.id}`, type: 'info', icon: Gift, title: 'Aniversário a Chegar', desc: `${a.nome}`, time: `Dia ${diaNasc}`, color: 'blue' });
                  }
@@ -15072,12 +15072,59 @@ const NotificationCenter = () => {
              });
         }
 
+        // Alertas de dízimos recorrentes atrasados por mais de 3 meses para liderança sacerdotal e administrativa (visando apoio pastoral)
+        const isPastoral = user?.cargo?.toLowerCase().includes('pastor') || 
+                           user?.funcao?.toLowerCase().includes('pastor') || 
+                           (db.igreja?.pastor && user?.nome && db.igreja.pastor.toLowerCase().trim() === user.nome.toLowerCase().trim()) ||
+                           user?.nivel === 'master' || 
+                           user?.id === 'dev' ||
+                           user?.cargo?.toLowerCase().includes('tesour') || 
+                           user?.funcao?.toLowerCase().includes('tesour') || 
+                           user?.nivel === 'tesour';
+
+        if (isPastoral && db.membros && db.financeiro) {
+            const mAtivos = db.membros.filter(m => m.status !== 'Inativo');
+            const dizimos = db.financeiro.filter(f => 
+                f.tipo === 'entrada' && 
+                f.categoria?.toLowerCase().includes('dízimo') && 
+                !(f.conciliado === false && String(f.descricao).includes('via Portal'))
+            );
+
+            mAtivos.forEach(membro => {
+                const dizimosMembro = dizimos.filter(d => d.membro_id === membro.id)
+                    .sort((a,b) => new Date(b.data_competencia || b.data_pagamento || 0).getTime() - new Date(a.data_competencia || a.data_pagamento || 0).getTime());
+                
+                if (dizimosMembro.length > 0) {
+                    const ultimoDizimo = dizimosMembro[0];
+                    const dateClean = (ultimoDizimo.data_competencia || ultimoDizimo.data_pagamento || '').split('T')[0];
+                    if (dateClean) {
+                        const dataUltimo = new Date(dateClean + 'T00:00:00');
+                        const diffTime = today.getTime() - dataUltimo.getTime();
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (diffDays > 90) {
+                            const meses = Math.floor(diffDays / 30);
+                            notifs.push({
+                                id: `dizimo_recorrente_atrasado_${membro.id}`,
+                                type: 'warning',
+                                icon: HeartHandshake,
+                                title: 'Apoio Pastoral: Dízimo Atrasado',
+                                desc: `O dizimista ${membro.nome} está sem registro de dízimo há ${meses} meses. Considere um contato amável para suporte espiritual.`,
+                                time: 'Apoio Pastoral',
+                                color: 'amber'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
         return notifs.sort((a, b) => {
             if (a.type === 'danger' && b.type !== 'danger') return -1;
             if (b.type === 'danger' && a.type !== 'danger') return 1;
             return 0;
         });
-    }, [db]);
+    }, [db, user]);
 
     return (
         <div className="relative pointer-events-auto" ref={dropdownRef}>
