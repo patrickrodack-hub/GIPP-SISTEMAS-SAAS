@@ -4941,11 +4941,22 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.2.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-600">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                <h3 className="font-bold text-lg text-indigo-800">v5.2.0 - Otimização de Performance & Customização Master</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Otimização de Performance (Paginação Firestore):</strong> Refatoração dos ouvintes do banco de dados do Firestore para Membros e Histórico Financeiro, com limites (`limit()`) de dados para reduzir a carga inicial, além de possuir filtros temporais inteligentes e botões rápidos para carregar mais registros sob demanda.</li>
+                    <li><strong className="text-slate-700">Customização IA via Portal SaaS:</strong> Possibilidade de alterar e persistir o nome e a foto de perfil (Avatar) do Assistente Virtual diretamente no Painel Master SaaS de forma unificada e em tempo real.</li>
+                    <li><strong className="text-slate-700">Estabilização do Motor de IA:</strong> Correção completa do erro de HTTP 404 e timeouts nas rotas de geração teológica e financeira, garantindo que o módulo Pastoral IA responda instantaneamente.</li>
+                </ul>
+            </div>
+
             <div className="relative pl-8 border-l-2 border-fuchsia-500">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-fuchsia-600 shadow-[0_0_10px_rgba(192,38,211,0.5)]"></div>
                 <h3 className="font-bold text-lg text-fuchsia-700">v5.1.0 - Suporte Master & Portal IA Flutuante</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Assistente Virtual (Chat Flutuante):</strong> Refatoração do widget flutuante persistente no sistema onde os membros e líderes podem tirar dúvidas operacionais ou usufruir da inteligência artificial adaptada à Base de Dados da igreja (FAQ dinâmico).</li>
                     <li><strong className="text-slate-700">Painel de Operador de Suporte:</strong> Lançamento do módulo "Op. de Suporte" focado em centralizar as interações, permitir bloqueio de IA em chamados abusivos e delegar a resposta manual para a equipe Pastoral/Atendimento da Sede, suportando anexos de log gerados pelo bot.</li>
@@ -6082,6 +6093,7 @@ const ModuleDesenvolvedor = () => {
             if (data.prestador_servico !== undefined) payload.prestador_servico = data.prestador_servico;
             if (data.bot_name !== undefined) payload.bot_name = data.bot_name;
             if (data.bot_welcome !== undefined) payload.bot_welcome = data.bot_welcome;
+            if (data.bot_avatar !== undefined) payload.bot_avatar = data.bot_avatar;
 
             // Guarda na base de dados do Tenant atual
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), payload, { merge: true });
@@ -12866,7 +12878,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.1.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.2.0 (SaaS Master Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -20156,7 +20168,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.1.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.2.0</p>
                         </div>
                     </div>
                     <div>
