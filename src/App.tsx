@@ -20,7 +20,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -1101,7 +1101,7 @@ const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], support_chats: [] };
 
 const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 const getIcon = (name) => ICON_MAP[name] || Star;
@@ -5057,6 +5057,30 @@ const ModuleIgreja = () => {
     const [tab, setTab] = useState(1);
     const [verificandoPix, setVerificandoPix] = useState(false);
 
+    useEffect(() => {
+        if (db.igreja) {
+            const defaults = {
+                canon_denom: 'ASSEMBLEIAS DE DEUS',
+                canon_convencao_nacional: 'CONVENÇÃO GERAL DAS ASSEMBLEIAS DE DEUS NO BRASIL (CGADB)',
+                canon_convencao_estadual: 'CONVENÇÃO ESTADUAL DOS MINISTROS DAS ASSEMBLEIAS DE DEUS',
+                canon_declaracao_fe: 'TRINITÁRIA E PENTECOSTAL (DECLARAÇÃO DE FÉ DAS ASSEMBLEIAS DE DEUS)',
+                canon_fundadores: 'GUNNAR VINGREN E DANIEL BERG',
+                canon_ano_introducao: '1911 (BELÉM DO PARÁ)',
+                canon_registro_geral: 'RE-AD-1911',
+                // Default Ecclesiastical roles if not explicitly defined
+                pastor_cargo: 'PASTOR PRESIDENTE',
+                vice_presidente1_cargo: 'VICE-PRESIDENTE / PASTOR AUXILIAR',
+                vice_presidente2_cargo: 'CO-PASTOR / EVANGELISTA',
+                secretario1_cargo: '1º SECRETÁRIO / PRESBÍTERO',
+                secretario2_cargo: '2º SECRETÁRIO / DIÁCONO',
+                tesoureiro1_cargo: '1º TESOUREIRO / PRESBÍTERO',
+                tesoureiro2_cargo: '2º TESOUREIRO / DIÁCONO',
+                ...db.igreja
+            };
+            setData(prev => ({ ...defaults, ...prev, ...db.igreja }));
+        }
+    }, [db.igreja]);
+
     const menuItems = [
         {id: 1, label: 'Sede e Diretoria', icon: Building2},
         {id: 2, label: 'Congregações e Filiais', icon: MapPin},
@@ -5090,6 +5114,32 @@ const ModuleIgreja = () => {
 
             addToast("Dados da igreja atualizados!", "success");
         } catch (e) { console.error(e); addToast("Erro ao salvar.", "error"); }
+    };
+
+    const handleEstatutoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+             if (file.size > 2 * 1024 * 1024) { 
+                 alert("O arquivo do Estatuto deve ter no máximo 2MB.");
+                 return; 
+             }
+             const reader = new FileReader();
+             reader.onloadend = () => {
+                 setData({...data, estatuto_nome: file.name, estatuto_base64: reader.result});
+                 addToast("Documento de estatuto importado com sucesso!", "success");
+             };
+             reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDownloadEstatuto = () => {
+        if (!data.estatuto_base64) return;
+        const link = document.createElement('a');
+        link.href = data.estatuto_base64;
+        link.download = data.estatuto_nome || 'estatuto_igreja.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleLogoUpload = (e) => {
@@ -5246,6 +5296,16 @@ const ModuleIgreja = () => {
         }, 3500); // 3.5 segundos de animação simulada
     };
 
+    const lideresList = [
+        { key: 'pastor', label: 'Pastor Presidente', defaultCargo: 'PASTOR PRESIDENTE' },
+        { key: 'vice_presidente1', label: '1º Vice-Presidente', defaultCargo: 'VICE-PRESIDENTE' },
+        { key: 'vice_presidente2', label: '2º Vice-Presidente', defaultCargo: 'VICE-PRESIDENTE' },
+        { key: 'secretario1', label: '1º Secretário', defaultCargo: '1º SECRETÁRIO' },
+        { key: 'secretario2', label: '2º Secretário', defaultCargo: '2º SECRETÁRIO' },
+        { key: 'tesoureiro1', label: '1º Tesoureiro', defaultCargo: '1º TESOUREIRO' },
+        { key: 'tesoureiro2', label: '2º Tesoureiro', defaultCargo: '2º TESOUREIRO' }
+    ];
+
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance max-w-6xl mx-auto w-full">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -5265,81 +5325,161 @@ const ModuleIgreja = () => {
                 {tab === 1 && (
                     <div className="glass-modern p-8 rounded-[2.5rem] overflow-y-auto custom-scrollbar h-full">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                            <div className="space-y-6">
-                                <h3 className="font-bold text-lg text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">1. Cadastro Institucional</h3>
-                                <div className="flex justify-center mb-6">
-                                     <label className="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center bg-slate-50 hover:bg-white transition-colors cursor-pointer relative overflow-hidden group">
-                                         {data.logo ? <img src={data.logo} className="w-full h-full object-contain p-2" /> : <div className="text-center text-slate-400"><ImageIcon size={32} className="mx-auto mb-1"/><span className="text-xs">Logo</span></div>}
-                                         <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload}/>
-                                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold">Alterar</div>
-                                     </label>
-                                </div>
-                                <FormInput label="Nome Oficial da Igreja" value={data.nome} onChange={v=>setData({...data, nome:v})} required placeholder="Ex: Catedral da Assembleia de Deus..."/>
-                                <FormInput label="CNPJ" value={data.cnpj} onChange={v=>setData({...data, cnpj:v})} placeholder="00.000.000/0000-00"/>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormInput label="Data de Fundação" type="date" value={data.data_fundacao} onChange={v=>setData({...data, data_fundacao:v})} />
-                                    <FormInput label="Data de Emancipação" type="date" value={data.data_emancipacao} onChange={v=>setData({...data, data_emancipacao:v})} />
-                                </div>
-                                <FormInput label="Endereço Completo" value={data.endereco} onChange={v=>setData({...data, endereco:v})} />
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="col-span-2"><FormInput label="Cidade" value={data.cidade} onChange={v=>setData({...data, cidade:v})} /></div>
-                                    <FormInput label="UF" value={data.uf} onChange={v=>setData({...data, uf:v})} />
-                                </div>
-                            </div>
-                            <div className="space-y-6">
-                                <h3 className="font-bold text-lg text-purple-700 uppercase tracking-widest border-b border-purple-100 pb-2 mb-4">2. Diretoria Executiva</h3>
-                                <div className="bg-purple-50 p-6 rounded-3xl border border-purple-100">
-                                    <FormInput label="Pastor Presidente" value={data.pastor} onChange={v=>setData({...data, pastor:v})} required />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="1º Vice-Presidente" value={data.vice_presidente1} onChange={v=>setData({...data, vice_presidente1:v})} />
-                                        <FormInput label="2º Vice-Presidente" value={data.vice_presidente2} onChange={v=>setData({...data, vice_presidente2:v})} />
+                            <div className="space-y-8">
+                                <div className="space-y-6">
+                                    <h3 className="font-bold text-lg text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-2 mb-4">1. Cadastro Institucional</h3>
+                                    <div className="flex justify-center mb-6">
+                                         <label className="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center bg-slate-50 hover:bg-white transition-colors cursor-pointer relative overflow-hidden group">
+                                             {data.logo ? <img src={data.logo} className="w-full h-full object-contain p-2" /> : <div className="text-center text-slate-400"><ImageIcon size={32} className="mx-auto mb-1"/><span className="text-xs">Logo</span></div>}
+                                             <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload}/>
+                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold">Alterar</div>
+                                         </label>
                                     </div>
+                                    <FormInput label="Nome Oficial da Igreja" value={data.nome} onChange={v=>setData({...data, nome:v})} required placeholder="Ex: Catedral da Assembleia de Deus..."/>
+                                    <FormInput label="CNPJ" value={data.cnpj} onChange={v=>setData({...data, cnpj:v})} placeholder="00.000.000/0000-00"/>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="1º Secretário" value={data.secretario1} onChange={v=>setData({...data, secretario1:v})} />
-                                        <FormInput label="2º Secretário" value={data.secretario2} onChange={v=>setData({...data, secretario2:v})} />
+                                        <FormInput label="Data de Fundação" type="date" value={data.data_fundacao} onChange={v=>setData({...data, data_fundacao:v})} />
+                                        <FormInput label="Data de Emancipação" type="date" value={data.data_emancipacao} onChange={v=>setData({...data, data_emancipacao:v})} />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="1º Tesoureiro" value={data.tesoureiro1} onChange={v=>setData({...data, tesoureiro1:v})} />
-                                        <FormInput label="2º Tesoureiro" value={data.tesoureiro2} onChange={v=>setData({...data, tesoureiro2:v})} />
+                                    <FormInput label="Endereço Completo" value={data.endereco} onChange={v=>setData({...data, endereco:v})} />
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="col-span-2"><FormInput label="Cidade" value={data.cidade} onChange={v=>setData({...data, cidade:v})} /></div>
+                                        <FormInput label="UF" value={data.uf} onChange={v=>setData({...data, uf:v})} />
                                     </div>
                                 </div>
 
-                                <h3 className="font-bold text-lg text-emerald-700 uppercase tracking-widest border-b border-emerald-100 pb-2 mb-4 mt-8">3. Dados Bancários & PIX</h3>
-                                <div className="bg-emerald-50/80 p-6 rounded-3xl border border-emerald-200 shadow-sm">
-                                    <div className="flex items-center gap-6 mb-6">
-                                        <div className="flex-1">
-                                            <FormSelect label="Instituição Bancária" value={data.banco} onChange={handleBancoSelect} options={bancosList} className="!mb-0" />
-                                        </div>
-                                        <label className="w-24 h-24 bg-white rounded-2xl shadow-sm border-2 border-dashed border-emerald-300 flex flex-col items-center justify-center p-2 shrink-0 relative overflow-hidden group cursor-pointer hover:bg-emerald-50 transition-colors" title="Clique para alterar a logo do banco manualmente">
-                                            {(data.banco_logo_base64 || data.banco_logo || getBancoLogo(data.banco)) ? (
-                                                <img src={data.banco_logo_base64 || data.banco_logo || getBancoLogo(data.banco)} alt={data.banco} className="w-full h-full object-contain rounded-lg p-1" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-                                            ) : null}
-                                            <Landmark size={32} className="text-emerald-400 absolute" style={{ display: (data.banco_logo_base64 || data.banco_logo || getBancoLogo(data.banco)) ? 'none' : 'block' }}/>
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleBancoLogoUpload}/>
-                                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-bold text-center p-1">
-                                                <UploadCloud size={16} className="mb-1"/>
-                                                Alterar Logo
-                                            </div>
-                                        </label>
+                                <div className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100 space-y-4">
+                                    <div className="flex items-center gap-2 border-b border-amber-200/60 pb-2 mb-2">
+                                        <ScrollText size={18} className="text-amber-700"/>
+                                        <h3 className="font-bold text-sm text-amber-800 uppercase tracking-wider">2. Dados Canônicos da Denominação</h3>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <FormInput label="Agência" value={data.agencia} onChange={v=>setData({...data, agencia:v})} placeholder="Ex: 0001" className="!mb-0"/>
-                                        <FormInput label="Conta" value={data.conta} onChange={v=>setData({...data, conta:v})} placeholder="Ex: 12345-6" className="!mb-0"/>
+                                    <FormInput label="Organização Eclesiástica" value={data.canon_denom} onChange={v=>setData({...data, canon_denom:v})} placeholder="Ex: Assembleia de Deus" />
+                                    <FormInput label="Convenção Geral / Nacional" value={data.canon_convencao_nacional} onChange={v=>setData({...data, canon_convencao_nacional:v})} placeholder="Ex: CGADB" />
+                                    <FormInput label="Convenção Estadual / Regional" value={data.canon_convencao_estadual} onChange={v=>setData({...data, canon_convencao_estadual:v})} placeholder="Ex: Convenção de Pastores do Estado" />
+                                    <FormInput label="Declaração de Fé Canônica" value={data.canon_declaracao_fe} onChange={v=>setData({...data, canon_declaracao_fe:v})} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormInput label="Pioneiros / Fundadores" value={data.canon_fundadores} onChange={v=>setData({...data, canon_fundadores:v})} />
+                                        <FormInput label="Ano de Introdução no BR" value={data.canon_ano_introducao} onChange={v=>setData({...data, canon_ano_introducao:v})} />
                                     </div>
-                                    <FormSelect label="Tipo de Conta" value={data.tipo_conta} onChange={v=>setData({...data, tipo_conta:v})} options={['Corrente', 'Poupança']} className="!mb-0"/>
-                                    
-                                    <div className="mt-6 pt-5 border-t border-emerald-200/80">
-                                        <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest mb-3 flex items-center gap-2"><Zap size={16}/> Chave PIX Oficial</h4>
-                                        <div className="flex flex-col sm:flex-row gap-6 items-center">
-                                            <div className="flex-1 w-full">
-                                                <FormInput label="Chave PIX (CNPJ, Celular, E-mail)" preserveCase value={data.chave_pix} onChange={v=>setData({...data, chave_pix:v})} placeholder="CNPJ, E-mail, Celular ou Chave Aleatória" className="!mb-0" />
+                                    <FormInput label="Registro Eclesiástico Consocial" value={data.canon_registro_geral} onChange={v=>setData({...data, canon_registro_geral:v})} placeholder="Inscrição Oficial da Sede" />
+                                </div>
+
+                                <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 space-y-4">
+                                    <div className="flex items-center gap-2 border-b border-blue-200/60 pb-2 mb-2">
+                                        <FileText size={18} className="text-blue-700"/>
+                                        <h3 className="font-bold text-sm text-blue-800 uppercase tracking-wider">3. Estatuto Social & Regimento Interno</h3>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Resumo do Estatuto ou Regimento</label>
+                                        <textarea 
+                                            value={data.estatuto_resumo || ''} 
+                                            onChange={e=>setData({...data, estatuto_resumo: e.target.value.toUpperCase()})}
+                                            className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 bg-white/70 border border-slate-200 outline-none h-32 uppercase animate-entrance"
+                                            placeholder="REGISTRE AQUI O RESUMO DO ESTATUTO OU DO REGIMENTO INTERNO..."
+                                        />
+                                    </div>
+                                    <div className="bg-white/80 p-4 rounded-2xl border border-blue-200 space-y-3">
+                                        <span className="text-xs font-bold text-slate-500 block uppercase">Anexar Cópia do Estatuto Oficial (PDF/DOC)</span>
+                                        <div className="flex items-center gap-3">
+                                            <input type="file" id="estatuto-upload" className="hidden" accept=".pdf,.doc,.docx" onChange={handleEstatutoUpload} />
+                                            <label htmlFor="estatuto-upload" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-2 shrink-0">
+                                                <UploadCloud size={16}/> Escolher Arquivo
+                                            </label>
+                                            <div className="text-xs text-slate-500 truncate flex-1 font-medium">
+                                                {data.estatuto_nome ? data.estatuto_nome : "Nenhum arquivo anexado"}
                                             </div>
-                                            {data.chave_pix && (
-                                                <div className="bg-white p-2 rounded-2xl shadow-sm border border-emerald-200 flex flex-col items-center shrink-0 animate-scale-in">
-                                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload(data.chave_pix, data.nome, data.cidade))}&color=047857`} alt="QR Code PIX" className="w-24 h-24 object-contain rounded-xl" />
-                                                    <span className="text-[9px] font-black text-emerald-600 mt-2 uppercase tracking-widest">QR Code Gerado</span>
-                                                </div>
+                                            {data.estatuto_base64 && (
+                                                <button type="button" onClick={handleDownloadEstatuto} className="p-2.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-all" title="Baixar Estatuto Social">
+                                                    <Download size={16}/>
+                                                </button>
                                             )}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 font-medium">Arquivos salvos de forma privada no banco de dados (máx 2MB).</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-8">
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-lg text-purple-700 uppercase tracking-widest border-b border-purple-100 pb-2 mb-4">4. Diretoria Executiva</h3>
+                                    <div className="bg-purple-50/50 p-6 rounded-3xl border border-purple-100 space-y-4 max-h-[700px] overflow-y-auto custom-scrollbar">
+                                        <p className="text-xs text-purple-600 font-medium mb-2">Configure o nome completo, o CPF e o cargo eclesiástico oficial dos responsáveis.</p>
+                                        <div className="space-y-4">
+                                            {lideresList.map(l => {
+                                                const nameKey = l.key;
+                                                const cpfKey = `${l.key}_cpf`;
+                                                const cargoKey = `${l.key}_cargo`;
+                                                return (
+                                                    <div key={l.key} className="bg-white p-4 rounded-2xl border border-purple-100 space-y-3 shadow-sm hover:shadow transition-shadow animate-entrance">
+                                                        <span className="text-xs font-black text-purple-700 tracking-wider uppercase block">{l.label}</span>
+                                                        <FormInput 
+                                                            label="Nome Computado" 
+                                                            value={data[nameKey] || ''} 
+                                                            onChange={v => setData({...data, [nameKey]: v})} 
+                                                            placeholder={`Nome do ${l.label}`}
+                                                            className="!mb-0"
+                                                        />
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <FormInput 
+                                                                label="CPF" 
+                                                                value={data[cpfKey] || ''} 
+                                                                onChange={v => setData({...data, [cpfKey]: formatCPF(v)})} 
+                                                                placeholder="000.000.000-00"
+                                                                className="!mb-0"
+                                                            />
+                                                            <FormInput 
+                                                                label="Cargo Eclesiástico" 
+                                                                value={data[cargoKey] || l.defaultCargo} 
+                                                                onChange={v => setData({...data, [cargoKey]: v})} 
+                                                                placeholder="Ex: Pastor, Evangelista..."
+                                                                className="!mb-0"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-lg text-emerald-700 uppercase tracking-widest border-b border-emerald-100 pb-2 mb-4">5. Dados Bancários & PIX</h3>
+                                    <div className="bg-emerald-50/80 p-6 rounded-3xl border border-emerald-200 shadow-sm">
+                                        <div className="flex items-center gap-6 mb-6">
+                                            <div className="flex-1">
+                                                <FormSelect label="Instituição Bancária" value={data.banco} onChange={handleBancoSelect} options={bancosList} className="!mb-0" />
+                                            </div>
+                                            <label className="w-24 h-24 bg-white rounded-2xl shadow-sm border-2 border-dashed border-emerald-300 flex flex-col items-center justify-center p-2 shrink-0 relative overflow-hidden group cursor-pointer hover:bg-emerald-50 transition-colors" title="Clique para alterar a logo do banco manualmente">
+                                                {(data.banco_logo_base64 || data.banco_logo || getBancoLogo(data.banco)) ? (
+                                                    <img src={data.banco_logo_base64 || data.banco_logo || getBancoLogo(data.banco)} alt={data.banco} className="w-full h-full object-contain rounded-lg p-1" onError={(e: any) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                                                ) : null}
+                                                <Landmark size={32} className="text-emerald-400 absolute" style={{ display: (data.banco_logo_base64 || data.banco_logo || getBancoLogo(data.banco)) ? 'none' : 'block' }}/>
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleBancoLogoUpload}/>
+                                                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-bold text-center p-1">
+                                                    <UploadCloud size={16} className="mb-1"/>
+                                                    Alterar Logo
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <FormInput label="Agência" value={data.agencia} onChange={v=>setData({...data, agencia:v})} placeholder="Ex: 0001" className="!mb-0"/>
+                                            <FormInput label="Conta" value={data.conta} onChange={v=>setData({...data, conta:v})} placeholder="Ex: 12345-6" className="!mb-0"/>
+                                        </div>
+                                        <FormSelect label="Tipo de Conta" value={data.tipo_conta} onChange={v=>setData({...data, tipo_conta:v})} options={['Corrente', 'Poupança']} className="!mb-0"/>
+                                        
+                                        <div className="mt-6 pt-5 border-t border-emerald-200/80">
+                                            <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest mb-3 flex items-center gap-2"><Zap size={16}/> Chave PIX Oficial</h4>
+                                            <div className="flex flex-col sm:flex-row gap-6 items-center">
+                                                <div className="flex-1 w-full">
+                                                    <FormInput label="Chave PIX (CNPJ, Celular, E-mail)" preserveCase value={data.chave_pix} onChange={v=>setData({...data, chave_pix:v})} placeholder="CNPJ, E-mail, Celular ou Chave Aleatória" className="!mb-0" />
+                                                </div>
+                                                {data.chave_pix && (
+                                                    <div className="bg-white p-2 rounded-2xl shadow-sm border border-emerald-200 flex flex-col items-center shrink-0 animate-scale-in">
+                                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload(data.chave_pix, data.nome, data.cidade))}&color=047857`} alt="QR Code PIX" className="w-24 h-24 object-contain rounded-xl" />
+                                                        <span className="text-[9px] font-black text-emerald-600 mt-2 uppercase tracking-widest">QR Code Gerado</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -6717,6 +6857,338 @@ Retorne em formato Markdown estimulante, profissional e focado em excelência.`;
                             </div>
                         )}
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const FloatingChatWidget = () => {
+    const context = useContext(ChurchContext);
+    if (!context || !context.user) return null;
+    const { db, user, dbFirestore, appId, callGeminiAI, setDbState } = context;
+    const [isOpen, setIsOpen] = useState(false);
+    const [text, setText] = useState("");
+    const [loading, setLoading] = useState(false);
+    const bottomRef = useRef<HTMLDivElement>(null);
+    
+    // Suporte apenas no módulo administrador (quem está logado)
+    if (!user || user.id === 'dev') return null;
+
+    const chat = db.support_chats?.find((c: any) => c.user_id === user.id) || null;
+    const messages = chat ? chat.messages : [];
+    const status = chat?.status || 'bot';
+
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+    }, [isOpen, messages.length]);
+
+    const handleSend = async () => {
+        if (!text.trim()) return;
+        setLoading(true);
+        const newMessage = {
+            id: String(Date.now()),
+            sender_type: 'user',
+            sender_name: user.nome,
+            text: text,
+            timestamp: new Date().toISOString()
+        };
+        
+        const currentMessages = [...messages, newMessage];
+        setText("");
+        
+        const chatId = chat ? chat.id : `chat_${user.id}`;
+        
+        const chatData = {
+            id: chatId,
+            user_id: user.id,
+            user_name: user.nome,
+            status: status, // bot or human
+            updated_at: new Date().toISOString(),
+            messages: currentMessages
+        };
+
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', chatId), chatData);
+            
+            // Generate bot response if status is bot
+            if (status === 'bot') {
+                const aiPrompt = `Você é um assistente virtual de suporte do sistema GIPP (Gestão de Igreja). 
+Responda a seguinte dúvida ou solicitação do usuário de forma clara, educada e profissional:
+Dúvida: "${text}"
+Histórico do Atendimento (últimas 3 menagens): ${messages.slice(-3).map((m: any) => `${m.sender_name}: ${m.text}`).join('\n')}
+Gere uma resposta curta (máximo 2 parágrafos) ajudando o usuário no que for preciso ou informando que um analista verificará.`;
+                const aiResponse = await callGeminiAI(aiPrompt);
+                
+                const botMessage = {
+                    id: String(Date.now() + 1),
+                    sender_type: 'bot',
+                    sender_name: 'IA Suporte',
+                    text: aiResponse,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Fetch the latest state directly before updating again
+                chatData.messages.push(botMessage);
+                chatData.updated_at = new Date().toISOString();
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', chatId), chatData);
+            }
+        } catch (e) {
+            console.error("Erro no chat", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed bottom-6 right-6 z-[9999]">
+            {isOpen && (
+                <div className="bg-white border shadow-2xl rounded-3xl w-[350px] h-[500px] flex flex-col mb-4 overflow-hidden animate-entrance right-0 origin-bottom-right">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <img src={db.igreja?.bot_avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=Support"} className="w-10 h-10 rounded-full bg-white/20 p-1 object-cover" alt="Avatar"/>
+                            <div>
+                                <h3 className="font-bold text-sm">Fale Conosco</h3>
+                                <div className="text-[10px] text-blue-100 flex items-center gap-1 font-medium bg-white/10 px-2 py-0.5 rounded-full mt-0.5">
+                                    <span className={`w-2 h-2 rounded-full ${status === 'bot' ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                                    {status === 'bot' ? 'Assistente Virtual (Online)' : 'Atendimento Humano'}
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full"><X size={18}/></button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-4 bg-[#f8fafc] space-y-4 text-sm custom-scrollbar">
+                        <div className="flex flex-col items-start gap-1">
+                            <div className="bg-white border rounded-2xl rounded-tl-none p-3 shadow-sm text-slate-700 font-medium">
+                                Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?
+                            </div>
+                        </div>
+                        {messages.map((m: any, i: number) => (
+                            <div key={m.id || i} className={`flex flex-col gap-1 ${m.sender_type === 'user' ? 'items-end' : 'items-start'}`}>
+                                <div className="text-[9px] font-bold text-slate-400 px-1">{m.sender_type === 'user' ? 'Você' : m.sender_name}</div>
+                                <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] shadow-sm ${m.sender_type === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border text-slate-700 rounded-tl-none font-medium'}`}>
+                                    <div className="whitespace-pre-wrap">{m.text}</div>
+                                </div>
+                                <span className="text-[9px] text-slate-400 px-1 font-medium">{new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                        ))}
+                        {loading && (
+                            <div className="flex gap-1 text-slate-400 px-2 my-2">
+                                <span className="animate-bounce">●</span><span className="animate-bounce" style={{animationDelay:'0.2s'}}>●</span><span className="animate-bounce" style={{animationDelay:'0.4s'}}>●</span>
+                            </div>
+                        )}
+                        <div ref={bottomRef}></div>
+                    </div>
+                    
+                    <div className="p-3 bg-white border-t flex gap-2 items-center">
+                        <input 
+                            type="text" 
+                            className="flex-1 border-0 bg-slate-100 rounded-xl py-3 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+                            placeholder="Escreva sua dúvida..."
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSend()}
+                            disabled={loading}
+                        />
+                        <button onClick={handleSend} disabled={loading || !text.trim()} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm">
+                            <Send size={18}/>
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`${isOpen ? 'bg-slate-800' : 'bg-blue-600 hover:bg-blue-700'} text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center justify-center relative ml-auto`}
+            >
+                {isOpen ? <X size={24}/> : <MessageCircle size={28}/>}
+                {!isOpen && messages.length > 0 && messages[messages.length - 1].sender_type !== 'user' && (
+                    <span className="absolute top-0 right-0 w-4 h-4 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+            </button>
+        </div>
+    );
+};
+
+const ModuleDevSuporte = () => {
+    const context = useContext(ChurchContext);
+    if (!context) return null;
+    const { db, setDoc, doc, dbFirestore, appId, addToast } = context;
+    const chats = db.support_chats || [];
+    const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState("");
+    
+    // Sort chats by recent
+    const sortedChats = [...chats].sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    const currentChat = chats.find((c: any) => c.id === selectedChatId);
+
+    const bottomRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if(currentChat) {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [currentChat?.messages.length, selectedChatId]);
+
+    const handleSendDev = async () => {
+        if (!replyText.trim() || !currentChat) return;
+        const msg = {
+            id: String(Date.now()),
+            sender_type: 'dev',
+            sender_name: 'Suporte Dev',
+            text: replyText,
+            timestamp: new Date().toISOString()
+        };
+        
+        const updatedChat = {
+            ...currentChat,
+            status: 'human', // assumes human is helping now
+            updated_at: new Date().toISOString(),
+            messages: [...currentChat.messages, msg]
+        };
+        
+        setReplyText("");
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', currentChat.id), updatedChat);
+            addToast("Mensagem enviada com sucesso.", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao enviar mensagem.", "error");
+        }
+    };
+
+    const handleToggleBot = async (chat: any) => {
+        const updatedChat = {
+            ...chat,
+            status: chat.status === 'bot' ? 'human' : 'bot',
+            updated_at: new Date().toISOString()
+        };
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', chat.id), updatedChat);
+            addToast(`O Assistente AI foi ${updatedChat.status === 'bot' ? 'ativado' : 'desativado'} para este chat.`, "success");
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    
+    const preProgrammed = [
+        "Olá, vou verificar essa situação agora mesmo.",
+        "Poderia me enviar um print da tela com o erro, por favor?",
+        "O problema foi resolvido! Pode testar novamente.",
+        "Obrigado pelo contato! Estamos à disposição.",
+        "Sua demanda foi registrada e a equipe técnica já está analisando."
+    ];
+
+    return (
+        <div className="h-full flex flex-col space-y-6 animate-entrance max-w-7xl mx-auto w-full">
+            <div className="flex items-center gap-4 border-b pb-4">
+                <div className="p-3 bg-fuchsia-50 rounded-2xl text-fuchsia-600 shadow-sm"><Headset size={32}/></div>
+                <div>
+                    <h2 className="text-2xl font-black text-slate-800">Portal de Suporte do Desenvolvedor</h2>
+                    <p className="text-slate-500 text-sm font-medium">Acompanhe e responda às dúvidas dos administradores das igrejas em tempo real.</p>
+                </div>
+            </div>
+            
+            <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden max-h-[80vh]">
+                <div className="w-full md:w-1/3 min-w-[320px] bg-white rounded-3xl border shadow-sm flex flex-col overflow-hidden h-full">
+                    <div className="p-5 bg-slate-50 border-b flex justify-between items-center">
+                        <span className="font-black text-slate-700 tracking-wide">ATENDIMENTOS ATIVOS</span>
+                        <span className="bg-fuchsia-100 text-fuchsia-700 px-3 py-1 rounded-full text-xs font-bold">{chats.length}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+                        {sortedChats.length === 0 && (
+                            <div className="p-8 text-center text-slate-400 flex flex-col items-center">
+                                <MessageCircle size={40} className="mb-3 opacity-30"/>
+                                <span className="font-medium">Nenhum chamado de suporte.</span>
+                            </div>
+                        )}
+                        {sortedChats.map((c: any) => (
+                            <button 
+                                key={c.id} 
+                                onClick={() => setSelectedChatId(c.id)}
+                                className={`w-full text-left p-4 rounded-2xl mb-3 transition-all ${selectedChatId === c.id ? 'bg-fuchsia-50/50 border-fuchsia-200 shadow-sm ring-1 ring-fuchsia-200' : 'bg-white hover:bg-slate-50 border-slate-100 shadow-sm'} border`}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="font-bold text-sm text-slate-800 truncate pr-2">{c.user_name}</span>
+                                    <span className={`text-[9px] px-2.5 py-1 rounded-lg font-black tracking-widest shrink-0 ${c.status === 'bot' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {c.status === 'bot' ? 'IA' : 'HUMANO'}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-slate-500 truncate font-medium bg-slate-50 p-2 rounded-lg">
+                                    {c.messages[c.messages.length - 1]?.text || 'Nenhuma mensagem'}
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-2 font-medium text-right">
+                                    Atualizado: {new Date(c.updated_at).toLocaleString()}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                
+                <div className="flex-1 bg-white rounded-3xl border shadow-sm flex flex-col overflow-hidden h-full">
+                    {currentChat ? (
+                        <>
+                            <div className="p-5 bg-slate-50 border-b flex justify-between items-center z-10 shadow-sm">
+                                <div>
+                                    <h3 className="font-black text-slate-800 text-lg">Chamado: {currentChat.user_name}</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Iniciado em: {new Date(currentChat.messages[0]?.timestamp).toLocaleString()}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <label className={`text-xs font-bold flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl transition-colors border shadow-sm select-none ${currentChat.status === 'bot' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                        <input type="checkbox" checked={currentChat.status === 'bot'} onChange={() => handleToggleBot(currentChat)} className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"/>
+                                        DEIXAR IA RESPONDER AUTOMATICAMENTE
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-6 custom-scrollbar relative">
+                                <div className="text-center">
+                                    <span className="bg-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Início do Atendimento</span>
+                                </div>
+                                {currentChat.messages.map((m: any, i: number) => (
+                                    <div key={m.id || i} className={`flex flex-col gap-1 ${m.sender_type !== 'user' ? 'items-end' : 'items-start'}`}>
+                                        <div className="text-[10px] font-black tracking-wider text-slate-400 uppercase px-1">{m.sender_type === 'user' ? 'Usuário / ' + m.sender_name : m.sender_name}</div>
+                                        <div className={`p-4 py-3 rounded-2xl max-w-[75%] shadow-sm ${m.sender_type === 'bot' ? 'bg-emerald-600 rounded-tr-none text-white' : m.sender_type === 'dev' ? 'bg-fuchsia-600 rounded-tr-none text-white' : 'bg-white border rounded-tl-none text-slate-700'}`}>
+                                            <div className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed">{m.text}</div>
+                                        </div>
+                                        <div className="text-[9px] text-slate-400 font-bold px-1">{new Date(m.timestamp).toLocaleString()}</div>
+                                    </div>
+                                ))}
+                                <div ref={bottomRef}></div>
+                            </div>
+                            
+                            <div className="p-4 bg-white border-t">
+                                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-2">
+                                    <span className="text-[9px] font-black uppercase text-slate-400 self-center tracking-widest shrink-0 mr-1"><Zap size={10} className="inline mr-1"/>Rápidas:</span>
+                                    {preProgrammed.map((pr, i) => (
+                                        <button key={i} onClick={() => setReplyText(pr)} className="whitespace-nowrap px-4 py-2 bg-slate-50 border hover:bg-fuchsia-50 hover:border-fuchsia-200 hover:text-fuchsia-700 rounded-xl text-[11px] font-bold text-slate-600 transition-colors shadow-sm">
+                                            {pr}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    <textarea
+                                        className="flex-1 border bg-slate-50 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 resize-none shadow-inner"
+                                        rows={2}
+                                        placeholder="Digite a resposta manual para o usuário..."
+                                        value={replyText}
+                                        onChange={e => setReplyText(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendDev())}
+                                    />
+                                    <button onClick={handleSendDev} disabled={!replyText.trim()} className="bg-fuchsia-600 text-white rounded-2xl px-6 hover:bg-fuchsia-700 disabled:opacity-50 transition-all shadow-md flex items-center justify-center">
+                                        <Send size={24}/>
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50">
+                            <Headset size={64} className="mb-4 text-slate-300"/>
+                            <p className="font-medium text-slate-500">Selecione um chamado ao lado para visualizar e interagir.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -14900,6 +15372,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     <div>
                         <MenuGroup label="Desenvolvedor (Dev)" />
                         <MenuItem id="desenvolvedor" icon={Code} label="Painel Master SaaS" />
+                        <MenuItem id="suporte_dev" icon={Headset} label="Op. de Suporte" />
                     </div>
                 )}
             </div>
@@ -18103,7 +18576,8 @@ const AppLayout = () => {
         'sobre': { component: ModuleSobre, access: 'public' },
         'portal_pastor': { component: ModulePortalPastor, access: 'public' },
         'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
-        'config_visual': { component: ModuleConfigVisual, access: 'master' }
+        'config_visual': { component: ModuleConfigVisual, access: 'master' },
+        'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
     const access = MODULE_REGISTRY[view]?.access || 'public';
@@ -18551,7 +19025,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'support_chats'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -19522,6 +19996,7 @@ export default function App() {
         <OsThemeStyles />
         <DynamicTheme color={db.igreja?.cor_tema} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <FloatingChatWidget />
         {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} />}
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
