@@ -11974,7 +11974,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 4.9.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.0.0 (SaaS Master Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -19205,8 +19205,9 @@ export default function App() {
                         <div className="w-20 h-20 bg-gradient-to-br from-indigo-50 to-white rounded-[2rem] shadow-xl shadow-indigo-500/20 flex items-center justify-center p-3 border-2 border-white shrink-0 transform hover:scale-105 transition-all animate-float">
                             {db.igreja?.logo ? <img src={db.igreja.logo} alt="Logo Igreja" className="w-full h-full object-contain drop-shadow-md" /> : <Building2 className="text-indigo-400" size={32}/>}
                         </div>
-                        <div>
-                            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">{db.igreja?.nome || "Igreja Local"}</h2>
+                        <div className="text-center lg:text-left">
+                            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.0.0</p>
                         </div>
                     </div>
                     <div>
