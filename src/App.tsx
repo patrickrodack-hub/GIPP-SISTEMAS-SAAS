@@ -4942,10 +4942,21 @@ const ModuleChangelog = () => (
         <div className="space-y-8">
             
             {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS */}
+            <div className="relative pl-8 border-l-2 border-fuchsia-500">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-fuchsia-600 shadow-[0_0_10px_rgba(192,38,211,0.5)]"></div>
+                <h3 className="font-bold text-lg text-fuchsia-700">v5.1.0 - Suporte Master & Portal IA Flutuante</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Assistente Virtual (Chat Flutuante):</strong> Refatoração do widget flutuante persistente no sistema onde os membros e líderes podem tirar dúvidas operacionais ou usufruir da inteligência artificial adaptada à Base de Dados da igreja (FAQ dinâmico).</li>
+                    <li><strong className="text-slate-700">Painel de Operador de Suporte:</strong> Lançamento do módulo "Op. de Suporte" focado em centralizar as interações, permitir bloqueio de IA em chamados abusivos e delegar a resposta manual para a equipe Pastoral/Atendimento da Sede, suportando anexos de log gerados pelo bot.</li>
+                    <li><strong className="text-slate-700">Correção de UX:</strong> Resolução de bugs relatados onde botões superiores entravam em conflito com as sobreposições flutuantes ou eventos pointer-events css.</li>
+                </ul>
+            </div>
+
             <div className="relative pl-8 border-l-2 border-indigo-500">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
                 <h3 className="font-bold text-lg text-indigo-700">v5.0.0 - Cofre Pastoral Protegido & Validação Financeira</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Abas de Segurança no Cofre Pastoral:</strong> Desdobramento do conteúdo restrito do cofre em abas separadas para Esboços de Sermão, Atas de Gabinete e Financeiro.</li>
                     <li><strong className="text-slate-700">Controle de Acesso Financeiro:</strong> Acesso às informações financeiras restrito exclusivamente ao Pastor Presidente (seletivo), exibindo tela informativa de bloqueio para outros perfis e protegendo os dados sensíveis da igreja.</li>
@@ -6069,6 +6080,8 @@ const ModuleDesenvolvedor = () => {
             const payload: any = {};
             if (data.cor_tema !== undefined) payload.cor_tema = data.cor_tema;
             if (data.prestador_servico !== undefined) payload.prestador_servico = data.prestador_servico;
+            if (data.bot_name !== undefined) payload.bot_name = data.bot_name;
+            if (data.bot_welcome !== undefined) payload.bot_welcome = data.bot_welcome;
 
             // Guarda na base de dados do Tenant atual
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), payload, { merge: true });
@@ -6584,6 +6597,38 @@ const ModuleDesenvolvedor = () => {
                                             <Trash2 size={12}/> Remover Papel de Parede
                                         </button>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="font-black text-lg text-indigo-800 uppercase tracking-widest mb-4 flex items-center gap-2 mt-10"><MessageSquare size={20}/> Assistente Virtual (IA)</h3>
+                            <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-fadeIn">
+                                <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-indigo-400 flex flex-col items-center justify-center bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer relative overflow-hidden group shrink-0 shadow-md">
+                                    {(data.bot_avatar || '') ? <img src={data.bot_avatar} className="w-full h-full object-cover p-1 rounded-xl" /> : <div className="text-center text-indigo-400"><ImageIcon size={28} className="mx-auto mb-1"/><span className="text-[10px] font-bold">Avatar</span></div>}
+                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = async () => {
+                                                try {
+                                                    setData({...data, bot_avatar: reader.result});
+                                                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { bot_avatar: reader.result }, { merge: true });
+                                                    addToast("Avatar do assistente atualizado com sucesso!", "success");
+                                                } catch (err) {}
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}/>
+                                    <div className="absolute inset-0 bg-indigo-900/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black text-center leading-tight p-2 uppercase tracking-widest">Alterar Avatar</div>
+                                </label>
+                                <div className="flex-1 text-center md:text-left space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormInput label="Nome do Assistente" value={data.bot_name || ''} onChange={v => setData({...data, bot_name: v})} placeholder="Ex: Sofia (Assistente Virtual)" className="!mb-0" />
+                                        <FormInput label="Mensagem de Saudação" value={data.bot_welcome || ''} onChange={v => setData({...data, bot_welcome: v})} placeholder="Ex: Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?" className="!mb-0" />
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Você pode alterar o nome e a foto de perfil da Inteligência Artificial. Esses dados serão visíveis no widget de chat flutuante para todos os usuários do sistema.</p>
+                                    <Button onClick={handleSaveConfig} variant="primary" className="shadow-lg"><Save size={18}/> Salvar Estilo do Assistente</Button>
                                 </div>
                             </div>
                         </div>
@@ -7137,7 +7182,7 @@ const FloatingChatWidget = () => {
 
     const botName = db.igreja?.bot_name || 'Sofia (Assistente Virtual)';
     const botAvatar = db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200';
-    const botWelcome = db.igreja?.bot_welcome || 'Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje hoje?';
+    const botWelcome = db.igreja?.bot_welcome || 'Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?';
 
     useEffect(() => {
         if (isOpen) {
@@ -12821,7 +12866,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.0.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.1.0 (SaaS Master Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -18702,7 +18747,7 @@ const MemberPortalLayout = () => {
             {/* Main Content (Área Rolável) */}
             <main className="flex-1 h-full overflow-y-auto custom-scrollbar relative z-10">
                 {/* Desktop Floating Toggle */}
-                <div className="hidden md:flex absolute top-6 right-6 z-50 pointer-events-auto gap-3">
+                <div className="hidden md:flex absolute top-6 right-6 z-[60] gap-3">
                     <OsThemeToggle />
                     <AnimBgToggle />
                     <ThemeToggle />
@@ -18946,17 +18991,17 @@ const AppLayout = () => {
                     {!sidebarOpen && (
                         <button 
                             onClick={() => setSidebarOpen(true)} 
-                            className="md:hidden p-3 rounded-2xl bg-white/80 backdrop-blur border border-slate-200/50 text-slate-700 hover:text-indigo-600 shadow-sm pointer-events-auto flex items-center justify-center transition-all"
+                            className="md:hidden p-3 rounded-2xl bg-white/80 backdrop-blur border border-slate-200/50 text-slate-700 hover:text-indigo-600 shadow-sm flex items-center justify-center transition-all"
                             title="Abrir Menu"
                         >
                             <Menu size={18} />
                         </button>
                     )}
-                    <div className="flex items-center gap-2 pointer-events-none ml-auto">
-                        <div className="pointer-events-auto"><OsThemeToggle /></div>
-                        <div className="pointer-events-auto"><AnimBgToggle /></div>
-                        <div className="pointer-events-auto"><ThemeToggle /></div>
-                        <div className="pointer-events-auto"><FullScreenToggle /></div>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <OsThemeToggle />
+                        <AnimBgToggle />
+                        <ThemeToggle />
+                        <FullScreenToggle />
                         <NotificationCenter />
                     </div>
                 </div>
@@ -20111,7 +20156,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.0.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.1.0</p>
                         </div>
                     </div>
                     <div>
