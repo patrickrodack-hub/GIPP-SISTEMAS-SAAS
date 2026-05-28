@@ -1462,7 +1462,7 @@ const GenericTable = ({
 // --- GENERIC MODAL ---
 const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
     if (!isOpen) return null;
-    const { db, user } = useContext(ChurchContext); 
+    const { db, user, addToast } = useContext(ChurchContext); 
     const fileInputRef = useRef(null);
     const [tempMember, setTempMember] = useState({ id: '', funcao: '' });
     const [loadingAiPlan, setLoadingAiPlan] = useState(false);
@@ -1675,8 +1675,45 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                            <FormInput label="Data Vencimento" type="date" value={data.data_vencimento} onChange={v=>setData({...data, data_vencimento:v})} required/>
-                            {data.status === 'pago' && <FormInput label="Data Pagamento" type="date" value={data.data_pagamento} onChange={v=>setData({...data, data_pagamento:v})} />}
+                            <FormInput 
+                                label="Data Vencimento" 
+                                type="date" 
+                                value={data.data_vencimento} 
+                                onChange={v => {
+                                    if (v) {
+                                        const today = new Date();
+                                        today.setHours(0,0,0,0);
+                                        const [yr, mo, dy] = v.split('-').map(Number);
+                                        const selected = new Date(yr, mo - 1, dy);
+                                        if (selected < today) {
+                                            addToast("A data de vencimento não pode ser anterior à data atual!", "warning");
+                                            return;
+                                        }
+                                    }
+                                    setData({...data, data_vencimento:v});
+                                }} 
+                                required
+                            />
+                            {data.status === 'pago' && (
+                                <FormInput 
+                                    label="Data Pagamento" 
+                                    type="date" 
+                                    value={data.data_pagamento} 
+                                    onChange={v => {
+                                        if (v) {
+                                            const today = new Date();
+                                            today.setHours(0,0,0,0);
+                                            const [yr, mo, dy] = v.split('-').map(Number);
+                                            const selected = new Date(yr, mo - 1, dy);
+                                            if (selected < today) {
+                                                addToast("A data de pagamento não pode ser anterior à data atual!", "warning");
+                                                return;
+                                            }
+                                        }
+                                        setData({...data, data_pagamento:v});
+                                    }} 
+                                />
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -4874,6 +4911,17 @@ const ModuleChangelog = () => (
         <div className="space-y-8">
             
             {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS */}
+            <div className="relative pl-8 border-l-2 border-indigo-500">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                <h3 className="font-bold text-lg text-indigo-700">v5.0.0 - Cofre Pastoral Protegido & Validação Financeira</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Abas de Segurança no Cofre Pastoral:</strong> Desdobramento do conteúdo restrito do cofre em abas separadas para Esboços de Sermão, Atas de Gabinete e Financeiro.</li>
+                    <li><strong className="text-slate-700">Controle de Acesso Financeiro:</strong> Acesso às informações financeiras restrito exclusivamente ao Pastor Presidente (seletivo), exibindo tela informativa de bloqueio para outros perfis e protegendo os dados sensíveis da igreja.</li>
+                    <li><strong className="text-slate-700">Validação Tempesctiva de Calendário:</strong> Implementada verificação inteligente no formulário de despesas para impedir a seleção de datas de vencimento ou pagamento anteriores ao dia de hoje, emitindo alertas do tipo toast para guiar o usuário.</li>
+                </ul>
+            </div>
+
             <div className="relative pl-8 border-l-2 border-emerald-400">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                 <h3 className="font-bold text-lg text-emerald-700">v4.9.5 - Modo Escuro Profissional (Design Tokens)</h3>
