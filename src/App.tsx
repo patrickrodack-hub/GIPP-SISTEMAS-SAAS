@@ -58,6 +58,52 @@ const callGeminiAI = async (prompt, retries = 5) => {
   }
 };
 
+const resizeImageAndCompress = (dataUrl: string, maxWidth = 200, maxHeight = 200, quality = 0.75): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!dataUrl || !dataUrl.startsWith("data:image/")) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = dataUrl;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (err) {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => {
+      resolve(dataUrl);
+    };
+  });
+};
+
 const fallbackConfig = {
   apiKey: "AIzaSyBFdfMUErNmooLwIosiacr5gRrlrSefdMk",
   authDomain: "gipp-sistemas.firebaseapp.com",
@@ -3436,10 +3482,11 @@ const PrintSystem = ({ mode, data }) => {
     // 5 - CADASTRO DA IGREJA
     if (mode === 'rel_igreja') {
         const { igreja } = data;
-        const Box = ({ label, value, span=1 }) => (<div className={`border border-slate-300 p-2 ${span > 1 ? `col-span-${span}` : ''}`}><p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p><p className="font-bold text-sm text-slate-800 uppercase">{value || '\u00A0'}</p></div>);
+        const Box = ({ label, value, span=1 }) => (<div className={`border border-slate-300 p-2 ${span > 1 ? `col-span-${span}` : ''}`}><p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p><p className="font-bold text-xs text-slate-800 uppercase leading-snug whitespace-pre-wrap">{value || '\u00A0'}</p></div>);
         return (
             <PageContainer title="Ficha de Cadastro Institucional" subtitle="Dados Oficiais da Igreja">
-                <h3 className="font-bold text-sm bg-slate-800 text-white p-2 uppercase tracking-widest mt-4">Dados Jurídicos e Localização</h3>
+                {/* DADOS BÁSICOS */}
+                <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mt-4">1. Dados Jurídicos e Localização</h3>
                 <div className="grid grid-cols-4 border-l border-t border-slate-300">
                     <Box label="Nome Oficial da Igreja" value={igreja.nome} span={4} />
                     <Box label="CNPJ" value={igreja.cnpj} span={2}/>
@@ -3450,19 +3497,79 @@ const PrintSystem = ({ mode, data }) => {
                     <Box label="UF" value={igreja.uf} />
                 </div>
 
-                <h3 className="font-bold text-sm bg-slate-800 text-white p-2 uppercase tracking-widest mt-8 avoid-break">Diretoria Executiva Atual</h3>
-                <div className="grid grid-cols-2 border-l border-t border-slate-300 mb-12 avoid-break">
-                     <Box label="Pastor Presidente" value={igreja.pastor} span={2}/>
-                     <Box label="1º Vice-Presidente" value={igreja.vice_presidente1} />
-                     <Box label="2º Vice-Presidente" value={igreja.vice_presidente2} />
-                     <Box label="1º Secretário" value={igreja.secretario1} />
-                     <Box label="2º Secretário" value={igreja.secretario2} />
-                     <Box label="1º Tesoureiro" value={igreja.tesoureiro1} />
-                     <Box label="2º Tesoureiro" value={igreja.tesoureiro2} />
+                {/* DADOS CANÔNICOS */}
+                <div className="avoid-break pt-4">
+                    <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mt-2">2. Dados Canônicos da Denominação</h3>
+                    <div className="grid grid-cols-4 border-l border-t border-slate-300">
+                        <Box label="Organização Eclesiástica" value={igreja.canon_denom} span={2} />
+                        <Box label="Registro Geral Consocial" value={igreja.canon_registro_geral} span={2} />
+                        <Box label="Convenção Geral / Nacional" value={igreja.canon_convencao_nacional} span={2} />
+                        <Box label="Convenção Estadual / Regional" value={igreja.canon_convencao_estadual} span={2} />
+                        <Box label="Declaração de Fé Canônica" value={igreja.canon_declaracao_fe} span={4} />
+                        <Box label="Pioneiros / Fundadores" value={igreja.canon_fundadores} span={3} />
+                        <Box label="Ano Introdução no Brasil" value={igreja.canon_ano_introducao} />
+                    </div>
                 </div>
 
-                <div className="mt-auto text-center border-t-2 border-slate-300 pt-8 flex justify-center gap-20">
-                    <div className="w-64"><div className="border-b border-slate-900 mb-2"></div><p className="text-xs font-bold uppercase">{igreja.pastor}</p><p className="text-[10px] font-serif italic text-slate-500">Pastor Presidente</p></div>
+                {/* ESTATUTO SOCIAL */}
+                {igreja.estatuto_resumo && (
+                    <div className="avoid-break pt-4">
+                        <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mt-2">3. Estatuto Social & Regimento Interno (Resumo)</h3>
+                        <div className="border border-slate-300 p-3 bg-slate-50 text-[10px] font-semibold text-slate-700 leading-relaxed uppercase whitespace-pre-wrap">
+                            {igreja.estatuto_resumo}
+                        </div>
+                    </div>
+                )}
+
+                {/* DIRETORIA EXECUTIVA */}
+                <div className="avoid-break pt-4">
+                    <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mt-2">4. Diretoria Executiva Oficial</h3>
+                    <div className="grid grid-cols-6 border-l border-t border-slate-300">
+                        {/* Linha Pastor Presidente */}
+                        <Box label="Pastor Presidente / Cargo" value={igreja.pastor ? `${igreja.pastor} - (${igreja.pastor_cargo || 'PASTOR PRESIDENTE'})` : ''} span={4} />
+                        <Box label="CPF do Pastor" value={igreja.pastor_cpf} span={2} />
+
+                        {/* Linha 1º Vice Presidente */}
+                        <Box label="1º Vice-Presidente / Cargo" value={igreja.vice_presidente1 ? `${igreja.vice_presidente1} - (${igreja.vice_presidente1_cargo || '1º VICE-PRESIDENTE'})` : ''} span={4} />
+                        <Box label="CPF 1º Vice" value={igreja.vice_presidente1_cpf} span={2} />
+
+                        {/* Linha 2º Vice Presidente */}
+                        <Box label="2º Vice-Presidente / Cargo" value={igreja.vice_presidente2 ? `${igreja.vice_presidente2} - (${igreja.vice_presidente2_cargo || '2º VICE-PRESIDENTE'})` : ''} span={4} />
+                        <Box label="CPF 2º Vice" value={igreja.vice_presidente2_cpf} span={2} />
+
+                        {/* Linha 1º Secretário */}
+                        <Box label="1º Secretário / Cargo" value={igreja.secretario1 ? `${igreja.secretario1} - (${igreja.secretario1_cargo || '1º SECRETÁRIO'})` : ''} span={4} />
+                        <Box label="CPF 1º Secretário" value={igreja.secretario1_cpf} span={2} />
+
+                        {/* Linha 2º Secretário */}
+                        <Box label="2º Secretário / Cargo" value={igreja.secretario2 ? `${igreja.secretario2} - (${igreja.secretario2_cargo || '2º SECRETÁRIO'})` : ''} span={4} />
+                        <Box label="CPF 2º Secretário" value={igreja.secretario2_cpf} span={2} />
+
+                        {/* Linha 1º Tesoureiro */}
+                        <Box label="1º Tesoureiro / Cargo" value={igreja.tesoureiro1 ? `${igreja.tesoureiro1} - (${igreja.tesoureiro1_cargo || '1º TESOUREIRO'})` : ''} span={4} />
+                        <Box label="CPF 1º Tesoureiro" value={igreja.tesoureiro1_cpf} span={2} />
+
+                        {/* Linha 2º Tesoureiro */}
+                        <Box label="2º Tesoureiro / Cargo" value={igreja.tesoureiro2 ? `${igreja.tesoureiro2} - (${igreja.tesoureiro2_cargo || '2º TESOUREIRO'})` : ''} span={4} />
+                        <Box label="CPF 2º Tesoureiro" value={igreja.tesoureiro2_cpf} span={2} />
+                    </div>
+                </div>
+
+                {/* DADOS BANCÁRIOS & PIX */}
+                {(igreja.banco || igreja.chave_pix) && (
+                    <div className="avoid-break pt-4">
+                        <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mt-2">5. Dados Financeiros & Conta de Recebimento</h3>
+                        <div className="grid grid-cols-4 border-l border-t border-slate-300">
+                            <Box label="Banco de Liquidação" value={igreja.banco} span={2} />
+                            <Box label="Agência" value={igreja.agencia} />
+                            <Box label="Conta Bancária / Tipo" value={igreja.conta ? `${igreja.conta} (${igreja.tipo_conta || 'CORRENTE'})` : ''} />
+                            <Box label="Chave PIX Registrada" value={igreja.chave_pix} span={4} />
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-8 text-center border-t-2 border-slate-300 pt-8 flex justify-center gap-20 avoid-break">
+                    <div className="w-64"><div className="border-b border-slate-900 mb-2"></div><p className="text-xs font-bold uppercase">{igreja.pastor}</p><p className="text-[10px] font-serif italic text-slate-500">Pastor Presidente / Superintendente</p></div>
                 </div>
             </PageContainer>
         );
@@ -4941,11 +5048,21 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.2.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.3.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-800">v5.2.0 - Otimização de Performance & Customização Master</h3>
+                <h3 className="font-bold text-lg text-indigo-800">v5.3.0 - Assistência Virtual Global & Ficha Institucional Canônica</h3>
                 <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Centralização do Painel Master de IA (SaaS Global):</strong> Integração e transferência completa dos controles da Assistente Virtual Sofia/Gabriel/Graça para uma aba unificada no Painel Master Administrativo. Suporta upload de avatares com compressão local (<strong className="text-slate-700">&lt;500KB</strong>), customização refinada de System Prompt para teologia/suporte, além de regras dinâmicas de FAQ baseadas em correspondência de palavras-chave com respostas automatizadas instantâneas.</li>
+                    <li><strong className="text-slate-700">Reengenharia da Ficha da Igreja (Canônica):</strong> Expansão completa do relatório oficial de cadastro institucional (`rel_igreja`) para documentar todos os dados canônicos da denominação (registro eclesiástico consocial, convenções de pastores federal e estadual, pioneiros e ano de introdução no Brasil), resumo formatado de estatuto social e regimento, cargos e CPFs de toda a diretoria executiva, além de dados bancários completos e chaves PIX de recebimentos da sede.</li>
+                </ul>
+            </div>
+
+            <div className="relative pl-8 border-l-2 border-slate-400">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-500 shadow-[0_0_10px_rgba(100,116,139,0.5)]"></div>
+                <h3 className="font-bold text-lg text-slate-800">v5.2.0 - Otimização de Performance & Customização Master</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Otimização de Performance (Paginação Firestore):</strong> Refatoração dos ouvintes do banco de dados do Firestore para Membros e Histórico Financeiro, com limites (`limit()`) de dados para reduzir a carga inicial, além de possuir filtros temporais inteligentes e botões rápidos para carregar mais registros sob demanda.</li>
                     <li><strong className="text-slate-700">Customização IA via Portal SaaS:</strong> Possibilidade de alterar e persistir o nome e a foto de perfil (Avatar) do Assistente Virtual diretamente no Painel Master SaaS de forma unificada e em tempo real.</li>
@@ -5156,8 +5273,7 @@ const ModuleIgreja = () => {
     const menuItems = [
         {id: 1, label: 'Sede e Diretoria', icon: Building2},
         {id: 2, label: 'Congregações e Filiais', icon: MapPin},
-        {id: 3, label: 'Assinatura (Licença)', icon: ShieldCheck},
-        {id: 4, label: 'Assistente Virtual', icon: MessageSquare}
+        {id: 3, label: 'Assinatura (Licença)', icon: ShieldCheck}
     ];
 
     const TabButton: any = ({ item }) => (
@@ -5639,7 +5755,7 @@ const ModuleIgreja = () => {
                     </div>
                 )}
 
-                {tab === 4 && (
+                {false && tab === 4 && (
                     <div className="glass-modern p-8 rounded-[2.5rem] overflow-y-auto custom-scrollbar h-full space-y-8 animate-entrance">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                             {/* Card 1: Aparência e Identidade */}
@@ -5828,6 +5944,55 @@ const ModuleDesenvolvedor = () => {
     // ESTADOS PARA LISTAGEM DE CLIENTES E PAGAMENTOS
     const [tenants, setTenants] = useState([]);
     const [loadingTenants, setLoadingTenants] = useState(false);
+
+    // ESTADOS E FUNÇÕES PARA O ASSISTENTE VIRTUAL (IA) TRANSFERIDO
+    const [newKeywords, setNewKeywords] = useState("");
+    const [newResponse, setNewResponse] = useState("");
+
+    const handleAddFaq = () => {
+        if (!newKeywords.trim() || !newResponse.trim()) {
+            addToast("Preencha as palavras-chave e a resposta automatizada da regra.", "warning");
+            return;
+        }
+        const newRule = {
+            id: String(Date.now()),
+            keywords: newKeywords,
+            response: newResponse
+        };
+        setData(prev => ({
+            ...prev,
+            bot_faq: [...(prev.bot_faq || []), newRule]
+        }));
+        setNewKeywords("");
+        setNewResponse("");
+        addToast("Nova regra de FAQ adicionada! Salve as alterações para persistir em Firestore.", "info");
+    };
+
+    const handleRemoveFaq = (id: string) => {
+        setData(prev => ({
+            ...prev,
+            bot_faq: (prev.bot_faq || []).filter((item: any) => item.id !== id)
+        }));
+        addToast("Regra removida. Lembre-se de salvar as alterações para persistir.", "info");
+    };
+
+    const handleBotAvatarUpload = (e: any) => {
+        const file = e.target.files[0];
+        if (file) {
+             if (file.size > 500 * 1024) { 
+                 alert("A imagem do avatar deve ter no máximo 500KB.");
+                 return; 
+             }
+             const reader = new FileReader();
+             reader.onloadend = async () => {
+                 const rawResult = reader.result as string;
+                 const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                 setData(prev => ({...prev, bot_avatar: compressed}));
+                 addToast("Avatar customizado carregado com sucesso!", "success");
+             };
+             reader.readAsDataURL(file);
+         }
+    };
 
     const defaultPlanos = {
         basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual'],
@@ -6093,7 +6258,18 @@ const ModuleDesenvolvedor = () => {
             if (data.prestador_servico !== undefined) payload.prestador_servico = data.prestador_servico;
             if (data.bot_name !== undefined) payload.bot_name = data.bot_name;
             if (data.bot_welcome !== undefined) payload.bot_welcome = data.bot_welcome;
-            if (data.bot_avatar !== undefined) payload.bot_avatar = data.bot_avatar;
+            if (data.bot_instructions !== undefined) payload.bot_instructions = data.bot_instructions;
+            if (data.bot_faq !== undefined) payload.bot_faq = data.bot_faq;
+            
+            if (data.bot_avatar !== undefined) {
+                if (typeof data.bot_avatar === 'string' && data.bot_avatar.startsWith('data:image/') && data.bot_avatar.length > 50000) {
+                    const compressed = await resizeImageAndCompress(data.bot_avatar, 150, 150, 0.75);
+                    payload.bot_avatar = compressed;
+                    setData(prev => ({...prev as any, bot_avatar: compressed}));
+                } else {
+                    payload.bot_avatar = data.bot_avatar;
+                }
+            }
 
             // Guarda na base de dados do Tenant atual
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), payload, { merge: true });
@@ -6193,6 +6369,7 @@ const ModuleDesenvolvedor = () => {
         {id: 'clientes', label: 'Clientes & Planos', icon: Users},
         {id: 'pagamentos', label: 'Controle Financeiro', icon: DollarSign},
         {id: 'planos', label: 'Permissões do Plano', icon: Layers},
+        {id: 'assistente', label: 'Assistente Virtual (IA)', icon: MessageSquare},
         {id: 'config', label: 'Config. do App', icon: Settings},
         {id: 'rotinas', label: 'Rotinas DEV', icon: Activity}
     ];
@@ -6553,6 +6730,170 @@ const ModuleDesenvolvedor = () => {
                     </div>
                 )}
 
+                {/* === ABA: ASSISTENTE VIRTUAL (IA) === */}
+                {tab === 'assistente' && (
+                    <div className="space-y-8 animate-fadeIn">
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 flex items-start gap-4">
+                            <MessageSquare size={24} className="text-indigo-600 mt-1 shrink-0"/>
+                            <div>
+                                <h4 className="font-black text-indigo-950 text-base uppercase tracking-widest mb-1">Assistência Técnica e Suporte Virtual</h4>
+                                <p className="text-xs text-indigo-800 leading-relaxed font-semibold">
+                                    Módulo SaaS Global para configuração do Chatbot de Inteligência Artificial do sistema. Todas as edições feitas aqui são aplicadas para todos os operadores do sistema.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                            {/* Card 1: Identidade e Aparência */}
+                            <div className="space-y-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                <h3 className="font-black text-lg text-indigo-900 uppercase tracking-widest flex items-center gap-2 mb-2 pb-2 border-b"><Smile size={20}/> Perfil do Assistente</h3>
+                                
+                                <FormInput 
+                                    label="Nome da Assistente Virtual" 
+                                    value={data.bot_name || ''} 
+                                    onChange={v=>setData({...data, bot_name: v})} 
+                                    placeholder="Ex: Sofia (Assistente Virtual)" 
+                                    className="!mb-4"
+                                />
+
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar</label>
+                                    <div className="grid grid-cols-4 gap-4">
+                                        {[
+                                            { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
+                                            { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
+                                            { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
+                                        ].map((av) => (
+                                            <button 
+                                                type="button"
+                                                key={av.name} 
+                                                onClick={() => setData({...data, bot_avatar: av.url})}
+                                                className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 bg-white relative overflow-hidden group ${data.bot_avatar === av.url ? 'border-indigo-600 scale-105 shadow-md shadow-indigo-600/10' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-indigo-300'}`}
+                                            >
+                                                <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
+                                                <span className="text-[10px] font-bold text-slate-700">{av.name}</span>
+                                                {data.bot_avatar === av.url && (
+                                                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
+                                                )}
+                                            </button>
+                                        ))}
+
+                                        {/* Custom Upload Option */}
+                                        <label className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 bg-white cursor-pointer relative overflow-hidden group ${(![
+                                            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
+                                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+                                            "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
+                                        ].includes(data.bot_avatar) && data.bot_avatar) ? 'border-indigo-600' : 'border-dashed border-slate-300 hover:border-indigo-300'}`}>
+                                            {(![
+                                                "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
+                                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+                                                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
+                                            ].includes(data.bot_avatar) && data.bot_avatar) ? (
+                                                <img src={data.bot_avatar} alt="Custom" className="w-12 h-12 rounded-xl object-cover" />
+                                            ) : (
+                                                <div className="w-12 h-12 bg-slate-50 border rounded-xl flex items-center justify-center"><Upload size={20} className="text-slate-400"/></div>
+                                            )}
+                                            <span className="text-[10px] font-bold text-slate-700">Outro</span>
+                                            <input type="file" className="hidden" accept="image/*" onChange={handleBotAvatarUpload}/>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mensagem Inicial de Boas-vindas</label>
+                                    <textarea 
+                                        value={data.bot_welcome || ''} 
+                                        onChange={e=>setData({...data, bot_welcome: e.target.value})}
+                                        className="w-full text-slate-700 bg-white border border-slate-200 rounded-2xl p-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-20"
+                                        placeholder="Ex: Olá! Sou o assistente virtual..."
+                                    />
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Instruções Customizadas da IA (System Prompt)</label>
+                                    <textarea 
+                                        value={data.bot_instructions || ''} 
+                                        onChange={e=>setData({...data, bot_instructions: e.target.value})}
+                                        className="w-full text-slate-700 bg-white border border-slate-200 rounded-2xl p-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-28"
+                                        placeholder="Instruções de como o assistente deve responder e regras a seguir."
+                                    />
+                                    <p className="text-[10px] text-slate-400 font-medium">Forneca o contexto de base para alimentar a Inteligência Artificial Gemini (Pastoral/Suporte).</p>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Base de Conhecimento e FAQ */}
+                            <div className="space-y-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
+                                <h3 className="font-black text-lg text-indigo-900 uppercase tracking-widest flex items-center gap-2 mb-2 pb-2 border-b"><BookOpen size={20}/> Base de Conhecimento (FAQ)</h3>
+                                
+                                <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-250">
+                                    <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider block">Adicionar Regra Automática</span>
+                                    <FormInput 
+                                        label="Palavras-chave (Separadas por vírgula)" 
+                                        value={newKeywords} 
+                                        onChange={setNewKeywords} 
+                                        placeholder="ex: pix, pagar, mensalidade, boleto" 
+                                        className="!mb-3 text-xs"
+                                    />
+                                    <div className="space-y-1">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Resposta Automatizada Instantânea</label>
+                                        <textarea
+                                            value={newResponse}
+                                            onChange={e=>setNewResponse(e.target.value)}
+                                            rows={3}
+                                            className="w-full text-slate-700 bg-white border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="Descreve o que responder quando as palavras forem digitadas."
+                                        />
+                                    </div>
+                                    <Button onClick={handleAddFaq} variant="primary" className="w-full py-2.5 text-xs shadow-indigo-500/10">
+                                        <Plus size={14}/> Adicionar Regra
+                                    </Button>
+                                </div>
+
+                                <div className="flex-1 space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1 pt-2">
+                                    <span className="text-xs font-black text-slate-400 tracking-wider block uppercase mb-1">Regras FAQ Ativas</span>
+                                    
+                                    {(!data.bot_faq || data.bot_faq.length === 0) ? (
+                                        <div className="text-center py-8 text-slate-400 bg-slate-50 border border-dashed rounded-2xl flex flex-col items-center">
+                                            <MessageSquare size={32} className="mb-2 opacity-30"/>
+                                            <span className="text-xs font-medium">Nenhuma regra cadastrada. O chatbot usará apenas inteligência artificial pura.</span>
+                                        </div>
+                                    ) : (
+                                        data.bot_faq.map((rule: any) => (
+                                            <div key={rule.id} className="bg-white border text-slate-700 rounded-2xl p-4 shadow-sm flex justify-between items-start gap-4 animate-entrance">
+                                                <div className="space-y-1 flex-1">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(rule.keywords || '').split(',').map((kw: string, idx: number) => (
+                                                            <span key={idx} className="bg-indigo-50 text-indigo-700 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                                {kw.trim()}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 font-medium leading-relaxed pt-1 whitespace-pre-wrap">{rule.response}</p>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleRemoveFaq(rule.id)}
+                                                    className="p-1.5 text-rose-500 hover:text-white hover:bg-rose-500 hover:scale-105 rounded-lg border border-rose-200 hover:border-transparent transition-all shrink-0"
+                                                    title="Excluir Regra"
+                                                >
+                                                    <Trash size={14}/>
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Save Action for Assistant */}
+                        <div className="mt-8 flex justify-end pt-6 border-t pb-10">
+                            <Button onClick={handleSaveConfig} variant="primary" className="shadow-lg px-8 py-4 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
+                                <Save size={18}/> Salvar Estilo do Assistente
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* === ABA: CONFIGURAÇÕES E RESET === */}
                 {tab === 'config' && (
                     <div className="space-y-8 animate-fadeIn">
@@ -6609,38 +6950,6 @@ const ModuleDesenvolvedor = () => {
                                             <Trash2 size={12}/> Remover Papel de Parede
                                         </button>
                                     )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="font-black text-lg text-indigo-800 uppercase tracking-widest mb-4 flex items-center gap-2 mt-10"><MessageSquare size={20}/> Assistente Virtual (IA)</h3>
-                            <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-fadeIn">
-                                <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-indigo-400 flex flex-col items-center justify-center bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer relative overflow-hidden group shrink-0 shadow-md">
-                                    {(data.bot_avatar || '') ? <img src={data.bot_avatar} className="w-full h-full object-cover p-1 rounded-xl" /> : <div className="text-center text-indigo-400"><ImageIcon size={28} className="mx-auto mb-1"/><span className="text-[10px] font-bold">Avatar</span></div>}
-                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            const reader = new FileReader();
-                                            reader.onloadend = async () => {
-                                                try {
-                                                    setData({...data, bot_avatar: reader.result});
-                                                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { bot_avatar: reader.result }, { merge: true });
-                                                    addToast("Avatar do assistente atualizado com sucesso!", "success");
-                                                } catch (err) {}
-                                            };
-                                            reader.readAsDataURL(file);
-                                        }
-                                    }}/>
-                                    <div className="absolute inset-0 bg-indigo-900/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black text-center leading-tight p-2 uppercase tracking-widest">Alterar Avatar</div>
-                                </label>
-                                <div className="flex-1 text-center md:text-left space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormInput label="Nome do Assistente" value={data.bot_name || ''} onChange={v => setData({...data, bot_name: v})} placeholder="Ex: Sofia (Assistente Virtual)" className="!mb-0" />
-                                        <FormInput label="Mensagem de Saudação" value={data.bot_welcome || ''} onChange={v => setData({...data, bot_welcome: v})} placeholder="Ex: Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?" className="!mb-0" />
-                                    </div>
-                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Você pode alterar o nome e a foto de perfil da Inteligência Artificial. Esses dados serão visíveis no widget de chat flutuante para todos os usuários do sistema.</p>
-                                    <Button onClick={handleSaveConfig} variant="primary" className="shadow-lg"><Save size={18}/> Salvar Estilo do Assistente</Button>
                                 </div>
                             </div>
                         </div>
@@ -20197,7 +20506,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.2.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.3.0</p>
                         </div>
                     </div>
                     <div>
