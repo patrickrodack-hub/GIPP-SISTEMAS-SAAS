@@ -1014,6 +1014,37 @@ const formatDateLocal = (dateString) => {
     try { if (typeof dateString !== 'string') return '---'; const [year, month, day] = dateString.split('-'); return `${day}/${month}/${year}`; } catch(e) { return dateString; } 
 };
 
+const isValidCPF = (cpf: string): boolean => {
+    if (!cpf) return false;
+    const cleanCPF = cpf.replace(/\D/g, '');
+    if (cleanCPF.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+        sum += parseInt(cleanCPF.charAt(i)) * (10 - i);
+    }
+    let rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cleanCPF.charAt(9))) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+        sum += parseInt(cleanCPF.charAt(i)) * (11 - i);
+    }
+    rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cleanCPF.charAt(10))) return false;
+    return true;
+};
+
+const formatCPF = (v: string): string => {
+    if (!v) return '';
+    const clean = v.replace(/\D/g, '');
+    if (clean.length <= 3) return clean;
+    if (clean.length <= 6) return `${clean.slice(0, 3)}.${clean.slice(3)}`;
+    if (clean.length <= 9) return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6)}`;
+    return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9, 11)}`;
+};
+
 const copyToClipboard = (text) => {
     const textArea = document.createElement("textarea");
     textArea.value = text; textArea.style.top = "0"; textArea.style.left = "0"; textArea.style.position = "fixed";
@@ -1834,7 +1865,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                 </div>
                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormInput label="Nome Completo" value={data.nome} onChange={v=>setData({...data, nome:v})} required placeholder="Ex: João da Silva" className="!mb-0"/>
-                                    <FormInput label="CPF" value={data.cpf} onChange={v=>setData({...data, cpf:v})} required placeholder="Apenas números ou formato padrão" className="!mb-0"/>
+                                    <FormInput label="CPF" value={data.cpf} onChange={v=>setData({...data, cpf:formatCPF(v)})} required placeholder="000.000.000-00" className="!mb-0"/>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -19015,7 +19046,15 @@ export default function App() {
             processedData.congregacao_id = user.congregacao_id || 'sede';
         }
 
-        if (resolvedModalType === 'membro' || resolvedModalType === 'usuario') {
+        if (resolvedModalType === 'membro') {
+            if (!processedData.congregacao_id) processedData.congregacao_id = 'sede';
+            if (processedData.cpf && !isValidCPF(processedData.cpf)) {
+                addToast("O CPF informado é inválido! Por favor, insira um CPF válido.", "error");
+                return;
+            }
+        }
+
+        if (resolvedModalType === 'usuario') {
             if (!processedData.congregacao_id) processedData.congregacao_id = 'sede';
         }
 
