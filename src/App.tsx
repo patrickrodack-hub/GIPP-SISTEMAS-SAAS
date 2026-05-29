@@ -14,7 +14,7 @@ import {
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
-  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target,
+  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
@@ -4121,7 +4121,7 @@ const PrintSystem = ({ mode, data }) => {
             <PageContainer title="Relatório de Aniversariantes" subtitle={subtitle}>
                 <Table headers={[{label:'Dia', align:'center'}, {label:'Nome'}, {label:'Cargo'}, {label:'Contato'}, {label:'Data Nasc.'}]}>
                     {filtrados.map((m, i) => (
-                        <tr key={m.id} className="border-b hover:bg-slate-50 avoid-break">
+                        <tr key={m.id} className="border-b hover:bg-slate-50 avoid-break border-slate-200">
                             <td className="p-2 font-black text-pink-600 text-center w-12 text-lg">{m.data_nascimento.split('-')[2]}</td>
                             <td className="p-2 font-bold text-slate-800">{m.nome}</td>
                             <td className="p-2 text-xs uppercase text-slate-600">{m.cargo}</td>
@@ -4129,8 +4129,164 @@ const PrintSystem = ({ mode, data }) => {
                             <td className="p-2 text-xs">{formatDateLocal(m.data_nascimento)}</td>
                         </tr>
                     ))}
-                    {filtrados.length === 0 && <tr><td colSpan="5" className="p-4 text-center italic text-slate-500">Nenhum aniversariante encontrado neste período.</td></tr>}
+                    {filtrados.length === 0 && <tr><td colSpan={5} className="p-4 text-center italic text-slate-500">Nenhum aniversariante encontrado neste período.</td></tr>}
                 </Table>
+            </PageContainer>
+        );
+    }
+
+    // 13 - PLANEJAMENTO ANUAL
+    if (mode === 'rel_planejamento_anual') {
+        const orcamentos = data.orcamentos || [];
+        const centro_custo = data.centro_custo || [];
+        const financeiro = data.financeiro || [];
+        const filtro_tipo = data.filtro_tipo || 'ano';
+        const ano = data.ano || new Date().getFullYear();
+        const mes = data.mes || '';
+        const data_inicio = data.data_inicio || '';
+        const data_fim = data.data_fim || '';
+
+        let subtitle = "";
+        let transactionFilter = (f: any) => true;
+
+        if (filtro_tipo === 'ano') {
+            subtitle = `Exercício Anual: ${ano}`;
+            transactionFilter = (f: any) => {
+                if (!f.data_competencia && !f.data_pagamento) return false;
+                const d = f.data_competencia || f.data_pagamento;
+                return d.startsWith(String(ano));
+            };
+        } else if (filtro_tipo === 'mes') {
+            const monthNames = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            subtitle = `Referência Mensal: ${monthNames[parseInt(mes)]} de ${ano}`;
+            transactionFilter = (f: any) => {
+                if (!f.data_competencia && !f.data_pagamento) return false;
+                const d = f.data_competencia || f.data_pagamento;
+                const [y, mStr] = d.split('-');
+                return y === String(ano) && parseInt(mStr) === parseInt(mes);
+            };
+        } else if (filtro_tipo === 'periodo') {
+            subtitle = `Período Especial: ${data_inicio ? formatDateLocal(data_inicio) : 'Início'} até ${data_fim ? formatDateLocal(data_fim) : 'Fim'}`;
+            transactionFilter = (f: any) => {
+                const d = f.data_competencia || f.data_pagamento;
+                if (!d) return false;
+                if (data_inicio && d < data_inicio) return false;
+                if (data_fim && d > data_fim) return false;
+                return true;
+            };
+        }
+
+        const processedCenters = centro_custo.map((cc: any) => {
+            const budgetYearStr = String(ano);
+            const budget = orcamentos.find((b: any) => b.ano === budgetYearStr && b.centro_custo_id === cc.id);
+            
+            const meta_receita = budget ? (parseFloat(budget.meta_receita) || 0) : 0;
+            const teto_gastos = budget ? (parseFloat(budget.teto_gastos) || 0) : 0;
+
+            const filteredTxs = financeiro.filter((f: any) => f.centro_custo_id === cc.id && transactionFilter(f));
+
+            const entradasRealizadas = filteredTxs
+                .filter((f: any) => f.tipo === 'entrada')
+                .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
+
+            const saidasRealizadas = filteredTxs
+                .filter((f: any) => f.tipo === 'saida')
+                .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
+
+            return {
+                ...cc,
+                meta_receita,
+                teto_gastos,
+                entradasRealizadas,
+                saidasRealizadas,
+            };
+        });
+
+        const totalMeta = processedCenters.reduce((acc: number, cc: any) => acc + cc.meta_receita, 0);
+        const totalTeto = processedCenters.reduce((acc: number, cc: any) => acc + cc.teto_gastos, 0);
+        const totalEntradas = processedCenters.reduce((acc: number, cc: any) => acc + cc.entradasRealizadas, 0);
+        const totalSaidas = processedCenters.reduce((acc: number, cc: any) => acc + cc.saidasRealizadas, 0);
+
+        const saldoPrevisto = totalMeta - totalTeto;
+        const saldoRealizado = totalEntradas - totalSaidas;
+
+        return (
+            <PageContainer title="Relatório de Planejamento Orçamentário" subtitle={subtitle}>
+                <div className="grid grid-cols-3 gap-4 mb-6 avoid-break bg-slate-50 border border-slate-300 rounded-xl p-4">
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Metas de Receitas (Anual)</p>
+                        <p className="text-lg font-black text-emerald-700 mt-1">R$ {totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] text-slate-500 italic mt-0.5">Realizado no filtro: R$ {totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Limites de Gastos (Anual)</p>
+                        <p className="text-lg font-black text-rose-700 mt-1">R$ {totalTeto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] text-slate-500 italic mt-0.5">Realizado no filtro: R$ {totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Diferença de Balanço</p>
+                        <p className={`text-lg font-black mt-1 ${saldoRealizado >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
+                            R$ {saldoRealizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-[10px] text-slate-500 italic mt-0.5">Previsto: R$ {saldoPrevisto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                </div>
+
+                <h3 className="font-bold text-xs uppercase text-slate-700 mb-2 mt-4 tracking-wider">Detalhamento por Centro de Custos</h3>
+                <Table headers={[
+                    { label: 'Centro de Custo' },
+                    { label: 'Meta Receita', align: 'right' },
+                    { label: 'Receita Realizada', align: 'right' },
+                    { label: 'Meta %', align: 'center' },
+                    { label: 'Teto Gastos', align: 'right' },
+                    { label: 'Despesa Realizada', align: 'right' },
+                    { label: 'Uso %', align: 'center' }
+                ]}>
+                    {processedCenters.map((cc: any) => {
+                        const metaPct = cc.meta_receita > 0 ? (cc.entradasRealizadas / cc.meta_receita) * 100 : 0;
+                        const tetoPct = cc.teto_gastos > 0 ? (cc.saidasRealizadas / cc.teto_gastos) * 100 : 0;
+
+                        return (
+                            <tr key={cc.id} className="border-b hover:bg-slate-50 avoid-break text-[10px] border-slate-200">
+                                <td className="p-2 font-bold text-slate-850">
+                                    <div className="font-bold text-slate-800 text-xs">{cc.nome}</div>
+                                    <div className="text-[9px] text-slate-400 font-medium">{cc.descricao || 'Sem descrição'}</div>
+                                </td>
+                                <td className="p-2 text-right text-slate-600 font-mono">
+                                    R$ {cc.meta_receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-2 text-right text-emerald-600 font-bold font-mono">
+                                    R$ {cc.entradasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-2 text-center">
+                                    <span className={`px-1.5 py-0.5 text-[8px] font-black rounded ${metaPct >= 100 ? 'bg-emerald-100 text-emerald-800' : metaPct > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`}>
+                                        {metaPct.toFixed(1)}%
+                                    </span>
+                                </td>
+                                <td className="p-2 text-right text-slate-600 font-mono">
+                                    R$ {cc.teto_gastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-2 text-right text-rose-650 font-bold font-mono">
+                                    R$ {cc.saidasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-2 text-center">
+                                    <span className={`px-1.5 py-0.5 text-[8px] font-black rounded ${tetoPct > 100 ? 'bg-rose-100 text-rose-800' : tetoPct > 80 ? 'bg-amber-100 text-amber-800' : tetoPct > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                                        {tetoPct.toFixed(1)}%
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                    {processedCenters.length === 0 && (
+                        <tr>
+                            <td colSpan={7} className="p-4 text-center italic text-slate-500">Nenhum centro de custo cadastrado.</td>
+                        </tr>
+                    )}
+                </Table>
+
+                <div className="mt-6 border-t border-slate-300 pt-3 text-[10px] text-justify text-slate-500 leading-relaxed avoid-break">
+                    <strong className="text-slate-700">Nota:</strong> Este relatório consolida as metas de receitas e os limites de teto de gastos configurados anualmente pela liderança da igreja frente a todas as transações de receitas e despesas registradas no livro-caixa dentro do filtro de abrangência selecionado. Margens superiores a 100% nas receitas são excelentes, enquanto usos acima de 100% do teto de gastos no setor financeiro exigem contingenciamento e revisão orçamentária imediata.
+                </div>
             </PageContainer>
         );
     }
@@ -5258,11 +5414,22 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.3.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.5.0 */}
+            <div className="relative pl-8 border-l-2 border-emerald-500">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="font-bold text-lg text-emerald-800">v5.5.0 - Super Resolução & Cache Local no IndexedDB</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Cache de Média Persistente via IndexedDB:</strong> Criação de subsistema de armazenamento local offline usando o banco IndexedDB do navegador. Imagens pesadas como avatares de membros, fotos de pastores, do assistente de IA, logos e cartazes de eventos são guardadas fisicamente na máquina do usuário, eliminando o tráfego repetitivo e minimizando a franquia de dados móveis sob conexões 3G/4G restritas.</li>
+                    <li><strong className="text-slate-700">Pré-processamento Científico de Uploads:</strong> Redução drástica das dimensões de imagens direto no cliente por meio de renderizadores Canvas HTML5 híbridos antes do upload no Firestore. Limita resoluções excessivas para 400x400 e otimiza a compressão JPEG para uma proporção ideal de 75%, mitigando o consumo de largura de banda.</li>
+                    <li><strong className="text-slate-700">Componente Inteligente &lt;CachedImage&gt;:</strong> Substituição de tags img nativas por um elemento sob medida com ciclo de vida otimizado. Ele intercepta as URLs do banco e renderiza imagens a partir do banco de dados IndexedDB local em nanossegundos, gerando uma experiência de navegação instantânea.</li>
+                </ul>
+            </div>
+
             <div className="relative pl-8 border-l-2 border-indigo-600">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
                 <h3 className="font-bold text-lg text-indigo-800">v5.3.0 - Assistência Virtual Global & Ficha Institucional Canônica</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Centralização do Painel Master de IA (SaaS Global):</strong> Integração e transferência completa dos controles da Assistente Virtual Sofia/Gabriel/Graça para uma aba unificada no Painel Master Administrativo. Suporta upload de avatares com compressão local (<strong className="text-slate-700">&lt;500KB</strong>), customização refinada de System Prompt para teologia/suporte, além de regras dinâmicas de FAQ baseadas em correspondência de palavras-chave com respostas automatizadas instantâneas.</li>
                     <li><strong className="text-slate-700">Reengenharia da Ficha da Igreja (Canônica):</strong> Expansão completa do relatório oficial de cadastro institucional (`rel_igreja`) para documentar todos os dados canônicos da denominação (registro eclesiástico consocial, convenções de pastores federal e estadual, pioneiros e ano de introdução no Brasil), resumo formatado de estatuto social e regimento, cargos e CPFs de toda a diretoria executiva, além de dados bancários completos e chaves PIX de recebimentos da sede.</li>
@@ -5475,9 +5642,9 @@ const ModuleIgreja = () => {
                 secretario2_cargo: '2º SECRETÁRIO / DIÁCONO',
                 tesoureiro1_cargo: '1º TESOUREIRO / PRESBÍTERO',
                 tesoureiro2_cargo: '2º TESOUREIRO / DIÁCONO',
-                bot_name: db.igreja?.bot_name || 'Sofia (Assistente Virtual)',
-                bot_avatar: db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200',
-                bot_welcome: db.igreja?.bot_welcome || 'Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?',
+                bot_name: db.igreja?.bot_name || 'Mary (Assistente Virtual)',
+                bot_avatar: db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200',
+                bot_welcome: db.igreja?.bot_welcome || 'Olá 👋 Sou a assistente virtual Mary. Como posso ajudar você hoje?',
                 bot_instructions: db.igreja?.bot_instructions || '',
                 bot_faq: db.igreja?.bot_faq || [],
                 ...db.igreja
@@ -6006,13 +6173,14 @@ const ModuleIgreja = () => {
                                     label="Nome da Assistente Virtual" 
                                     value={data.bot_name || ''} 
                                     onChange={v=>setData({...data, bot_name: v})} 
-                                    placeholder="Ex: Sara (Assistente Virtual)" 
+                                    placeholder="Ex: Mary (Assistente Virtual)" 
                                 />
 
                                 <div className="space-y-3">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar da Assistente</label>
-                                    <div className="grid grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                         {[
+                                            { name: "Mary", url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO" },
                                             { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
                                             { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
                                             { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
@@ -6020,11 +6188,18 @@ const ModuleIgreja = () => {
                                             <button 
                                                 type="button"
                                                 key={av.name} 
-                                                onClick={() => setData({...data, bot_avatar: av.url})}
+                                                onClick={() => setData({
+                                                    ...data, 
+                                                    bot_avatar: av.url,
+                                                    bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
+                                                })}
                                                 className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 bg-white relative overflow-hidden group ${data.bot_avatar === av.url ? 'border-indigo-600 scale-105 shadow-md shadow-indigo-600/10' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-indigo-300'}`}
                                             >
                                                 <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
-                                                <span className="text-[10px] font-bold text-slate-700">{av.name}</span>
+                                                <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
+                                                    {av.name}
+                                                    {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
+                                                </span>
                                                 {data.bot_avatar === av.url && (
                                                     <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
                                                 )}
@@ -6033,11 +6208,13 @@ const ModuleIgreja = () => {
 
                                         {/* Custom Upload Option */}
                                         <label className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 bg-white cursor-pointer relative overflow-hidden group ${(![
+                                            "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
                                             "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
                                             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
                                             "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
                                         ].includes(data.bot_avatar) && data.bot_avatar) ? 'border-indigo-600' : 'border-dashed border-slate-300 hover:border-indigo-300'}`}>
                                             {(![
+                                                "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
                                                 "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
                                                 "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
                                                 "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
@@ -6995,14 +7172,15 @@ const ModuleDesenvolvedor = () => {
                                     label="Nome da Assistente Virtual" 
                                     value={data.bot_name || ''} 
                                     onChange={v=>setData({...data, bot_name: v})} 
-                                    placeholder="Ex: Sofia (Assistente Virtual)" 
+                                    placeholder="Ex: Mary (Assistente Virtual)" 
                                     className="!mb-4"
                                 />
 
                                 <div className="space-y-3">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar</label>
-                                    <div className="grid grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                         {[
+                                            { name: "Mary", url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO" },
                                             { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
                                             { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
                                             { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
@@ -7010,11 +7188,18 @@ const ModuleDesenvolvedor = () => {
                                             <button 
                                                 type="button"
                                                 key={av.name} 
-                                                onClick={() => setData({...data, bot_avatar: av.url})}
+                                                onClick={() => setData({
+                                                    ...data, 
+                                                    bot_avatar: av.url,
+                                                    bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
+                                                })}
                                                 className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 bg-white relative overflow-hidden group ${data.bot_avatar === av.url ? 'border-indigo-600 scale-105 shadow-md shadow-indigo-600/10' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-indigo-300'}`}
                                             >
                                                 <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
-                                                <span className="text-[10px] font-bold text-slate-700">{av.name}</span>
+                                                <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
+                                                    {av.name}
+                                                    {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
+                                                </span>
                                                 {data.bot_avatar === av.url && (
                                                     <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
                                                 )}
@@ -7023,11 +7208,13 @@ const ModuleDesenvolvedor = () => {
 
                                         {/* Custom Upload Option */}
                                         <label className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 bg-white cursor-pointer relative overflow-hidden group ${(![
+                                            "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
                                             "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
                                             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
                                             "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
                                         ].includes(data.bot_avatar) && data.bot_avatar) ? 'border-indigo-600' : 'border-dashed border-slate-300 hover:border-indigo-300'}`}>
                                             {(![
+                                                "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
                                                 "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
                                                 "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
                                                 "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
@@ -7814,9 +8001,9 @@ const FloatingChatWidget = () => {
     const messages = chat ? chat.messages : [];
     const status = chat?.status || 'bot';
 
-    const botName = db.igreja?.bot_name || 'Sofia (Assistente Virtual)';
-    const botAvatar = db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200';
-    const botWelcome = db.igreja?.bot_welcome || 'Olá 👋 Sou o assistente virtual do sistema. Como posso ajudar você hoje?';
+    const botName = db.igreja?.bot_name || 'Mary (Assistente Virtual)';
+    const botAvatar = db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200';
+    const botWelcome = db.igreja?.bot_welcome || 'Olá 👋 Sou a assistente virtual Mary. Como posso ajudar você hoje?';
 
     useEffect(() => {
         if (isOpen) {
@@ -10893,8 +11080,398 @@ const ModuleConfigVisual = () => {
 };
 
 const ModuleBackup = () => {
-    const { startExport, handleImportRequest } = useContext(ChurchContext);
-    return (<div className="glass-modern p-10 rounded-[2.5rem] flex flex-col items-center justify-center text-center animate-entrance min-h-[500px]"><Database size={80} className="text-slate-300 mb-6"/><h2 className="text-3xl font-black text-slate-800 mb-2">Backup & Dados</h2><p className="text-slate-500 max-w-md mb-8">Mantenha seus dados seguros exportando periodicamente.</p><div className="flex gap-4"><Button variant="primary" onClick={startExport}><DownloadCloud size={20}/> Exportar Dados (JSON)</Button><Button variant="secondary" onClick={handleImportRequest}><UploadCloud size={20}/> Importar Backup</Button></div></div>);
+    const { startExport, handleImportRequest, db, dbFirestore, appId, addToast, setDoc, updateDoc, doc, collection, logAction, setConfirmDialog, user } = useContext(ChurchContext);
+    
+    const [cloudBackups, setCloudBackups] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [restoring, setRestoring] = useState(false);
+    const [restoreProgress, setRestoreProgress] = useState(0);
+
+    const autoHabilitado = db.igreja?.backup_auto_habilitado !== false;
+    const autoFrequencia = db.igreja?.backup_auto_frequencia || 'diario';
+    const ultimoAuto = db.igreja?.backup_auto_ultimo || '';
+
+    const fetchCloudBackups = async () => {
+        setLoading(true);
+        try {
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'cloud_backups');
+            const snapList = await getDocs(colRef);
+            const list: any[] = [];
+            snapList.forEach((d: any) => {
+                list.push({ id: d.id, ...d.data() });
+            });
+            list.sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime());
+            setCloudBackups(list);
+        } catch (err) {
+            console.error("Erro ao obter backups da nuvem:", err);
+            addToast("Falha ao listar pontos de restauração.", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCloudBackups();
+    }, []);
+
+    const handleCreateCloudBackup = async () => {
+        setCreating(true);
+        try {
+            const cleanDb = JSON.parse(JSON.stringify(db));
+            const cleanObject = (obj: any) => {
+                if (!obj || typeof obj !== 'object') return;
+                Object.keys(obj).forEach(key => {
+                    if (typeof obj[key] === 'string' && (obj[key].startsWith('data:image') || obj[key].length > 10000)) {
+                        obj[key] = "[IMAGEM_PESADA_REMOVIDA_DO_CLOUD_BACKUP]";
+                    } else if (typeof obj[key] === 'object') {
+                        cleanObject(obj[key]);
+                    }
+                });
+            };
+            cleanObject(cleanDb);
+
+            const dadosJsonStr = JSON.stringify(cleanDb);
+            const backupSizeKb = Math.round(dadosJsonStr.length / 1024);
+
+            const backupDoc = {
+                id: 'backup_manual_' + Date.now(),
+                data_criacao: new Date().toISOString(),
+                responsavel: user?.nome || 'Administrador',
+                tipo: 'manual',
+                tamanho_kb: backupSizeKb,
+                observacao: 'Ponto de restauração manual criado pelo painel de controle.',
+                dados_json: dadosJsonStr
+            };
+
+            const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'cloud_backups', backupDoc.id);
+            await setDoc(ref, backupDoc);
+            
+            addToast("Ponto de restauração em Nuvem criado!", "success");
+            logAction('SISTEMA', `Criou backup em nuvem (${backupSizeKb} KB)`, 'cloud_backups', backupDoc.id);
+            
+            fetchCloudBackups();
+        } catch (err) {
+            console.error("Erro ao gravar backup na nuvem:", err);
+            addToast("Falha ao salvar backup na nuvem.", "error");
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleRestoreCloudBackup = async (backup: any) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: "⚠ RESTAURAÇÃO DE SISTEMA CRÍTICA",
+            message: `ATENÇÃO: Você está prestes a restaurar a base de dados para o ponto de ${new Date(backup.data_criacao).toLocaleString('pt-BR')} (criado por ${backup.responsavel}). Esta ação substituirá seus membros, registros financeiros, escalas e configurações atuais pelos dados contidos neste backup. Deseja prosseguir?`,
+            onConfirm: async () => {
+                setRestoring(true);
+                setRestoreProgress(0);
+                try {
+                    const targetData = JSON.parse(backup.dados_json);
+                    const docsToWrite: any[] = [];
+                    
+                    if (targetData.igreja) {
+                        docsToWrite.push({ collection: 'settings', id: 'config', data: targetData.igreja });
+                    }
+                    
+                    const simpleCollections = ['membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 'emails', 'mural', 'orcamentos'];
+                    simpleCollections.forEach(col => {
+                        if (targetData[col]) {
+                            targetData[col].forEach((item: any) => {
+                                docsToWrite.push({ 
+                                    collection: col, 
+                                    id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), 
+                                    data: item 
+                                });
+                            });
+                        }
+                    });
+                    
+                    if (targetData.ebd) {
+                        if (targetData.ebd.turmas) targetData.ebd.turmas.forEach((item: any) => docsToWrite.push({ collection: 'ebd_turmas', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                        if (targetData.ebd.alunos) targetData.ebd.alunos.forEach((item: any) => docsToWrite.push({ collection: 'ebd_alunos', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                        if (targetData.ebd.licoes) targetData.ebd.licoes.forEach((item: any) => docsToWrite.push({ collection: 'ebd_licoes', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                    }
+                    if (targetData.missoes) {
+                        if (targetData.missoes.missionarios) targetData.missoes.missionarios.forEach((item: any) => docsToWrite.push({ collection: 'missoes_missionarios', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                        if (targetData.missoes.agencias) targetData.missoes.agencias.forEach((item: any) => docsToWrite.push({ collection: 'missoes_agencias', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                        if (targetData.missoes.colaboradores) targetData.missoes.colaboradores.forEach((item: any) => docsToWrite.push({ collection: 'missoes_colaboradores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                        if (targetData.missoes.agenda) targetData.missoes.agenda.forEach((item: any) => docsToWrite.push({ collection: 'missoes_agenda', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+                    }
+
+                    const batchSize = 100;
+                    for (let i = 0; i < docsToWrite.length; i += batchSize) {
+                        const batch = writeBatch(dbFirestore);
+                        const chunk = docsToWrite.slice(i, i + batchSize);
+                        
+                        for (const docObj of chunk) {
+                            const { collection: colName, id, data: itemData } = docObj;
+                            const dataToSave = { ...itemData };
+                            delete dataToSave.id;
+                            const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, String(id));
+                            batch.set(ref, dataToSave, { merge: true });
+                        }
+                        
+                        await batch.commit();
+                        setRestoreProgress(Math.round(((i + chunk.length) / docsToWrite.length) * 100));
+                    }
+                    
+                    addToast("Ponto de restauração em Nuvem aplicado com sucesso!", "success");
+                    logAction('SISTEMA', `Restaurou banco de dados da nuvem para o ponto: ${backup.data_criacao}`, 'cloud_backups', backup.id);
+                } catch (err) {
+                    console.error("Erro ao aplicar backup da nuvem:", err);
+                    addToast("Falha ao restaurar dados da nuvem.", "error");
+                } finally {
+                    setRestoring(false);
+                }
+            }
+        });
+    };
+
+    const handleDeleteCloudBackup = async (id: string) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: "Remover Ponto de Restauração",
+            message: "Tem certeza de que deseja excluir permanentemente este ponto de restauração da nuvem? Esta ação é irreversível.",
+            onConfirm: async () => {
+                try {
+                    const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'cloud_backups', id);
+                    await deleteDoc(ref);
+                    addToast("Ponto de restauração excluído da nuvem.", "success");
+                    fetchCloudBackups();
+                } catch (err) {
+                    console.error("Erro ao excluir backup da nuvem:", err);
+                    addToast("Falha ao excluir ponto de backup.", "error");
+                }
+            }
+        });
+    };
+
+    const handleToggleAutoBackup = async (checked: boolean) => {
+        try {
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            await updateDoc(configRef, {
+                backup_auto_habilitado: checked
+            });
+            addToast(checked ? "Backup automático habilitado!" : "Backup automático desativado.", "success");
+        } catch (err) {
+            console.error("Erro ao atualizar config de backup:", err);
+            addToast("Falha ao salvar alterações.", "error");
+        }
+    };
+
+    const handleUpdateAutoFreq = async (freq: string) => {
+        try {
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            await updateDoc(configRef, {
+                backup_auto_frequencia: freq
+            });
+            addToast(`Frequência ajustada para: ${freq.toUpperCase()}`, "success");
+        } catch (err) {
+            console.error("Erro ao atualizar frequencia de backup:", err);
+            addToast("Falha ao salvar frequência.", "error");
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col space-y-6 animate-entrance">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600 shadow-sm">
+                        <Database size={28}/>
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-800 text-gradient">Central de Backups GIPP</h2>
+                        <p className="text-sm text-slate-500 font-medium">Garanta a integridade, segurança absoluta e restore simplificado da sua igreja.</p>
+                    </div>
+                </div>
+                <Button variant="ghost" onClick={fetchCloudBackups} className="bg-white border border-slate-200">
+                    <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} /> Sincronizar
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* 1. Backup Local */}
+                <div className="bg-white/70 p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl w-fit mb-4">
+                            <DownloadCloud size={24}/>
+                        </div>
+                        <h3 className="text-lg font-black text-slate-800 mb-1">Backup Local (Ficheiro JSON)</h3>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium mb-6">
+                            Gere e faça download imediato de uma cópia em texto estruturado criptograficamente seguro diretamente para o seu computador ou smartphone. Ideal para segurança offline extra rápida.
+                        </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
+                        <Button className="flex-1 justify-center items-center gap-2" variant="primary" onClick={startExport}>
+                            <DownloadCloud size={16}/> Exportar JSON
+                        </Button>
+                        <Button className="flex-1 justify-center items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200" variant="ghost" onClick={handleImportRequest}>
+                            <UploadCloud size={16}/> Importar Local
+                        </Button>
+                    </div>
+                </div>
+
+                {/* 2. Backup Inteligente (Automático) */}
+                <div className="bg-white/70 p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-xs flex flex-col justify-between col-span-1 lg:col-span-2">
+                    <div>
+                        <div className="flex justify-between items-start">
+                            <div className="p-3 bg-violet-50 text-violet-600 rounded-2xl w-fit mb-4">
+                                <Clock size={24}/>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-600 font-medium">Status do Agendador:</span>
+                                <span className={`px-2 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${autoHabilitado ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                                    {autoHabilitado ? 'Ativado e Ativo' : 'Pausado'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <h3 className="text-lg font-black text-slate-800 mb-1">Backup Automático Silencioso</h3>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium mb-6 flex items-start">
+                            O GIPP executa backups silenciados de forma autônoma em background na nuvem, sem interferir na usabilidade do operador. Defina a periodicidade abaixo:
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/55">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-2">Habilitar Rotina</label>
+                                <div className="flex items-center gap-3">
+                                    <input 
+                                        type="checkbox" 
+                                        id="toggle_auto" 
+                                        checked={autoHabilitado} 
+                                        onChange={(e) => handleToggleAutoBackup(e.target.checked)}
+                                        className="w-10 h-5 bg-slate-200 rounded-full appearance-none cursor-pointer relative checked:bg-indigo-600 transition-colors duration-200 before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-5 before:transition-transform before:duration-205 shadow-inner" 
+                                    />
+                                    <span className="text-xs font-bold text-slate-705">{autoHabilitado ? 'Rotina Autônoma Ativada' : 'Rotina Autônoma Desativada'}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-2">Frequência de Backup</label>
+                                <select 
+                                    value={autoFrequencia} 
+                                    onChange={(e) => handleUpdateAutoFreq(e.target.value)}
+                                    disabled={!autoHabilitado}
+                                    className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 outline-none w-full shadow-xs focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="diario">Diário (A cada 24 Horas)</option>
+                                    <option value="semanal">Semanal (A cada 7 Dias)</option>
+                                    <option value="mensal">Mensal (A cada 30 Dias)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-500">
+                        <span>Último backup silencioso:</span>
+                        <span className="text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                            {ultimoAuto ? new Date(ultimoAuto).toLocaleString('pt-BR') : 'Sem registros na nuvem.'}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div className="bg-white/70 p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-xs">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Cloud className="text-indigo-600" size={20}/> Pontos de Restauração em Nuvem</h3>
+                        <p className="text-xs text-slate-500 font-medium">Pontos guardados com segurança mútua no Cloud Firestore e passíveis de reconstituição com 1 clique.</p>
+                    </div>
+                    <Button 
+                        onClick={handleCreateCloudBackup} 
+                        disabled={creating}
+                        variant="primary" 
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 py-2 px-5 text-xs font-black rounded-xl"
+                    >
+                        {creating ? <Loader2 size={14} className="animate-spin mr-2"/> : <Sparkles size={14} className="mr-2"/>}
+                        Criar Ponto de Restauração
+                    </Button>
+                </div>
+
+                <div className="overflow-x-auto min-h-[150px]">
+                    <table className="w-full text-left text-xs border-collapse font-medium">
+                        <thead>
+                            <tr className="border-b border-slate-200 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                <th className="pb-3 text-left">Data</th>
+                                <th className="pb-3 text-left">Tipo</th>
+                                <th className="pb-3 text-left">Criado Por</th>
+                                <th className="pb-3 text-right">Peso (KB)</th>
+                                <th className="pb-3 text-center w-40">Ações de Recuperação</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {cloudBackups.map((bc: any) => (
+                                <tr key={bc.id} className="hover:bg-slate-50/50">
+                                    <td className="py-3 font-bold text-slate-800 font-mono text-[11px]">
+                                        {new Date(bc.data_criacao).toLocaleString('pt-BR')}
+                                    </td>
+                                    <td className="py-3">
+                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider font-mono ${bc.tipo === 'agendado' ? 'bg-violet-100 text-violet-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                                            {bc.tipo === 'agendado' ? 'Silencioso' : 'Manual'}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 text-slate-700 font-bold uppercase text-[10px]">
+                                        {bc.responsavel}
+                                    </td>
+                                    <td className="py-3 text-right font-mono font-bold text-slate-600">
+                                        {bc.tamanho_kb} KB
+                                    </td>
+                                    <td className="py-3 text-center flex justify-center gap-2">
+                                        <button 
+                                            onClick={() => handleRestoreCloudBackup(bc)}
+                                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-750 font-black px-2.5 py-1.5 rounded-lg border border-emerald-200/50 transition-all text-[10px] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <RefreshCw size={11}/> Restaurar
+                                        </button>
+                                        <button 
+                                            onClick={() => bc.id && handleDeleteCloudBackup(bc.id)}
+                                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold p-1.5 rounded-lg border border-rose-200/50 transition-all cursor-pointer"
+                                            title="Excluir ponto"
+                                        >
+                                            <Trash2 size={13}/>
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {cloudBackups.length === 0 && !loading && (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center italic text-slate-400 font-medium">Nenhum ponto de restauração em nuvem encontrado.</td>
+                                </tr>
+                            )}
+                            {loading && (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-slate-400 flex items-center justify-center gap-2">
+                                        <Loader2 size={16} className="animate-spin text-slate-400"/> Sincronizando pontos...
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {restoring && (
+                <div className="fixed inset-0 bg-slate-900/90 z-[11000] flex flex-col items-center justify-center p-6 backdrop-blur-md">
+                    <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-entrance">
+                        <div className="relative mx-auto w-20 h-20 bg-emerald-100 text-emerald-650 rounded-full flex items-center justify-center animate-pulse">
+                            <Database className="text-emerald-500" size={40}/>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-wide">Gravando em Lotes</h3>
+                            <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">Não feche nem atualize esta aba. Sobrescrevendo tabelas estruturais de forma segura...</p>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-3 relative overflow-hidden shadow-inner">
+                            <div className="bg-emerald-500 h-full rounded-full transition-all duration-300" style={{ width: `${restoreProgress}%` }}></div>
+                        </div>
+                        <p className="text-xs font-mono font-black text-emerald-650 bg-emerald-50 py-1.5 px-4 rounded-xl inline-block">{restoreProgress}% Processado</p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 };
 
 const ModuleUtilitarios = () => {
@@ -13915,7 +14492,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.2.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.5.0 (SaaS Master Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -13996,7 +14573,8 @@ const ModuleRelatorios = memo(() => {
         { id: 'rel_corpo_ministerial', label: '9. Corpo Ministerial', desc: 'Pastores, Obreiros, Diáconos', icon: Shield, color: 'rose' },
         { id: 'rel_contador', label: '10. P/ Contador', desc: 'Financeiro Detalhado p/ Auditoria', icon: FileSpreadsheet, color: 'cyan' },
         { id: 'rel_ata_reuniao', label: '11. Ata de Reunião', desc: 'Documento Padrão AD', icon: ScrollText, color: 'stone' },
-        { id: 'rel_aniversariantes', label: '12. Aniversariantes', desc: 'Listagem de Membros por Mês', icon: Gift, color: 'pink' }
+        { id: 'rel_aniversariantes', label: '12. Aniversariantes', desc: 'Listagem de Membros por Mês', icon: Gift, color: 'pink' },
+        { id: 'rel_planejamento_anual', label: '13. Planejamento Anual', desc: 'Metas vs Realizado / Orçamentos', icon: Target, color: 'emerald' }
     ];
 
     const openReportConfig = (type) => { 
@@ -14050,6 +14628,18 @@ const ModuleRelatorios = memo(() => {
                 break;
             case 'rel_aniversariantes':
                 payload = { membros: db.membros, mes: inputs.mes_aniversario };
+                break;
+            case 'rel_planejamento_anual':
+                payload = { 
+                    orcamentos: db.orcamentos || [], 
+                    centro_custo: db.centro_custo || [], 
+                    financeiro: db.financeiro || [],
+                    filtro_tipo: inputs.filtro_tipo || 'ano', 
+                    ano: inputs.ano || new Date().getFullYear(),
+                    mes: inputs.mes || '',
+                    data_inicio: inputs.data_inicio || '',
+                    data_fim: inputs.data_fim || '1'
+                };
                 break;
         } 
         
@@ -14157,6 +14747,77 @@ const ModuleRelatorios = memo(() => {
                                 </div>
                             )}
 
+                            {configModal.type === 'rel_planejamento_anual' && (
+                                <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 mb-4">
+                                    <p className="text-sm font-bold text-emerald-800 mb-4 flex items-center gap-2"><Target size={18}/> Opções do Planejamento Anual</p>
+                                    
+                                    <div className="mb-4 col-span-2">
+                                        <FormSelect 
+                                            label="Abrangência do Filtro" 
+                                            value={inputs.filtro_tipo || 'ano'} 
+                                            onChange={v => setInputs({...inputs, filtro_tipo: v})} 
+                                            options={[
+                                                {label: 'Exercício Anual Completo (Padrão)', value: 'ano'},
+                                                {label: 'Referência Mensal Específica', value: 'mes'},
+                                                {label: 'Período Customizado (Datas)', value: 'periodo'}
+                                            ]} 
+                                        />
+                                    </div>
+
+                                    {(inputs.filtro_tipo === 'ano' || inputs.filtro_tipo === 'mes' || !inputs.filtro_tipo) && (
+                                        <div className="mb-4">
+                                            <FormInput 
+                                                label="Ano do Exercício" 
+                                                type="number" 
+                                                value={inputs.ano || new Date().getFullYear().toString()} 
+                                                onChange={v => setInputs({...inputs, ano: parseInt(v) || new Date().getFullYear()})} 
+                                            />
+                                        </div>
+                                    )}
+
+                                    {inputs.filtro_tipo === 'mes' && (
+                                        <div className="mb-4">
+                                            <FormSelect 
+                                                label="Selecione o Mês" 
+                                                value={inputs.mes || '1'} 
+                                                onChange={v => setInputs({...inputs, mes: v})} 
+                                                options={[
+                                                    {label: 'Janeiro', value: '1'},
+                                                    {label: 'Fevereiro', value: '2'},
+                                                    {label: 'Março', value: '3'},
+                                                    {label: 'Abril', value: '4'},
+                                                    {label: 'Maio', value: '5'},
+                                                    {label: 'Junho', value: '6'},
+                                                    {label: 'Julho', value: '7'},
+                                                    {label: 'Agosto', value: '8'},
+                                                    {label: 'Setembro', value: '9'},
+                                                    {label: 'Outubro', value: '10'},
+                                                    {label: 'Novembro', value: '11'},
+                                                    {label: 'Dezembro', value: '12'}
+                                                ]} 
+                                            />
+                                        </div>
+                                    )}
+
+                                    {inputs.filtro_tipo === 'periodo' && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Data Inicial" 
+                                                type="date" 
+                                                value={inputs.data_inicio || ''} 
+                                                onChange={v => setInputs({...inputs, data_inicio: v})} 
+                                            />
+                                            <FormInput 
+                                                label="Data Final" 
+                                                type="date" 
+                                                value={inputs.data_fim || ''} 
+                                                onChange={v => setInputs({...inputs, data_fim: v})} 
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {['rel_fluxo', 'rel_missoes', 'rel_contador'].includes(configModal.type) && (
                                 <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 mb-4">
                                     <p className="text-sm font-bold text-emerald-800 mb-4">Filtrar por Período e Local (Opcional)</p>
@@ -14169,7 +14830,7 @@ const ModuleRelatorios = memo(() => {
                                 </div>
                             )}
 
-                            {['rel_ebd', 'rel_carnes', 'rel_igreja', 'rel_ministerios', 'rel_corpo_ministerial', 'rel_aniversariantes'].includes(configModal.type) && (
+                            {['rel_ebd', 'rel_carnes', 'rel_igreja', 'rel_ministerios', 'rel_corpo_ministerial', 'rel_aniversariantes', 'rel_planejamento_anual'].includes(configModal.type) && (
                                 <div className="text-center py-8">
                                     <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse"><CheckCheck size={40} className="text-emerald-500"/></div>
                                     <h4 className="text-xl font-black text-slate-800 mb-2">Pronto para gerar</h4>
@@ -20583,6 +21244,91 @@ export default function App() {
       };
   }, [authUser, user]);
 
+  // --- MOTOR DE BACKUP AUTOMÁTICO SILENCIOSO EM NUVEM ---
+  useEffect(() => {
+      if (!authUser || !user || !db || !db.igreja) return;
+      
+      const config = db.igreja;
+      const isAutoEnabled = config.backup_auto_habilitado !== false;
+      if (!isAutoEnabled) return;
+
+      const freq = config.backup_auto_frequencia || 'diario';
+      const lastBackupStr = config.backup_auto_ultimo || '';
+      
+      let shouldBackup = false;
+      const now = new Date();
+
+      if (!lastBackupStr) {
+          shouldBackup = true;
+      } else {
+          const lastBackup = new Date(lastBackupStr);
+          const diffMs = now.getTime() - lastBackup.getTime();
+          const diffHours = diffMs / (1000 * 60 * 60);
+
+          if (freq === 'diario' && diffHours >= 24) {
+              shouldBackup = true;
+          } else if (freq === 'semanal' && diffHours >= 168) {
+              shouldBackup = true;
+          } else if (freq === 'mensal' && diffHours >= 720) {
+              shouldBackup = true;
+          }
+      }
+
+      if (shouldBackup) {
+          const sessionFlag = sessionStorage.getItem('gipp_silent_backup_triggered');
+          if (sessionFlag) return;
+          sessionStorage.setItem('gipp_silent_backup_triggered', 'true');
+
+          const dispatchSilentBackup = async () => {
+              try {
+                  console.log("[GIPP Auto-Backup] Despachando rotina silenciosa...");
+                  
+                  const cleanDb = JSON.parse(JSON.stringify(db));
+                  const cleanObject = (obj: any) => {
+                      if (!obj || typeof obj !== 'object') return;
+                      Object.keys(obj).forEach(key => {
+                          if (typeof obj[key] === 'string' && (obj[key].startsWith('data:image') || obj[key].length > 10000)) {
+                              obj[key] = "[IMAGEM_PESADA_REMOVIDA_DO_CLOUD_BACKUP]";
+                          } else if (typeof obj[key] === 'object') {
+                              cleanObject(obj[key]);
+                          }
+                      });
+                  };
+                  cleanObject(cleanDb);
+
+                  const dataJsonStr = JSON.stringify(cleanDb);
+                  const backupSizeKb = Math.round(dataJsonStr.length / 1024);
+                  const backupId = 'backup_auto_' + Date.now();
+                  const backupTime = now.toISOString();
+
+                  const backupDoc = {
+                      id: backupId,
+                      data_criacao: backupTime,
+                      responsavel: 'Agendador Silencioso',
+                      tipo: 'agendado',
+                      tamanho_kb: backupSizeKb,
+                      observacao: 'Ponto de restauração gerado automaticamente pelo motor do GIPP.',
+                      dados_json: dataJsonStr
+                  };
+
+                  const backupRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'cloud_backups', backupId);
+                  await setDoc(backupRef, backupDoc);
+
+                  const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+                  await updateDoc(configRef, {
+                      backup_auto_ultimo: backupTime
+                  });
+
+                  console.log(`[GIPP Auto-Backup] Rotina finalizada com sucesso! Salvo ${backupSizeKb} KB em nuvem.`);
+              } catch (err) {
+                  console.error("[GIPP Auto-Backup] Falha na rotina silenciosa:", err);
+              }
+          };
+
+          setTimeout(dispatchSilentBackup, 8000);
+      }
+  }, [authUser, user, db]);
+
   // --- MOTOR PWA (PROGRESSIVE WEB APP) ---
   useEffect(() => {
       // 1. Bloquear o Menu de Contexto (Clique Direito do Rato) para dar sensação de executável
@@ -21250,7 +21996,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.3.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.5.0</p>
                         </div>
                     </div>
                     <div>
