@@ -33,6 +33,63 @@ import {
   getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged 
 } from 'firebase/auth';
 
+import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
+
+const CachedImage = memo(({ src, cacheKey, className, alt = "", referrerPolicy = "no-referrer", ...props }: any) => {
+  const [localSrc, setLocalSrc] = useState<string | null>(src);
+
+  useEffect(() => {
+    if (!src) {
+      setLocalSrc(null);
+      return;
+    }
+
+    let isMounted = true;
+    const finalKey = cacheKey || (src.startsWith('data:') ? `data_hash_${src.substring(0, 80)}` : src);
+
+    if (src.startsWith('data:')) {
+      setLocalSrc(src);
+      storeMedia(finalKey, src).catch(() => {});
+      return;
+    }
+
+    getMedia(finalKey)
+      .then((cached) => {
+        if (!isMounted) return;
+        if (cached) {
+          setLocalSrc(cached);
+        } else {
+          setLocalSrc(src);
+          if (src.startsWith('http')) {
+            fetch(src, { mode: 'cors' })
+              .then(res => res.blob())
+              .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  if (reader.result && isMounted) {
+                    storeMedia(finalKey, reader.result as string).catch(() => {});
+                  }
+                };
+                reader.readAsDataURL(blob);
+              })
+              .catch(() => {});
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar do cache IndexedDB:", err);
+        if (isMounted) setLocalSrc(src);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [src, cacheKey]);
+
+  if (!localSrc) return null;
+  return <img src={localSrc} className={className} alt={alt} referrerPolicy={referrerPolicy} {...props} />;
+});
+
 const callGeminiAI = async (prompt, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
 
@@ -1729,11 +1786,26 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
     const themeInfo = getModalTheme(type);
     const IconComponent = themeInfo.icon;
 
-    const handleImageUpload = (e, field) => {
+    const handleImageUpload = async (e, field) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 500 * 1024) { alert("A imagem deve ter no máximo 500KB."); return; }
-            const reader = new FileReader(); reader.onloadend = () => { setData(prev => ({ ...prev, [field]: reader.result })); }; reader.readAsDataURL(file);
+            try {
+                const compressedBase64 = await preprocessImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.75 });
+                const cacheKey = data?.id ? `modal_${type}_${data.id}_${field}` : `temp_${type || 'misc'}_${field}_${Date.now()}`;
+                await storeMedia(cacheKey, compressedBase64);
+                setData(prev => ({ 
+                    ...prev, 
+                    [field]: compressedBase64,
+                    [`${field}_cache_key`]: cacheKey
+                }));
+            } catch (err) {
+                console.error("Erro ao pré-processar imagem de upload:", err);
+                const reader = new FileReader(); 
+                reader.onloadend = () => { 
+                    setData(prev => ({ ...prev, [field]: reader.result })); 
+                }; 
+                reader.readAsDataURL(file);
+            }
         }
     };
 
@@ -2981,7 +3053,7 @@ const PrintSystem = ({ mode, data }) => {
                     {/* Left Sidebar - Photo & QR */}
                     <div className="w-[28%] h-full bg-slate-900/80 backdrop-blur-md border-r border-white/10 flex flex-col items-center justify-center p-2 relative z-10 shadow-lg">
                         <div className="w-[20mm] h-[26mm] bg-slate-200 rounded-md overflow-hidden border-2 border-amber-500 shadow-lg mb-2 relative">
-                            {data.membro.foto ? <img src={data.membro.foto} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-slate-100"><User size={24} className="text-slate-400"/></div>}
+                            {data.membro.foto ? <CachedImage src={data.membro.foto} cacheKey={`membro_${data.membro.id}_foto`} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-slate-100"><User size={24} className="text-slate-400"/></div>}
                         </div>
                         <div className="w-full text-center bg-white p-0.5 rounded-sm">
                             <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(data.membro.id)}&color=0f172a&bgcolor=ffffff`} alt="QR Code" className="w-[12mm] h-[12mm] mx-auto object-contain"/>
@@ -3087,7 +3159,7 @@ const PrintSystem = ({ mode, data }) => {
                                 </div>
                                 <div className="flex gap-4 mb-3 items-center">
                                     <div className="w-16 h-20 bg-slate-800 rounded-lg overflow-hidden border border-amber-500 shadow-md shrink-0">
-                                        {membro.foto ? <img src={membro.foto} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-500"><User size={24}/></div>}
+                                        {membro.foto ? <CachedImage src={membro.foto} cacheKey={`membro_${membro.id}_foto`} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-500"><User size={24}/></div>}
                                     </div>
                                     <div className="flex-1 bg-white p-1 rounded-lg shadow-sm border border-slate-200 self-center max-w-[60px]">
                                         <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(membro.id)}&color=0f172a&bgcolor=ffffff`} alt="QR Code" className="w-full aspect-square object-contain"/>
@@ -3164,7 +3236,7 @@ const PrintSystem = ({ mode, data }) => {
                             } else if (f.type === 'image' && f.id === 'foto') {
                                 return (
                                     <div key={f.id} className="absolute bg-slate-200 border-2 border-white shadow-sm overflow-hidden" style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}mm`, height: `${f.h}mm`, transform: 'translate(-50%, -50%)' }}>
-                                        {membro.foto ? <img src={membro.foto} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><User size={24} className="text-slate-400"/></div>}
+                                        {membro.foto ? <CachedImage src={membro.foto} cacheKey={`membro_${membro.id}_foto`} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><User size={24} className="text-slate-400"/></div>}
                                     </div>
                                 );
                             } else if (f.type === 'qr' && f.id === 'qr') {
@@ -16654,13 +16726,13 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
              <div className={`flex border-b border-white/30 bg-white/20 ${open ? 'p-8 items-center justify-between' : 'py-6 px-4 flex-col items-center gap-6'}`}>
                 {open ? (
                     <div className="flex items-center gap-4">
-                         {db.igreja.logo ? <img src={db.igreja.logo} className="w-12 h-12 object-contain bg-white rounded-xl shadow-md p-1" /> : <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/30"><Building2 size={24}/></div>}
+                         {db.igreja.logo ? <CachedImage src={db.igreja.logo} cacheKey="church_main_logo" className="w-12 h-12 object-contain bg-white rounded-xl shadow-md p-1" /> : <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/30"><Building2 size={24}/></div>}
                         <div>
                             <h1 className="font-black text-lg tracking-tight text-slate-800 truncate max-w-[160px] leading-tight">{db.igreja.nome || "GIPP"}</h1>
                             <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-500">Plano {db.igreja?.plano || 'Avançado'}</p>
                         </div>
                     </div>
-                ) : (db.igreja.logo ? <img src={db.igreja.logo} className="w-10 h-10 mx-auto object-contain bg-white rounded-xl shadow-sm" /> : <div className="mx-auto bg-gradient-to-br from-indigo-600 to-purple-600 p-3 rounded-2xl text-white shadow-md"><Building2 size={28}/></div>)}
+                ) : (db.igreja.logo ? <CachedImage src={db.igreja.logo} cacheKey="church_main_logo" className="w-10 h-10 mx-auto object-contain bg-white rounded-xl shadow-sm" /> : <div className="mx-auto bg-gradient-to-br from-indigo-600 to-purple-600 p-3 rounded-2xl text-white shadow-md"><Building2 size={28}/></div>)}
                 <button onClick={() => setOpen(!open)} className="p-2 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 text-slate-500 hover:text-indigo-600 transition-colors shrink-0">
                     {open ? <ChevronLeft size={20} /> : <Menu size={20} />}
                 </button>
@@ -17272,7 +17344,7 @@ const PortalHome = ({ user, db, setView }) => {
                 
                 <div className="relative z-10 shrink-0">
                     <div className="w-32 h-32 rounded-full border-[6px] border-slate-800 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.2)] relative group/foto">
-                        {currentUser.foto ? <img src={currentUser.foto} className="w-full h-full object-cover"/> : <User size={48} className="text-slate-500"/>}
+                        {currentUser.foto ? <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/> : <User size={48} className="text-slate-500"/>}
                         <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity">
                             <Camera size={24} className="text-white mb-1"/>
                             <span className="text-[9px] font-black uppercase tracking-widest text-white">Atualizar</span>
@@ -21051,12 +21123,24 @@ export default function App() {
         delete safeData._collection_key;
         delete safeData._type_label;
 
+        let savedId = editingItem && editingItem.id ? editingItem.id : null;
         if (editingItem && editingItem.id) {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, editingItem.id), safeData, { merge: true });
             logAction('EDIÇÃO', `Editou registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, editingItem.id);
         } else {
             const novoDoc = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', colName), { ...safeData, created_at: new Date().toISOString() });
+            savedId = novoDoc.id;
             logAction('CRIAÇÃO', `Criou novo registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, novoDoc.id);
+        }
+
+        if (savedId) {
+            try {
+                if (safeData.foto) await storeMedia(`membro_${savedId}_foto`, safeData.foto);
+                if (safeData.logo) await storeMedia(`congregacao_${savedId}_logo`, safeData.logo);
+                if (safeData.imagem) await storeMedia(`agenda_${savedId}_imagem`, safeData.imagem);
+            } catch (err) {
+                console.warn("Erro ao registar cache IndexedDB pós-guardar:", err);
+            }
         }
         handleSuccess("Guardado com sucesso!");
     } catch (e) { 
