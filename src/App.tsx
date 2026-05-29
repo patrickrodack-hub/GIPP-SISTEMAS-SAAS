@@ -6797,6 +6797,7 @@ const ModuleDesenvolvedor = () => {
             if (data.bot_welcome !== undefined) payload.bot_welcome = data.bot_welcome;
             if (data.bot_instructions !== undefined) payload.bot_instructions = data.bot_instructions;
             if (data.bot_faq !== undefined) payload.bot_faq = data.bot_faq;
+            if (data.custom_mary_avatar !== undefined) payload.custom_mary_avatar = data.custom_mary_avatar;
             
             if (data.bot_avatar !== undefined) {
                 if (typeof data.bot_avatar === 'string' && data.bot_avatar.startsWith('data:image/') && data.bot_avatar.length > 50000) {
