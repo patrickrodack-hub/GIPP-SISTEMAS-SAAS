@@ -1285,7 +1285,7 @@ const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], support_chats: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], support_chats: [], orcamentos: [] };
 
 const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 const getIcon = (name) => ICON_MAP[name] || Star;
@@ -5366,14 +5366,20 @@ const ModuleIgreja = () => {
     const handleBotAvatarUpload = (e: any) => {
         const file = e.target.files[0];
         if (file) {
-             if (file.size > 500 * 1024) { 
-                 alert("A imagem do avatar deve ter no máximo 500KB.");
+             if (file.size > 10 * 1024 * 1024) { 
+                 addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
                  return; 
              }
              const reader = new FileReader();
-             reader.onloadend = () => {
-                 setData(prev => ({...prev, bot_avatar: reader.result}));
-                 addToast("Avatar customizado carregado com sucesso!", "success");
+             reader.onloadend = async () => {
+                 try {
+                     const rawResult = reader.result as string;
+                     const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                     setData(prev => ({...prev, bot_avatar: compressed}));
+                     addToast("Avatar customizado carregado e otimizado com sucesso!", "success");
+                 } catch (err) {
+                     addToast("Erro ao processar imagem.", "error");
+                 }
              };
              reader.readAsDataURL(file);
         }
@@ -5472,12 +5478,21 @@ const ModuleIgreja = () => {
     const handleLogoUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-             if (file.size > 500 * 1024) { 
-                 alert("A imagem deve ter no máximo 500KB.");
+             if (file.size > 10 * 1024 * 1024) { 
+                 addToast("A imagem deve ter no máximo 10MB.", "error");
                  return; 
              }
              const reader = new FileReader();
-             reader.onloadend = () => setData({...data, logo: reader.result});
+             reader.onloadend = async () => {
+                 try {
+                     const rawResult = reader.result as string;
+                     const compressed = await resizeImageAndCompress(rawResult, 300, 300, 0.8);
+                     setData({...data, logo: compressed});
+                     addToast("Logo carregada e otimizada!", "success");
+                 } catch (err) {
+                     addToast("Erro ao processar imagem.", "error");
+                 }
+             };
              reader.readAsDataURL(file);
         }
     };
@@ -5485,14 +5500,20 @@ const ModuleIgreja = () => {
     const handleIconeSistemaUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-             if (file.size > 500 * 1024) { 
-                 alert("A imagem deve ter no máximo 500KB.");
+             if (file.size > 10 * 1024 * 1024) { 
+                 addToast("A imagem deve ter no máximo 10MB.", "error");
                  return; 
              }
              const reader = new FileReader();
-             reader.onloadend = () => {
-                 setData({...data, icone_sistema: reader.result});
-                 addToast("Ícone do sistema atualizado!", "success");
+             reader.onloadend = async () => {
+                 try {
+                     const rawResult = reader.result as string;
+                     const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.8);
+                     setData({...data, icone_sistema: compressed});
+                     addToast("Ícone do sistema atualizado e otimizado!", "success");
+                 } catch (err) {
+                     addToast("Erro ao processar imagem.", "error");
+                 }
              };
              reader.readAsDataURL(file);
         }
@@ -5501,14 +5522,22 @@ const ModuleIgreja = () => {
     const handleBancoLogoUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-             if (file.size > 500 * 1024) { 
-                 alert("A imagem deve ter no máximo 500KB.");
+             if (file.size > 10 * 1024 * 1024) { 
+                 addToast("A imagem deve ter no máximo 10MB.", "error");
                  return; 
              }
              const reader = new FileReader();
-             reader.onloadend = () => setData({...data, banco_logo_base64: reader.result, banco_logo: reader.result});
+             reader.onloadend = async () => {
+                 try {
+                     const rawResult = reader.result as string;
+                     const compressed = await resizeImageAndCompress(rawResult, 200, 100, 0.8);
+                     setData({...data, banco_logo_base64: compressed, banco_logo: compressed});
+                     addToast("Logo do banco alterada e otimizada com sucesso!", "success");
+                 } catch (err) {
+                     addToast("Erro ao processar imagem.", "error");
+                 }
+             };
              reader.readAsDataURL(file);
-             addToast("Logo do banco alterada manualmente com sucesso!", "success");
         }
     };
 
@@ -6117,16 +6146,20 @@ const ModuleDesenvolvedor = () => {
     const handleBotAvatarUpload = (e: any) => {
         const file = e.target.files[0];
         if (file) {
-             if (file.size > 500 * 1024) { 
-                 alert("A imagem do avatar deve ter no máximo 500KB.");
+             if (file.size > 10 * 1024 * 1024) { 
+                 addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
                  return; 
              }
              const reader = new FileReader();
              reader.onloadend = async () => {
-                 const rawResult = reader.result as string;
-                 const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
-                 setData(prev => ({...prev, bot_avatar: compressed}));
-                 addToast("Avatar customizado carregado com sucesso!", "success");
+                 try {
+                     const rawResult = reader.result as string;
+                     const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                     setData(prev => ({...prev, bot_avatar: compressed}));
+                     addToast("Avatar customizado carregado e otimizado com sucesso!", "success");
+                 } catch (err) {
+                     addToast("Erro ao processar imagem.", "error");
+                 }
              };
              reader.readAsDataURL(file);
          }
@@ -10501,7 +10534,7 @@ const ANIMATION_OPTIONS = [
 ];
 
 const ModuleConfigVisual = () => {
-    const { db, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
+    const { db, setDoc, doc, dbFirestore, appId, addToast, theme, setTheme } = useContext(ChurchContext);
     const configData = db.igreja || {};
     
     const [selectedWall, setSelectedWall] = useState(configData.papel_parede || null);
@@ -10531,7 +10564,6 @@ const ModuleConfigVisual = () => {
                 tipo_animacao: anim,
                 papel_parede_opacidade: opacity
             }, { merge: true });
-            
             addToast("Preferências visuais atualizadas com sucesso!", "success");
         } catch (err) {
             console.error(err);
@@ -10591,7 +10623,7 @@ const ModuleConfigVisual = () => {
                         <ImageIcon className="text-indigo-600" size={24}/>
                         <div>
                             <h3 className="text-lg font-black text-slate-800">1. Papel de Parede do Portal</h3>
-                            <p className="text-xs text-slate-500 font-medium">Selecione uma imagem para cobrir os fundos das páginas do sistema.</p>
+                            <p className="text-xs text-slate-550 font-medium">Selecione uma imagem para cobrir os fundos das páginas do sistema.</p>
                         </div>
                     </div>
 
@@ -10638,7 +10670,7 @@ const ModuleConfigVisual = () => {
 
                     {/* Galeria de presets */}
                     <div>
-                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Galeria de Fundos de Alta Qualidade</h4>
+                        <h4 className="text-xs font-black text-slate-550 uppercase tracking-wider mb-3">Galeria de Fundos de Alta Qualidade</h4>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                             {GALLERY_WALLPAPERS.map((item, idx) => {
                                 const isSelected = selectedWall === item.value;
@@ -10696,41 +10728,91 @@ const ModuleConfigVisual = () => {
                     </div>
                 </div>
 
-                {/* Quadrante 2: Efeito de Animação de Fundo */}
-                <div className="lg:col-span-12 xl:col-span-5 bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
-                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                        <Sparkles className="text-indigo-600" size={24}/>
-                        <div>
-                            <h3 className="text-lg font-black text-slate-800">2. Estilos de Animação</h3>
-                            <p className="text-xs text-slate-550 font-medium">Decida quais efeitos visuais flutuarão sobre o fundo escolhido.</p>
+                {/* Coluna da Direita: Estilos de Animação & Tema do Sistema */}
+                <div className="lg:col-span-12 xl:col-span-5 flex flex-col gap-8">
+                    {/* Quadrante 2: Efeito de Animação de Fundo */}
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                            <Sparkles className="text-indigo-600" size={24}/>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800">2. Estilos de Animação</h3>
+                                <p className="text-xs text-slate-550 font-medium">Decida quais efeitos visuais flutuarão sobre o fundo escolhido.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col space-y-3 max-h-[320px] overflow-y-auto pr-1.5 custom-scrollbar">
+                            {ANIMATION_OPTIONS.map((opt) => {
+                                const isSelected = selectedAnim === opt.id;
+                                return (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => {
+                                            setSelectedAnim(opt.id);
+                                            handleSaveConfig(selectedWall, opt.id, opacityFilter);
+                                        }}
+                                        className={`flex items-start gap-4 p-4 rounded-3xl border-2 text-left transition-all ${isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
+                                    >
+                                        <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                            <opt.icon size={20}/>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs sm:text-sm font-black text-slate-800 leading-none">{opt.name}</span>
+                                                {isSelected && <span className="text-[9px] font-black uppercase text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md leading-none tracking-wider">Ativo</span>}
+                                            </div>
+                                            <p className="text-[11px] text-slate-555 leading-relaxed mt-1.5 font-medium">{opt.desc}</p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    <div className="flex flex-col space-y-3 max-h-[500px] overflow-y-auto pr-1.5 custom-scrollbar">
-                        {ANIMATION_OPTIONS.map((opt) => {
-                            const isSelected = selectedAnim === opt.id;
-                            return (
-                                <button
-                                    key={opt.id}
-                                    onClick={() => {
-                                        setSelectedAnim(opt.id);
-                                        handleSaveConfig(selectedWall, opt.id, opacityFilter);
-                                    }}
-                                    className={`flex items-start gap-4 p-4 rounded-3xl border-2 text-left transition-all ${isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
-                                >
-                                    <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                        <opt.icon size={20}/>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs sm:text-sm font-black text-slate-800 leading-none">{opt.name}</span>
-                                            {isSelected && <span className="text-[9px] font-black uppercase text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md leading-none tracking-wider">Ativo</span>}
-                                        </div>
-                                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5 font-medium">{opt.desc}</p>
-                                    </div>
-                                </button>
-                            );
-                        })}
+                    {/* Quadrante 3: Tema do Sistema (Claro / Escuro) */}
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                            {theme === 'dark' ? <Moon className="text-indigo-600" size={24}/> : <Sun className="text-indigo-600" size={24}/>}
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800">3. Tema do Sistema</h3>
+                                <p className="text-xs text-slate-550 font-medium">Selecione o estilo visual padrão para a sua navegação permanente.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTheme('light');
+                                    addToast("Modo Claro ativado permanente!", "success");
+                                }}
+                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 ${theme === 'light' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
+                            >
+                                <div className={`p-3 rounded-2xl ${theme === 'light' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    <Sun size={24}/>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-xs sm:text-sm font-black text-slate-800">Modo Claro</span>
+                                    <span className="text-[10px] text-slate-400 font-medium">Design nítido e limpo</span>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTheme('dark');
+                                    addToast("Modo Escuro ativado permanente!", "success");
+                                }}
+                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 ${theme === 'dark' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
+                            >
+                                <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    <Moon size={24}/>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-xs sm:text-sm font-black text-slate-800">Modo Escuro</span>
+                                    <span className="text-[10px] text-slate-400 font-medium">Atmosfera elegante e noturna</span>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -11471,6 +11553,49 @@ const ModulePortalPastor = () => {
     const isPastorPresidente = user?.funcao_administrativa?.toUpperCase() === 'PASTOR PRESIDENTE' || user?.nivel === 'master';
     const [activeTab, setActiveTab] = useState('agenda'); // agenda, mensagens, cofre
     
+    // States for Budget Planning
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [showBudgetModal, setShowBudgetModal] = useState(false);
+    const [editingBudgetCC, setEditingBudgetCC] = useState(null);
+    const [metaReceitaValue, setMetaReceitaValue] = useState('');
+    const [tetoGastosValue, setTetoGastosValue] = useState('');
+    const [budgetSaving, setBudgetSaving] = useState(false);
+
+    const centersInfo = useMemo(() => {
+        return (db.centro_custo || []).map((cc: any) => {
+            const budget = (db.orcamentos || []).find((b: any) => b.ano === selectedYear && b.centro_custo_id === cc.id);
+            const meta_receita = budget ? (parseFloat(budget.meta_receita) || 0) : 0;
+            const teto_gastos = budget ? (parseFloat(budget.teto_gastos) || 0) : 0;
+
+            const txHasThisCc = (db.financeiro || []).filter((f: any) => 
+                f.centro_custo_id === cc.id && 
+                f.data_competencia && 
+                f.data_competencia.startsWith(String(selectedYear))
+            );
+
+            const entradasRealizadas = txHasThisCc
+                .filter((f: any) => f.tipo === 'entrada')
+                .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
+
+            const saidasRealizadas = txHasThisCc
+                .filter((f: any) => f.tipo === 'saida')
+                .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
+
+            return {
+                ...cc,
+                meta_receita,
+                teto_gastos,
+                entradasRealizadas,
+                saidasRealizadas,
+            };
+        });
+    }, [db.centro_custo, db.orcamentos, db.financeiro, selectedYear]);
+
+    const totalMetaReceita = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.meta_receita, 0), [centersInfo]);
+    const totalTetoGastos = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.teto_gastos, 0), [centersInfo]);
+    const totalEntradasRealizadas = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.entradasRealizadas, 0), [centersInfo]);
+    const totalSaidasRealizadas = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.saidasRealizadas, 0), [centersInfo]);
+    
     // Form States for Agenda
     const [agendaForm, setAgendaForm] = useState({ titulo: '', categoria: 'Compromisso', data: '', hora: '', local: '', descricao: '' });
     const [editingAgendaId, setEditingAgendaId] = useState(null);
@@ -11931,6 +12056,9 @@ const ModulePortalPastor = () => {
                 <button onClick={() => setActiveTab('mensagens')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'mensagens' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Send size={16}/> Enviar Mensagem
                 </button>
+                <button onClick={() => setActiveTab('orcamento')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'orcamento' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Target size={16}/> Planeamento Orçamentário
+                </button>
                 <button onClick={() => setActiveTab('cofre')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'cofre' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Lock size={16}/> Área Restrita
                 </button>
@@ -12221,6 +12349,215 @@ const ModulePortalPastor = () => {
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'orcamento' && (
+                <div className="space-y-6 animate-entrance">
+                    {/* Summary Header of Planning */}
+                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 className="font-black text-slate-800 text-lg">Metas & Tetos Anuais</h3>
+                            <p className="text-xs text-slate-400 font-medium">Controle executivo e planejamento de receitas e tetos de despesas de cada centro de de custo.</p>
+                        </div>
+                        
+                        {/* Year selector buttons */}
+                        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                            {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1, new Date().getFullYear() + 2].map(yr => (
+                                <button 
+                                    key={yr} 
+                                    onClick={() => setSelectedYear(yr)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${selectedYear === yr ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+                                >
+                                    {yr}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Grand Totals Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Revenue Target Summary */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-3xl border border-emerald-100/80 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-md shadow-emerald-500/20">
+                                        <TrendingUp size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-slate-400 text-xs font-bold uppercase tracking-wider">Meta de Receitas Geral</h4>
+                                        <span className="text-slate-400 text-[10px] font-semibold">Consolidado ({selectedYear})</span>
+                                    </div>
+                                </div>
+                                <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                                    {totalMetaReceita > 0 ? `${((totalEntradasRealizadas / totalMetaReceita) * 100).toFixed(1)}%` : '0%'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Estipulado</span>
+                                    <span className="text-lg font-black text-slate-800">R$ {totalMetaReceita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Arrecadado</span>
+                                    <span className="text-lg font-black text-emerald-600">R$ {totalEntradasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="space-y-1">
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                                        style={{ width: `${Math.min(100, totalMetaReceita > 0 ? (totalEntradasRealizadas / totalMetaReceita) * 100 : 0)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                                    <span>Início do Ano</span>
+                                    <span>{totalMetaReceita > 0 && totalEntradasRealizadas >= totalMetaReceita ? 'Meta Atingida!' : `Faltam R$ ${Math.max(0, totalMetaReceita - totalEntradasRealizadas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Spends Ceiling Summary */}
+                        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-3xl border border-indigo-100/80 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-indigo-500 text-white rounded-2xl shadow-md shadow-indigo-500/20">
+                                        <TrendingDown size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-slate-400 text-xs font-bold uppercase tracking-wider">Teto de Gastos Geral</h4>
+                                        <span className="text-slate-400 text-[10px] font-semibold">Consolidado ({selectedYear})</span>
+                                    </div>
+                                </div>
+                                <span className={`text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider ${totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'bg-rose-100 text-rose-700 font-bold' : totalTetoGastos > 0 && (totalSaidasRealizadas / totalTetoGastos) >= 0.8 ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                    {totalTetoGastos > 0 ? `${((totalSaidasRealizadas / totalTetoGastos) * 100).toFixed(1)}%` : '0%'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Limite de Despesa</span>
+                                    <span className="text-lg font-black text-slate-800">R$ {totalTetoGastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Despesa Consumida</span>
+                                    <span className={`text-lg font-black ${totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'text-rose-600' : 'text-indigo-600'}`}>R$ {totalSaidasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="space-y-1">
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-500 ${totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'bg-rose-500 animate-pulse' : totalTetoGastos > 0 && (totalSaidasRealizadas / totalTetoGastos) >= 0.8 ? 'bg-amber-500' : 'bg-indigo-505'}`} 
+                                        style={{ width: `${Math.min(100, totalTetoGastos > 0 ? (totalSaidasRealizadas / totalTetoGastos) * 100 : 0)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                                    <span>0% consumido</span>
+                                    <span>{totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'Limite Ultrapassado!' : `R$ ${Math.max(0, totalTetoGastos - totalSaidasRealizadas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} restantes`}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* List of Cost Centers with Budgets */}
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                        <div>
+                            <h3 className="font-extrabold text-slate-800 text-lg">Distribuição por Centro de Custo</h3>
+                            <p className="text-xs text-slate-400 font-medium">Veja e ajuste as metas individuais para cada linha orçamentária cadastrada.</p>
+                        </div>
+
+                        {centersInfo.length > 0 ? (
+                            <div className="grid gap-6 sm:grid-cols-2">
+                                {centersInfo.map((cc) => {
+                                    const rPercent = cc.meta_receita > 0 ? (cc.entradasRealizadas / cc.meta_receita) * 100 : 0;
+                                    const sPercent = cc.teto_gastos > 0 ? (cc.saidasRealizadas / cc.teto_gastos) * 100 : 0;
+                                    const isOverLimit = cc.teto_gastos > 0 && cc.saidasRealizadas > cc.teto_gastos;
+
+                                    return (
+                                        <div key={cc.id} className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 hover:border-slate-300 transition-all flex flex-col justify-between space-y-6">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex gap-3">
+                                                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                                                        <Landmark size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-extrabold text-slate-800 text-sm uppercase leading-tight">{cc.nome}</h4>
+                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{cc.responsavel ? `Resp: ${cc.responsavel}` : 'Sem Responsável'}</span>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingBudgetCC(cc);
+                                                        setMetaReceitaValue(cc.meta_receita ? String(cc.meta_receita) : '');
+                                                        setTetoGastosValue(cc.teto_gastos ? String(cc.teto_gastos) : '');
+                                                        setShowBudgetModal(true);
+                                                    }}
+                                                    className="p-2 bg-white hover:bg-indigo-50 rounded-xl text-slate-500 hover:text-indigo-600 border border-slate-100 transition-all hover:scale-105"
+                                                    title="Editar Planeamento"
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                {/* Target Revenue Section */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-end">
+                                                        <div>
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Meta de Receita</span>
+                                                            <span className="text-xs font-bold text-slate-700">R$ {cc.meta_receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Arrecadado</span>
+                                                            <span className="text-xs font-extrabold text-emerald-600">R$ {cc.entradasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({rPercent.toFixed(0)}%)</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full bg-slate-200/50 h-1.5 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="bg-emerald-500 h-full rounded-full transition-all" 
+                                                            style={{ width: `${Math.min(100, rPercent)}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Spending Limit Section */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-end">
+                                                        <div>
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Limite de Despesa</span>
+                                                            <span className="text-xs font-bold text-slate-700">R$ {cc.teto_gastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Gasto Atual</span>
+                                                            <span className={`text-xs font-extrabold ${isOverLimit ? 'text-rose-600 font-black' : 'text-indigo-600'}`}>R$ {cc.saidasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({sPercent.toFixed(0)}%)</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full bg-slate-200/50 h-1.5 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full transition-all ${isOverLimit ? 'bg-rose-500' : sPercent >= 80 ? 'bg-amber-500' : 'bg-indigo-500'}`} 
+                                                            style={{ width: `${Math.min(100, sPercent)}%` }}
+                                                        />
+                                                    </div>
+                                                    {isOverLimit && (
+                                                        <span className="text-[9px] text-rose-600 font-extrabold flex items-center gap-1 mt-1 justify-end">
+                                                            <AlertTriangle size={10} /> LIMITE EXCEDIDO EM R$ {(cc.saidasRealizadas - cc.teto_gastos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}!
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center p-12 bg-slate-50/50 rounded-3xl border border-slate-105">
+                                <Landmark size={48} className="text-slate-300 mx-auto mb-4" />
+                                <h4 className="font-extrabold text-slate-700 text-sm">Nenhum Centro de Custo Encontrado</h4>
+                                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Para definir o planejamento orçamentário, primeiro precisa de ter centros de custos ativos na sua secretaria.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -12847,6 +13184,99 @@ const ModulePortalPastor = () => {
                             <div className="flex gap-4 pt-4">
                                 <button type="button" onClick={()=>setShowAtaModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
                                 <button type="submit" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20">Registrar e Guardar no Cofre</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showBudgetModal && editingBudgetCC && (
+                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-white/20 p-8 space-y-6 my-8 animate-entrance">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800">Definir Planeamento</h3>
+                                <p className="text-xs text-slate-400 font-medium">Configure as metas financeiras para {selectedYear}.</p>
+                            </div>
+                            <button onClick={() => { setShowBudgetModal(false); setEditingBudgetCC(null); }} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                                <X size={18}/>
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                                <Landmark size={20} />
+                            </div>
+                            <div>
+                                <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider block">Centro de Custo</span>
+                                <h4 className="font-extrabold text-slate-800 text-sm uppercase leading-tight">{editingBudgetCC.nome}</h4>
+                            </div>
+                        </div>
+
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            setBudgetSaving(true);
+                            try {
+                                const docId = `${selectedYear}_${editingBudgetCC.id}`;
+                                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'orcamentos', docId), {
+                                    ano: selectedYear,
+                                    centro_custo_id: editingBudgetCC.id,
+                                    meta_receita: parseFloat(metaReceitaValue) || 0,
+                                    teto_gastos: parseFloat(tetoGastosValue) || 0,
+                                    updated_at: new Date().toISOString()
+                                });
+                                logAction('CONFIGURAÇÃO', `Pastor atualizou Planeamento Orçamentário (${selectedYear}) para "${editingBudgetCC.nome}"`, 'orcamentos', docId);
+                                addToast(`Planeamento para o Centro de Custo "${editingBudgetCC.nome}" gravado com sucesso!`, "success");
+                                setShowBudgetModal(false);
+                                setEditingBudgetCC(null);
+                            } catch (err) {
+                                console.error(err);
+                                addToast("Erro ao gravar planeamento orçamentário.", "error");
+                            } finally {
+                                setBudgetSaving(false);
+                            }
+                        }} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Meta de Receita do Ano (R$)</label>
+                                <input 
+                                    type="number" 
+                                    step="any"
+                                    value={metaReceitaValue} 
+                                    onChange={e => setMetaReceitaValue(e.target.value)} 
+                                    placeholder="Ex: 50000" 
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                />
+                                <span className="text-[10px] text-slate-400 font-medium ml-1 block mt-1">Quanto se projeta arrecadar no total de dízimos e ofertas neste centro neste ano.</span>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Teto Máximo de Gastos do Ano (R$)</label>
+                                <input 
+                                    type="number" 
+                                    step="any"
+                                    value={tetoGastosValue} 
+                                    onChange={e => setTetoGastosValue(e.target.value)} 
+                                    placeholder="Ex: 30000" 
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                />
+                                <span className="text-[10px] text-slate-400 font-medium ml-1 block mt-1">Limite máximo de despesas planejadas para este centro de custo neste ano.</span>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setShowBudgetModal(false); setEditingBudgetCC(null); }} 
+                                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={budgetSaving}
+                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20 disabled:opacity-50"
+                                >
+                                    {budgetSaving ? 'Gravando...' : 'Gravar Planeamento'}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -19994,7 +20424,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'support_chats'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'support_chats', 'orcamentos'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -20402,7 +20832,7 @@ export default function App() {
           const docsToWrite = [];
           if (targetData.igreja) docsToWrite.push({ collection: 'settings', id: 'config', data: targetData.igreja });
           
-          const simpleCollections = ['membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 'emails', 'mural'];
+          const simpleCollections = ['membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 'emails', 'mural', 'orcamentos'];
           simpleCollections.forEach(col => {
               if (targetData[col]) targetData[col].forEach(item => docsToWrite.push({ collection: col, id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
           });
@@ -20635,7 +21065,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI };
+  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI };
 
   if (!user) { 
     return ( 
