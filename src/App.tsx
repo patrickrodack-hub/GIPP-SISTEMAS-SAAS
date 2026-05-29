@@ -7326,75 +7326,89 @@ const ModuleDesenvolvedor = () => {
                                     className="!mb-4"
                                 />
 
-                                 <div className="space-y-3">
-                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar</label>
-                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {[
-                                             { name: "Mary", url: data.custom_mary_avatar || "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO", isMary: true },
-                                             { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
-                                             { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
-                                             { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
-                                         ].map((av) => (
-                                             <div key={av.name} className="relative group overflow-hidden rounded-2xl border-2 transition-all p-0">
-                                                 <button 
-                                                     type="button"
-                                                     onClick={() => setData({
-                                                         ...data, 
-                                                         bot_avatar: av.url,
-                                                         bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
-                                                     })}
-                                                     className={`p-1.5 rounded-2xl w-full h-full transition-all flex flex-col items-center gap-1 bg-white border-0 relative ${data.bot_avatar === av.url ? 'scale-105 opacity-100 shadow-md shadow-indigo-600/10' : 'opacity-70 hover:opacity-100'}`}
-                                                 >
-                                                     <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
-                                                     <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
-                                                         {av.name}
-                                                         {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
-                                                     </span>
-                                                     {data.bot_avatar === av.url && (
-                                                         <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
-                                                     )}
-                                                 </button>
-
-                                                 {av.isMary && (
-                                                     <label className="absolute inset-x-0 bottom-0 bg-indigo-900/90 hover:bg-slate-900 text-white text-[8px] py-1 text-center font-black uppercase tracking-wider cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                                                         <UploadCloud size={8}/> Importar
-                                                         <input 
-                                                             type="file" 
-                                                             className="hidden" 
-                                                             accept="image/*" 
-                                                             onChange={(e) => {
-                                                                 const file = e.target.files?.[0];
-                                                                 if (file) {
-                                                                     if (file.size > 10 * 1024 * 1024) { 
-                                                                         addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
-                                                                         return; 
-                                                                     }
-                                                                     const reader = new FileReader();
-                                                                     reader.onloadend = async () => {
-                                                                         try {
-                                                                             const rawResult = reader.result as string;
-                                                                             const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
-                                                                             setData(prev => ({
-                                                                                 ...prev, 
-                                                                                 custom_mary_avatar: compressed,
-                                                                                 bot_avatar: compressed,
-                                                                                 bot_name: "Mary (Assistente Virtual)"
-                                                                             }));
-                                                                             addToast("Imagem da Mary customizada com sucesso!", "success");
-                                                                         } catch (err) {
-                                                                             addToast("Erro ao processar imagem.", "error");
-                                                                         }
-                                                                     };
-                                                                     reader.readAsDataURL(file);
-                                                                 }
-                                                             }}
-                                                         />
-                                                     </label>
-                                                 )}
-                                             </div>
-                                         ))}
-                                     </div>
-                                 </div>
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Foto da Assistente (Avatar)</label>
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                        <div className="relative group overflow-hidden rounded-full w-20 h-20 border-2 border-indigo-600 shrink-0 shadow-md">
+                                            <img 
+                                                src={data.bot_avatar || "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200"} 
+                                                alt="Avatar do Assistente" 
+                                                className="w-full h-full object-cover" 
+                                                referrerPolicy="no-referrer"
+                                            />
+                                            <label className="absolute inset-0 bg-black/60 text-white text-[8px] font-black uppercase tracking-wider cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-center p-1 leading-normal">
+                                                <UploadCloud size={16}/> Alterar Imagem
+                                                <input 
+                                                    type="file" 
+                                                    className="hidden" 
+                                                    accept="image/*" 
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            if (file.size > 10 * 1024 * 1024) { 
+                                                                addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
+                                                                return; 
+                                                            }
+                                                            const reader = new FileReader();
+                                                            reader.onloadend = async () => {
+                                                                try {
+                                                                    const rawResult = reader.result as string;
+                                                                    const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                                                                    setData(prev => ({
+                                                                        ...prev, 
+                                                                        custom_mary_avatar: compressed,
+                                                                        bot_avatar: compressed
+                                                                    }));
+                                                                    addToast("Imagem da Assistente customizada com sucesso!", "success");
+                                                                } catch (err) {
+                                                                    addToast("Erro ao processar imagem.", "error");
+                                                                }
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className="flex-1 text-center sm:text-left">
+                                            <span className="text-xs font-black text-slate-700 block mb-0.5">Avatar Único do Sistema</span>
+                                            <p className="text-[10px] text-slate-400 font-medium font-semibold">Faça upload de uma imagem quadrada para personalizar a identidade visual do assistente virtual.</p>
+                                            <label className="mt-2 inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-xl text-[10px] font-extrabold cursor-pointer transition-all">
+                                                <UploadCloud size={12}/> Carregar Nova Imagem
+                                                <input 
+                                                    type="file" 
+                                                    className="hidden" 
+                                                    accept="image/*" 
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            if (file.size > 10 * 1024 * 1024) { 
+                                                                addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
+                                                                return; 
+                                                            }
+                                                            const reader = new FileReader();
+                                                            reader.onloadend = async () => {
+                                                                try {
+                                                                    const rawResult = reader.result as string;
+                                                                    const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                                                                    setData(prev => ({
+                                                                        ...prev, 
+                                                                        custom_mary_avatar: compressed,
+                                                                        bot_avatar: compressed
+                                                                    }));
+                                                                    addToast("Imagem da Assistente customizada com sucesso!", "success");
+                                                                } catch (err) {
+                                                                    addToast("Erro ao processar imagem.", "error");
+                                                                }
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div className="space-y-2 pt-2">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mensagem Inicial de Boas-vindas</label>
