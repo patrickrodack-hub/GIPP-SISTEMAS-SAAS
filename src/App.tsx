@@ -714,17 +714,155 @@ const GlobalStyles = () => (
     .doc-padding { padding: 10mm; box-sizing: border-box; }
 
     @media print {
-      body, html { background-color: white !important; background-image: none !important; color: black !important; overflow: visible !important; height: auto !important; }
-      .screen-content, .screen-content *, #toast-container, .fixed { display: none !important; }
-      .print-area { display: block !important; position: relative !important; width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; background: white !important; z-index: 99999 !important; visibility: visible !important; }
-      .print-area * { visibility: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      @page { margin: 10mm; size: A4 portrait; }
-      @page landscape-page { size: A4 landscape; margin: 10mm; }
-      .print-landscape { page: landscape-page; }
-      .doc-padding { padding: 0 !important; }
-      table { page-break-inside: auto; border-collapse: collapse; width: 100%; }
-      tr, td, th { page-break-inside: avoid !important; break-inside: avoid !important; }
-      .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+      /* Reset global do documento para impressão limpa */
+      body, html { 
+        background-color: white !important; 
+        background-image: none !important; 
+        color: #000000 !important; 
+        overflow: visible !important; 
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important;
+      }
+      
+      /* Ocultar elementos de navegação, chatbot, botões, modais gerais, rodapés interativos, cabeçalhos, notificações, etc. */
+      .screen-content, 
+      .screen-content *, 
+      #toast-container, 
+      .toast,
+      .fixed, 
+      .absolute:not(.print-area *),
+      nav, 
+      aside, 
+      header:not(.print-header), 
+      footer:not(.print-footer),
+      button, 
+      .btn,
+      .no-print,
+      .print-hidden,
+      .print\:hidden,
+      input[type="button"],
+      input[type="submit"],
+      .sidebar,
+      .sidebar-wrapper,
+      #assistente_ai,
+      .floating-copilot,
+      [class*="backdrop-blur"],
+      [class*="bg-slate-900/80"],
+      [class*="z-[12000]"],
+      .pagination-controls,
+      .filter-bar,
+      .user-menu,
+      .tabs-list,
+      .tabs-trigger,
+      .scroll-indicator,
+      .loading-spinner,
+      [role="tooltip"] { 
+        display: none !important; 
+        visibility: hidden !important; 
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+
+      /* Garantir que a área de impressão ocupe todo o espaço disponível sem bordas cortadas */
+      .print-area { 
+        display: block !important; 
+        position: relative !important; 
+        width: 100% !important; 
+        max-width: 100% !important;
+        height: auto !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        background: white !important; 
+        z-index: 99999 !important; 
+        visibility: visible !important; 
+      }
+      
+      .print-area * { 
+        visibility: visible !important; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+      }
+
+      /* Forçar textos a ficarem nítidos e pretos para economia de tinta e contraste */
+      .print-area p, 
+      .print-area span, 
+      .print-area h1, 
+      .print-area h2, 
+      .print-area h3, 
+      .print-area h4, 
+      .print-area h5, 
+      .print-area h6, 
+      .print-area td, 
+      .print-area th { 
+        color: #000000 !important; 
+        text-shadow: none !important;
+        box-shadow: none !important;
+      }
+
+      /* Ajustes de Margem e Orientação de Página */
+      @page { 
+        margin: 15mm 10mm 15mm 10mm; 
+        size: A4 portrait; 
+      }
+      @page landscape-page { 
+        size: A4 landscape; 
+        margin: 15mm 10mm 15mm 10mm; 
+      }
+      
+      .print-landscape { 
+        page: landscape-page; 
+      }
+      
+      .print-portrait {
+        page: A4 portrait;
+      }
+
+      .doc-padding { 
+        padding: 0 !important; 
+      }
+
+      /* Quebras de páginas elegantes */
+      table { 
+        page-break-inside: auto; 
+        border-collapse: collapse; 
+        width: 100%; 
+      }
+      tr, td, th { 
+        page-break-inside: avoid !important; 
+        break-inside: avoid !important; 
+      }
+      h1, h2, h3, h4, h5, h6, .avoid-break { 
+        page-break-inside: avoid !important; 
+        break-inside: avoid !important; 
+      }
+      
+      /* Estetização limpa de tabelas em relatórios impressos */
+      table th {
+        background-color: #f1f5f9 !important;
+        color: #000000 !important;
+        border: 1px solid #cbd5e1 !important;
+        font-weight: bold !important;
+        font-size: 10px !important;
+        padding: 6px 8px !important;
+        text-transform: uppercase !important;
+      }
+      table td {
+        border: 1px solid #e2e8f0 !important;
+        font-size: 10px !important;
+        padding: 6px 8px !important;
+        background: transparent !important;
+      }
+      
+      /* Ocultar barra de rolagem horizontal ou vertical impressa */
+      body {
+        scrollbar-width: none !important;
+      }
+      ::-webkit-scrollbar {
+        display: none !important;
+      }
     }
     .print-area { display: none; }
   `}</style>
@@ -7493,6 +7631,76 @@ const FloatingChatWidget = () => {
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
+
+    // Reposition states
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const dragStart = useRef({ x: 0, y: 0 });
+    const offsetStart = useRef({ x: 0, y: 0 });
+    const isMoving = useRef(false);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return; // Only left button
+        dragStart.current = { x: e.clientX, y: e.clientY };
+        offsetStart.current = { ...offset };
+        isMoving.current = false;
+        
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            const dx = moveEvent.clientX - dragStart.current.x;
+            const dy = moveEvent.clientY - dragStart.current.y;
+            if (Math.hypot(dx, dy) > 5) {
+                isMoving.current = true;
+                setIsDragging(true);
+                setOffset({
+                    x: offsetStart.current.x + dx,
+                    y: offsetStart.current.y + dy
+                });
+            }
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            setTimeout(() => {
+                setIsDragging(false);
+            }, 50);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        dragStart.current = { x: touch.clientX, y: touch.clientY };
+        offsetStart.current = { ...offset };
+        isMoving.current = false;
+
+        const onTouchMove = (moveEvent: TouchEvent) => {
+            const touchMove = moveEvent.touches[0];
+            const dx = touchMove.clientX - dragStart.current.x;
+            const dy = touchMove.clientY - dragStart.current.y;
+            if (Math.hypot(dx, dy) > 5) {
+                isMoving.current = true;
+                setIsDragging(true);
+                setOffset({
+                    x: offsetStart.current.x + dx,
+                    y: offsetStart.current.y + dy
+                });
+            }
+        };
+
+        const onTouchEnd = () => {
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+            setTimeout(() => {
+                setIsDragging(false);
+            }, 50);
+        };
+
+        document.addEventListener('touchmove', onTouchMove, { passive: true });
+        document.addEventListener('touchend', onTouchEnd);
+    };
     
     // Suporte apenas no módulo administrador (quem está logado)
     if (!user || user.id === 'dev') return null;
@@ -7593,14 +7801,18 @@ Gere uma resposta de suporte operacional muito educada, curta (máximo de 2 par�
     const hasUnread = lastMsgAlt && lastMsgAlt.sender_type !== 'user';
 
     return (
-        <div className="fixed bottom-6 right-6 z-[9999]">
+        <div className="fixed bottom-6 right-6 z-[9999]" style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}>
             {isOpen && (
                 <div className="bg-white border text-slate-800 shadow-2xl rounded-3xl w-[360px] h-[520px] flex flex-col mb-4 overflow-hidden animate-entrance right-0 origin-bottom-right">
                     {/* Header estilo telecomunicações */}
-                    <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 text-white p-4 flex items-center justify-between shadow-md">
+                    <div 
+                        className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 text-white p-4 flex items-center justify-between shadow-md cursor-grab active:cursor-grabbing select-none touch-none"
+                        onMouseDown={handleMouseDown}
+                        onTouchStart={handleTouchStart}
+                    >
                         <div className="flex items-center gap-3">
                             <div className="relative">
-                                <img src={botAvatar} className="w-10 h-10 rounded-full border-2 border-white/20 bg-white/20 object-cover" alt="Avatar Assistente"/>
+                                <img src={botAvatar} className="w-10 h-10 rounded-full border-2 border-white/20 bg-white/20 object-cover" alt="Avatar Assistente" referrerPolicy="no-referrer"/>
                                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-indigo-600 rounded-full"></span>
                             </div>
                             <div>
@@ -7610,7 +7822,12 @@ Gere uma resposta de suporte operacional muito educada, curta (máximo de 2 par�
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} 
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full"
+                        >
                             <X size={18}/>
                         </button>
                     </div>
@@ -7674,9 +7891,18 @@ Gere uma resposta de suporte operacional muito educada, curta (máximo de 2 par�
             {/* Pulsing launcher button */}
             <button 
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className={`${isOpen ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105 active:scale-95'} text-white p-4.5 rounded-full shadow-2xl transition-all flex items-center justify-center relative ml-auto`}
-                title="Fale Conosco"
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
+                onClick={(e) => {
+                    if (isMoving.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                    setIsOpen(!isOpen);
+                }}
+                className={`${isOpen ? 'bg-slate-800 animate-none' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105 active:scale-95'} text-white p-4.5 rounded-full shadow-2xl transition-all flex items-center justify-center relative ml-auto cursor-grab active:cursor-grabbing select-none touch-none`}
+                title="Arraste para reposicionar ou clique para conversar"
             >
                 {isOpen ? <X size={24}/> : <MessageCircle size={28}/>}
                 {!isOpen && hasUnread && (
@@ -18805,68 +19031,72 @@ const PortalMural = ({ user, db }) => {
                 </div>
             </div>
 
-            <div className="space-y-4">
-                {posts.length > 0 ? posts.map(post => {
-                    const oradores = post.oradores || [];
-                    const isPraying = oradores.includes(user.id);
-                    return (
-                        <div key={post.id} className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-200 transition-all hover:border-slate-300">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 shrink-0 overflow-hidden border border-slate-200">
-                                        {post.autor_foto ? <img src={post.autor_foto} className="w-full h-full object-cover" /> : post.autor_nome.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-black text-slate-800 leading-tight mb-0.5">{post.autor_nome}</p>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[10px] font-bold text-slate-500">{new Date(post.data).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                                            <span className="text-slate-300">•</span>
-                                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border shadow-sm bg-rose-50 text-rose-600 border-rose-200">
-                                                Pedido de Oração
-                                            </span>
+            {posts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {posts.map(post => {
+                        const oradores = post.oradores || [];
+                        const isPraying = oradores.includes(user.id);
+                        return (
+                            <div key={post.id} className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-200 transition-all hover:border-slate-300 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 shrink-0 overflow-hidden border border-slate-200">
+                                                {post.autor_foto ? <img src={post.autor_foto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : post.autor_nome.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-slate-800 leading-tight mb-0.5">{post.autor_nome}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[10px] font-bold text-slate-500">{new Date(post.data).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                                    <span className="text-slate-300">•</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border shadow-sm bg-rose-50 text-rose-600 border-rose-200">
+                                                        Pedido de Oração
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
+                                        {post.autor_id === user.id && (
+                                            <button onClick={() => handleDeletePost(post.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0 animate-pulse-once">
+                                                <Trash2 size={16}/>
+                                            </button>
+                                        )}
                                     </div>
+                                    
+                                    <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed mb-6 font-medium">
+                                        {post.texto}
+                                    </p>
                                 </div>
-                                {post.autor_id === user.id && (
-                                    <button onClick={() => handleDeletePost(post.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
-                                        <Trash2 size={16}/>
-                                    </button>
-                                )}
-                            </div>
-                            
-                            <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed mb-6 font-medium">
-                                {post.texto}
-                            </p>
-                            
-                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <button 
-                                        onClick={() => handleTogglePray(post)}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${isPraying ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                                    >
-                                        <Heart size={16} className={isPraying ? 'fill-rose-500 text-rose-500 animate-pulse' : 'text-slate-400'}/>
-                                        {isPraying ? 'Estou orando por isto' : 'Orar por isto'}
-                                    </button>
-                                    {oradores.length > 0 && (
-                                        <span className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
-                                            {oradores.length} {oradores.length === 1 ? 'oração' : 'orações'}
-                                        </span>
+                                
+                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+                                    <div className="flex items-center gap-3">
+                                        <button 
+                                            onClick={() => handleTogglePray(post)}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${isPraying ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                                        >
+                                            <Heart size={16} className={isPraying ? 'fill-rose-500 text-rose-500 animate-pulse' : 'text-slate-400'}/>
+                                            {isPraying ? 'Estou orando por isto' : 'Orar por isto'}
+                                        </button>
+                                        {oradores.length > 0 && (
+                                            <span className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                                {oradores.length} {oradores.length === 1 ? 'oração' : 'orações'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {!isPraying && (
+                                        <span className="text-[10px] text-slate-400 hidden lg:block italic">Clique para apoiar.</span>
                                     )}
                                 </div>
-                                {!isPraying && (
-                                    <span className="text-[10px] text-slate-400 hidden sm:block italic">Clique no botão para mostrar seu apoio.</span>
-                                )}
                             </div>
-                        </div>
-                    );
-                }) : (
-                    <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                        <Heart size={48} className="mx-auto text-slate-200 mb-4"/>
-                        <h4 className="text-xl font-bold text-slate-600 mb-1">Mural Vazio</h4>
-                        <p className="text-sm text-slate-500">Seja o primeiro a partilhar um pedido de oração com os irmãos.</p>
-                    </div>
-                )}
-            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                    <Heart size={48} className="mx-auto text-slate-200 mb-4"/>
+                    <h4 className="text-xl font-bold text-slate-600 mb-1">Mural Vazio</h4>
+                    <p className="text-sm text-slate-500">Seja o primeiro a partilhar um pedido de oração com os irmãos.</p>
+                </div>
+            )}
         </div>
     );
 };
