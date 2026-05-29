@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
 import { 
   PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line
@@ -768,7 +769,7 @@ const GlobalStyles = () => (
     .input-futuristic:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); outline: none; }
     .text-gradient { background: linear-gradient(135deg, #4f46e5 0%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-    .doc-padding { padding: 10mm; box-sizing: border-box; }
+    .doc-padding { padding: 20mm; box-sizing: border-box; }
 
     @media print {
       /* Reset global do documento para impressão limpa */
@@ -861,12 +862,12 @@ const GlobalStyles = () => (
 
       /* Ajustes de Margem e Orientação de Página */
       @page { 
-        margin: 15mm 10mm 15mm 10mm; 
+        margin: 20mm; 
         size: A4 portrait; 
       }
       @page landscape-page { 
         size: A4 landscape; 
-        margin: 15mm 10mm 15mm 10mm; 
+        margin: 20mm; 
       }
       
       .print-landscape { 
@@ -2481,87 +2482,175 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
 
     if (!isOpen) return null;
 
-    const handleDownloadDocument = async () => {
-        addToast("Processando documento para download...", "info");
-        let originalClassName = '';
-        try {
-            const el = contentRef.current;
-            // Guardar as classes originais e remover a escala para gerar a imagem em tamanho real A4
-            originalClassName = el.className;
-            el.className = el.className.replace(/scale-75/g, '').replace(/sm:scale-90/g, '').replace(/transform/g, '');
-            
-            // Pequeno delay para garantir a renderização do DOM sem a escala
-            await new Promise(r => setTimeout(r, 400));
-            
-            const dataUrl = await toPng(el, {
-                pixelRatio: 3, // Qualidade alta
-                backgroundColor: "#ffffff",
-                style: { transform: 'scale(1)', transformOrigin: 'top left' }
-            });
-            
-            // Restaura a escala visual após a captura
-            el.className = originalClassName;
-            
-            const link = document.createElement('a');
-            const fileName = `documento_${mode}_${Date.now()}.png`;
-            link.download = fileName;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            addToast("Download concluído!", "success");
-        } catch (e) {
-            console.error(e);
-            if (contentRef.current && originalClassName) contentRef.current.className = originalClassName;
-            addToast("Erro ao gerar arquivo. Tente novamente.", "error");
+    // Função centralizada para renderizar a área de impressão (.print-area) para PDF de nível corporativo
+    const generateProfessionalPDF = async (action: 'download' | 'print') => {
+        addToast(action === 'download' ? "Gerando PDF corporativo (Alta Resolução)..." : "Preparando documento para impressão profissional...", "info");
+        
+        const targetEl = document.querySelector('.print-area') as HTMLElement;
+        if (!targetEl) {
+            addToast("Erro: área de impressão não localizada no sistema.", "error");
+            return null;
         }
-    };
 
-    const handleNativePrint = () => {
-        addToast("A gerar PDF Profissional. Escolha 'Salvar como PDF' na caixa de diálogo.", "success");
-        setTimeout(() => {
-            window.print();
-        }, 800);
-    };
+        const originalStyle = targetEl.getAttribute('style') || '';
+        const isLandscape = mode && mode.startsWith('cert_');
+        
+        // Larguras canônicas A4 em pixels @ 96 DPI (210mm ou 297mm)
+        const targetWidth = isLandscape ? 1123 : 794;
 
-    const handleJSPdfExport = async () => {
-        addToast("Processando PDF (Alta Resolução)...", "info");
-        let originalClassName = '';
         try {
-            const el = contentRef.current;
-            originalClassName = el.className;
-            el.className = el.className.replace(/scale-75/g, '').replace(/sm:scale-90/g, '').replace(/transform/g, '');
-            
-            await new Promise(r => setTimeout(r, 400));
-            
-            const imgData = await toJpeg(el, {
-                quality: 0.98,
-                pixelRatio: 2, // Boa resolução
-                backgroundColor: "#ffffff",
-                style: { transform: 'scale(1)', transformOrigin: 'top left' }
+            // Força renderização limpa offline, posicionada fora da tela para evitar flickering
+            // Enfatiza o confinamento rígido à largura A4 por meio de min-width e max-width
+            targetEl.setAttribute('style', `
+                display: block !important; 
+                position: fixed !important; 
+                top: -15000px !important; 
+                left: -15000px !important; 
+                width: ${targetWidth}px !important; 
+                min-width: ${targetWidth}px !important; 
+                max-width: ${targetWidth}px !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                background: white !important;
+                -webkit-font-smoothing: antialiased !important;
+                -moz-osx-font-smoothing: grayscale !important;
+                text-rendering: optimizeLegibility !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+                box-sizing: border-box !important;
+            `);
+
+            // Pequeno delay para recálculo de reflow do navegador
+            await new Promise(r => setTimeout(r, 300));
+
+            // Executa captura de alta fidelidade redimensionando estritamente para a largura A4 correspondente
+            const canvas = await html2canvas(targetEl, {
+                scale: 2.5, // Fator escala de alta resolução que atua como vetorização
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                width: targetWidth, // Restringe a captura exatamente à largura pretendida, mitigando quebras ou reentrâncias
+                windowWidth: targetWidth,
+                windowHeight: targetEl.scrollHeight
             });
-            
-            el.className = originalClassName;
-            
-            // Detecta orientação de acordo com a proporção da DIV de impressão
-            const isLandscape = el.offsetWidth > el.offsetHeight;
+
+            // Restaura imediatamente os estilos do elemento original
+            targetEl.setAttribute('style', originalStyle);
+
+            const isPortrait = !isLandscape;
             const pdf = new jsPDF({
                 orientation: isLandscape ? 'landscape' : 'portrait',
                 unit: 'mm',
                 format: 'a4'
             });
-            
+
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (el.offsetHeight * pdfWidth) / el.offsetWidth;
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            // Slicing de Páginas Inteligente baseado na proporção A4
+            // Altura esperada para uma página única do canvas na escala original do elemento
+            const sourcePageHeight = isLandscape ? (canvas.width * 210 / 297) : (canvas.width * 297 / 210);
             
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Documento_${mode}_${new Date().getTime()}.pdf`);
-            
-            addToast("Exportação PDF concluída!", "success");
+            let currentPage = 0;
+            let srcY = 0;
+
+            while (srcY < canvas.height) {
+                if (currentPage > 0) {
+                    pdf.addPage();
+                }
+
+                const currentSliceHeight = Math.min(canvas.height - srcY, sourcePageHeight);
+
+                // Criar o canvas temporário de corte para evitar esticamento vertical
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = sourcePageHeight; // Sempre o formato perfeito A4 proporcional
+
+                const ctx = tempCanvas.getContext('2d');
+                if (ctx) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, sourcePageHeight);
+                    // Copia o frame do canvas original
+                    ctx.drawImage(
+                        canvas,
+                        0, srcY, canvas.width, currentSliceHeight, // Source
+                        0, 0, canvas.width, currentSliceHeight      // Destination
+                    );
+                }
+
+                const sliceImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(sliceImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${currentPage}`, 'FAST');
+
+                currentPage++;
+                srcY += sourcePageHeight;
+            }
+
+            return pdf;
+
         } catch (error) {
-            console.error("Erro PDF jsPDF/html-to-image:", error);
-            if (contentRef.current && originalClassName) contentRef.current.className = originalClassName; // rollback in case of error
-            addToast("Erro ao gerar arquivo PDF. Tente novamente.", "error");
+            console.error("Erro ao processar PDF:", error);
+            targetEl.setAttribute('style', originalStyle);
+            addToast("Erro interno ao renderizar o PDF de impressão.", "error");
+            return null;
+        }
+    };
+
+    const handleDownloadDocument = async () => {
+        const pdf = await generateProfessionalPDF('download');
+        if (pdf) {
+            pdf.save(`Relatorio_${mode}_${new Date().getTime()}.pdf`);
+            addToast("PDF de alta resolução baixado com sucesso!", "success");
+        }
+    };
+
+    const handleNativePrint = async () => {
+        const pdf = await generateProfessionalPDF('print');
+        if (!pdf) return;
+
+        try {
+            // Conversão do PDF consolidado para Blob URL executado num Iframe oculto direto
+            const blobUrl = pdf.output('bloburl').toString();
+            
+            // Destrói qualquer iframe anterior de impressão pendente do DOM
+            const oldIframe = document.getElementById('gp-silent-print-iframe');
+            if (oldIframe) oldIframe.remove();
+
+            const iframe = document.createElement('iframe');
+            iframe.id = 'gp-silent-print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            iframe.src = blobUrl;
+
+            document.body.appendChild(iframe);
+
+            iframe.onload = () => {
+                try {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                    addToast("Diálogo de impressão profissional aberto!", "success");
+                } catch (err) {
+                    console.error("Falha ao focar impressão:", err);
+                    addToast("Seu navegador limitou o disparo silencioso. Recomendamos baixar o PDF e realizar a impressão.", "info");
+                }
+
+                // Desaloca do DOM após tempo seguro (1 minuto) para evitar vazamento de memória e fechar o print process
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                        URL.revokeObjectURL(blobUrl);
+                    }
+                }, 60000);
+            };
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao carregar renderizador físico de impressão. Tente baixar o PDF plano.", "error");
         }
     };
 
@@ -2572,7 +2661,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                     <h3 className="font-bold text-lg text-slate-700 flex items-center gap-2"><FileText size={20} className="text-indigo-600"/> Visualização de Documento</h3>
                     <div className="flex gap-2 sm:gap-3 flex-wrap">
                         <Button variant="ghost" onClick={onClose} className="border border-slate-300 hover:bg-slate-100 hidden sm:flex">Fechar</Button>
-                        <Button variant="primary" onClick={handleJSPdfExport} className="shadow-lg flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700">
+                        <Button variant="primary" onClick={handleDownloadDocument} className="shadow-lg flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700">
                             <Download size={20}/> Baixar PDF 
                         </Button>
                         <Button variant="success" onClick={handleNativePrint} className="shadow-lg flex items-center gap-2">
@@ -5414,11 +5503,22 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.5.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.6.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                <h3 className="font-bold text-lg text-indigo-700">v5.6.0 - Assistente Mary Customizável, Moderação de Suporte & Auto‑Backup</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Avatar Mary Personalizável (Importação Local):</strong> Otimização da Assistente Virtual padrão "Mary". Removemos a opção genérica e dispersa de avatar anterior "Outro", integrando em seu lugar um botão direto e simplificado sobre o card de Mary para importação local. Permite carregar qualquer imagem do computador do usuário, realizando auto-recorte e pré-processamento Canvas automático antes de persistir no banco.</li>
+                    <li><strong className="text-slate-700">Gerenciamento no Painel de Suporte:</strong> Inclusão de botões de controle térmico e purga de tickets de atendimento no portal do desenvolvedor. Operadores master podem agora excluir conversas específicas individualmente diretamente no box ativo de chat selecionado, além de acionar a limpeza global ("Apagar Todas as Mensagens") caso o banco precise ser purgado de atendimentos passados.</li>
+                    <li><strong className="text-slate-700">Motor de Auto-Backup Silencioso:</strong> Inicialização de uma rotina automatizada que roda nos bastidores do sistema, empacotando os dados estruturados canônicos sem imagens redundantes e salvando snapshots estruturais de segurança direto no Firestore a cada intervalo programado, protegendo o sistema contra interrupções.</li>
+                </ul>
+            </div>
+
             <div className="relative pl-8 border-l-2 border-emerald-500">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                 <h3 className="font-bold text-lg text-emerald-800">v5.5.0 - Super Resolução & Cache Local no IndexedDB</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Cache de Média Persistente via IndexedDB:</strong> Criação de subsistema de armazenamento local offline usando o banco IndexedDB do navegador. Imagens pesadas como avatares de membros, fotos de pastores, do assistente de IA, logos e cartazes de eventos são guardadas fisicamente na máquina do usuário, eliminando o tráfego repetitivo e minimizando a franquia de dados móveis sob conexões 3G/4G restritas.</li>
                     <li><strong className="text-slate-700">Pré-processamento Científico de Uploads:</strong> Redução drástica das dimensões de imagens direto no cliente por meio de renderizadores Canvas HTML5 híbridos antes do upload no Firestore. Limita resoluções excessivas para 400x400 e otimiza a compressão JPEG para uma proporção ideal de 75%, mitigando o consumo de largura de banda.</li>
@@ -6178,54 +6278,71 @@ const ModuleIgreja = () => {
 
                                 <div className="space-y-3">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar da Assistente</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         {[
-                                            { name: "Mary", url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO" },
+                                            { name: "Mary", url: data.custom_mary_avatar || "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO", isMary: true },
                                             { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
                                             { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
                                             { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
                                         ].map((av) => (
-                                            <button 
-                                                type="button"
-                                                key={av.name} 
-                                                onClick={() => setData({
-                                                    ...data, 
-                                                    bot_avatar: av.url,
-                                                    bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
-                                                })}
-                                                className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 bg-white relative overflow-hidden group ${data.bot_avatar === av.url ? 'border-indigo-600 scale-105 shadow-md shadow-indigo-600/10' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-indigo-300'}`}
-                                            >
-                                                <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
-                                                <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
-                                                    {av.name}
-                                                    {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
-                                                </span>
-                                                {data.bot_avatar === av.url && (
-                                                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
-                                                )}
-                                            </button>
-                                        ))}
+                                            <div key={av.name} className="relative group overflow-hidden rounded-2xl border-2 transition-all p-0">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setData({
+                                                        ...data, 
+                                                        bot_avatar: av.url,
+                                                        bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
+                                                    })}
+                                                    className={`p-1.5 rounded-2xl w-full h-full transition-all flex flex-col items-center gap-1 bg-white border-0 relative ${data.bot_avatar === av.url ? 'scale-105 opacity-100 shadow-md shadow-indigo-600/10' : 'opacity-70 hover:opacity-100'}`}
+                                                >
+                                                    <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
+                                                    <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
+                                                        {av.name}
+                                                        {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
+                                                    </span>
+                                                    {data.bot_avatar === av.url && (
+                                                        <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
+                                                    )}
+                                                </button>
 
-                                        {/* Custom Upload Option */}
-                                        <label className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 bg-white cursor-pointer relative overflow-hidden group ${(![
-                                            "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
-                                            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
-                                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-                                            "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
-                                        ].includes(data.bot_avatar) && data.bot_avatar) ? 'border-indigo-600' : 'border-dashed border-slate-300 hover:border-indigo-300'}`}>
-                                            {(![
-                                                "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
-                                                "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
-                                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-                                                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
-                                            ].includes(data.bot_avatar) && data.bot_avatar) ? (
-                                                <img src={data.bot_avatar} alt="Custom" className="w-12 h-12 rounded-xl object-cover" />
-                                            ) : (
-                                                <div className="w-12 h-12 bg-slate-50 border rounded-xl flex items-center justify-center"><Upload size={20} className="text-slate-400"/></div>
-                                            )}
-                                            <span className="text-[10px] font-bold text-slate-700">Outro</span>
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleBotAvatarUpload}/>
-                                        </label>
+                                                {av.isMary && (
+                                                    <label className="absolute inset-x-0 bottom-0 bg-indigo-900/90 hover:bg-slate-900 text-white text-[8px] py-1 text-center font-black uppercase tracking-wider cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                                        <UploadCloud size={8}/> Importar
+                                                        <input 
+                                                            type="file" 
+                                                            className="hidden" 
+                                                            accept="image/*" 
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    if (file.size > 10 * 1024 * 1024) { 
+                                                                        addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
+                                                                        return; 
+                                                                    }
+                                                                    const reader = new FileReader();
+                                                                    reader.onloadend = async () => {
+                                                                        try {
+                                                                            const rawResult = reader.result as string;
+                                                                            const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                                                                            setData(prev => ({
+                                                                                ...prev, 
+                                                                                custom_mary_avatar: compressed,
+                                                                                bot_avatar: compressed,
+                                                                                bot_name: "Mary (Assistente Virtual)"
+                                                                            }));
+                                                                            addToast("Imagem da Mary customizada com sucesso!", "success");
+                                                                        } catch (err) {
+                                                                            addToast("Erro ao processar imagem.", "error");
+                                                                        }
+                                                                    };
+                                                                    reader.readAsDataURL(file);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -7176,58 +7293,75 @@ const ModuleDesenvolvedor = () => {
                                     className="!mb-4"
                                 />
 
-                                <div className="space-y-3">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                        {[
-                                            { name: "Mary", url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO" },
-                                            { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
-                                            { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
-                                            { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
-                                        ].map((av) => (
-                                            <button 
-                                                type="button"
-                                                key={av.name} 
-                                                onClick={() => setData({
-                                                    ...data, 
-                                                    bot_avatar: av.url,
-                                                    bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
-                                                })}
-                                                className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 bg-white relative overflow-hidden group ${data.bot_avatar === av.url ? 'border-indigo-600 scale-105 shadow-md shadow-indigo-600/10' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-indigo-300'}`}
-                                            >
-                                                <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
-                                                <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
-                                                    {av.name}
-                                                    {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
-                                                </span>
-                                                {data.bot_avatar === av.url && (
-                                                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
-                                                )}
-                                            </button>
-                                        ))}
+                                 <div className="space-y-3">
+                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selecionar Avatar</label>
+                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                         {[
+                                             { name: "Mary", url: data.custom_mary_avatar || "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200", tag: "PADRÃO", isMary: true },
+                                             { name: "Sofia", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
+                                             { name: "Gabriel", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" },
+                                             { name: "Graça", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200" }
+                                         ].map((av) => (
+                                             <div key={av.name} className="relative group overflow-hidden rounded-2xl border-2 transition-all p-0">
+                                                 <button 
+                                                     type="button"
+                                                     onClick={() => setData({
+                                                         ...data, 
+                                                         bot_avatar: av.url,
+                                                         bot_name: av.name === "Mary" ? "Mary (Assistente Virtual)" : av.name + " (Assistente Virtual)"
+                                                     })}
+                                                     className={`p-1.5 rounded-2xl w-full h-full transition-all flex flex-col items-center gap-1 bg-white border-0 relative ${data.bot_avatar === av.url ? 'scale-105 opacity-100 shadow-md shadow-indigo-600/10' : 'opacity-70 hover:opacity-100'}`}
+                                                 >
+                                                     <img src={av.url} alt={av.name} className="w-12 h-12 rounded-xl object-cover" />
+                                                     <span className="text-[10px] font-bold text-slate-700 flex items-center justify-center gap-0.5 whitespace-nowrap">
+                                                         {av.name}
+                                                         {av.tag && <span className="bg-emerald-500 text-white text-[7px] font-black px-1 rounded-sm leading-tight scale-90 shrink-0">{av.tag}</span>}
+                                                     </span>
+                                                     {data.bot_avatar === av.url && (
+                                                         <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black">✓</span>
+                                                     )}
+                                                 </button>
 
-                                        {/* Custom Upload Option */}
-                                        <label className={`p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 bg-white cursor-pointer relative overflow-hidden group ${(![
-                                            "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
-                                            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
-                                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-                                            "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
-                                        ].includes(data.bot_avatar) && data.bot_avatar) ? 'border-indigo-600' : 'border-dashed border-slate-300 hover:border-indigo-300'}`}>
-                                            {(![
-                                                "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200",
-                                                "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200",
-                                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-                                                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200"
-                                            ].includes(data.bot_avatar) && data.bot_avatar) ? (
-                                                <img src={data.bot_avatar} alt="Custom" className="w-12 h-12 rounded-xl object-cover" />
-                                            ) : (
-                                                <div className="w-12 h-12 bg-slate-50 border rounded-xl flex items-center justify-center"><Upload size={20} className="text-slate-400"/></div>
-                                            )}
-                                            <span className="text-[10px] font-bold text-slate-700">Outro</span>
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleBotAvatarUpload}/>
-                                        </label>
-                                    </div>
-                                </div>
+                                                 {av.isMary && (
+                                                     <label className="absolute inset-x-0 bottom-0 bg-indigo-900/90 hover:bg-slate-900 text-white text-[8px] py-1 text-center font-black uppercase tracking-wider cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                                         <UploadCloud size={8}/> Importar
+                                                         <input 
+                                                             type="file" 
+                                                             className="hidden" 
+                                                             accept="image/*" 
+                                                             onChange={(e) => {
+                                                                 const file = e.target.files?.[0];
+                                                                 if (file) {
+                                                                     if (file.size > 10 * 1024 * 1024) { 
+                                                                         addToast("A imagem do avatar deve ter no máximo 10MB.", "error");
+                                                                         return; 
+                                                                     }
+                                                                     const reader = new FileReader();
+                                                                     reader.onloadend = async () => {
+                                                                         try {
+                                                                             const rawResult = reader.result as string;
+                                                                             const compressed = await resizeImageAndCompress(rawResult, 150, 150, 0.75);
+                                                                             setData(prev => ({
+                                                                                 ...prev, 
+                                                                                 custom_mary_avatar: compressed,
+                                                                                 bot_avatar: compressed,
+                                                                                 bot_name: "Mary (Assistente Virtual)"
+                                                                             }));
+                                                                             addToast("Imagem da Mary customizada com sucesso!", "success");
+                                                                         } catch (err) {
+                                                                             addToast("Erro ao processar imagem.", "error");
+                                                                         }
+                                                                     };
+                                                                     reader.readAsDataURL(file);
+                                                                 }
+                                                             }}
+                                                         />
+                                                     </label>
+                                                 )}
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </div>
 
                                 <div className="space-y-2 pt-2">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mensagem Inicial de Boas-vindas</label>
@@ -8208,10 +8342,37 @@ Gere uma resposta de suporte operacional muito educada, curta (máximo de 2 par�
 const ModuleDevSuporte = () => {
     const context = useContext(ChurchContext);
     if (!context) return null;
-    const { db, setDoc, doc, dbFirestore, appId, addToast } = context;
+    const { db, setDoc, doc, dbFirestore, appId, addToast, deleteDoc } = context;
     const chats = db.support_chats || [];
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [replyText, setReplyText] = useState("");
+
+    const handleDeleteChat = async (id: string) => {
+        if (!confirm("Tem certeza que deseja excluir permanentemente esta conversa de suporte?")) return;
+        try {
+            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', id));
+            setSelectedChatId(null);
+            addToast("Conversa de suporte excluída do sistema!", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao excluir conversa.", "error");
+        }
+    };
+
+    const handleDeleteAllChats = async () => {
+        if (!confirm("⚠️ ATENÇÃO CRÍTICA: Isso excluirá permanentemente TODAS as conversas e históricos de mensagens de suporte do banco de dados! Deseja mesmo prosseguir com esta limpeza completa?")) return;
+        try {
+            const batchPromises = chats.map((c: any) => 
+                deleteDoc(doc(doc.firestore || dbFirestore, 'artifacts', appId, 'public', 'data', 'support_chats', c.id))
+            );
+            await Promise.all(batchPromises);
+            setSelectedChatId(null);
+            addToast("Histórico completo de conversas apagado com sucesso!", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao excluir todas as conversas.", "error");
+        }
+    };
     
     // Sort chats by recent
     const sortedChats = [...chats].sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
@@ -8282,12 +8443,23 @@ const ModuleDevSuporte = () => {
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance max-w-7xl mx-auto w-full">
             {/* Header */}
-            <div className="flex items-center gap-4 border-b pb-4">
-                <div className="p-3 bg-fuchsia-50 rounded-2xl text-fuchsia-600 shadow-sm"><Headset size={32}/></div>
-                <div>
-                    <h2 className="text-2xl font-black text-slate-800">Portal de Suporte Técnico do Desenvolvedor</h2>
-                    <p className="text-slate-500 text-sm font-medium">Controle canais abertos, veja mensagens automáticas e tome controle manual das requisições de suporte.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-fuchsia-50 rounded-2xl text-fuchsia-600 shadow-sm"><Headset size={32}/></div>
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-800">Portal de Suporte Técnico do Desenvolvedor</h2>
+                        <p className="text-slate-500 text-sm font-medium">Controle canais abertos, veja mensagens automáticas e tome controle manual das requisições de suporte.</p>
+                    </div>
                 </div>
+                {chats.length > 0 && (
+                    <button 
+                        onClick={handleDeleteAllChats}
+                        className="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition-all font-black text-xs px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-sm"
+                        title="Limpar todas as conversas do suporte"
+                    >
+                        <Trash2 size={16}/> APAGAR TODAS AS MENSAGENS
+                    </button>
+                )}
             </div>
 
             {/* Dashboard Mini metrics */}
@@ -8363,6 +8535,13 @@ const ModuleDevSuporte = () => {
                                         <input type="checkbox" checked={currentChat.status === 'bot'} onChange={() => handleToggleBot(currentChat)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"/>
                                         DEIXAR IA RESPONDER AUTOMATICAMENTE
                                     </label>
+                                    <button 
+                                        onClick={() => handleDeleteChat(currentChat.id)}
+                                        className="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition-all font-black text-[10px] tracking-wider px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm"
+                                        title="Excluir este chamado de suporte permanentemente"
+                                    >
+                                        <Trash2 size={12}/> EXCLUIR TICKET
+                                    </button>
                                 </div>
                             </div>
                             
@@ -21996,7 +22175,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.5.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.6.0</p>
                         </div>
                     </div>
                     <div>
