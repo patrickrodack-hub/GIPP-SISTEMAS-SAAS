@@ -193,7 +193,26 @@ try {
 }
 
 const urlParams = new URLSearchParams(window.location.search);
-const urlAppId = urlParams.get('id');
+let urlAppId = urlParams.get('id');
+
+if (urlAppId) {
+    localStorage.setItem('gipp_saved_app_id', urlAppId);
+    localStorage.setItem('gipp_saved_saas_url', window.location.origin + window.location.pathname + window.location.search);
+} else {
+    const savedAppId = localStorage.getItem('gipp_saved_app_id');
+    if (savedAppId && savedAppId !== 'default-app-id') {
+        urlAppId = savedAppId;
+        try {
+            const newSearch = new URLSearchParams(window.location.search);
+            newSearch.set('id', savedAppId);
+            const newUrl = window.location.pathname + '?' + newSearch.toString() + window.location.hash;
+            window.history.replaceState(null, '', newUrl);
+        } catch (e) {
+            console.warn("Could not write dynamic application query parameter:", e);
+        }
+    }
+}
+
 const baseAppId = (typeof (window as any).__app_id !== 'undefined' && (window as any).__app_id) ? String((window as any).__app_id) : 'default-app-id';
 const appId = urlAppId || baseAppId;
 
@@ -21530,53 +21549,72 @@ export default function App() {
       metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 
       // 3. Manifest PWA
-      if (!document.getElementById('gipp-pwa-manifest')) {
-          const manifest = {
-              name: "GIPP - Gestão de Igreja",
-              short_name: "GIPP App",
-              description: "Sistema Inteligente de Gestão Eclesiástica",
-              start_url: ".",
-              display: "fullscreen", // CRUCIAL: Força tela cheia nativa ao instalar o PWA
-              background_color: "#0f172a",
-              theme_color: "#4f46e5",
-              icons: [
-                  {
-                      src: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png", 
-                      sizes: "512x512",
-                      type: "image/png",
-                      purpose: "any maskable"
-                  }
-              ]
-          };
-
-          const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-          const manifestUrl = URL.createObjectURL(manifestBlob);
-          const manifestLink = document.createElement('link');
-          manifestLink.id = 'gipp-pwa-manifest';
+      let manifestLink = document.querySelector("link[rel='manifest']") as HTMLLinkElement | null;
+      if (!manifestLink) {
+          manifestLink = document.createElement('link');
           manifestLink.rel = 'manifest';
-          manifestLink.href = manifestUrl;
+          manifestLink.id = 'gipp-pwa-manifest';
           document.head.appendChild(manifestLink);
+      } else {
+          manifestLink.id = 'gipp-pwa-manifest';
+      }
 
-          const metaThemeColor = document.createElement('meta');
+      const activeLaunchUrl = window.location.origin + window.location.pathname + window.location.search;
+
+      const manifest = {
+          name: "GIPP - Gestão de Igreja",
+          short_name: "GIPP App",
+          description: "Sistema Inteligente de Gestão Eclesiástica",
+          start_url: activeLaunchUrl,
+          display: "fullscreen", // CRUCIAL: Força tela cheia nativa ao instalar o PWA
+          background_color: "#0f172a",
+          theme_color: "#4f46e5",
+          icons: [
+              {
+                  src: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png", 
+                  sizes: "512x512",
+                  type: "image/png",
+                  purpose: "any maskable"
+              }
+          ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestUrl = URL.createObjectURL(manifestBlob);
+      manifestLink.href = manifestUrl;
+
+      // Meta tags adicionais para Apple/Android de alta fidelidade
+      let metaThemeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+      if (!metaThemeColor) {
+          metaThemeColor = document.createElement('meta');
           metaThemeColor.name = 'theme-color';
-          metaThemeColor.content = '#0f172a';
           document.head.appendChild(metaThemeColor);
+      }
+      metaThemeColor.content = '#0f172a';
 
-          const metaAppleCapable = document.createElement('meta');
+      let metaAppleCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]') as HTMLMetaElement | null;
+      if (!metaAppleCapable) {
+          metaAppleCapable = document.createElement('meta');
           metaAppleCapable.name = 'apple-mobile-web-app-capable';
-          metaAppleCapable.content = 'yes';
           document.head.appendChild(metaAppleCapable);
+      }
+      metaAppleCapable.content = 'yes';
 
-          const metaAppleStatus = document.createElement('meta');
+      let metaAppleStatus = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
+      if (!metaAppleStatus) {
+          metaAppleStatus = document.createElement('meta');
           metaAppleStatus.name = 'apple-mobile-web-app-status-bar-style';
-          metaAppleStatus.content = 'black-translucent';
           document.head.appendChild(metaAppleStatus);
+      }
+      metaAppleStatus.content = 'black-translucent';
 
-          const appleIcon = document.createElement('link');
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+      if (!appleIcon) {
+          appleIcon = document.createElement('link');
           appleIcon.rel = 'apple-touch-icon';
-          appleIcon.href = "https://cdn-icons-png.flaticon.com/512/3004/3004613.png";
           document.head.appendChild(appleIcon);
       }
+      appleIcon.href = "https://cdn-icons-png.flaticon.com/512/3004/3004613.png";
 
       return () => {
           document.removeEventListener('contextmenu', handleContextMenu);
@@ -21605,11 +21643,12 @@ export default function App() {
       // Atualizar o Manifest existente (se houver)
       const manifestLink = document.getElementById('gipp-pwa-manifest') as HTMLLinkElement | null;
       if (manifestLink) {
+          const activeLaunchUrl = window.location.origin + window.location.pathname + window.location.search;
           const manifest = {
             name: "GIPP - Gestão de Igreja",
             short_name: "GIPP App",
             description: "Sistema Inteligente de Gestão Eclesiástica",
-            start_url: ".",
+            start_url: activeLaunchUrl,
             display: "fullscreen",
             background_color: "#0f172a",
             theme_color: "#4f46e5",
