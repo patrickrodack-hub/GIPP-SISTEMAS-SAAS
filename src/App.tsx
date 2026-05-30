@@ -2520,6 +2520,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const contentRef = useRef<HTMLDivElement>(null);
     const [renderProgress, setRenderProgress] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
+    const [palette, setPalette] = useState<'cinza' | 'azul' | 'verde'>('cinza');
 
     if (!isOpen) return null;
 
@@ -2727,6 +2728,34 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
 
                     {/* Controles do visualizador */}
                     <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+                        {/* Seletor de Estilo / Paleta CSS */}
+                        <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase px-2 flex items-center gap-1.5 select-none md:inline hidden">
+                                <Palette size={13} className="text-indigo-400" /> Estilo:
+                            </span>
+                            <button 
+                                onClick={() => setPalette('cinza')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${palette === 'cinza' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Paleta Cinza Antracite (Padrão)"
+                            >
+                                Cinza
+                            </button>
+                            <button 
+                                onClick={() => setPalette('azul')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${palette === 'azul' ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Paleta Azul Celestial"
+                            >
+                                Azul
+                            </button>
+                            <button 
+                                onClick={() => setPalette('verde')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${palette === 'verde' ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Paleta Verde Realeza"
+                            >
+                                Verde
+                            </button>
+                        </div>
+
                         {/* Zoom Controls */}
                         <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
                             <button 
@@ -2740,7 +2769,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             <button 
                                 onClick={() => setZoom(prev => Math.min(150, prev + 10))}
                                 className="p-1 px-2.5 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg text-xs font-bold transition-all"
-                                title="Aumentar Zoom"
+                                  title="Aumentar Zoom"
                             >
                                 <Plus size={14} />
                             </button>
@@ -2784,7 +2813,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             }}
                             className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
                         >
-                            <PrintSystem mode={mode} data={data} />
+                            <PrintSystem mode={mode} data={data} palette={palette} />
                         </div>
                     </div>
                 </div>
@@ -2809,19 +2838,52 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     );
 };
 
-const PrintSystem = ({ mode, data }) => {
+const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
     if (!mode || !data) return null;
 
+    // Paleta de cores para customização de Layout do Cabeçalho e Títulos de Relatórios
+    const colorMap = {
+        cinza: {
+            borderHeader: 'border-slate-900',
+            borderLogo: 'border-slate-900',
+            borderAccent: 'border-slate-900',
+            textTitle: 'text-slate-950',
+            textSubtitle: 'text-slate-800',
+            borderTableHead: 'border-slate-400',
+            bgTableHead: 'bg-slate-100'
+        },
+        azul: {
+            borderHeader: 'border-indigo-600',
+            borderLogo: 'border-indigo-600',
+            borderAccent: 'border-indigo-600',
+            textTitle: 'text-indigo-950',
+            textSubtitle: 'text-indigo-800',
+            borderTableHead: 'border-indigo-300',
+            bgTableHead: 'bg-indigo-50/65'
+        },
+        verde: {
+            borderHeader: 'border-emerald-600',
+            borderLogo: 'border-emerald-600',
+            borderAccent: 'border-emerald-600',
+            textTitle: 'text-emerald-950',
+            textSubtitle: 'text-emerald-800',
+            borderTableHead: 'border-emerald-300',
+            bgTableHead: 'bg-emerald-50/65'
+        }
+    };
+
+    const colors = colorMap[palette as 'cinza' | 'azul' | 'verde'] || colorMap.cinza;
+
     const OfficialHeader = () => (
-        <div className="flex items-center gap-6 border-b-4 border-slate-900 pb-4 mb-6 avoid-break">
+        <div className={`flex items-center gap-6 border-b-4 ${colors.borderHeader} pb-4 mb-6 avoid-break`}>
             {data.igreja?.logo ? (
                 <img src={data.igreja.logo} className="h-20 w-20 object-contain" alt="Logo"/>
             ) : (
-                <div className="h-20 w-20 border-2 border-slate-900 flex items-center justify-center p-2 text-center text-[10px] font-bold">Sem Logo</div>
+                <div className={`h-20 w-20 border-2 ${colors.borderLogo} flex items-center justify-center p-2 text-center text-[10px] font-bold`}>Sem Logo</div>
             )}
             <div className="flex-1 text-center">
                 <h1 className="font-serif text-3xl font-black uppercase text-slate-900 leading-tight">Assembleia de Deus</h1>
-                <h2 className="text-lg font-bold uppercase text-slate-800 tracking-widest mb-1">{data.igreja?.nome || "Ministério"}</h2>
+                <h2 className={`text-lg font-bold uppercase ${colors.textSubtitle} tracking-widest mb-1`}>{data.igreja?.nome || "Ministério"}</h2>
                 <p className="text-[11px] text-slate-600 font-medium">
                     {data.igreja?.endereco} - {data.igreja?.cidade}/{data.igreja?.uf} • CNPJ: {data.igreja?.cnpj}
                 </p>
@@ -2841,8 +2903,8 @@ const PrintSystem = ({ mode, data }) => {
             <div className="mb-6 avoid-break">
                 <OfficialHeader />
                 {title && (
-                    <div className="mb-4 border-l-4 border-slate-900 pl-4 py-1">
-                        <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">{title}</h2>
+                    <div className={`mb-4 border-l-4 ${colors.borderAccent} pl-4 py-1`}>
+                        <h2 className={`text-2xl font-black uppercase tracking-tight ${colors.textTitle}`}>{title}</h2>
                         {subtitle && <p className="text-sm text-slate-600 font-bold uppercase">{subtitle}</p>}
                     </div>
                 )}
@@ -2863,7 +2925,7 @@ const PrintSystem = ({ mode, data }) => {
                         <tr>
                             <td className="align-top">
                                 <div className="w-full flex flex-col gap-2">
-                                    {children}
+                                     {children}
                                 </div>
                             </td>
                         </tr>
@@ -2876,7 +2938,7 @@ const PrintSystem = ({ mode, data }) => {
     const Table = ({ headers, children }) => (
         <div className="w-full mb-8">
             <table className="w-full text-sm border-collapse border border-slate-300">
-                <thead className="bg-slate-100 border-b-2 border-slate-400">
+                <thead className={`${colors.bgTableHead} border-b-2 ${colors.borderTableHead}`}>
                     <tr>
                         {headers.map((h, i) => (
                             <th key={i} className={`p-3 uppercase text-[10px] font-black text-slate-700 tracking-wider border-r border-slate-300 last:border-r-0 ${h.align === 'right' ? 'text-right' : h.align === 'center' ? 'text-center' : 'text-left'}`}>
