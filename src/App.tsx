@@ -2915,7 +2915,7 @@ const DocumentPreviewModal = ({
                             }}
                             className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
                         >
-                            <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} contentScale={contentScale} />
+                            <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} contentScale={contentScale} orientation={orientation} />
                         </div>
                     </div>
                 </div>
@@ -2940,7 +2940,7 @@ const DocumentPreviewModal = ({
     );
 };
 
-const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', contentScale = 100 }) => {
+const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', contentScale = 100, orientation = 'landscape' }) => {
     if (!mode || !data) return null;
 
     // Configuração de margens dinâmicas de acordo com o seletor de layout
@@ -3150,14 +3150,52 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
     if (mode.startsWith('cert_')) {
         const hojeExtenso = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
         
-        // Margens padrão exigidas: Superior: 3cm (30mm), Esquerda: 3cm (30mm), Inferior: 2cm (20mm), Direita: 2cm (20mm)
+        // Margens padrão exigidas que se adaptam conforme o painel se alterado, mantendo o padrão ABNT (Superior: 30mm, Esquerda: 30mm, Inferior: 20mm, Direita: 20mm)
         const certificateMargin = {
-            paddingTop: '30mm',
-            paddingLeft: '30mm',
-            paddingBottom: '20mm',
-            paddingRight: '20mm',
+            ...selectedMargin,
             boxSizing: 'border-box' as const
         };
+
+        const isLandscape = orientation === 'landscape';
+        const cardWidth = isLandscape ? 1123 : 794;
+        const cardHeight = isLandscape ? 794 : 1123;
+        const scale = contentScale / 100;
+
+        const scaledContainerStyle = contentScale !== 100 ? {
+            width: `${cardWidth * scale}px`,
+            height: `${cardHeight * scale}px`,
+            overflow: 'hidden' as const,
+            position: 'relative' as const
+        } : {
+            width: `${cardWidth}px`,
+            height: `${cardHeight}px`,
+            position: 'relative' as const
+        };
+
+        const cardStyle = {
+            width: `${cardWidth}px`,
+            height: `${cardHeight}px`,
+            ...certificateMargin,
+            transform: contentScale !== 100 ? `scale(${scale})` : 'none',
+            transformOrigin: 'top left',
+            position: 'absolute' as const,
+            top: 0,
+            left: 0,
+        };
+
+        const CertificatePage = ({ className = '', style = {}, children }) => (
+            <div style={scaledContainerStyle}>
+                <div 
+                    className={`relative overflow-hidden ${className}`} 
+                    style={{
+                        ...cardStyle,
+                        ...style
+                    }}
+                >
+                    {children}
+                </div>
+            </div>
+        );
 
         const Seal = ({ color }) => (
             <div className={`absolute bottom-8 left-8 w-28 h-28 rounded-full border-8 border-double flex items-center justify-center shadow-lg opacity-90`} style={{ borderColor: color }}>
@@ -3193,7 +3231,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_batismo') {
             return (
-                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[12px] border-double border-blue-900 p-2 relative flex flex-col justify-between">
                         <div className="w-full h-full border-[4px] border-blue-800/30 p-8 flex flex-col items-center justify-between text-center relative z-10 bg-slate-50/50">
                             <Watermark />
@@ -3215,13 +3253,13 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                             <Assinaturas />
                         </div>
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
 
         if (mode === 'cert_consagracao') {
             return (
-                <div className="bg-[#faf8f5] relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-[#faf8f5]">
                     <div className="w-full h-full border-[16px] border-solid border-rose-900 outline outline-4 outline-offset-4 outline-rose-800 p-6 flex flex-col justify-between text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
                         <Watermark />
                         <div className="w-full flex flex-col items-center justify-center">
@@ -3246,13 +3284,13 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                         <Seal color="#881337" />
                         <Assinaturas />
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
 
         if (mode === 'cert_crianca') {
             return (
-                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[6px] border-solid border-amber-400 rounded-[3rem] p-3 flex flex-col justify-between">
                         <div className="w-full h-full border-[2px] border-dashed border-amber-600/50 rounded-[2.5rem] p-6 flex flex-col items-center justify-between text-center relative z-10 bg-amber-50/10">
                             <Watermark />
@@ -3278,13 +3316,13 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                             </div>
                         </div>
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
 
         if (mode === 'cert_casamento') {
             return (
-                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[12px] border-double border-slate-200 flex relative z-10">
                         <div className="w-[30px] h-full bg-gradient-to-b from-slate-300 via-slate-400 to-slate-300 shrink-0 border-r-4 border-slate-400"></div>
                         <div className="flex-1 h-full p-6 flex flex-col items-center justify-between text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/floral-paper.png')]">
@@ -3307,13 +3345,13 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                             <Assinaturas />
                         </div>
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
 
         if (mode === 'cert_curso') {
             return (
-                <div className="bg-slate-50 relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-slate-50">
                     <div className="w-full h-full border-[10px] border-indigo-900 p-1 relative shadow-inner flex flex-col justify-between">
                         <div className="w-full h-full border-[2px] border-indigo-800 p-8 flex flex-col items-center justify-between text-center relative z-10 bg-white">
                             <Watermark />
@@ -3338,13 +3376,13 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                             <Assinaturas />
                         </div>
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
 
         if (mode === 'cert_evento') {
             return (
-                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[12px] border-double border-slate-100 flex relative z-10">
                         <div className="w-[15px] h-full bg-emerald-850 shrink-0"></div>
                         <div className="w-[5px] h-full bg-emerald-600 shrink-0"></div>
@@ -3368,13 +3406,13 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                             <Assinaturas />
                         </div>
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
 
         if (mode === 'cert_ebd') {
             return (
-                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[8px] border-purple-900 p-1 relative flex flex-col justify-between">
                         <div className="w-full h-full border-[2px] border-dashed border-purple-800 p-8 flex flex-col items-center justify-between text-center relative z-10 bg-purple-50/20">
                             <Watermark />
@@ -3410,7 +3448,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                             </div>
                         </div>
                     </div>
-                </div>
+                </CertificatePage>
             );
         }
     }
@@ -22968,7 +23006,7 @@ export default function App() {
         )}
         <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileSelect} />
         <div className={`print-area ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'} ${printMode?.startsWith('cert_') ? 'cert-colorized' : ''}`}>
-            <PrintSystem mode={printMode} data={printData} palette={printPalette} marginType={printMarginType} contentScale={printContentScale} />
+            <PrintSystem mode={printMode} data={printData} palette={printPalette} marginType={printMarginType} contentScale={printContentScale} orientation={printOrientation} />
         </div>
         <div className="screen-content">
             {user.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />}
