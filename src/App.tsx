@@ -2569,19 +2569,84 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             // Pequeno delay para recálculo de reflow do navegador
             await new Promise(r => setTimeout(r, 400));
 
-            // Executa captura de alta fidelidade redimensionando estritamente para a largura A4 correspondente
-            const canvas = await html2canvas(targetEl, {
-                scale: 2.0, // Fator escala de alta resolução equilibrado para impedir falhas de alocação de memória no canvas
-                useCORS: true,
-                allowTaint: false, // CRÍTICO: allowTaint: true tacha permanentemente o canvas caso uma imagem externa sem CORS apareça, lançando erro de segurança fatal ao resgatar o dataURL. false previne esse crash.
-                backgroundColor: '#ffffff',
-                logging: false,
-                scrollX: 0,
-                scrollY: 0,
-                width: targetWidth, // Restringe a captura exatamente à largura pretendida, mitigando quebras ou reentrâncias
-                windowWidth: targetWidth,
-                windowHeight: targetEl.scrollHeight || undefined
-            });
+            let overridden = false;
+            let canvas;
+            try {
+                const originalStyleSheets = Array.from(document.styleSheets);
+                const proxiedStyleSheets = originalStyleSheets.map(sheet => {
+                    try {
+                        const rules = sheet.cssRules;
+                        if (!rules) return sheet;
+                    } catch (e) {
+                        return sheet;
+                    }
+
+                    return new Proxy(sheet, {
+                        get(target, prop, receiver) {
+                            if (prop === 'cssRules') {
+                                try {
+                                    const rules = target.cssRules;
+                                    if (!rules) return rules;
+                                    const srcRules = Array.from(rules);
+                                    const filtered = srcRules.filter(rule => {
+                                        try {
+                                            return !rule.cssText.includes('oklch');
+                                        } catch (_) {
+                                            return true;
+                                        }
+                                    });
+
+                                    const ruleList = {
+                                        length: filtered.length,
+                                        item(idx: number) { return filtered[idx]; }
+                                    };
+                                    filtered.forEach((r, idx) => {
+                                        (ruleList as any)[idx] = r;
+                                    });
+                                    return ruleList;
+                                } catch (_) {
+                                    return null;
+                                }
+                            }
+                            return Reflect.get(target, prop, receiver);
+                        }
+                    });
+                });
+
+                Object.defineProperty(document, 'styleSheets', {
+                    configurable: true,
+                    get() {
+                        return proxiedStyleSheets;
+                    }
+                });
+                overridden = true;
+            } catch (e) {
+                console.warn("Could not override document.styleSheets:", e);
+            }
+
+            try {
+                // Executa captura de alta fidelidade redimensionando estritamente para a largura A4 correspondente
+                canvas = await html2canvas(targetEl, {
+                    scale: 2.0, // Fator escala de alta resolução equilibrado para impedir falhas de alocação de memória no canvas
+                    useCORS: true,
+                    allowTaint: false, // CRÍTICO: allowTaint: true tacha permanentemente o canvas caso uma imagem externa sem CORS apareça, lançando erro de segurança fatal ao resgatar o dataURL. false previne esse crash.
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    width: targetWidth, // Restringe a captura exatamente à largura pretendida, mitigando quebras ou reentrâncias
+                    windowWidth: targetWidth,
+                    windowHeight: targetEl.scrollHeight || undefined
+                });
+            } finally {
+                if (overridden) {
+                    try {
+                        delete (document as any).styleSheets;
+                    } catch (e) {
+                        console.warn("Could not restore original document.styleSheets:", e);
+                    }
+                }
+            }
 
             // Restaura imediatamente os estilos do elemento original
             if (isUsingModalRef) {
