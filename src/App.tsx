@@ -882,17 +882,17 @@ const GlobalStyles = () => (
         print-color-adjust: exact !important; 
       }
 
-      /* Forçar textos a ficarem nítidos e pretos para economia de tinta e contraste */
-      .print-area p, 
-      .print-area span, 
-      .print-area h1, 
-      .print-area h2, 
-      .print-area h3, 
-      .print-area h4, 
-      .print-area h5, 
-      .print-area h6, 
-      .print-area td, 
-      .print-area th { 
+      /* Forçar textos a ficarem nítidos e pretos para economia de tinta e contraste (exceto certificados) */
+      .print-area:not(.cert-colorized) p, 
+      .print-area:not(.cert-colorized) span, 
+      .print-area:not(.cert-colorized) h1, 
+      .print-area:not(.cert-colorized) h2, 
+      .print-area:not(.cert-colorized) h3, 
+      .print-area:not(.cert-colorized) h4, 
+      .print-area:not(.cert-colorized) h5, 
+      .print-area:not(.cert-colorized) h6, 
+      .print-area:not(.cert-colorized) td, 
+      .print-area:not(.cert-colorized) th { 
         color: #000000 !important; 
         text-shadow: none !important;
         box-shadow: none !important;
@@ -3149,26 +3149,36 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
     // --- NOVOS CERTIFICADOS OFICIAIS (A4 PAISAGEM - ALTO PADRÃO) ---
     if (mode.startsWith('cert_')) {
         const hojeExtenso = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        // Margens padrão exigidas: Superior: 3cm (30mm), Esquerda: 3cm (30mm), Inferior: 2cm (20mm), Direita: 2cm (20mm)
+        const certificateMargin = {
+            paddingTop: '30mm',
+            paddingLeft: '30mm',
+            paddingBottom: '20mm',
+            paddingRight: '20mm',
+            boxSizing: 'border-box' as const
+        };
+
         const Seal = ({ color }) => (
-            <div className={`absolute bottom-16 left-16 w-32 h-32 rounded-full border-8 border-double flex items-center justify-center shadow-lg opacity-90`} style={{ borderColor: color }}>
-                <div className={`w-24 h-24 rounded-full flex flex-col items-center justify-center text-center`} style={{ backgroundColor: color }}>
-                    <Stamp size={32} className="text-white mb-1"/>
-                    <span className="text-[6px] font-black text-white uppercase tracking-[0.2em]">Selo<br/>Oficial</span>
+            <div className={`absolute bottom-8 left-8 w-28 h-28 rounded-full border-8 border-double flex items-center justify-center shadow-lg opacity-90`} style={{ borderColor: color }}>
+                <div className={`w-20 h-20 rounded-full flex flex-col items-center justify-center text-center`} style={{ backgroundColor: color }}>
+                    <Stamp size={28} className="text-white mb-0.5"/>
+                    <span className="text-[5px] font-black text-white uppercase tracking-[0.2em] leading-tight">Selo<br/>Oficial</span>
                 </div>
             </div>
         );
 
         const Assinaturas = () => (
-            <div className="mt-auto w-full flex justify-between px-10 pt-10 gap-16 relative z-20">
+            <div className="mt-auto w-full flex justify-between px-10 pt-4 gap-16 relative z-20">
                 <div className="text-center flex-1">
-                    <div className="border-b border-black mb-2 mx-auto w-full"></div>
-                    <p className="text-sm font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
-                    <p className="text-[10px] text-slate-600 font-serif uppercase tracking-widest">Pastor Presidente</p>
+                    <div className="border-b border-black mb-1 mx-auto w-full"></div>
+                    <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
+                    <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Pastor Presidente</p>
                 </div>
                 <div className="text-center flex-1">
-                    <div className="border-b border-black mb-2 mx-auto w-full"></div>
-                    <p className="text-sm font-bold uppercase text-slate-900">{data.igreja?.secretario1 || "Secretário(a) Geral"}</p>
-                    <p className="text-[10px] text-slate-600 font-serif uppercase tracking-widest">Secretaria Eclesiástica</p>
+                    <div className="border-b border-black mb-1 mx-auto w-full"></div>
+                    <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.secretario1 || "Secretário(a) Geral"}</p>
+                    <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Secretaria Eclesiástica</p>
                 </div>
             </div>
         );
@@ -3176,27 +3186,29 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
         const Watermark = () => (
             data.igreja?.logo ? (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-5">
-                    <img src={data.igreja.logo} className="w-[120mm] h-[120mm] object-contain grayscale"/>
+                    <img src={data.igreja.logo} className="w-[100mm] h-[100mm] object-contain grayscale"/>
                 </div>
             ) : null
         );
 
         if (mode === 'cert_batismo') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border" style={selectedMargin}>
-                    <div className="w-full h-full border-[12px] border-double border-blue-900 p-2 relative">
-                        <div className="w-full h-full border-[4px] border-blue-800/30 p-12 flex flex-col items-center text-center relative z-10 bg-slate-50/50">
+                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[12px] border-double border-blue-900 p-2 relative flex flex-col justify-between">
+                        <div className="w-full h-full border-[4px] border-blue-800/30 p-8 flex flex-col items-center justify-between text-center relative z-10 bg-slate-50/50">
                             <Watermark />
-                            <h1 className="font-classic text-4xl font-bold uppercase text-blue-950 tracking-[0.3em] mb-2">{data.igreja?.nome}</h1>
-                            <p className="text-xs font-bold uppercase tracking-[0.5em] text-blue-700 mb-12">Certificação Oficial Eclesiástica</p>
+                            <div className="flex flex-col items-center">
+                                <h1 className="font-classic text-2xl font-bold uppercase text-blue-950 tracking-[0.3em] mb-1">{data.igreja?.nome}</h1>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-blue-700">Certificação Oficial Eclesiástica</p>
+                            </div>
                             
-                            <h2 className="font-script text-[6.5rem] text-blue-900 leading-none mb-10 drop-shadow-sm">Certificado de Batismo</h2>
+                            <h2 className="font-script text-[4.5rem] text-blue-900 leading-none drop-shadow-sm my-2">Certificado de Batismo</h2>
                             
-                            <p className="font-serif text-2xl leading-loose text-slate-800 max-w-4xl text-justify indent-16">
+                            <p className="font-serif text-lg leading-relaxed text-slate-800 max-w-3xl text-justify indent-12 my-2 z-10">
                                 Certificamos para os devidos fins espirituais e eclesiásticos que <strong className="uppercase text-blue-950">{data.membro?.nome || 'NOME DO MEMBRO'}</strong>, tendo confessado publicamente a sua fé em Jesus Cristo como seu único e suficiente Salvador, desceu às águas batismais nesta congregação em cumprimento à grande comissão (Mateus 28:19).
                             </p>
                             
-                            <p className="mt-8 text-slate-700 font-classic text-sm uppercase tracking-widest">
+                            <p className="text-slate-700 font-classic text-sm uppercase tracking-widest my-2 z-10">
                                 {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
                             </p>
                             <Seal color="#1e3a8a" />
@@ -3209,24 +3221,26 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_consagracao') {
             return (
-                <div className="w-full h-full bg-[#faf8f5] relative overflow-hidden box-border" style={selectedMargin}>
-                    <div className="w-full h-full border-[16px] border-solid border-rose-900 outline outline-4 outline-offset-4 outline-rose-800 p-10 flex flex-col items-center text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
+                <div className="bg-[#faf8f5] relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[16px] border-solid border-rose-900 outline outline-4 outline-offset-4 outline-rose-800 p-6 flex flex-col justify-between text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
                         <Watermark />
-                        <div className="flex items-center justify-center gap-6 w-full mb-10 border-b-2 border-rose-900/30 pb-6">
-                            {data.igreja?.logo && <img src={data.igreja.logo} className="w-20 h-20 object-contain"/>}
-                            <div>
-                                <h1 className="font-classic text-3xl font-black uppercase text-rose-950 tracking-[0.2em]">{data.igreja?.nome}</h1>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-rose-800">Gabinete Pastoral e Ministério</p>
+                        <div className="w-full flex flex-col items-center justify-center">
+                            <div className="flex items-center justify-center gap-4 border-b border-rose-900/20 pb-2 w-full max-w-2xl">
+                                {data.igreja?.logo && <img src={data.igreja.logo} className="w-12 h-12 object-contain"/>}
+                                <div>
+                                    <h1 className="font-classic text-xl font-black uppercase text-rose-950 tracking-[0.2em] mb-0.5">{data.igreja?.nome}</h1>
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-rose-800">Gabinete Pastoral e Ministério</p>
+                                </div>
                             </div>
                         </div>
                         
-                        <h2 className="font-classic text-5xl text-rose-900 font-black tracking-widest mb-10 uppercase">Credencial de Consagração</h2>
+                        <h2 className="font-classic text-3xl text-rose-900 font-black tracking-widest uppercase my-2 z-10">Credencial de Consagração</h2>
                         
-                        <p className="font-serif text-2xl leading-[2.2] text-slate-900 max-w-4xl text-justify">
+                        <p className="font-serif text-lg leading-relaxed text-slate-900 max-w-3xl text-justify indent-12 my-2 z-10">
                             O Ministério desta Igreja, sob a direção do Espírito Santo, atesta e confere o presente documento declarando que <strong className="uppercase">{data.membro?.nome || 'NOME DO MEMBRO'}</strong> foi examinado(a), aprovado(a) e, nesta data solene, mediante a imposição de mãos, separado(a) para o Santo Ministério no ofício de <strong className="uppercase text-rose-800 border-b-2 border-rose-800">{data.extra?.cargo || 'OBREIRO(A)'}</strong>.
                         </p>
                         
-                        <p className="mt-8 text-rose-900 font-classic text-sm font-bold uppercase tracking-widest">
+                        <p className="text-rose-900 font-classic text-xs font-bold uppercase tracking-widest my-1 z-10">
                             {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
                         </p>
                         <Seal color="#881337" />
@@ -3238,25 +3252,27 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_crianca') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border" style={selectedMargin}>
-                    <div className="w-full h-full border-[6px] border-solid border-amber-400 rounded-[3rem] p-3">
-                        <div className="w-full h-full border-[2px] border-dashed border-amber-600/50 rounded-[2.5rem] p-12 flex flex-col items-center text-center relative z-10 bg-amber-50/10">
+                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[6px] border-solid border-amber-400 rounded-[3rem] p-3 flex flex-col justify-between">
+                        <div className="w-full h-full border-[2px] border-dashed border-amber-600/50 rounded-[2.5rem] p-6 flex flex-col items-center justify-between text-center relative z-10 bg-amber-50/10">
                             <Watermark />
-                            <Baby size={48} className="text-amber-500 mb-4 opacity-80"/>
-                            <h1 className="font-serif text-3xl font-bold uppercase text-amber-900 tracking-widest mb-1">{data.igreja?.nome}</h1>
-                            <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400 mb-10">Consagração Infantil</p>
+                            <div className="flex flex-col items-center">
+                                <Baby size={32} className="text-amber-500 mb-1 opacity-80"/>
+                                <h1 className="font-serif text-xl font-bold uppercase text-amber-900 tracking-widest mb-1">{data.igreja?.nome}</h1>
+                                <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">Consagração Infantil</p>
+                            </div>
                             
-                            <h2 className="font-script text-[6rem] text-amber-700 leading-none mb-10">Apresentação ao Senhor</h2>
+                            <h2 className="font-script text-[4rem] text-amber-700 leading-none my-1">Apresentação ao Senhor</h2>
                             
-                            <p className="font-serif text-2xl leading-loose text-slate-700 max-w-4xl">
+                            <p className="font-serif text-lg leading-relaxed text-slate-700 max-w-3xl text-center z-10">
                                 Certificamos com júbilo que a criança <strong className="uppercase text-amber-900">{data.extra?.nome_crianca || 'NOME DA CRIANÇA'}</strong>{data.extra?.data_nasc && <span>, nascida em {formatDateLocal(data.extra.data_nasc)}</span>}, filha de <strong className="uppercase text-slate-900">{data.extra?.nome_pai || 'NOME DO PAI'}</strong> e <strong className="uppercase text-slate-900">{data.extra?.nome_mae || 'NOME DA MÃE'}</strong>, foi trazida ao templo sagrado e apresentada a Deus conforme o rito bíblico, rogando aos céus a sua proteção e graça divina.
                             </p>
                             
-                            <p className="mt-10 text-slate-500 font-serif text-base italic">
+                            <p className="text-slate-500 font-serif text-sm italic my-1 z-10">
                                 "Deixai vir a mim os pequeninos, porque dos tais é o Reino dos Céus." (Mc 10:14)
                             </p>
                             
-                            <div className="mt-auto w-full max-w-lg mx-auto border-t border-slate-800 pt-2 relative z-20">
+                            <div className="w-full max-w-lg mx-auto border-t border-slate-800 pt-1 relative z-20">
                                 <p className="text-sm font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest">{data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.</p>
                             </div>
@@ -3268,22 +3284,23 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_casamento') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border flex" style={selectedMargin}>
-                    <div className="w-full h-full border-[20px] border-slate-100 flex relative z-10">
-                        <div className="w-[40px] h-full bg-gradient-to-b from-slate-300 via-slate-400 to-slate-300 shrink-0 border-r-4 border-slate-500"></div>
-                        <div className="flex-1 h-full p-12 flex flex-col items-center text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/floral-paper.png')]">
+                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[12px] border-double border-slate-200 flex relative z-10">
+                        <div className="w-[30px] h-full bg-gradient-to-b from-slate-300 via-slate-400 to-slate-300 shrink-0 border-r-4 border-slate-400"></div>
+                        <div className="flex-1 h-full p-6 flex flex-col items-center justify-between text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/floral-paper.png')]">
                             <Watermark />
-                            <h1 className="font-classic text-2xl font-bold uppercase text-slate-500 tracking-[0.4em] mb-12">{data.igreja?.nome}</h1>
-                        <h2 className="font-script text-[6.5rem] text-slate-800 leading-none mb-12 border-b border-slate-300 w-full pb-4">Enlace Matrimonial</h2>
-                        
-                        <p className="font-serif text-[1.6rem] leading-[2] text-slate-700 max-w-4xl text-justify">
-                            É com honra e bênção eclesiástica que certificamos que <strong className="uppercase text-slate-900 font-black">{data.extra?.nome_noivo || 'NOME DO NOIVO'}</strong> e <strong className="uppercase text-slate-900 font-black">{data.extra?.nome_noiva || 'NOME DA NOIVA'}</strong>, compareceram perante o altar sagrado e uniram-se pelos indissolúveis laços do santo matrimônio. Que o amor de Cristo seja o cordão de três dobras que sustenta este lar.
-                        </p>
-                        
-                        <p className="mt-8 text-slate-500 font-serif text-lg italic">
-                            "Assim não são mais dois, mas uma só carne. Portanto, o que Deus ajuntou não o separe o homem." (Mt 19:6)
-                        </p>
-                            <p className="mt-8 text-slate-800 font-classic text-sm uppercase tracking-widest">
+                            <h1 className="font-classic text-lg font-bold uppercase text-slate-500 tracking-[0.4em]">{data.igreja?.nome}</h1>
+                            <h2 className="font-script text-[4rem] text-slate-800 leading-none my-1 border-b border-slate-200 w-full pb-1">Enlace Matrimonial</h2>
+                            
+                            <p className="font-serif text-lg leading-relaxed text-slate-700 max-w-3xl text-justify indent-12 my-1 z-10">
+                                É com honra e bênção eclesiástica que certificamos que <strong className="uppercase text-slate-900 font-black">{data.extra?.nome_noivo || 'NOME DO NOIVO'}</strong> e <strong className="uppercase text-slate-900 font-black">{data.extra?.nome_noiva || 'NOME DA NOIVA'}</strong>, compareceram perante o altar sagrado e uniram-se pelos indissolúveis laços do santo matrimônio. Que o amor de Cristo seja o cordão de três dobras que sustenta este lar.
+                            </p>
+                            
+                            <p className="text-slate-500 font-serif text-sm italic my-1 z-10">
+                                "Assim não são mais dois, mas uma só carne. Portanto, o que Deus ajuntou não o separe o homem." (Mt 19:6)
+                            </p>
+                            
+                            <p className="text-slate-800 font-classic text-xs uppercase tracking-widest my-1 z-10">
                                 {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
                             </p>
                             <Seal color="#475569" />
@@ -3296,24 +3313,26 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_curso') {
             return (
-                <div className="w-full h-full bg-slate-50 relative overflow-hidden box-border" style={selectedMargin}>
-                    <div className="w-full h-full border-[10px] border-indigo-900 p-1 relative shadow-inner">
-                        <div className="w-full h-full border-[2px] border-indigo-800 p-12 flex flex-col items-center text-center relative z-10 bg-white">
+                <div className="bg-slate-50 relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[10px] border-indigo-900 p-1 relative shadow-inner flex flex-col justify-between">
+                        <div className="w-full h-full border-[2px] border-indigo-800 p-8 flex flex-col items-center justify-between text-center relative z-10 bg-white">
                             <Watermark />
-                            <div className="absolute top-10 left-10 w-24 h-24 border-4 border-indigo-900 rounded-full flex items-center justify-center">
-                                <BookOpen size={40} className="text-indigo-900"/>
+                            <div className="absolute top-6 left-6 w-16 h-16 border-2 border-indigo-900 rounded-full flex items-center justify-center opacity-70">
+                                <BookOpen size={28} className="text-indigo-900"/>
                             </div>
                             
-                            <h1 className="font-classic text-4xl font-black uppercase text-indigo-900 tracking-[0.2em] mb-4">{data.igreja?.nome}</h1>
-                            <p className="text-xs font-bold uppercase tracking-[0.4em] text-slate-500 mb-10">Departamento de Ensino Teológico</p>
+                            <div className="flex flex-col items-center">
+                                <h1 className="font-classic text-2xl font-black uppercase text-indigo-900 tracking-[0.2em] mb-1">{data.igreja?.nome}</h1>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-500">Departamento de Ensino Teológico</p>
+                            </div>
                             
-                            <h2 className="font-classic text-6xl text-indigo-800 font-black tracking-widest mb-10 uppercase border-y-4 border-indigo-100 py-4 w-full">Diploma de Conclusão</h2>
+                            <h2 className="font-classic text-3xl text-indigo-800 font-black tracking-widest uppercase border-y-4 border-indigo-100 py-1.5 w-full my-2">Diploma de Conclusão</h2>
                             
-                            <p className="font-serif text-2xl leading-loose text-slate-800 max-w-4xl text-justify indent-12">
+                            <p className="font-serif text-lg leading-relaxed text-slate-800 max-w-3xl text-justify indent-12 my-2 z-10">
                                 Conferimos o presente certificado a <strong className="uppercase text-indigo-900 font-black">{data.membro?.nome || 'NOME DO ALUNO'}</strong>, em virtude de ter cumprido todos os requisitos curriculares e concluído com pleno aproveitamento o <strong className="uppercase">{data.extra?.curso || 'CURSO DE TEOLOGIA'}</strong>, estando apto(a) a aplicar os conhecimentos adquiridos na obra do Mestre.
                             </p>
                             
-                            <p className="mt-8 text-indigo-900 font-classic text-xs font-bold uppercase tracking-widest">
+                            <p className="text-indigo-900 font-classic text-xs font-bold uppercase tracking-widest my-1 z-10">
                                 Registado em: {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
                             </p>
                             <Assinaturas />
@@ -3325,25 +3344,29 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_evento') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border flex" style={selectedMargin}>
-                    <div className="w-[30px] h-full bg-emerald-800 shrink-0"></div>
-                    <div className="w-[10px] h-full bg-emerald-600 shrink-0"></div>
-                    <div className="flex-1 h-full p-12 flex flex-col items-center text-center relative z-10 border-t-[10px] border-b-[10px] border-r-[10px] border-slate-100">
-                        <Watermark />
-                        <h1 className="font-classic text-3xl font-bold uppercase text-emerald-900 tracking-[0.3em] mb-2">{data.igreja?.nome}</h1>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-12">Secretaria de Eventos</p>
-                        
-                        <h2 className="font-script text-[6rem] text-emerald-700 leading-none mb-10">Certificado de Participação</h2>
-                        
-                        <p className="font-serif text-2xl leading-loose text-slate-700 max-w-4xl text-justify">
-                            Certificamos que <strong className="uppercase text-emerald-900">{data.membro?.nome || 'NOME DO PARTICIPANTE'}</strong>, participou ativamente do evento <strong className="uppercase border-b border-emerald-500">{data.extra?.evento || 'CONGRESSO OFICIAL'}</strong>, realizado nas dependências desta instituição, demonstrando dedicação, comunhão e interesse no crescimento espiritual do Corpo de Cristo.
-                        </p>
-                        
-                        <p className="mt-12 text-emerald-900 font-classic text-sm uppercase tracking-widest">
-                            {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
-                        </p>
-                        <Seal color="#047857" />
-                        <Assinaturas />
+                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[12px] border-double border-slate-100 flex relative z-10">
+                        <div className="w-[15px] h-full bg-emerald-850 shrink-0"></div>
+                        <div className="w-[5px] h-full bg-emerald-600 shrink-0"></div>
+                        <div className="flex-1 h-full p-8 flex flex-col items-center justify-between text-center relative z-10">
+                            <Watermark />
+                            <div className="flex flex-col items-center">
+                                <h1 className="font-classic text-2xl font-bold uppercase text-emerald-900 tracking-[0.3em] mb-1">{data.igreja?.nome}</h1>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Secretaria de Eventos</p>
+                            </div>
+                            
+                            <h2 className="font-script text-[4rem] text-emerald-700 leading-none my-1">Certificado de Participação</h2>
+                            
+                            <p className="font-serif text-lg leading-relaxed text-slate-700 max-w-3xl text-justify indent-12 my-2 z-10">
+                                Certificamos que <strong className="uppercase text-emerald-900">{data.membro?.nome || 'NOME DO PARTICIPANTE'}</strong>, participou ativamente do evento <strong className="uppercase border-b border-emerald-500">{data.extra?.evento || 'CONGRESSO OFICIAL'}</strong>, realizado nas dependências desta instituição, demonstrando dedicação, comunhão e interesse no crescimento espiritual do Corpo de Cristo.
+                            </p>
+                            
+                            <p className="text-emerald-900 font-classic text-xs uppercase tracking-widest my-1 z-10">
+                                {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                            </p>
+                            <Seal color="#047857" />
+                            <Assinaturas />
+                        </div>
                     </div>
                 </div>
             );
@@ -3351,35 +3374,37 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
 
         if (mode === 'cert_ebd') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border" style={selectedMargin}>
-                    <div className="w-full h-full border-[8px] border-purple-900 p-1 relative">
-                        <div className="w-full h-full border-[2px] border-dashed border-purple-800 p-12 flex flex-col items-center text-center relative z-10 bg-purple-50/20">
+                <div className="bg-white relative overflow-hidden" style={{ width: '1123px', height: '794px', ...certificateMargin }}>
+                    <div className="w-full h-full border-[8px] border-purple-900 p-1 relative flex flex-col justify-between">
+                        <div className="w-full h-full border-[2px] border-dashed border-purple-800 p-8 flex flex-col items-center justify-between text-center relative z-10 bg-purple-50/20">
                             <Watermark />
-                            <GraduationCap size={40} className="text-purple-800 mb-4"/>
-                            <h1 className="font-classic text-3xl font-black uppercase text-purple-900 tracking-[0.2em] mb-1">{data.igreja?.nome}</h1>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-500 mb-8">Escola Bíblica Dominical</p>
+                            <div className="flex flex-col items-center">
+                                <GraduationCap size={32} className="text-purple-800 mb-1"/>
+                                <h1 className="font-classic text-2xl font-black uppercase text-purple-900 tracking-[0.2em] mb-1">{data.igreja?.nome}</h1>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-500">Escola Bíblica Dominical</p>
+                            </div>
                             
-                            <h2 className="font-script text-[6.5rem] text-purple-800 leading-none mb-8">Honra ao Mérito</h2>
+                            <h2 className="font-script text-[4rem] text-purple-800 leading-none my-1">Honra ao Mérito</h2>
                             
-                            <p className="font-serif text-[1.6rem] leading-loose text-slate-800 max-w-4xl text-justify indent-12">
+                            <p className="font-serif text-lg leading-relaxed text-slate-850 max-w-3xl text-justify indent-12 my-2 z-10">
                                 O Departamento de Ensino confere o presente certificado a <strong className="uppercase text-purple-900">{data.membro?.nome || 'NOME DO ALUNO'}</strong>, por ter concluído com zelo e dedicação o ciclo de estudos da EBD, integrando a <strong className="uppercase">{data.extra?.turma || 'TURMA DE ENSINO'}</strong> sob a instrução dedicada de seus professores.
                             </p>
                             
-                            <p className="mt-6 text-slate-500 font-serif text-lg italic">
+                            <p className="text-slate-500 font-serif text-sm italic my-1 z-10">
                                 "Crescei na graça e no conhecimento de nosso Senhor e Salvador, Jesus Cristo." (2 Pe 3:18)
                             </p>
                             
-                            <p className="mt-8 text-purple-900 font-classic text-sm uppercase tracking-widest">
+                            <p className="text-purple-900 font-classic text-xs uppercase tracking-widest my-1 z-10">
                                 {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
                             </p>
                             
-                            <div className="mt-auto w-full flex justify-between px-10 pt-8 gap-16 relative z-20">
+                            <div className="w-full flex justify-between px-10 pt-2 gap-16 relative z-20">
                                 <div className="text-center flex-1">
-                                    <div className="border-b border-black mb-2 mx-auto w-full"></div>
+                                    <div className="border-b border-black mb-1 mx-auto w-full"></div>
                                     <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
                                 </div>
                                 <div className="text-center flex-1">
-                                    <div className="border-b border-black mb-2 mx-auto w-full"></div>
+                                    <div className="border-b border-black mb-1 mx-auto w-full"></div>
                                     <p className="text-xs font-bold uppercase text-slate-900">{data.extra?.professor || "Superintendência EBD"}</p>
                                 </div>
                             </div>
@@ -5913,12 +5938,25 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.8.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.9.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v5.8.0 - Correção de Importação de Imagem & Estabilização de PDF Premium</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <h3 className="font-bold text-lg text-indigo-700">v5.9.0 - Escala de Impressão Dinâmica, Margens ABNT & Impressão Física Blindada</h3>
+                <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Ajustar à Largura (Auto-Fit Inteligente):</strong> Algoritmo adaptativo avançado integrado na tela de impressão. Ele lê e avalia elementos que transbordam horizontalmente (tabelas e grids longos) e reduz as dimensões do documento na proporção exata necessária para encaixá-lo nas margens físicas da página A4 sem cortes de texto ou de bordas.</li>
+                    <li><strong className="text-slate-700">Seletor de Margens Reguláveis:</strong> Suporte completo no spooler para pré-escolha da margem física ideal do documento (<span className="italic">Margem ABNT 20mm/15mm, Moderada 15mm/10mm ou Estreita 10mm/5mm</span>).</li>
+                    <li><strong className="text-slate-700">Orientação de Canal Dinâmica:</strong> Flexibilidade total de rotacionamento rápido entre Retrato (Portrait) e Paisagem (Landscape) diretamente nos controles internos do preview oficial.</li>
+                    <li><strong className="text-slate-700">Resolução do Bloqueio Cross-Origin:</strong> Correção definitiva dos problemas de segurança e frame sandboxing do navegador na impressão física ao substituir silenciosos `BlobURL` iframes por acionadores nativos e diretos do motor sistêmico de impressão via <code className="text-xs bg-indigo-50 text-indigo-600 rounded px-1">window.print()</code>.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO PARA VERSÃO 5.8.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-bold text-lg text-slate-700">v5.8.0 - Correção de Importação de Imagem & Estabilização de PDF Premium</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-500 text-sm">
                     <li><strong className="text-slate-700">Sincronização e Importação de Avatares:</strong> Correção do fluxo de processamento de avatares com auto-recorte pré-banco para aceitar imagens em Base64 e imagens com restrições de domínios externos de maneira transparente.</li>
                     <li><strong className="text-slate-700">Renderizador de PDF Livre de Falhas:</strong> Reforço no mecanismo de geração e exportação de relatórios corporativos para contornar crash de segurança gerados por canvas contaminados ("tainted canvases") vindos de mídias remotas sem cabeçalho CORS.</li>
                 </ul>
@@ -15120,7 +15158,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.8.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.9.0 (SaaS Master Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -21478,6 +21516,11 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <h2 className="text-2xl md:text-3xl font-bold text-white/90 drop-shadow-lg animate-slide-up-fade mt-2" style={{ opacity: 0, animationDelay: '1s', animationFillMode: 'forwards' }}>
                         Sistema de Gestão de Igrejas
                     </h2>
+                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
+                        <span>Versão 5.9.0</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>SaaS Master</span>
+                    </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
                             por PATRICK PESSOA
@@ -22673,7 +22716,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.8.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.9.0</p>
                         </div>
                     </div>
                     <div>
@@ -22924,7 +22967,7 @@ export default function App() {
             />
         )}
         <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileSelect} />
-        <div className={`print-area ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'}`}>
+        <div className={`print-area ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'} ${printMode?.startsWith('cert_') ? 'cert-colorized' : ''}`}>
             <PrintSystem mode={printMode} data={printData} palette={printPalette} marginType={printMarginType} contentScale={printContentScale} />
         </div>
         <div className="screen-content">
