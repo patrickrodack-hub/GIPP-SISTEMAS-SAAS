@@ -135,7 +135,7 @@ const resizeImageAndCompress = (dataUrl: string, maxWidth = 200, maxHeight = 200
       processedDataUrl = dataUrl.replace("data:application/octet-stream", "data:image/jpeg");
     }
 
-    const img = new Image();
+    const img = new window.Image();
     
     // Configura os eventos corretos ANTES de atribuir img.src para evitar corrida de threads do browser
     img.onload = () => {
@@ -2583,7 +2583,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
 
             // Cria uma Image física para pegar a largura/altura reais renderizadas do Canvas
             setRenderProgress("Analisando dimensões físicas e vetor de corte...");
-            const img = new Image();
+            const img = new window.Image();
             img.src = dataUrl;
             await new Promise((res, rej) => {
                 img.onload = res;
@@ -16464,7 +16464,7 @@ const ModuleCarteirinha = () => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
-                const img = new Image();
+                const img = new window.Image();
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
