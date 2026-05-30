@@ -118,49 +118,66 @@ const callGeminiAI = async (prompt, retries = 5) => {
 
 const resizeImageAndCompress = (dataUrl: string, maxWidth = 200, maxHeight = 200, quality = 0.75): Promise<string> => {
   return new Promise((resolve) => {
-    if (!dataUrl || !dataUrl.startsWith("data:image/")) {
+    if (!dataUrl) {
+      resolve("");
+      return;
+    }
+    
+    // Se não for um data URL, resolve de imediato (ex: links do unsplash)
+    if (!dataUrl.startsWith("data:")) {
       resolve(dataUrl);
       return;
     }
-    const img = new Image();
-    if (!dataUrl.startsWith("data:")) {
-      img.crossOrigin = "anonymous";
+
+    // Corrige tipo de stream se for lido incorretamente como octet-stream para permitir renderização em Image
+    let processedDataUrl = dataUrl;
+    if (dataUrl.startsWith("data:application/octet-stream")) {
+      processedDataUrl = dataUrl.replace("data:application/octet-stream", "data:image/jpeg");
     }
-    img.src = dataUrl;
+
+    const img = new Image();
+    
+    // Configura os eventos corretos ANTES de atribuir img.src para evitar corrida de threads do browser
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
 
-        if (width > height) {
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
+        // Comprime mantendo proporção ideal dentro dos limites de largura/altura
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        if (ratio < 1) {
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
         }
 
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(dataUrl);
+          resolve(processedDataUrl);
           return;
         }
+
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        const result = canvas.toDataURL('image/jpeg', quality);
+        
+        // Se a string ainda for absurdamente grande, faz compressão recursiva incremental de segurança
+        if (result.length > 100000 && quality > 0.3) {
+          resizeImageAndCompress(processedDataUrl, maxWidth, maxHeight, quality - 0.25).then(resolve);
+        } else {
+          resolve(result);
+        }
       } catch (err) {
-        resolve(dataUrl);
+        resolve(processedDataUrl);
       }
     };
+
     img.onerror = () => {
-      resolve(dataUrl);
+      resolve(processedDataUrl);
     };
+
+    img.src = processedDataUrl;
   });
 };
 
@@ -2500,161 +2517,79 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
 // --- PREVIEW SYSTEM & DOCUMENT ---
 const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const { addToast } = useContext(ChurchContext);
-    const contentRef = useRef(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [renderProgress, setRenderProgress] = useState<string | null>(null);
+    const [zoom, setZoom] = useState(100);
 
     if (!isOpen) return null;
 
-    // Função centralizada para renderizar a área de impressão (.print-area ou ref) para PDF de nível corporativo
+    const isLandscape = mode && mode.startsWith('cert_');
+    const targetWidth = isLandscape ? 1123 : 794;
+    const targetHeight = isLandscape ? 794 : 1123;
+
+    // Função centralizada para renderizar a área usando o html-to-image e exportar em jsPDF
     const generateProfessionalPDF = async (action: 'download' | 'print') => {
-        addToast(action === 'download' ? "Gerando PDF corporativo (Alta Resolução)..." : "Preparando documento para impressão profissional...", "info");
-        
-        let targetEl = contentRef.current as HTMLElement;
-        let isUsingModalRef = true;
-        
+        setRenderProgress("Inicializando motor gráfico de PDF...");
+        await new Promise(r => setTimeout(r, 200));
+
+        let targetEl = contentRef.current;
         if (!targetEl) {
-            targetEl = document.querySelector('.print-area') as HTMLElement;
-            isUsingModalRef = false;
+            targetEl = document.querySelector('.print-area') as HTMLDivElement;
         }
-        
+
         if (!targetEl) {
             addToast("Erro: área de impressão não localizada no sistema.", "error");
+            setRenderProgress(null);
             return null;
         }
 
         const originalStyle = targetEl.getAttribute('style') || '';
         const originalClassName = targetEl.className || '';
-        const isLandscape = mode && mode.startsWith('cert_');
-        
-        // Larguras canônicas A4 em pixels @ 96 DPI (210mm ou 297mm)
-        const targetWidth = isLandscape ? 1123 : 794;
 
         try {
-            if (isUsingModalRef) {
-                // Remove temporariamente classes de transform e scale que possam cortar a imagem no html2canvas
-                targetEl.className = "bg-white flex flex-col";
-                targetEl.setAttribute('style', `
-                    display: block !important;
-                    width: ${targetWidth}px !important;
-                    min-width: ${targetWidth}px !important;
-                    max-width: ${targetWidth}px !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    background: white !important;
-                    transform: none !important;
-                    box-sizing: border-box !important;
-                `);
-            } else {
-                // Força renderização limpa offline, posicionada fora da tela para evitar flickering
-                // Enfatiza o confinamento rígido à largura A4 por meio de min-width e max-width
-                targetEl.setAttribute('style', `
-                    display: block !important; 
-                    position: fixed !important; 
-                    top: -15000px !important; 
-                    left: -15000px !important; 
-                    width: ${targetWidth}px !important; 
-                    min-width: ${targetWidth}px !important; 
-                    max-width: ${targetWidth}px !important; 
-                    margin: 0 !important; 
-                    padding: 0 !important; 
-                    background: white !important;
-                    -webkit-font-smoothing: antialiased !important;
-                    -moz-osx-font-smoothing: grayscale !important;
-                    text-rendering: optimizeLegibility !important;
-                    box-shadow: none !important;
-                    overflow: visible !important;
-                    box-sizing: border-box !important;
-                `);
-            }
+            setRenderProgress("Otimizando layout e estilização para A4...");
+            // Configurar estilos limpos para A4 exatos para evitar transformações no capture
+            targetEl.className = "bg-white flex flex-col";
+            targetEl.setAttribute('style', `
+                display: block !important;
+                width: ${targetWidth}px !important;
+                min-width: ${targetWidth}px !important;
+                max-width: ${targetWidth}px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                transform: none !important;
+                box-sizing: border-box !important;
+                overflow: visible !important;
+            `);
 
-            // Pequeno delay para recálculo de reflow do navegador
-            await new Promise(r => setTimeout(r, 400));
+            // Delay para o browser recalcular reflow de fontes e imagens
+            await new Promise(r => setTimeout(r, 500));
 
-            let overridden = false;
-            let canvas;
-            try {
-                const originalStyleSheets = Array.from(document.styleSheets);
-                const proxiedStyleSheets = originalStyleSheets.map(sheet => {
-                    try {
-                        const rules = sheet.cssRules;
-                        if (!rules) return sheet;
-                    } catch (e) {
-                        return sheet;
-                    }
+            setRenderProgress("Rasterizando página e compilando fontes...");
+            // html-to-image toPng é extremamente estável com oklch() e CSS3 moderno
+            const dataUrl = await toPng(targetEl, {
+                quality: 0.95,
+                backgroundColor: '#ffffff',
+                style: {
+                    transform: 'none',
+                    margin: '0',
+                    padding: '0',
+                },
+                width: targetWidth,
+                height: targetEl.scrollHeight
+            });
 
-                    return new Proxy(sheet, {
-                        get(target, prop, receiver) {
-                            if (prop === 'cssRules') {
-                                try {
-                                    const rules = target.cssRules;
-                                    if (!rules) return rules;
-                                    const srcRules = Array.from(rules);
-                                    const filtered = srcRules.filter(rule => {
-                                        try {
-                                            return !rule.cssText.includes('oklch');
-                                        } catch (_) {
-                                            return true;
-                                        }
-                                    });
+            // Cria uma Image física para pegar a largura/altura reais renderizadas do Canvas
+            setRenderProgress("Analisando dimensões físicas e vetor de corte...");
+            const img = new Image();
+            img.src = dataUrl;
+            await new Promise((res, rej) => {
+                img.onload = res;
+                img.onerror = rej;
+            });
 
-                                    const ruleList = {
-                                        length: filtered.length,
-                                        item(idx: number) { return filtered[idx]; }
-                                    };
-                                    filtered.forEach((r, idx) => {
-                                        (ruleList as any)[idx] = r;
-                                    });
-                                    return ruleList;
-                                } catch (_) {
-                                    return null;
-                                }
-                            }
-                            return Reflect.get(target, prop, receiver);
-                        }
-                    });
-                });
-
-                Object.defineProperty(document, 'styleSheets', {
-                    configurable: true,
-                    get() {
-                        return proxiedStyleSheets;
-                    }
-                });
-                overridden = true;
-            } catch (e) {
-                console.warn("Could not override document.styleSheets:", e);
-            }
-
-            try {
-                // Executa captura de alta fidelidade redimensionando estritamente para a largura A4 correspondente
-                canvas = await html2canvas(targetEl, {
-                    scale: 2.0, // Fator escala de alta resolução equilibrado para impedir falhas de alocação de memória no canvas
-                    useCORS: true,
-                    allowTaint: false, // CRÍTICO: allowTaint: true tacha permanentemente o canvas caso uma imagem externa sem CORS apareça, lançando erro de segurança fatal ao resgatar o dataURL. false previne esse crash.
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    scrollX: 0,
-                    scrollY: 0,
-                    width: targetWidth, // Restringe a captura exatamente à largura pretendida, mitigando quebras ou reentrâncias
-                    windowWidth: targetWidth,
-                    windowHeight: targetEl.scrollHeight || undefined
-                });
-            } finally {
-                if (overridden) {
-                    try {
-                        delete (document as any).styleSheets;
-                    } catch (e) {
-                        console.warn("Could not restore original document.styleSheets:", e);
-                    }
-                }
-            }
-
-            // Restaura imediatamente os estilos do elemento original
-            if (isUsingModalRef) {
-                targetEl.className = originalClassName;
-            }
-            targetEl.setAttribute('style', originalStyle);
-
-            const isPortrait = !isLandscape;
+            setRenderProgress("Slicing inteligente de páginas em andamento...");
             const pdf = new jsPDF({
                 orientation: isLandscape ? 'landscape' : 'portrait',
                 unit: 'mm',
@@ -2664,55 +2599,58 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
 
-            // Slicing de Páginas Inteligente baseado na proporção A4
-            // Altura esperada para uma página única do canvas na escala original do elemento
-            const sourcePageHeight = isLandscape ? (canvas.width * 210 / 297) : (canvas.width * 297 / 210);
+            // Altura padrão de corte proporcional a uma página A4
+            const sourcePageHeight = isLandscape ? (img.width * 210 / 297) : (img.width * 297 / 210);
             
-            let currentPage = 0;
             let srcY = 0;
+            let pageIndex = 0;
 
-            while (srcY < canvas.height) {
-                if (currentPage > 0) {
+            const totalHeight = img.height;
+            const approxTotalPages = Math.ceil(totalHeight / sourcePageHeight);
+
+            while (srcY < totalHeight) {
+                if (pageIndex > 0) {
                     pdf.addPage();
                 }
 
-                const currentSliceHeight = Math.min(canvas.height - srcY, sourcePageHeight);
+                setRenderProgress(`Compilando página ${pageIndex + 1} de ${approxTotalPages}...`);
+                const currentSliceHeight = Math.min(totalHeight - srcY, sourcePageHeight);
 
-                // Criar o canvas temporário de corte para evitar esticamento vertical
+                // Criar canvas de corte intermediário para desenhar o pedaço da página
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = canvas.width;
-                tempCanvas.height = sourcePageHeight; // Sempre o formato perfeito A4 proporcional
+                tempCanvas.width = img.width;
+                tempCanvas.height = sourcePageHeight;
 
-                const ctx = tempCanvas.getContext('2d');
-                if (ctx) {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, canvas.width, sourcePageHeight);
-                    // Copia o frame do canvas original
-                    ctx.drawImage(
-                        canvas,
-                        0, srcY, canvas.width, currentSliceHeight, // Source
-                        0, 0, canvas.width, currentSliceHeight      // Destination
+                const tempCtx = tempCanvas.getContext('2d');
+                if (tempCtx) {
+                    tempCtx.fillStyle = '#ffffff';
+                    tempCtx.fillRect(0, 0, img.width, sourcePageHeight);
+                    tempCtx.drawImage(
+                        img,
+                        0, srcY, img.width, currentSliceHeight, // Source Rect
+                        0, 0, img.width, currentSliceHeight      // Dest Rect
                     );
                 }
 
-                const sliceImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
-                pdf.addImage(sliceImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${currentPage}`, 'FAST');
+                const pageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.9);
+                pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, 'FAST');
 
-                currentPage++;
+                pageIndex++;
                 srcY += sourcePageHeight;
             }
 
+            // Restaura imediatamente os estilos originais
+            targetEl.className = originalClassName;
+            targetEl.setAttribute('style', originalStyle);
+            setRenderProgress(null);
             return pdf;
 
         } catch (error) {
-            console.error("Erro ao processar PDF:", error);
-            if (targetEl) {
-                if (isUsingModalRef) {
-                    targetEl.className = originalClassName;
-                }
-                targetEl.setAttribute('style', originalStyle);
-            }
-            addToast("Erro interno ao renderizar o PDF de impressão.", "error");
+            console.error("Erro ao gerar PDF profissional:", error);
+            targetEl.className = originalClassName;
+            targetEl.setAttribute('style', originalStyle);
+            setRenderProgress(null);
+            addToast("Erro ao processar PDF de alta resolução.", "error");
             return null;
         }
     };
@@ -2720,7 +2658,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const handleDownloadDocument = async () => {
         const pdf = await generateProfessionalPDF('download');
         if (pdf) {
-            pdf.save(`Relatorio_${mode}_${new Date().getTime()}.pdf`);
+            pdf.save(`Documento_${mode}_${new Date().getTime()}.pdf`);
             addToast("PDF de alta resolução baixado com sucesso!", "success");
         }
     };
@@ -2730,10 +2668,9 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
         if (!pdf) return;
 
         try {
-            // Conversão do PDF consolidado para Blob URL executado num Iframe oculto direto
+            setRenderProgress("Formatando spooler de impressão de sistema...");
             const blobUrl = pdf.output('bloburl').toString();
             
-            // Destrói qualquer iframe anterior de impressão pendente do DOM
             const oldIframe = document.getElementById('gp-silent-print-iframe');
             if (oldIframe) oldIframe.remove();
 
@@ -2753,13 +2690,12 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                 try {
                     iframe.contentWindow?.focus();
                     iframe.contentWindow?.print();
-                    addToast("Diálogo de impressão profissional aberto!", "success");
+                    addToast("Diálogo de impressão aberto com sucesso!", "success");
                 } catch (err) {
                     console.error("Falha ao focar impressão:", err);
-                    addToast("Seu navegador limitou o disparo silencioso. Recomendamos baixar o PDF e realizar a impressão.", "info");
+                    addToast("Seu navegador impediu o disparo automático. Baixe o PDF para imprimir.", "info");
                 }
-
-                // Desaloca do DOM após tempo seguro (1 minuto) para evitar vazamento de memória e fechar o print process
+                setRenderProgress(null);
                 setTimeout(() => {
                     if (document.body.contains(iframe)) {
                         document.body.removeChild(iframe);
@@ -2769,30 +2705,109 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             };
         } catch (e) {
             console.error(e);
-            addToast("Erro ao carregar renderizador físico de impressão. Tente baixar o PDF plano.", "error");
+            setRenderProgress(null);
+            addToast("Erro ao carregar renderizador para impressão física.", "error");
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/80 z-[12000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance print:hidden">
-            <div className="bg-slate-200 w-full max-w-7xl h-[95vh] rounded-[2rem] flex flex-col shadow-2xl overflow-hidden ring-4 ring-white/10 relative">
-                <div className="bg-white p-4 border-b border-slate-300 flex justify-between items-center px-8 z-20 shadow-sm flex-wrap gap-2">
-                    <h3 className="font-bold text-lg text-slate-700 flex items-center gap-2"><FileText size={20} className="text-indigo-600"/> Visualização de Documento</h3>
-                    <div className="flex gap-2 sm:gap-3 flex-wrap">
-                        <Button variant="ghost" onClick={onClose} className="border border-slate-300 hover:bg-slate-100 hidden sm:flex">Fechar</Button>
-                        <Button variant="primary" onClick={handleDownloadDocument} className="shadow-lg flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700">
-                            <Download size={20}/> Baixar PDF 
+        <div className="fixed inset-0 bg-slate-900/85 z-[12000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance print:hidden">
+            {/* Modal Box */}
+            <div className="bg-slate-800 w-full max-w-7xl h-[95vh] rounded-[2rem] flex flex-col shadow-2xl overflow-hidden border border-slate-700 relative">
+                
+                {/* Header do Visualizador */}
+                <div className="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center px-8 z-20 shadow-lg flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-indigo-600/20 rounded-xl text-indigo-400">
+                            <FileText size={20} />
+                        </div>
+                        <div>
+                            <h3 className="font-extrabold text-sm md:text-base text-white flex items-center gap-2">
+                                Visualizador Oficial de Documentos GIPP <span className="text-[10px] bg-slate-800 font-bold px-2 py-0.5 rounded-full text-indigo-300 border border-slate-700/50">PDF HQ</span>
+                            </h3>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">A4 Standard • Vetorizado e Otimizado</p>
+                        </div>
+                    </div>
+
+                    {/* Controles do visualizador */}
+                    <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+                        {/* Zoom Controls */}
+                        <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
+                            <button 
+                                onClick={() => setZoom(prev => Math.max(50, prev - 10))}
+                                className="p-1 px-2.5 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg text-xs font-bold transition-all"
+                                title="Diminuir Zoom"
+                            >
+                                <Minus size={14} />
+                            </button>
+                            <span className="text-xs font-bold font-mono text-slate-300 w-12 text-center select-none">{zoom}%</span>
+                            <button 
+                                onClick={() => setZoom(prev => Math.min(150, prev + 10))}
+                                className="p-1 px-2.5 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg text-xs font-bold transition-all"
+                                title="Aumentar Zoom"
+                            >
+                                <Plus size={14} />
+                            </button>
+                            <button 
+                                onClick={() => setZoom(100)}
+                                className="p-1 px-2 text-slate-500 hover:text-indigo-400 font-black rounded-lg text-[10px] uppercase transition-all"
+                                title="Resetar Zoom"
+                            >
+                                100%
+                            </button>
+                        </div>
+
+                        <Button variant="ghost" onClick={onClose} className="border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700/50 hover:border-transparent py-2 px-4 transition-all text-xs">
+                            Fechar
                         </Button>
-                        <Button variant="success" onClick={handleNativePrint} className="shadow-lg flex items-center gap-2">
-                            <Printer size={20}/> Imprimir
+                        <Button variant="primary" onClick={handleDownloadDocument} className="shadow-lg shadow-indigo-600/10 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
+                            <Download size={16}/> Baixar PDF 
+                        </Button>
+                        <Button variant="success" onClick={handleNativePrint} className="shadow-lg shadow-emerald-600/10 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
+                            <Printer size={16}/> Imprimir
                         </Button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-8 flex justify-center bg-slate-500/10 relative">
-                    <div ref={contentRef} className="bg-white shadow-xl origin-top transform scale-75 sm:scale-90 transition-transform mb-8 flex flex-col" style={{ width: mode.startsWith('cert_') ? '1123px' : '794px', minHeight: mode.startsWith('cert_') ? '794px' : '1123px', boxSizing: 'border-box' }}>
-                        <PrintSystem mode={mode} data={data} />
+
+                {/* Área Interna de Preview com Centralização */}
+                <div className="flex-1 overflow-auto bg-slate-900/50 custom-scrollbar p-6 flex justify-center items-start">
+                    <div 
+                        style={{ 
+                            transform: `scale(${zoom / 100})`, 
+                            transformOrigin: 'top center',
+                            transition: 'transform 0.15s ease-out'
+                        }}
+                        className="mb-8"
+                    >
+                        <div 
+                            ref={contentRef} 
+                            style={{ 
+                                width: `${targetWidth}px`, 
+                                minHeight: `${targetHeight}px`,
+                                boxSizing: 'border-box' 
+                            }}
+                            className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
+                        >
+                            <PrintSystem mode={mode} data={data} />
+                        </div>
                     </div>
                 </div>
+
+                {/* Progress Overlay */}
+                {renderProgress && (
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-[13000] animate-fadeIn">
+                        <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl">
+                            <Loader2 className="animate-spin text-indigo-500 mx-auto" size={36} />
+                            <div className="space-y-1">
+                                <h4 className="font-bold text-white text-sm">Processando Documento</h4>
+                                <p className="text-xs text-slate-400 font-medium">{renderProgress}</p>
+                            </div>
+                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-indigo-500 h-full rounded-full animate-pulse" style={{ width: '80%' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
