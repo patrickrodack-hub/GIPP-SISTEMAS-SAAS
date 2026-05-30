@@ -862,6 +862,44 @@ const GlobalStyles = () => (
         pointer-events: none !important;
       }
 
+      /* Ampliação ultra generosa da classe .no-print e elementos interativos para garantir que ocupem espaço ZERO absoluto e sejam totalmente ocultos */
+      .no-print,
+      .no-print *,
+      [class*="no-print"],
+      .print-hidden,
+      .print\:hidden,
+      .floating-widget,
+      [data-no-print],
+      .floating-copilot,
+      #assistente_ai,
+      .context-menu,
+      .dropdown-menu,
+      .action-buttons,
+      .floating-button,
+      .btn-floating,
+      [role="menu"],
+      [role="listbox"],
+      [role="dialog"]:not(.print-area *) { 
+        display: none !important; 
+        visibility: hidden !important; 
+        opacity: 0 !important; 
+        width: 0 !important;
+        height: 0 !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        max-width: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        outline: none !important;
+        position: absolute !important;
+        top: -99999px !important;
+        left: -99999px !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+      }
+
       /* Garantir que a área de impressão ocupe todo o espaço disponível sem bordas cortadas */
       .print-area { 
         display: block !important; 
