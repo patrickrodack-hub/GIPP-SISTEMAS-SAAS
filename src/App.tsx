@@ -2524,18 +2524,62 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
 };
 
 // --- PREVIEW SYSTEM & DOCUMENT ---
-const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
+const DocumentPreviewModal = ({ 
+    isOpen, 
+    onClose, 
+    mode, 
+    data,
+    palette,
+    setPalette,
+    marginType,
+    setMarginType,
+    orientation,
+    setOrientation,
+    contentScale,
+    setContentScale
+}) => {
     const { addToast } = useContext(ChurchContext);
     const contentRef = useRef<HTMLDivElement>(null);
     const [renderProgress, setRenderProgress] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
-    const [palette, setPalette] = useState<'cinza' | 'azul' | 'verde'>('cinza');
-    const [marginType, setMarginType] = useState<'abnt' | 'moderada' | 'estreita'>('abnt');
-    const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
-        mode && (mode.startsWith('cert_') || mode === 'carne_print' || mode === 'carteirinha' || mode === 'carteirinha_custom' || mode === 'credenciais_lote') ? 'landscape' : 'portrait'
-    );
+    const [isAutoFit, setIsAutoFit] = useState<boolean>(false);
 
     if (!isOpen) return null;
+
+    const handleAutoFitWidth = () => {
+        if (!contentRef.current) return;
+        
+        setIsAutoFit(true);
+        addToast("Analisando dimensões para otimização automática...", "info");
+        
+        // Temporariamente reseta para 100 para medir a largura ideal sem escalas pré-existentes
+        setContentScale(100);
+        
+        setTimeout(() => {
+            if (!contentRef.current) return;
+            
+            let maxScrollWidth = targetWidth;
+            
+            // Busca tabelas ou blocos dentro do container que possam ter estourado o limite horizontal
+            const elements = contentRef.current.querySelectorAll('table, .print-block, .w-full, div');
+            elements.forEach((el: any) => {
+                if (el.scrollWidth > maxScrollWidth) {
+                    maxScrollWidth = el.scrollWidth;
+                }
+            });
+            
+            if (maxScrollWidth > targetWidth) {
+                // Buffer de segurança para evitar quebras ou cortes de linha na impressão física
+                const calculatedRatio = (targetWidth - 12) / maxScrollWidth;
+                const roundedScale = Math.max(50, Math.min(100, Math.floor(calculatedRatio * 100)));
+                setContentScale(roundedScale);
+                addToast(`Largura ajustada com sucesso! Escala de conteúdo definida em ${roundedScale}%.`, "success");
+            } else {
+                setContentScale(100);
+                addToast("O conteúdo já está perfeitamente ajustado à largura padrão da página A4.", "success");
+            }
+        }, 150);
+    };
 
     const isLandscape = orientation === 'landscape';
     const targetWidth = isLandscape ? 1123 : 794;
@@ -2673,51 +2717,11 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
         }
     };
 
-    const handleNativePrint = async () => {
-        const pdf = await generateProfessionalPDF();
-        if (!pdf) return;
-
-        try {
-            setRenderProgress("Formatando spooler de impressão de sistema...");
-            const blobUrl = pdf.output('bloburl').toString();
-            
-            const oldIframe = document.getElementById('gp-silent-print-iframe');
-            if (oldIframe) oldIframe.remove();
-
-            const iframe = document.createElement('iframe');
-            iframe.id = 'gp-silent-print-iframe';
-            iframe.style.position = 'fixed';
-            iframe.style.right = '0';
-            iframe.style.bottom = '0';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            iframe.src = blobUrl;
-
-            document.body.appendChild(iframe);
-
-            iframe.onload = () => {
-                try {
-                    iframe.contentWindow?.focus();
-                    iframe.contentWindow?.print();
-                    addToast("Diálogo de impressão aberto com sucesso!", "success");
-                } catch (err) {
-                    console.error("Falha ao focar impressão:", err);
-                    addToast("Seu navegador impediu o disparo automático. Baixe o PDF para imprimir.", "info");
-                }
-                setRenderProgress(null);
-                setTimeout(() => {
-                    if (document.body.contains(iframe)) {
-                        document.body.removeChild(iframe);
-                        URL.revokeObjectURL(blobUrl);
-                    }
-                }, 60000);
-            };
-        } catch (err) {
-            console.error(err);
-            setRenderProgress(null);
-            addToast("Erro ao carregar renderizador para impressão física.", "error");
-        }
+    const handleNativePrint = () => {
+        addToast("Abrindo diálogo de impressão física do sistema...", "success");
+        setTimeout(() => {
+            window.print();
+        }, 150);
     };
 
     return (
@@ -2818,6 +2822,42 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             </button>
                         </div>
 
+                        {/* Ajustar à largura da página */}
+                        <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase px-2 flex items-center gap-1.5 select-none md:inline hidden" title="Ajustar conteúdo para caber na largura da página (escala de impressão)">
+                                Ajustar Largura:
+                            </span>
+                            <button 
+                                onClick={() => { setContentScale(100); setIsAutoFit(false); }}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${contentScale === 100 && !isAutoFit ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Sem Escalar (100%)"
+                            >
+                                100%
+                            </button>
+                            <button 
+                                onClick={() => { setContentScale(90); setIsAutoFit(false); }}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${contentScale === 90 && !isAutoFit ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Escala do conteúdo em 90%"
+                            >
+                                90%
+                            </button>
+                            <button 
+                                onClick={() => { setContentScale(80); setIsAutoFit(false); }}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${contentScale === 80 && !isAutoFit ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Escala do conteúdo em 80%"
+                            >
+                                80%
+                            </button>
+                            <button 
+                                onClick={() => handleAutoFitWidth()}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg flex items-center gap-1 ${isAutoFit ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Calcular escala automaticamente para caber tabelas sem cortá-las no papel"
+                            >
+                                <Sparkles size={11} className={isAutoFit ? 'text-emerald-300 animate-pulse' : 'text-slate-400'} /> 
+                                {isAutoFit && contentScale < 100 ? `Auto (${contentScale}%)` : 'Auto'}
+                            </button>
+                        </div>
+
                         {/* Zoom Controls */}
                         <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
                             <button 
@@ -2875,7 +2915,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             }}
                             className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
                         >
-                            <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} />
+                            <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} contentScale={contentScale} />
                         </div>
                     </div>
                 </div>
@@ -2900,7 +2940,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     );
 };
 
-const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt' }) => {
+const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', contentScale = 100 }) => {
     if (!mode || !data) return null;
 
     // Configuração de margens dinâmicas de acordo com o seletor de layout
@@ -2980,20 +3020,28 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt' }) => 
             </div>
         );
 
+        const scaleStyle = contentScale !== 100 ? {
+            transform: `scale(${contentScale / 100})`,
+            transformOrigin: 'top left',
+            width: `${10000 / contentScale}%`,
+        } : {};
+
         return (
             <div className="w-full bg-white mx-auto print-block relative text-slate-900" style={{ width: '100%', boxSizing: 'border-box', ...selectedMargin }}>
                 <table className="w-full border-collapse">
                     <thead className="table-header-group">
                         <tr>
                             <td className="pb-4">
-                                {header}
+                                <div style={scaleStyle}>
+                                    {header}
+                                </div>
                             </td>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td className="align-top">
-                                <div className="w-full flex flex-col gap-2">
+                                <div className="w-full flex flex-col gap-2" style={scaleStyle}>
                                      {children}
                                 </div>
                             </td>
@@ -21511,6 +21559,10 @@ export default function App() {
   const [printMode, setPrintMode] = useState(null);
   const [printData, setPrintData] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false); 
+  const [printPalette, setPrintPalette] = useState<'cinza' | 'azul' | 'verde'>('cinza');
+  const [printMarginType, setPrintMarginType] = useState<'abnt' | 'moderada' | 'estreita'>('abnt');
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [printContentScale, setPrintContentScale] = useState<number>(100);
   const [loginData, setLoginData] = useState({ user: '', pass: '' });
   const [isFirstAccess, setIsFirstAccess] = useState(false);
   const [firstAccessData, setFirstAccessData] = useState({ nome: '', data_nascimento: '', senha: '', confirmar: '' });
@@ -21539,6 +21591,17 @@ export default function App() {
           setLoginMode('membro');
       }
   }, []);
+
+  // NOVO: Sincronização automática das configurações padrão de impressão quando o modo muda
+  useEffect(() => {
+      if (printMode) {
+          const isLnd = (printMode.startsWith('cert_') || printMode === 'carne_print' || printMode === 'carteirinha' || printMode === 'carteirinha_custom' || printMode === 'credenciais_lote');
+          setPrintOrientation(isLnd ? 'landscape' : 'portrait');
+          setPrintPalette('cinza');
+          setPrintMarginType('abnt');
+          setPrintContentScale(100);
+      }
+  }, [printMode]);
 
   // NOVO: Forçar o idioma para Português do Brasil e evitar traduções automáticas do navegador
   useEffect(() => {
@@ -22844,9 +22907,26 @@ export default function App() {
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
         <BackupModal backupState={backupState} onConfirm={handleBackupConfirm} onCancel={handleBackupCancel} />
-        {previewOpen && <DocumentPreviewModal isOpen={previewOpen} onClose={() => setPreviewOpen(false)} mode={printMode} data={printData} />}
+        {previewOpen && (
+            <DocumentPreviewModal 
+                isOpen={previewOpen} 
+                onClose={() => setPreviewOpen(false)} 
+                mode={printMode} 
+                data={printData} 
+                palette={printPalette}
+                setPalette={setPrintPalette}
+                marginType={printMarginType}
+                setMarginType={setPrintMarginType}
+                orientation={printOrientation}
+                setOrientation={setPrintOrientation}
+                contentScale={printContentScale}
+                setContentScale={setPrintContentScale}
+            />
+        )}
         <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileSelect} />
-        <div className={`print-area ${printMode && printMode.startsWith('cert_') ? 'print-landscape' : 'print-portrait'}`}><PrintSystem mode={printMode} data={printData} /></div>
+        <div className={`print-area ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'}`}>
+            <PrintSystem mode={printMode} data={printData} palette={printPalette} marginType={printMarginType} contentScale={printContentScale} />
+        </div>
         <div className="screen-content">
             {user.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />}
         </div>
