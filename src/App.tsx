@@ -5557,12 +5557,23 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.7.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.8.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v5.7.0 - PWA com Segurança SaaS, Margem de Impressão de 20mm & Travamento A4</h3>
+                <h3 className="font-bold text-lg text-indigo-700">v5.8.0 - Correção de Importação de Imagem & Estabilização de PDF Premium</h3>
                 <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Sincronização e Importação de Avatares:</strong> Correção do fluxo de processamento de avatares com auto-recorte pré-banco para aceitar imagens em Base64 e imagens com restrições de domínios externos de maneira transparente.</li>
+                    <li><strong className="text-slate-700">Renderizador de PDF Livre de Falhas:</strong> Reforço no mecanismo de geração e exportação de relatórios corporativos para contornar crash de segurança gerados por canvas contaminados ("tainted canvases") vindos de mídias remotas sem cabeçalho CORS.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO PARA VERSÃO 5.7.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-bold text-lg text-slate-700">v5.7.0 - PWA com Segurança SaaS, Margem de Impressão de 20mm & Travamento A4</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-500 text-sm">
                     <li><strong className="text-slate-700">PWA Multiplataforma SaaS Persistente:</strong> Otimização do fluxo de instalação do PWA. O sistema agora detecta e armazena permanentemente em `localStorage` o endereço exato do subdomínio SaaS atualmente usado, injetando dinamicamente essa rota como `start_url` no manifesto do aplicativo em celulares Android, iOS, tablets ou computadores Windows e macOS, evitando perdas de redirecionamento ou necessidade de nova digitação pelo usuário.</li>
                     <li><strong className="text-slate-700">Serviço de Emissão e Impressão Reforçado (Largura A4 de 794px):</strong> Implementação de travamento rígido e invariável das dimensões de visualização e captura em padrão absoluto de `794px` (Formato Retrato A4) e `1123px` (Formato Paisagem A4/Certificados) para garantir layout fiel WYSIWYG, evitando scrolls e refinando o alinhamento pós-exportação.</li>
                     <li><strong className="text-slate-700">Margem de Segurança Estendida de 20mm:</strong> Definição e proteção de margem segura de `20mm` no preenchimento físico dos documentos oficiais através do seletor `.doc-padding` blindado no escopo final de renderização, eliminando problemas de quebra de parágrafo ou corte de tabelas em impressoras padrão.</li>
@@ -14752,7 +14763,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.7.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.8.0 (SaaS Master Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -22276,7 +22287,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.7.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.8.0</p>
                         </div>
                     </div>
                     <div>
