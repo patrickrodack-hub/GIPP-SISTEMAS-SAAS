@@ -2520,7 +2520,6 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const contentRef = useRef<HTMLDivElement>(null);
     const [renderProgress, setRenderProgress] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
-    const [showPrintOptionModal, setShowPrintOptionModal] = useState(true);
 
     if (!isOpen) return null;
 
@@ -2528,8 +2527,8 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const targetWidth = isLandscape ? 1123 : 794;
     const targetHeight = isLandscape ? 794 : 1123;
 
-    // Função centralizada para renderizar a área usando o html-to-image e exportar em jsPDF
-    const generateProfessionalPDF = async (action: 'download' | 'print') => {
+    // Função centralizada para renderizar a área usando o jsPDF em modo imagem estrita com quebras para A4
+    const generateProfessionalPDF = async () => {
         setRenderProgress("Inicializando motor gráfico de PDF...");
         await new Promise(r => setTimeout(r, 200));
 
@@ -2549,7 +2548,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
 
         try {
             setRenderProgress("Otimizando layout e estilização para A4...");
-            // Configurar estilos limpos para A4 exatos para evitar transformações no capture
+            // Configurar estilos limpos para A4 exatos para garantir renderização perfeita
             targetEl.className = "bg-white flex flex-col";
             targetEl.setAttribute('style', `
                 display: block !important;
@@ -2565,12 +2564,11 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             `);
 
             // Delay para o browser recalcular reflow de fontes e imagens
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 450));
 
-            setRenderProgress("Rasterizando página e compilando fontes...");
-            // html-to-image toPng é extremamente estável com oklch() e CSS3 moderno
+            setRenderProgress("Processando vetorização do documento e fontes...");
             const dataUrl = await toPng(targetEl, {
-                quality: 0.95,
+                quality: 0.98,
                 backgroundColor: '#ffffff',
                 style: {
                     transform: 'none',
@@ -2581,7 +2579,6 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                 height: targetEl.scrollHeight
             });
 
-            // Cria uma Image física para pegar a largura/altura reais renderizadas do Canvas
             setRenderProgress("Analisando dimensões físicas e vetor de corte...");
             const img = new window.Image();
             img.src = dataUrl;
@@ -2594,18 +2591,16 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             const pdf = new jsPDF({
                 orientation: isLandscape ? 'landscape' : 'portrait',
                 unit: 'mm',
-                format: 'a4'
+                format: 'a4',
+                compress: true
             });
 
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-
-            // Altura padrão de corte proporcional a uma página A4
             const sourcePageHeight = isLandscape ? (img.width * 210 / 297) : (img.width * 297 / 210);
             
             let srcY = 0;
             let pageIndex = 0;
-
             const totalHeight = img.height;
             const approxTotalPages = Math.ceil(totalHeight / sourcePageHeight);
 
@@ -2633,7 +2628,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                     );
                 }
 
-                const pageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.9);
+                const pageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
                 pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, 'FAST');
 
                 pageIndex++;
@@ -2647,17 +2642,17 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
             return pdf;
 
         } catch (error) {
-            console.error("Erro ao gerar PDF profissional:", error);
+            console.error("Erro crítico ao gerar PDF:", error);
             targetEl.className = originalClassName;
             targetEl.setAttribute('style', originalStyle);
             setRenderProgress(null);
-            addToast("Erro ao processar PDF de alta resolução.", "error");
+            addToast("Erro sistêmico ao carregar renderizador físico de PDF.", "error");
             return null;
         }
     };
 
     const handleDownloadDocument = async () => {
-        const pdf = await generateProfessionalPDF('download');
+        const pdf = await generateProfessionalPDF();
         if (pdf) {
             pdf.save(`Documento_${mode}_${new Date().getTime()}.pdf`);
             addToast("PDF de alta resolução baixado com sucesso!", "success");
@@ -2665,58 +2660,49 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     };
 
     const handleNativePrint = async () => {
+        const pdf = await generateProfessionalPDF();
+        if (!pdf) return;
+
         try {
-            setRenderProgress("Inicializando spooler de impressão nativa...");
-            await new Promise(r => setTimeout(r, 600));
-            setRenderProgress(null);
-            window.print();
-            addToast("Diálogo de impressão nativo disparado com sucesso!", "success");
-        } catch (e) {
-            console.error("Erro no print nativo, tentando renderizar PDF...", e);
-            const pdf = await generateProfessionalPDF('print');
-            if (!pdf) return;
+            setRenderProgress("Formatando spooler de impressão de sistema...");
+            const blobUrl = pdf.output('bloburl').toString();
+            
+            const oldIframe = document.getElementById('gp-silent-print-iframe');
+            if (oldIframe) oldIframe.remove();
 
-            try {
-                setRenderProgress("Formatando spooler de impressão de sistema...");
-                const blobUrl = pdf.output('bloburl').toString();
-                
-                const oldIframe = document.getElementById('gp-silent-print-iframe');
-                if (oldIframe) oldIframe.remove();
+            const iframe = document.createElement('iframe');
+            iframe.id = 'gp-silent-print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            iframe.src = blobUrl;
 
-                const iframe = document.createElement('iframe');
-                iframe.id = 'gp-silent-print-iframe';
-                iframe.style.position = 'fixed';
-                iframe.style.right = '0';
-                iframe.style.bottom = '0';
-                iframe.style.width = '0';
-                iframe.style.height = '0';
-                iframe.style.border = '0';
-                iframe.src = blobUrl;
+            document.body.appendChild(iframe);
 
-                document.body.appendChild(iframe);
-
-                iframe.onload = () => {
-                    try {
-                        iframe.contentWindow?.focus();
-                        iframe.contentWindow?.print();
-                        addToast("Diálogo de impressão aberto com sucesso!", "success");
-                    } catch (err) {
-                        console.error("Falha ao focar impressão:", err);
-                        addToast("Seu navegador impediu o disparo automático. Baixe o PDF para imprimir.", "info");
-                    }
-                    setRenderProgress(null);
-                    setTimeout(() => {
-                        if (document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                            URL.revokeObjectURL(blobUrl);
-                        }
-                    }, 60000);
-                };
-            } catch (err) {
-                console.error(err);
+            iframe.onload = () => {
+                try {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                    addToast("Diálogo de impressão aberto com sucesso!", "success");
+                } catch (err) {
+                    console.error("Falha ao focar impressão:", err);
+                    addToast("Seu navegador impediu o disparo automático. Baixe o PDF para imprimir.", "info");
+                }
                 setRenderProgress(null);
-                addToast("Erro ao carregar renderizador para impressão física.", "error");
-            }
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                        URL.revokeObjectURL(blobUrl);
+                    }
+                }, 60000);
+            };
+        } catch (err) {
+            console.error(err);
+            setRenderProgress(null);
+            addToast("Erro ao carregar renderizador para impressão física.", "error");
         }
     };
 
@@ -2735,7 +2721,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             <h3 className="font-extrabold text-sm md:text-base text-white flex items-center gap-2">
                                 Visualizador Oficial de Documentos GIPP <span className="text-[10px] bg-slate-800 font-bold px-2 py-0.5 rounded-full text-indigo-300 border border-slate-700/50">PDF HQ</span>
                             </h3>
-                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">A4 Standard • Vetorizado e Otimizado</p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">A4 Standard • Processamento em Modo Imagem</p>
                         </div>
                     </div>
 
@@ -2773,7 +2759,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                         <Button variant="primary" onClick={handleDownloadDocument} className="shadow-lg shadow-indigo-600/10 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
                             <Download size={16}/> Baixar PDF 
                         </Button>
-                        <Button variant="success" onClick={() => setShowPrintOptionModal(true)} className="shadow-lg shadow-emerald-600/10 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
+                        <Button variant="success" onClick={handleNativePrint} className="shadow-lg shadow-emerald-600/10 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
                             <Printer size={16}/> Imprimir
                         </Button>
                     </div>
@@ -2802,66 +2788,6 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                         </div>
                     </div>
                 </div>
-
-                {/* Janela de Confirmação de Impressão (Fluxo Multi-opção) */}
-                {showPrintOptionModal && (
-                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[12500] animate-fadeIn text-slate-800">
-                        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl border border-slate-100 space-y-6 animate-entrance">
-                            <div className="text-center space-y-2">
-                                <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100">
-                                    <Printer size={28} />
-                                </div>
-                                <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Configurar Emissão</h3>
-                                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Como deseja emitir este documento?</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 gap-3 pt-1">
-                                {/* Opção 1: Impressora */}
-                                <button 
-                                    onClick={() => {
-                                        setShowPrintOptionModal(false);
-                                        handleNativePrint();
-                                    }}
-                                    className="flex items-center gap-4 text-left p-4 bg-slate-50/60 hover:bg-indigo-50/60 hover:border-indigo-300 border border-slate-200/80 rounded-2xl transition-all shadow-sm hover:shadow group text-slate-800 outline-none"
-                                >
-                                    <div className="p-3 bg-indigo-500 text-white rounded-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
-                                        <Printer size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Imprimir</p>
-                                        <p className="text-[10px] text-slate-500 font-medium">Abre o painel do sistema com o arquivo pronto para impressão</p>
-                                    </div>
-                                </button>
-                                
-                                {/* Opção 2: Download em PDF */}
-                                <button 
-                                    onClick={() => {
-                                        setShowPrintOptionModal(false);
-                                        handleDownloadDocument();
-                                    }}
-                                    className="flex items-center gap-4 text-left p-4 bg-slate-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 border border-slate-200/80 rounded-2xl transition-all shadow-sm hover:shadow group text-slate-800 outline-none"
-                                >
-                                    <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
-                                        <Download size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Download em PDF</p>
-                                        <p className="text-[10px] text-slate-500 font-medium">Inicia o download direto e seguro do arquivo em formato PDF</p>
-                                    </div>
-                                </button>
-                            </div>
-                            
-                            <div className="pt-2 border-t border-slate-100 flex justify-end">
-                                <button 
-                                    onClick={() => setShowPrintOptionModal(false)}
-                                    className="text-center w-full py-2.5 font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl border border-slate-200/60 transition-all text-[11px] uppercase tracking-wider"
-                                >
-                                    Apenas Visualizar Primeiro
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Progress Overlay */}
                 {renderProgress && (
