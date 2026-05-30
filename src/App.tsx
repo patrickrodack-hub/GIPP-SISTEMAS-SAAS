@@ -2520,6 +2520,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const contentRef = useRef<HTMLDivElement>(null);
     const [renderProgress, setRenderProgress] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
+    const [showPrintOptionModal, setShowPrintOptionModal] = useState(true);
 
     if (!isOpen) return null;
 
@@ -2664,49 +2665,58 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     };
 
     const handleNativePrint = async () => {
-        const pdf = await generateProfessionalPDF('print');
-        if (!pdf) return;
-
         try {
-            setRenderProgress("Formatando spooler de impressão de sistema...");
-            const blobUrl = pdf.output('bloburl').toString();
-            
-            const oldIframe = document.getElementById('gp-silent-print-iframe');
-            if (oldIframe) oldIframe.remove();
-
-            const iframe = document.createElement('iframe');
-            iframe.id = 'gp-silent-print-iframe';
-            iframe.style.position = 'fixed';
-            iframe.style.right = '0';
-            iframe.style.bottom = '0';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            iframe.src = blobUrl;
-
-            document.body.appendChild(iframe);
-
-            iframe.onload = () => {
-                try {
-                    iframe.contentWindow?.focus();
-                    iframe.contentWindow?.print();
-                    addToast("Diálogo de impressão aberto com sucesso!", "success");
-                } catch (err) {
-                    console.error("Falha ao focar impressão:", err);
-                    addToast("Seu navegador impediu o disparo automático. Baixe o PDF para imprimir.", "info");
-                }
-                setRenderProgress(null);
-                setTimeout(() => {
-                    if (document.body.contains(iframe)) {
-                        document.body.removeChild(iframe);
-                        URL.revokeObjectURL(blobUrl);
-                    }
-                }, 60000);
-            };
-        } catch (e) {
-            console.error(e);
+            setRenderProgress("Inicializando spooler de impressão nativa...");
+            await new Promise(r => setTimeout(r, 600));
             setRenderProgress(null);
-            addToast("Erro ao carregar renderizador para impressão física.", "error");
+            window.print();
+            addToast("Diálogo de impressão nativo disparado com sucesso!", "success");
+        } catch (e) {
+            console.error("Erro no print nativo, tentando renderizar PDF...", e);
+            const pdf = await generateProfessionalPDF('print');
+            if (!pdf) return;
+
+            try {
+                setRenderProgress("Formatando spooler de impressão de sistema...");
+                const blobUrl = pdf.output('bloburl').toString();
+                
+                const oldIframe = document.getElementById('gp-silent-print-iframe');
+                if (oldIframe) oldIframe.remove();
+
+                const iframe = document.createElement('iframe');
+                iframe.id = 'gp-silent-print-iframe';
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                iframe.src = blobUrl;
+
+                document.body.appendChild(iframe);
+
+                iframe.onload = () => {
+                    try {
+                        iframe.contentWindow?.focus();
+                        iframe.contentWindow?.print();
+                        addToast("Diálogo de impressão aberto com sucesso!", "success");
+                    } catch (err) {
+                        console.error("Falha ao focar impressão:", err);
+                        addToast("Seu navegador impediu o disparo automático. Baixe o PDF para imprimir.", "info");
+                    }
+                    setRenderProgress(null);
+                    setTimeout(() => {
+                        if (document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
+                            URL.revokeObjectURL(blobUrl);
+                        }
+                    }, 60000);
+                };
+            } catch (err) {
+                console.error(err);
+                setRenderProgress(null);
+                addToast("Erro ao carregar renderizador para impressão física.", "error");
+            }
         }
     };
 
@@ -2763,7 +2773,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                         <Button variant="primary" onClick={handleDownloadDocument} className="shadow-lg shadow-indigo-600/10 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
                             <Download size={16}/> Baixar PDF 
                         </Button>
-                        <Button variant="success" onClick={handleNativePrint} className="shadow-lg shadow-emerald-600/10 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
+                        <Button variant="success" onClick={() => setShowPrintOptionModal(true)} className="shadow-lg shadow-emerald-600/10 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4.5 rounded-xl text-xs font-bold">
                             <Printer size={16}/> Imprimir
                         </Button>
                     </div>
@@ -2792,6 +2802,66 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Janela de Confirmação de Impressão (Fluxo Multi-opção) */}
+                {showPrintOptionModal && (
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[12500] animate-fadeIn text-slate-800">
+                        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl border border-slate-100 space-y-6 animate-entrance">
+                            <div className="text-center space-y-2">
+                                <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100">
+                                    <Printer size={28} />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Configurar Emissão</h3>
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Como deseja emitir este documento?</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-3 pt-1">
+                                {/* Opção 1: Impressora */}
+                                <button 
+                                    onClick={() => {
+                                        setShowPrintOptionModal(false);
+                                        handleNativePrint();
+                                    }}
+                                    className="flex items-center gap-4 text-left p-4 bg-slate-50/60 hover:bg-indigo-50/60 hover:border-indigo-300 border border-slate-200/80 rounded-2xl transition-all shadow-sm hover:shadow group text-slate-800 outline-none"
+                                >
+                                    <div className="p-3 bg-indigo-500 text-white rounded-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
+                                        <Printer size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Imprimir</p>
+                                        <p className="text-[10px] text-slate-500 font-medium">Abre o painel do sistema com o arquivo pronto para impressão</p>
+                                    </div>
+                                </button>
+                                
+                                {/* Opção 2: Download em PDF */}
+                                <button 
+                                    onClick={() => {
+                                        setShowPrintOptionModal(false);
+                                        handleDownloadDocument();
+                                    }}
+                                    className="flex items-center gap-4 text-left p-4 bg-slate-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 border border-slate-200/80 rounded-2xl transition-all shadow-sm hover:shadow group text-slate-800 outline-none"
+                                >
+                                    <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
+                                        <Download size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Download em PDF</p>
+                                        <p className="text-[10px] text-slate-500 font-medium">Inicia o download direto e seguro do arquivo em formato PDF</p>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <div className="pt-2 border-t border-slate-100 flex justify-end">
+                                <button 
+                                    onClick={() => setShowPrintOptionModal(false)}
+                                    className="text-center w-full py-2.5 font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl border border-slate-200/60 transition-all text-[11px] uppercase tracking-wider"
+                                >
+                                    Apenas Visualizar Primeiro
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Progress Overlay */}
                 {renderProgress && (
@@ -3554,6 +3624,107 @@ const PrintSystem = ({ mode, data }) => {
                         <div className="border-b border-black w-full mb-2"></div>
                         <p className="font-bold uppercase text-sm tracking-wider">{data.igreja?.pastor || 'Pastor Presidente'}</p>
                         <p className="text-xs font-serif text-slate-600">Pastor Presidente</p>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
+    // --- NOVO: TEMPLATE DE ESCALA INDIVIDUAL DO MEMBRO ---
+    if (mode === 'membro_escala_print') {
+        const { membro, tarefas } = data;
+        
+        const minhasTarefas = (tarefas || []).filter(t => 
+            (t.equipe || []).some(m => m.id === membro.id || m.nome === membro.nome)
+        ).sort((a, b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
+
+        const confirmadasCount = minhasTarefas.filter(t => {
+            const mInfo = (t.equipe || []).find(m => m.id === membro.id || m.nome === membro.nome);
+            return mInfo?.status_presenca === 'confirmado';
+        }).length;
+
+        const pendentesCount = minhasTarefas.filter(t => {
+            const mInfo = (t.equipe || []).find(m => m.id === membro.id || m.nome === membro.nome);
+            return !mInfo?.status_presenca || mInfo.status_presenca === 'pendente';
+        }).length;
+
+        const recusadasCount = minhasTarefas.filter(t => {
+            const mInfo = (t.equipe || []).find(m => m.id === membro.id || m.nome === membro.nome);
+            return mInfo?.status_presenca === 'recusado';
+        }).length;
+
+        return (
+            <PageContainer title="Escala de Compromissos e Tarefas" subtitle={`${membro.nome} (${membro.cargo || 'Membro'})`}>
+                <div className="border border-slate-200 p-8 rounded-[2rem] bg-slate-50/30 mb-8 avoid-break">
+                    <div className="flex justify-between items-center mb-6 border-b-2 border-slate-200 pb-6 flex-wrap gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100"><UserCircle size={32}/></div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800">{membro.nome}</h3>
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{membro.cargo} {membro.funcao_administrativa && membro.funcao_administrativa !== 'NENHUMA' ? `• ${membro.funcao_administrativa}` : ''}</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Membro ID: {membro.id?.slice(0, 8) || "N/A"}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 text-center scale-95">
+                                <span className="block text-2xl font-black text-blue-600">{minhasTarefas.length}</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Compromissos</span>
+                            </div>
+                            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 text-center scale-95 border-l-4 border-l-emerald-500">
+                                <span className="block text-2xl font-black text-emerald-600">{confirmadasCount}</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Confirmados</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 className="font-bold text-sm bg-slate-800 text-white p-3 uppercase tracking-widest mb-2 flex items-center gap-2 rounded-t-lg">
+                        <ClipboardList size={16}/> Agenda de Serviços Escalados
+                    </h3>
+                    <table className="w-full text-xs border-collapse border border-slate-300">
+                        <thead className="bg-slate-100 border-b-2 border-slate-400">
+                            <tr>
+                                <th className="p-3 uppercase text-[9px] font-black text-slate-700 tracking-wider text-left border-r border-slate-300 w-1/4">Data / Hora</th>
+                                <th className="p-3 uppercase text-[9px] font-black text-slate-700 tracking-wider text-left border-r border-slate-300">Compromisso / Categoria</th>
+                                <th className="p-3 uppercase text-[9px] font-black text-slate-700 tracking-wider text-left border-r border-slate-300">Função Atribuída</th>
+                                <th className="p-3 uppercase text-[9px] font-black text-slate-700 tracking-wider text-center">Status Confirmação</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                            {minhasTarefas.map((t, i) => {
+                                const mInfo = (t.equipe || []).find(m => m.id === membro.id || m.nome === membro.nome);
+                                const funAtribuida = mInfo?.funcao_escala || 'Membro';
+                                const rsvp = mInfo?.status_presenca;
+
+                                return (
+                                    <tr key={i} className="hover:bg-slate-50 avoid-break">
+                                        <td className="p-3 border-r border-slate-200 text-slate-800">
+                                            <span className="font-bold block">{t.data ? formatDateLocal(t.data) : 'Sem data'}</span>
+                                            {t.hora && <span className="text-[10px] text-slate-400 font-semibold block">{t.hora}h</span>}
+                                        </td>
+                                        <td className="p-3 border-r border-slate-200">
+                                            <span className="font-bold text-slate-800 block text-xs">{t.descricao}</span>
+                                            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">{t.categoria || 'Geral'}</span>
+                                        </td>
+                                        <td className="p-3 border-r border-slate-200 font-semibold text-slate-600 uppercase text-[11px]">{funAtribuida}</td>
+                                        <td className="p-3 text-center">
+                                            {rsvp === 'confirmado' && <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md inline-flex items-center gap-1"><CheckCircle size={11}/> CONFIRMADO</span>}
+                                            {rsvp === 'recusado' && <span className="text-[9px] font-black uppercase text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-md inline-flex items-center gap-1"><Ban size={11}/> RECUSADO</span>}
+                                            {(!rsvp || rsvp === 'pendente') && <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md inline-flex items-center gap-1"><Clock size={11}/> PENDENTE</span>}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {minhasTarefas.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-6 text-center italic text-slate-500 font-medium">Nenhum compromisso ou escala agendada para este membro.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+                    <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest gap-2">
+                        <span>Gerado via GIPP - Secretaria Oficial</span>
+                        <span>Assinatura do Membro: ___________________________</span>
                     </div>
                 </div>
             </PageContainer>
@@ -9068,10 +9239,11 @@ const ModuleMembros = memo(() => {
                 <GenericTable title="Listagem de Membros" type="membro" data={membrosFiltrados} columns={cols} customActions={(item) => (
                     <div className="flex gap-2">
                         <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2.5 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100 bg-white" title="Carteirinha"><FileBadge size={18}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2.5 text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100 bg-white" title="Escala de Compromissos"><ClipboardList size={18}/></button>
                         <button onClick={() => {
                             const text = encodeURIComponent(`Olá ${item.nome}, a Paz do Senhor!`);
                             window.open(`https://wa.me/55${item.telefone?.replace(/\D/g,'')}?text=${text}`, '_blank');
-                        }} className="p-2.5 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white" title="WhatsApp"><MessageCircle size={18}/></button>
+                        }} className="p-2.5 text-emerald-500 hover:bg-emerald-555 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white" title="WhatsApp"><MessageCircle size={18}/></button>
                     </div>
                 )} />
             </div>
@@ -19199,7 +19371,7 @@ const PortalAgenda = ({ user, db }) => {
 };
 
 const PortalTarefas = ({ user, db }) => {
-    const { setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
+    const { setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
     
     const minhasTarefas = (db.tarefas || []).filter(t => 
         (t.equipe || []).some(m => m.id === user.id || m.nome === user.nome)
@@ -19217,18 +19389,32 @@ const PortalTarefas = ({ user, db }) => {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas', taskId), { equipe: novaEquipe }, { merge: true });
             addToast(status === 'confirmado' ? "Presença confirmada na escala!" : "Ausência na escala informada.", "success");
         } catch (e) {
-            addToast("Erro ao atualizar a confirmação.", "error");
+            addToast("Erro ao atualizar a confirmation.", "error");
         }
     };
 
     return (
         <div className="space-y-6 animate-entrance">
-            <div className="flex items-center gap-4 bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shadow-sm border border-indigo-100"><CheckSquare size={28}/></div>
-                <div>
-                    <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Minhas Escalas e Tarefas</h2>
-                    <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Compromissos agendados e Confirmações</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shadow-sm border border-indigo-100"><CheckSquare size={28}/></div>
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Minhas Escalas e Tarefas</h2>
+                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Compromissos agendados e Confirmações</p>
+                    </div>
                 </div>
+                {minhasTarefas.length > 0 && (
+                    <button 
+                        onClick={() => {
+                            setPrintData({ membro: user, tarefas: db.tarefas || [], igreja: db.igreja });
+                            setPrintMode('membro_escala_print');
+                            setPreviewOpen(true);
+                        }}
+                        className="shadow-md flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 px-4.5 font-bold text-xs transition-all border border-indigo-500"
+                    >
+                        <Printer size={16}/> Imprimir Compromissos
+                    </button>
+                )}
             </div>
             
             <div className="glass-modern rounded-[2rem] shadow-sm border border-white/50 p-6 md:p-8">
