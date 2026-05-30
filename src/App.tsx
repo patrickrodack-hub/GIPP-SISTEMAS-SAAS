@@ -807,7 +807,7 @@ const GlobalStyles = () => (
     .input-futuristic:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); outline: none; }
     .text-gradient { background: linear-gradient(135deg, #4f46e5 0%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-    .doc-padding { padding: 20mm; box-sizing: border-box; }
+    .doc-padding { padding-top: 30mm; padding-left: 30mm; padding-bottom: 20mm; padding-right: 20mm; box-sizing: border-box; }
 
     @media print {
       /* Reset global do documento para impressão limpa */
@@ -900,12 +900,18 @@ const GlobalStyles = () => (
 
       /* Ajustes de Margem e Orientação de Página */
       @page { 
-        margin: 20mm; 
+        margin-top: 30mm;
+        margin-left: 30mm;
+        margin-bottom: 20mm;
+        margin-right: 20mm;
         size: A4 portrait; 
       }
       @page landscape-page { 
         size: A4 landscape; 
-        margin: 20mm; 
+        margin-top: 30mm;
+        margin-left: 30mm;
+        margin-bottom: 20mm;
+        margin-right: 20mm;
       }
       
       .print-landscape { 
@@ -917,7 +923,10 @@ const GlobalStyles = () => (
       }
 
       .doc-padding { 
-        padding: 20mm !important; 
+        padding-top: 30mm !important;
+        padding-left: 30mm !important;
+        padding-bottom: 20mm !important;
+        padding-right: 20mm !important;
         box-sizing: border-box !important;
       }
 
@@ -2521,10 +2530,14 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     const [renderProgress, setRenderProgress] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
     const [palette, setPalette] = useState<'cinza' | 'azul' | 'verde'>('cinza');
+    const [marginType, setMarginType] = useState<'abnt' | 'moderada' | 'estreita'>('abnt');
+    const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
+        mode && (mode.startsWith('cert_') || mode === 'carne_print' || mode === 'carteirinha' || mode === 'carteirinha_custom' || mode === 'credenciais_lote') ? 'landscape' : 'portrait'
+    );
 
     if (!isOpen) return null;
 
-    const isLandscape = mode && mode.startsWith('cert_');
+    const isLandscape = orientation === 'landscape';
     const targetWidth = isLandscape ? 1123 : 794;
     const targetHeight = isLandscape ? 794 : 1123;
 
@@ -2756,6 +2769,55 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             </button>
                         </div>
 
+                        {/* Seletor de Margem / Ajustar Página */}
+                        <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase px-2 flex items-center gap-1.5 select-none md:inline hidden" title="Ajustar margens da página">
+                                Margem:
+                            </span>
+                            <button 
+                                onClick={() => setMarginType('abnt')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'abnt' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Margem Padrão (Superior: 3cm / Esquerda: 3cm / Inferior: 2cm / Direita: 2cm)"
+                            >
+                                Padrão
+                            </button>
+                            <button 
+                                onClick={() => setMarginType('moderada')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'moderada' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Margem Média (2.0 cm em todas)"
+                            >
+                                Média
+                            </button>
+                            <button 
+                                onClick={() => setMarginType('estreita')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'estreita' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Margem Estreita (1.5 cm em todas)"
+                            >
+                                Estreita
+                            </button>
+                        </div>
+
+                        {/* Seletor de Orientação da Página */}
+                        <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase px-2 flex items-center gap-1.5 select-none md:inline hidden" title="Mudar orientação da página">
+                                Orientação:
+                            </span>
+                            <button 
+                                onClick={() => setOrientation('portrait')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${orientation === 'portrait' ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Formato Retrato (Vertical)"
+                            >
+                                Retrato
+                            </button>
+                            <button 
+                                onClick={() => setOrientation('landscape')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${orientation === 'landscape' ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Formato Paisagem (Horizontal)"
+                            >
+                                Paisagem
+                            </button>
+                        </div>
+
                         {/* Zoom Controls */}
                         <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
                             <button 
@@ -2813,7 +2875,7 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
                             }}
                             className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
                         >
-                            <PrintSystem mode={mode} data={data} palette={palette} />
+                            <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} />
                         </div>
                     </div>
                 </div>
@@ -2838,8 +2900,16 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
     );
 };
 
-const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
+const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt' }) => {
     if (!mode || !data) return null;
+
+    // Configuração de margens dinâmicas de acordo com o seletor de layout
+    const marginStyles = {
+        abnt: { paddingTop: '30mm', paddingLeft: '30mm', paddingBottom: '20mm', paddingRight: '20mm' },
+        moderada: { paddingTop: '20mm', paddingLeft: '20mm', paddingBottom: '20mm', paddingRight: '20mm' },
+        estreita: { paddingTop: '15mm', paddingLeft: '15mm', paddingBottom: '15mm', paddingRight: '15mm' }
+    };
+    const selectedMargin = marginStyles[marginType as 'abnt' | 'moderada' | 'estreita'] || marginStyles.abnt;
 
     // Paleta de cores para customização de Layout do Cabeçalho e Títulos de Relatórios
     const colorMap = {
@@ -2882,8 +2952,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
                 <div className={`h-20 w-20 border-2 ${colors.borderLogo} flex items-center justify-center p-2 text-center text-[10px] font-bold`}>Sem Logo</div>
             )}
             <div className="flex-1 text-center">
-                <h1 className="font-serif text-3xl font-black uppercase text-slate-900 leading-tight">Assembleia de Deus</h1>
-                <h2 className={`text-lg font-bold uppercase ${colors.textSubtitle} tracking-widest mb-1`}>{data.igreja?.nome || "Ministério"}</h2>
+                <h1 className={`font-serif text-2xl font-black uppercase ${colors.textTitle} leading-tight mb-1`}>{data.igreja?.nome || "Ministério"}</h1>
                 <p className="text-[11px] text-slate-600 font-medium">
                     {data.igreja?.endereco} - {data.igreja?.cidade}/{data.igreja?.uf} • CNPJ: {data.igreja?.cnpj}
                 </p>
@@ -2912,7 +2981,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
         );
 
         return (
-            <div className="w-full bg-white mx-auto print-block relative text-slate-900 doc-padding" style={{ width: '100%', boxSizing: 'border-box' }}>
+            <div className="w-full bg-white mx-auto print-block relative text-slate-900" style={{ width: '100%', boxSizing: 'border-box', ...selectedMargin }}>
                 <table className="w-full border-collapse">
                     <thead className="table-header-group">
                         <tr>
@@ -2989,7 +3058,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
         }
 
         return (
-            <div className="w-full h-full doc-padding flex items-center justify-center bg-white relative overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center bg-white relative overflow-hidden" style={selectedMargin}>
                 <div className="w-[210mm] h-[148mm] bg-white p-8 flex flex-col border-2 border-slate-200 shrink-0">
                     <div className="border-4 border-double border-slate-800 p-8 h-full flex flex-col relative">
                         <div className="flex justify-between items-start border-b-2 border-slate-800 pb-4 mb-8">
@@ -3066,7 +3135,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_batismo') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden doc-padding box-border">
+                <div className="w-full h-full bg-white relative overflow-hidden box-border" style={selectedMargin}>
                     <div className="w-full h-full border-[12px] border-double border-blue-900 p-2 relative">
                         <div className="w-full h-full border-[4px] border-blue-800/30 p-12 flex flex-col items-center text-center relative z-10 bg-slate-50/50">
                             <Watermark />
@@ -3092,7 +3161,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_consagracao') {
             return (
-                <div className="w-full h-full bg-[#faf8f5] relative overflow-hidden doc-padding box-border">
+                <div className="w-full h-full bg-[#faf8f5] relative overflow-hidden box-border" style={selectedMargin}>
                     <div className="w-full h-full border-[16px] border-solid border-rose-900 outline outline-4 outline-offset-4 outline-rose-800 p-10 flex flex-col items-center text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
                         <Watermark />
                         <div className="flex items-center justify-center gap-6 w-full mb-10 border-b-2 border-rose-900/30 pb-6">
@@ -3121,7 +3190,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_crianca') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden doc-padding box-border">
+                <div className="w-full h-full bg-white relative overflow-hidden box-border" style={selectedMargin}>
                     <div className="w-full h-full border-[6px] border-solid border-amber-400 rounded-[3rem] p-3">
                         <div className="w-full h-full border-[2px] border-dashed border-amber-600/50 rounded-[2.5rem] p-12 flex flex-col items-center text-center relative z-10 bg-amber-50/10">
                             <Watermark />
@@ -3151,7 +3220,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_casamento') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border doc-padding flex">
+                <div className="w-full h-full bg-white relative overflow-hidden box-border flex" style={selectedMargin}>
                     <div className="w-full h-full border-[20px] border-slate-100 flex relative z-10">
                         <div className="w-[40px] h-full bg-gradient-to-b from-slate-300 via-slate-400 to-slate-300 shrink-0 border-r-4 border-slate-500"></div>
                         <div className="flex-1 h-full p-12 flex flex-col items-center text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/floral-paper.png')]">
@@ -3179,7 +3248,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_curso') {
             return (
-                <div className="w-full h-full bg-slate-50 relative overflow-hidden doc-padding box-border">
+                <div className="w-full h-full bg-slate-50 relative overflow-hidden box-border" style={selectedMargin}>
                     <div className="w-full h-full border-[10px] border-indigo-900 p-1 relative shadow-inner">
                         <div className="w-full h-full border-[2px] border-indigo-800 p-12 flex flex-col items-center text-center relative z-10 bg-white">
                             <Watermark />
@@ -3208,7 +3277,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_evento') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden box-border doc-padding flex">
+                <div className="w-full h-full bg-white relative overflow-hidden box-border flex" style={selectedMargin}>
                     <div className="w-[30px] h-full bg-emerald-800 shrink-0"></div>
                     <div className="w-[10px] h-full bg-emerald-600 shrink-0"></div>
                     <div className="flex-1 h-full p-12 flex flex-col items-center text-center relative z-10 border-t-[10px] border-b-[10px] border-r-[10px] border-slate-100">
@@ -3234,7 +3303,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
 
         if (mode === 'cert_ebd') {
             return (
-                <div className="w-full h-full bg-white relative overflow-hidden doc-padding box-border">
+                <div className="w-full h-full bg-white relative overflow-hidden box-border" style={selectedMargin}>
                     <div className="w-full h-full border-[8px] border-purple-900 p-1 relative">
                         <div className="w-full h-full border-[2px] border-dashed border-purple-800 p-12 flex flex-col items-center text-center relative z-10 bg-purple-50/20">
                             <Watermark />
@@ -3276,7 +3345,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
     // --- CARNÊ IMPRESSÃO ORIGINAL ---
     if (mode === 'carne_print') {
         return (
-            <div className="w-full bg-white doc-padding">
+            <div className="w-full bg-white" style={selectedMargin}>
                 <div className="text-center mb-8 border-b-2 border-dotted border-slate-300 pb-4">
                     <h2 className="text-2xl font-bold uppercase">{data.igreja?.nome}</h2>
                     <h3 className="text-lg text-slate-600">{data.carne.titulo}</h3>
@@ -3323,7 +3392,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
     // --- CARTEIRINHA ORIGINAL ---
     if (mode === 'carteirinha') {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center doc-padding gap-8 bg-slate-50 print:bg-white">
+            <div className="w-full h-full flex flex-col items-center justify-center gap-8 bg-slate-50 print:bg-white" style={selectedMargin}>
                 {/* FRENTE */}
                 <div className="w-[85.6mm] h-[53.98mm] bg-slate-900 relative overflow-hidden flex shadow-2xl border border-slate-800 shrink-0 print:shadow-none print:border-none rounded-xl print:rounded-none">
                     {/* Background Art Premium */}
@@ -3423,7 +3492,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
     // --- CREDENCIAIS LOTE ORIGINAL ---
     if (mode === 'credenciais_lote') {
         return (
-            <div className="w-full flex flex-wrap gap-8 justify-center doc-padding print:p-0">
+            <div className="w-full flex flex-wrap gap-8 justify-center print:p-0" style={selectedMargin}>
                 {data.membros.map((membro, index) => (
                     <div key={index} className="flex flex-col gap-4 avoid-break mb-8">
                         {/* FRENTE */}
@@ -3491,7 +3560,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
         const fields = layout.fields || [];
 
         return (
-            <div className="w-full flex flex-wrap gap-8 justify-center doc-padding print:p-0">
+            <div className="w-full flex flex-wrap gap-8 justify-center print:p-0" style={selectedMargin}>
                 {data.membros.map((membro, index) => (
                     <div key={index} className="w-[85.6mm] h-[53.98mm] relative overflow-hidden flex shadow-lg border border-slate-300 shrink-0 print:shadow-none print:border-none avoid-break mb-8 bg-cover bg-center" style={{ backgroundColor: bg.startsWith('#') ? bg : 'transparent', backgroundImage: bg.startsWith('http') || bg.startsWith('data:') ? `url(${bg})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }}>
                         {fields.map(f => {
@@ -4680,7 +4749,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza' }) => {
         const mesRef = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
         
         return (
-            <div className="w-full bg-white print-block relative flex flex-col mx-auto shadow-xl doc-padding" style={{ width: '100%', minHeight: '297mm', boxSizing: 'border-box' }}>
+            <div className="w-full bg-white print-block relative flex flex-col mx-auto shadow-xl" style={{ width: '100%', minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
                 <div className="flex-1 border-2 border-slate-200 flex flex-col p-8 bg-white relative rounded-xl shadow-sm">
                     {/* Header NF */}
                     <div className="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
