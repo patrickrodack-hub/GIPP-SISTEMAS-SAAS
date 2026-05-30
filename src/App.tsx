@@ -123,7 +123,9 @@ const resizeImageAndCompress = (dataUrl: string, maxWidth = 200, maxHeight = 200
       return;
     }
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!dataUrl.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.src = dataUrl;
     img.onload = () => {
       try {
@@ -2502,62 +2504,89 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
 
     if (!isOpen) return null;
 
-    // Função centralizada para renderizar a área de impressão (.print-area) para PDF de nível corporativo
+    // Função centralizada para renderizar a área de impressão (.print-area ou ref) para PDF de nível corporativo
     const generateProfessionalPDF = async (action: 'download' | 'print') => {
         addToast(action === 'download' ? "Gerando PDF corporativo (Alta Resolução)..." : "Preparando documento para impressão profissional...", "info");
         
-        const targetEl = document.querySelector('.print-area') as HTMLElement;
+        let targetEl = contentRef.current as HTMLElement;
+        let isUsingModalRef = true;
+        
+        if (!targetEl) {
+            targetEl = document.querySelector('.print-area') as HTMLElement;
+            isUsingModalRef = false;
+        }
+        
         if (!targetEl) {
             addToast("Erro: área de impressão não localizada no sistema.", "error");
             return null;
         }
 
         const originalStyle = targetEl.getAttribute('style') || '';
+        const originalClassName = targetEl.className || '';
         const isLandscape = mode && mode.startsWith('cert_');
         
         // Larguras canônicas A4 em pixels @ 96 DPI (210mm ou 297mm)
         const targetWidth = isLandscape ? 1123 : 794;
 
         try {
-            // Força renderização limpa offline, posicionada fora da tela para evitar flickering
-            // Enfatiza o confinamento rígido à largura A4 por meio de min-width e max-width
-            targetEl.setAttribute('style', `
-                display: block !important; 
-                position: fixed !important; 
-                top: -15000px !important; 
-                left: -15000px !important; 
-                width: ${targetWidth}px !important; 
-                min-width: ${targetWidth}px !important; 
-                max-width: ${targetWidth}px !important; 
-                margin: 0 !important; 
-                padding: 0 !important; 
-                background: white !important;
-                -webkit-font-smoothing: antialiased !important;
-                -moz-osx-font-smoothing: grayscale !important;
-                text-rendering: optimizeLegibility !important;
-                box-shadow: none !important;
-                overflow: visible !important;
-                box-sizing: border-box !important;
-            `);
+            if (isUsingModalRef) {
+                // Remove temporariamente classes de transform e scale que possam cortar a imagem no html2canvas
+                targetEl.className = "bg-white flex flex-col";
+                targetEl.setAttribute('style', `
+                    display: block !important;
+                    width: ${targetWidth}px !important;
+                    min-width: ${targetWidth}px !important;
+                    max-width: ${targetWidth}px !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: white !important;
+                    transform: none !important;
+                    box-sizing: border-box !important;
+                `);
+            } else {
+                // Força renderização limpa offline, posicionada fora da tela para evitar flickering
+                // Enfatiza o confinamento rígido à largura A4 por meio de min-width e max-width
+                targetEl.setAttribute('style', `
+                    display: block !important; 
+                    position: fixed !important; 
+                    top: -15000px !important; 
+                    left: -15000px !important; 
+                    width: ${targetWidth}px !important; 
+                    min-width: ${targetWidth}px !important; 
+                    max-width: ${targetWidth}px !important; 
+                    margin: 0 !important; 
+                    padding: 0 !important; 
+                    background: white !important;
+                    -webkit-font-smoothing: antialiased !important;
+                    -moz-osx-font-smoothing: grayscale !important;
+                    text-rendering: optimizeLegibility !important;
+                    box-shadow: none !important;
+                    overflow: visible !important;
+                    box-sizing: border-box !important;
+                `);
+            }
 
             // Pequeno delay para recálculo de reflow do navegador
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, 400));
 
             // Executa captura de alta fidelidade redimensionando estritamente para a largura A4 correspondente
             const canvas = await html2canvas(targetEl, {
-                scale: 2.5, // Fator escala de alta resolução que atua como vetorização
+                scale: 2.0, // Fator escala de alta resolução equilibrado para impedir falhas de alocação de memória no canvas
                 useCORS: true,
-                allowTaint: true,
+                allowTaint: false, // CRÍTICO: allowTaint: true tacha permanentemente o canvas caso uma imagem externa sem CORS apareça, lançando erro de segurança fatal ao resgatar o dataURL. false previne esse crash.
                 backgroundColor: '#ffffff',
                 logging: false,
                 scrollX: 0,
                 scrollY: 0,
                 width: targetWidth, // Restringe a captura exatamente à largura pretendida, mitigando quebras ou reentrâncias
                 windowWidth: targetWidth,
-                windowHeight: targetEl.scrollHeight
+                windowHeight: targetEl.scrollHeight || undefined
             });
 
             // Restaura imediatamente os estilos do elemento original
+            if (isUsingModalRef) {
+                targetEl.className = originalClassName;
+            }
             targetEl.setAttribute('style', originalStyle);
 
             const isPortrait = !isLandscape;
@@ -2612,7 +2641,12 @@ const DocumentPreviewModal = ({ isOpen, onClose, mode, data }) => {
 
         } catch (error) {
             console.error("Erro ao processar PDF:", error);
-            targetEl.setAttribute('style', originalStyle);
+            if (targetEl) {
+                if (isUsingModalRef) {
+                    targetEl.className = originalClassName;
+                }
+                targetEl.setAttribute('style', originalStyle);
+            }
             addToast("Erro interno ao renderizar o PDF de impressão.", "error");
             return null;
         }
