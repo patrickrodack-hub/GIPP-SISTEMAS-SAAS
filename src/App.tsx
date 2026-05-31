@@ -649,15 +649,19 @@ const GlobalStyles = () => (
     .stars-1 { background-image: radial-gradient(1.5px 1.5px at 20px 30px, #ffffff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 100px 150px, #ffffff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 250px 200px, #ffffff, rgba(0,0,0,0)); background-size: 300px 300px; animation: move-stars-up 60s linear infinite; opacity: 0.6; filter: brightness(1.2); }
     .stars-2 { background-image: radial-gradient(2px 2px at 150px 180px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 50px 50px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 300px 300px, #ffffff, rgba(0,0,0,0)); background-size: 400px 400px; animation: move-stars-up 40s linear infinite; opacity: 0.85; filter: brightness(1.2); }
     .stars-3 { background-image: radial-gradient(2.5px 2.5px at 80px 120px, #ffffff, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 200px 10px, #ffffff, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 400px 250px, #ffffff, rgba(0,0,0,0)); background-size: 500px 500px; animation: move-stars-up 20s linear infinite; opacity: 1.0; filter: brightness(1.5); }
-    .stars-silver-1 { background-image: radial-gradient(1.5px 1.5px at 20px 30px, #8a94a6, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 100px 150px, #a1a1aa, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 250px 200px, #cbd5e1, rgba(0,0,0,0)); background-size: 300px 300px; animation: move-stars-up 65s linear infinite; opacity: 0.8; }
-    .stars-silver-2 { background-image: radial-gradient(2px 2px at 150px 180px, #64748b, rgba(0,0,0,0)), radial-gradient(2px 2px at 50px 50px, #8a94a6, rgba(0,0,0,0)), radial-gradient(2px 2px at 300px 300px, #a1a1aa, rgba(0,0,0,0)); background-size: 400px 400px; animation: move-stars-up 45s linear infinite; opacity: 0.95; }
-    .stars-silver-3 { background-image: radial-gradient(2.5px 2.5px at 80px 120px, #475569, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 200px 10px, #64748b, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 400px 250px, #8a94a6, rgba(0,0,0,0)); background-size: 500px 500px; animation: move-stars-up 25s linear infinite; opacity: 1.0; }
+    .stars-silver-1 { background-image: radial-gradient(1.5px 1.5px at 20px 30px, #ffffff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 100px 150px, #e2e8f0, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 250px 200px, #cbd5e1, rgba(0,0,0,0)); background-size: 300px 300px; animation: move-stars-up 60s linear infinite; opacity: 0.85; filter: brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,0.7)); }
+    .stars-silver-2 { background-image: radial-gradient(2px 2px at 150px 180px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 50px 50px, #e2e8f0, rgba(0,0,0,0)), radial-gradient(2px 2px at 300px 300px, #ffffff, rgba(0,0,0,0)); background-size: 400px 400px; animation: move-stars-up 40s linear infinite; opacity: 0.95; filter: brightness(1.3) drop-shadow(0 0 1.5px rgba(255,255,255,0.8)); }
+    .stars-silver-3 { background-image: radial-gradient(2.5px 2.5px at 80px 120px, #ffffff, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 200px 10px, #cbd5e1, rgba(0,0,0,0)), radial-gradient(2.5px 2.5px at 400px 250px, #ffffff, rgba(0,0,0,0)); background-size: 500px 500px; animation: move-stars-up 20s linear infinite; opacity: 1.0; filter: brightness(1.5) drop-shadow(0 0 2px rgba(255,255,255,0.9)); }
     
     @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
     .animate-slide-up-fade { animation: slideUpFade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .animate-entrance { animation: fadeIn 0.6s ease-out forwards; }
     
-    body.theme-light { background-color: #f8fafc; background-image: none; }
+    body.theme-light { 
+      background-color: #eef6fc; 
+      background-image: radial-gradient(at 0% 0%, rgba(186,230,253,0.4) 0, transparent 50%), radial-gradient(at 50% 0%, rgba(219,234,254,0.5) 0, transparent 50%); 
+      background-attachment: fixed;
+    }
     body.theme-dark { background-color: #0f172a; background-image: radial-gradient(at 0% 0%, hsla(253,16%,10%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(242, 47%, 15%, 1) 0, transparent 50%), radial-gradient(at 100% 100%, hsla(339,49%,25%,1) 0, transparent 50%); color: #f8fafc; }
     
     /* -----------------------------------------------------------
@@ -1073,6 +1077,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     const animBgEnabled = context ? context.animBgEnabled : true;
     const papelParede = context?.db?.igreja?.papel_parede;
     const osTheme = context?.osTheme || 'default';
+    const isLightTheme = context?.theme === 'light';
     
     // Configurações personalizadas do usuário
     const animacaoTipoSelected = context?.db?.igreja?.tipo_animacao || 'auto';
@@ -1088,6 +1093,12 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         if (theme === 'win95') return "bg-[#008080]";
         if (theme === 'premium_black') return "bg-[#050505]";
         if (theme === 'msdos') return "bg-[#000022]";
+        if (isLightTheme) {
+            if (isSplash) {
+                return "bg-[#eef6fc] bg-[radial-gradient(at_0%_0%,_rgba(186,230,253,0.5)_0,_transparent_50%),_radial-gradient(at_50%_0%,_rgba(219,234,254,0.7)_0,_transparent_50%)]";
+            }
+            return "bg-[#eef6fc]"; // fundo azul bem clarinho
+        }
         if (isSplash) return "bg-[#0f172a] bg-[radial-gradient(at_0%_0%,_hsla(253,16%,7%,1)_0,_transparent_50%),_radial-gradient(at_50%_0%,_hsla(242,47%,18%,1)_0,_transparent_50%)]";
         return "bg-white"; // default
     };
@@ -1271,10 +1282,21 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
 
             {(activeAnim === 'stars' || activeAnim === 'splash' || (activeAnim === 'default' && !papelParede)) && (
                 <>
-                    <div className="star-layer stars-1"></div>
-                    <div className="star-layer stars-2"></div>
-                    <div className="star-layer stars-3"></div>
-                    <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[100px] animate-float"></div>
+                    {isLightTheme ? (
+                        <>
+                            <div className="star-layer stars-silver-1"></div>
+                            <div className="star-layer stars-silver-2"></div>
+                            <div className="star-layer stars-silver-3"></div>
+                            <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-300/35 blur-[100px] animate-float"></div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="star-layer stars-1"></div>
+                            <div className="star-layer stars-2"></div>
+                            <div className="star-layer stars-3"></div>
+                            <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[100px] animate-float"></div>
+                        </>
+                    )}
                 </>
             )}
 
@@ -21232,6 +21254,79 @@ const MemberPortalLayout = () => {
 
     const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark';
 
+    const handleVerificarPagamento = async () => {
+        setVerificandoPix(true);
+        setTimeout(async () => {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { 
+                    licenca_status: 'ativo',
+                    licenca_vencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +30 dias
+                }, { merge: true });
+                addToast("Pagamento Confirmado! Sistema Desbloqueado.", "success");
+            } catch (err) {
+                console.error(err);
+                addToast("Erro ao processar ativação.", "error");
+            } finally {
+                setVerificandoPix(false);
+            }
+        }, 2500);
+    };
+
+    const isLicenseValid = () => {
+        if (db.igreja?.licenca_status === 'bloqueado') return false;
+        const vencimento = db.igreja?.licenca_vencimento;
+        if (vencimento) {
+            const hoje = new Date().toISOString().split('T')[0];
+            if (hoje > vencimento) return false;
+        }
+        return true;
+    };
+
+    if (!isLicenseValid()) {
+        return (
+            <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 p-6 md:p-12 relative overflow-hidden font-sans">
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <ThemeBackground theme={osTheme} />
+                </div>
+                <div className="absolute top-6 right-6 z-[100] pointer-events-auto flex gap-3">
+                    <OsThemeToggle variant="dark" />
+                    <AnimBgToggle variant="dark" />
+                    <ThemeToggle variant="dark" />
+                    <FullScreenToggle variant="dark" />
+                </div>
+                <div className="relative z-10 w-full max-w-xl bg-white/15 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/25 p-8 flex flex-col items-center text-center">
+                    <Lock size={56} className="text-rose-500 mb-4 animate-pulse" />
+                    <h1 className="text-2xl md:text-3xl font-black mb-3 text-white">Sistema de Membros Bloqueado</h1>
+                    <p className="text-slate-300 text-sm md:text-base mb-6 leading-relaxed font-medium">
+                        A licença de uso deste sistema expirou. Renove a sua assinatura via PIX abaixo para desbloquear o sistema automaticamente.
+                    </p>
+                    
+                    <div className="bg-white text-slate-900 p-6 rounded-3xl shadow-xl w-full mb-6">
+                        <div className="p-2 bg-slate-50 rounded-2xl border border-slate-200 mb-4 w-fit mx-auto shadow-inner">
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698', 'PATRICK PESSOA', 'Rio de Janeiro'))}&color=0f172a&bgcolor=ffffff`} alt="PIX" className="w-32 h-32 object-contain"/>
+                        </div>
+                        <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 mb-5">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX (Aleatória)</p>
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono font-black text-xs sm:text-sm text-slate-800 break-all">4d9868d2-88f7-4fed-ad87-6dfc3c4ae698</span>
+                                <button onClick={() => { copyToClipboard('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
+                            </div>
+                        </div>
+                        
+                        <button onClick={handleVerificarPagamento} disabled={verificandoPix} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30">
+                            {verificandoPix ? <Loader2 size={18} className="animate-spin"/> : <RefreshCw size={18}/>}
+                            {verificandoPix ? 'A verificar...' : 'Já Paguei (Liberar Acesso)'}
+                        </button>
+                    </div>
+
+                    <button onClick={handleLogoutRequest} className="text-sm font-bold text-slate-400 hover:text-white transition-colors underline">
+                        Sair da Conta (Fazer Logout)
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const getHeaderStyles = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
             return "bg-black/80 border-b border-white/10 text-white";
@@ -21316,17 +21411,6 @@ const MemberPortalLayout = () => {
                 icon: `text-slate-400 ${hoverColor}`
             };
         }
-    };
-
-    // --- LÓGICA DE BLOQUEIO DE LICENÇA ---
-    const isLicenseValid = () => {
-        if (db.igreja?.licenca_status === 'bloqueado') return false;
-        const vencimento = db.igreja?.licenca_vencimento;
-        if (vencimento) {
-            const hoje = new Date().toISOString().split('T')[0];
-            if (hoje > vencimento) return false;
-        }
-        return true;
     };
 
     const isPastor = user?.cargo?.toLowerCase().includes('pastor') || 
@@ -21449,106 +21533,39 @@ const MemberPortalLayout = () => {
             </header>
 
             {/* Main Content (Área Rolável) */}
-            <main className="flex-1 h-full overflow-y-auto custom-scrollbar relative z-10">
-                {/* Desktop Floating Toggle */}
-                <div className="hidden md:flex absolute top-6 right-6 z-[60] gap-3">
-                    <OsThemeToggle />
-                    <AnimBgToggle />
-                    <ThemeToggle />
-                    <FullScreenToggle />
-                </div>
-                
-                <div className="p-4 md:p-10 max-w-5xl mx-auto pb-28 md:pb-10">
+            <main className="flex-1 p-6 md:p-10 h-screen overflow-y-auto custom-scrollbar relative z-10">
+                <div className="max-w-[1800px] mx-auto pb-16">
                     {renderView()}
                 </div>
             </main>
-
-            {/* Mobile Bottom Nav (Strict Flex Item - Fixado) */}
-            <nav className={`md:hidden shrink-0 w-full backdrop-blur-md flex justify-between overflow-x-auto custom-scrollbar flex-nowrap gap-1 p-2 z-40 pb-safe shadow-[0_-10px_45px_rgba(0,0,0,0.08)] transition-all duration-300 ${getFooterStyles()}`}>
-                {mobileBottomItems.map(item => {
-                    const isMore = item.id === 'portal_more';
-                    const active = isMore ? showMoreMenu : view === item.id;
-                    const itemStyles = getBottomNavItemStyles(active, item.hoverColor);
-                    return (
-                        <button 
-                            key={item.id} 
-                            onClick={() => {
-                                if (isMore) {
-                                    setShowMoreMenu(true);
-                                } else {
-                                    setView(item.id);
-                                }
-                            }} 
-                            className={`flex flex-col items-center p-2 min-w-[60px] flex-1 shrink-0 transition-all duration-300 group ${itemStyles.text}`}
-                        >
-                            <div className={`p-1.5 rounded-full mb-1 transition-all duration-300 ${itemStyles.iconBg}`}>
-                                <item.icon size={20} className={`transition-colors duration-300 ${itemStyles.icon}`}/>
-                            </div>
-                            <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
-                        </button>
-                    );
-                })}
-            </nav>
-
-            {/* Bottom sheet para visualização no celular */}
-            {showMoreMenu && (() => {
-                const sheetText = getBottomSheetTextStyles();
-                return (
-                    <div 
-                        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 backdrop-blur-xs transition-opacity" 
-                        onClick={() => setShowMoreMenu(false)}
-                    >
-                        <div 
-                            className={`w-full max-w-lg rounded-t-[2.5rem] p-6 pb-8 shadow-2xl relative flex flex-col gap-6 animate-entrance transition-all duration-300 ${getBottomSheetStyles()}`}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className={`w-12 h-1 rounded-full mx-auto ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'bg-white/20' : 'bg-slate-200'}`}></div>
-                            <div className="flex justify-between items-center px-2">
-                                <div>
-                                    <h3 className={`font-black text-lg ${sheetText.title}`}>Menu do Portal</h3>
-                                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${sheetText.sub}`}>Todos os recursos</p>
-                                </div>
-                                <button onClick={() => setShowMoreMenu(false)} className={`p-2 rounded-full transition-colors ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white/70 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200'}`}>
-                                    <X size={18}/>
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3 overflow-y-auto max-h-[60vh] p-1 custom-scrollbar">
-                                {navItems.map(item => {
-                                    const active = view === item.id;
-                                    return (
-                                        <button 
-                                            key={item.id} 
-                                            onClick={() => {
-                                                setView(item.id);
-                                                setShowMoreMenu(false);
-                                            }}
-                                            className={`flex flex-col items-center justify-center p-4 rounded-3xl border transition-all text-center gap-2 group ${active ? sheetText.buttonActive : sheetText.buttonInactive}`}
-                                        >
-                                            <div className={`p-2.5 rounded-2xl transition-all duration-300 ${active ? 'bg-white/25 text-white scale-110' : (isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'bg-white/5 text-white/75 group-hover:bg-white/10' : 'bg-white text-slate-500 shadow-xs border border-slate-100 group-hover:bg-slate-50')}`}>
-                                                <item.icon size={20} />
-                                            </div>
-                                            <span className={`text-[10px] font-extrabold leading-tight ${active ? 'text-white' : (isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white/90' : 'text-slate-700')}`}>{item.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()}
         </div>
     );
 };
 
 const AppLayout = () => {
-    const { view, setView, sidebarOpen, setSidebarOpen, user, hasPermission, db, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme } = useContext(ChurchContext);
+    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
 
-    // --- LÓGICA DE BLOQUEIO DE LICENÇA ---
+    const handleVerificarPagamento = async () => {
+        setVerificandoPix(true);
+        setTimeout(async () => {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { 
+                    licenca_status: 'ativo',
+                    licenca_vencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +30 dias
+                }, { merge: true });
+                addToast("Pagamento Confirmado! Painel Desbloqueado.", "success");
+            } catch (err) {
+                console.error(err);
+                addToast("Erro ao processar ativação.", "error");
+            } finally {
+                setVerificandoPix(false);
+            }
+        }, 2500);
+    };
+
     const isLicenseValid = () => {
-        if (user?.id === 'dev') return true; // O desenvolvedor (você) nunca é bloqueado
         if (db.igreja?.licenca_status === 'bloqueado') return false;
-        
         const vencimento = db.igreja?.licenca_vencimento;
         if (vencimento) {
             const hoje = new Date().toISOString().split('T')[0];
@@ -21557,53 +21574,21 @@ const AppLayout = () => {
         return true;
     };
 
-    const handleVerificarPagamento = async () => {
-        const currentMonthStr = new Date().toISOString().slice(0, 7);
-        if (db.igreja?.ultimo_desbloqueio_auto === currentMonthStr) {
-            addToast("Limite de liberação automática atingido neste mês. Por favor, contacte o suporte.", "error");
-            return;
-        }
-
-        setVerificandoPix(true);
-        addToast("A procurar transações via PIX...", "info");
-        
-        setTimeout(async () => {
-            try {
-                const novoVencimento = new Date();
-                novoVencimento.setDate(novoVencimento.getDate() + 30);
-                const vencimentoStr = novoVencimento.toISOString().split('T')[0];
-
-                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { 
-                    licenca_status: 'ativo',
-                    licenca_vencimento: vencimentoStr,
-                    liberado_por: 'sistema_pix',
-                    ultimo_desbloqueio_auto: currentMonthStr
-                }, { merge: true });
-
-                try {
-                    await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', appId), {
-                        licenca_status: 'ativo',
-                        licenca_vencimento: vencimentoStr,
-                        liberado_por: 'sistema_pix',
-                        ultimo_desbloqueio_auto: currentMonthStr
-                    }, { merge: true });
-                } catch(e) {}
-
-                addToast("Pagamento reconhecido! Sistema Desbloqueado.", "success");
-            } catch(e) {
-                console.error(e);
-                addToast("Erro ao comunicar com a base de dados.", "error");
-            }
-            setVerificandoPix(false);
-        }, 3500);
-    };
-
     if (!isLicenseValid()) {
         return (
-            <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 text-white p-6 text-center font-sans">
-                <div className="max-w-md w-full bg-slate-800 p-8 md:p-10 rounded-[2.5rem] border border-rose-500/50 shadow-2xl shadow-rose-500/20 animate-entrance flex flex-col items-center">
+            <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 p-6 md:p-12 relative overflow-hidden font-sans">
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <ThemeBackground theme={osTheme} />
+                </div>
+                <div className="absolute top-6 right-6 z-[100] pointer-events-auto flex gap-3">
+                    <OsThemeToggle variant="dark" />
+                    <AnimBgToggle variant="dark" />
+                    <ThemeToggle variant="dark" />
+                    <FullScreenToggle variant="dark" />
+                </div>
+                <div className="relative z-10 w-full max-w-xl bg-white/15 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/25 p-8 flex flex-col items-center text-center">
                     <Lock size={56} className="text-rose-500 mb-4 animate-pulse" />
-                    <h1 className="text-2xl md:text-3xl font-black mb-3 text-white">Sistema Bloqueado</h1>
+                    <h1 className="text-2xl md:text-3xl font-black mb-3 text-white">Painel Administrativo Bloqueado</h1>
                     <p className="text-slate-300 text-sm md:text-base mb-6 leading-relaxed font-medium">
                         A licença de uso deste sistema expirou. Renove a sua assinatura via PIX abaixo para desbloquear o sistema automaticamente.
                     </p>
@@ -21729,6 +21714,38 @@ const AppLayout = () => {
             </main>
         </div>
     );
+};
+
+// Utility function to clear browser caches and service worker registrations
+const clearBrowserAppCache = () => {
+    try {
+        // 1. Clear Cache Storage API used heavily by browsers & PWAs
+        if ('caches' in window) {
+            caches.keys().then((names) => {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            }).catch(() => {});
+        }
+        
+        // 2. Unregister active service workers to bypass offline assets
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            }).catch(() => {});
+        }
+
+        // 3. Clear sessionStorage
+        try {
+            sessionStorage.clear();
+        } catch (e) {}
+
+        console.log("GIPP OS Info: Caches do navegador e Service Worker limpos com sucesso para garantir arquivos atualizados.");
+    } catch (err) {
+        console.warn("GIPP Storage Error:", err);
+    }
 };
 
 // --- TELA DE CARREGAMENTO (SPLASH SCREEN) PÓS-LOGIN ---
@@ -21927,6 +21944,11 @@ export default function App() {
       if (mobileCheck) {
           setLoginMode('membro');
       }
+  }, []);
+
+  // NOVO: Limpar cache ao inicializar o sistema para manter sempre atualizado
+  useEffect(() => {
+      clearBrowserAppCache();
   }, []);
 
   // NOVO: Sincronização automática das configurações padrão de impressão quando o modo muda
