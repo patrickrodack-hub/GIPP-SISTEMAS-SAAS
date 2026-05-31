@@ -2726,6 +2726,24 @@ const DocumentPreviewModal = ({
     const [zoom, setZoom] = useState(100);
     const [isAutoFit, setIsAutoFit] = useState<boolean>(false);
 
+    const [showWatermark, setShowWatermark] = useState<boolean>(false);
+    const [includeSignatures, setIncludeSignatures] = useState<boolean>(false);
+    const [signatureName1, setSignatureName1] = useState<string>("");
+    const [signatureTitle1, setSignatureTitle1] = useState<string>("");
+    const [signatureName2, setSignatureName2] = useState<string>("");
+    const [signatureTitle2, setSignatureTitle2] = useState<string>("");
+
+    useEffect(() => {
+        if (isOpen && data) {
+            setShowWatermark(false);
+            setIncludeSignatures(false);
+            setSignatureName1(data.igreja?.pastor || "");
+            setSignatureTitle1("Pastor Presidente");
+            setSignatureName2(data.igreja?.tesoureiro1 || "");
+            setSignatureTitle2("Coordenador Financeiro");
+        }
+    }, [isOpen, data]);
+
     if (!isOpen) return null;
 
     const handleAutoFitWidth = () => {
@@ -3136,6 +3154,84 @@ const DocumentPreviewModal = ({
                     </div>
                 </div>
 
+                {/* NOVO: Ajustes Avançados de Layout e Institucionalidade */}
+                <div className="bg-slate-850 px-8 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4 z-10 select-none">
+                    <div className="flex items-center gap-6 flex-wrap">
+                        <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                            <Settings size={12} className="text-indigo-400" /> Customização Institucional:
+                        </span>
+
+                        {/* Toggle de Marca d'água */}
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-350 cursor-pointer hover:text-white transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={showWatermark} 
+                                onChange={e => setShowWatermark(e.target.checked)}
+                                className="accent-indigo-500 rounded border-slate-700 bg-slate-900 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                            />
+                            <span className="flex items-center gap-1"><Award size={13} className="text-slate-400" /> Marca d'água de Fundo</span>
+                        </label>
+                        
+                        <div className="w-px h-4 bg-slate-800"></div>
+
+                        {/* Toggle de Assinaturas */}
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-350 cursor-pointer hover:text-white transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={includeSignatures} 
+                                onChange={e => setIncludeSignatures(e.target.checked)}
+                                className="accent-indigo-500 rounded border-slate-700 bg-slate-900 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                            />
+                            <span className="flex items-center gap-1"><PenTool size={13} className="text-slate-400" /> Incluir Assinaturas Oficiais</span>
+                        </label>
+                    </div>
+
+                    {/* Inputs das assinaturas (Exibidos apenas se "includeSignatures" for verdadeiro) */}
+                    {includeSignatures && (
+                        <div className="flex items-center gap-3 animate-fadeIn flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-indigo-400 uppercase">Assinatura 1:</span>
+                                <input 
+                                    type="text" 
+                                    value={signatureName1} 
+                                    onChange={e => setSignatureName1(e.target.value)} 
+                                    placeholder="Nome da liderança"
+                                    className="bg-slate-900 text-slate-150 text-[11px] font-bold border border-slate-700 rounded-lg px-2 py-1 w-32 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                    title="Nome da Assinatura 1"
+                                />
+                                <input 
+                                    type="text" 
+                                    value={signatureTitle1} 
+                                    onChange={e => setSignatureTitle1(e.target.value)} 
+                                    placeholder="Cargo / Ministério"
+                                    className="bg-slate-900 text-slate-400 text-[11px] font-semibold border border-slate-700 rounded-lg px-2 py-1 w-28 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                    title="Cargo da Assinatura 1"
+                                />
+                            </div>
+                            <span className="text-slate-700 font-bold">•</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-indigo-400 uppercase">Assinatura 2:</span>
+                                <input 
+                                    type="text" 
+                                    value={signatureName2} 
+                                    onChange={e => setSignatureName2(e.target.value)} 
+                                    placeholder="Nome da liderança"
+                                    className="bg-slate-900 text-slate-150 text-[11px] font-bold border border-slate-700 rounded-lg px-2 py-1 w-32 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                    title="Nome da Assinatura 2"
+                                />
+                                <input 
+                                    type="text" 
+                                    value={signatureTitle2} 
+                                    onChange={e => setSignatureTitle2(e.target.value)} 
+                                    placeholder="Cargo / Ministério"
+                                    className="bg-slate-900 text-slate-400 text-[11px] font-semibold border border-slate-700 rounded-lg px-2 py-1 w-28 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                    title="Cargo da Assinatura 2"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Área Interna de Preview com Centralização */}
                 <div className="flex-1 overflow-auto bg-slate-900/50 custom-scrollbar p-6 flex justify-center items-start">
                     <div 
@@ -3156,7 +3252,20 @@ const DocumentPreviewModal = ({
                             }}
                             className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
                         >
-                            <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} contentScale={contentScale} orientation={orientation} />
+                            <PrintSystem 
+                                mode={mode} 
+                                data={data} 
+                                palette={palette} 
+                                marginType={marginType} 
+                                contentScale={contentScale} 
+                                orientation={orientation}
+                                includeSignatures={includeSignatures}
+                                customSignatureName1={signatureName1}
+                                customSignatureTitle1={signatureTitle1}
+                                customSignatureName2={signatureName2}
+                                customSignatureTitle2={signatureTitle2}
+                                showWatermark={showWatermark}
+                            />
                             <PageBoundaryIndicators marginType={marginType} targetHeight={targetHeight} contentRef={contentRef} />
                         </div>
                     </div>
@@ -3182,7 +3291,20 @@ const DocumentPreviewModal = ({
     );
 };
 
-const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', contentScale = 100, orientation = 'landscape' }) => {
+const PrintSystem = ({ 
+    mode, 
+    data, 
+    palette = 'cinza', 
+    marginType = 'abnt', 
+    contentScale = 100, 
+    orientation = 'landscape',
+    includeSignatures = false,
+    customSignatureName1 = '',
+    customSignatureTitle1 = '',
+    customSignatureName2 = '',
+    customSignatureTitle2 = '',
+    showWatermark = false
+}) => {
     if (!mode || !data) return null;
 
     // Configuração de margens dinâmicas de acordo com o seletor de layout
@@ -3227,7 +3349,7 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
     const colors = colorMap[palette as 'cinza' | 'azul' | 'verde'] || colorMap.cinza;
 
     const OfficialHeader = () => (
-        <div className={`flex items-center gap-6 border-b-4 ${colors.borderHeader} pb-4 mb-6 avoid-break`}>
+        <div className={`flex items-center gap-6 border-b-4 ${colors.borderHeader} pb-4 mb-6 avoid-break relative z-10`}>
             {data.igreja?.logo ? (
                 <img src={data.igreja.logo} className="h-20 w-20 object-contain" alt="Logo"/>
             ) : (
@@ -3268,9 +3390,37 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
             width: `${10000 / contentScale}%`,
         } : {};
 
+        // Seção de Assinaturas dinâmicas
+        const SignatureSection = () => {
+            if (!includeSignatures) return null;
+            return (
+                <div className="mt-12 avoid-break pt-8 flex justify-around gap-6 text-center w-full relative z-10 border-t border-slate-200">
+                    <div className="flex flex-col items-center max-w-[250px] flex-1">
+                        <div className="w-48 border-b-2 border-slate-400 mb-2 h-6"></div>
+                        <p className="text-xs font-black uppercase text-slate-800 tracking-tight leading-tight">{customSignatureName1 || data.igreja?.pastor || "Pastor Presidente"}</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{customSignatureTitle1 || "Assinatura do Pastor"}</p>
+                    </div>
+                    <div className="flex flex-col items-center max-w-[250px] flex-1">
+                        <div className="w-48 border-b-2 border-slate-400 mb-2 h-6"></div>
+                        <p className="text-xs font-black uppercase text-slate-800 tracking-tight leading-tight">{customSignatureName2 || data.igreja?.tesoureiro1 || "Tesouaria Coordenadora"}</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{customSignatureTitle2 || "Assinatura Responsável"}</p>
+                    </div>
+                </div>
+            );
+        };
+
         return (
             <div className="w-full bg-white mx-auto print-block relative text-slate-900" style={{ width: '100%', boxSizing: 'border-box', ...selectedMargin }}>
-                <table className="w-full border-collapse">
+                {showWatermark && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.035] pointer-events-none select-none z-0" style={{ transform: 'rotate(-25deg)' }}>
+                        {data.igreja?.logo ? (
+                            <img src={data.igreja.logo} className="w-[380px] h-[380px] object-contain" alt="Watermark Logo" />
+                        ) : (
+                            <span className="font-serif font-black text-6xl tracking-widest text-slate-950 uppercase">{data.igreja?.nome || "GIPP SYSTEM"}</span>
+                        )}
+                    </div>
+                )}
+                <table className="w-full border-collapse relative z-10">
                     <thead className="table-header-group">
                         <tr>
                             <td className="pb-4">
@@ -3283,8 +3433,9 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
                     <tbody>
                         <tr>
                             <td className="align-top">
-                                <div className="w-full flex flex-col gap-2" style={scaleStyle}>
+                                <div className="w-full flex flex-col gap-2 relative z-10" style={scaleStyle}>
                                      {children}
+                                     <SignatureSection />
                                 </div>
                             </td>
                         </tr>
@@ -4288,24 +4439,73 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
         let titleSuffix = 'Controle Financeiro Geral';
         if (data_inicio || data_fim) titleSuffix += ` | Período: ${formatDateLocal(data_inicio) || 'Início'} a ${formatDateLocal(data_fim) || 'Atual'}`;
 
+        const totalVolume = entradas + saidas;
+        const entradaPct = totalVolume > 0 ? (entradas / totalVolume) * 100 : 0;
+        const saidaPct = totalVolume > 0 ? (saidas / totalVolume) * 105 : 0; // slight scale for visual weight
+
         return (
             <PageContainer title="Relatório de Fluxo de Caixa" subtitle={titleSuffix}>
-                <div className="flex gap-4 mb-6 avoid-break">
-                    <div className="flex-1 p-4 border border-slate-300 bg-slate-50 text-center"><p className="text-[10px] font-bold uppercase text-slate-500 mb-1">Total Entradas</p><p className="text-xl font-black text-emerald-600">R$ {entradas.toFixed(2)}</p></div>
-                    <div className="flex-1 p-4 border border-slate-300 bg-slate-50 text-center"><p className="text-[10px] font-bold uppercase text-slate-500 mb-1">Total Saídas (Pagas)</p><p className="text-xl font-black text-rose-600">R$ {saidas.toFixed(2)}</p></div>
-                    <div className="flex-1 p-4 border border-slate-400 bg-slate-100 text-center"><p className="text-[10px] font-bold uppercase text-slate-600 mb-1">Saldo Líquido</p><p className={`text-xl font-black ${saldo >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>R$ {saldo.toFixed(2)}</p></div>
+                {/* KPI Cards Bento Box style */}
+                <div className="grid grid-cols-3 gap-5 mb-6 avoid-break">
+                    <div className="p-4 border border-emerald-250 bg-emerald-50/40 rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-sm">
+                        <div className="absolute top-0 right-0 w-12 h-12 bg-emerald-500/5 rounded-bl-3xl flex items-center justify-center text-emerald-500 font-black text-xs">E</div>
+                        <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Total Entradas</p>
+                        <p className="text-xl font-black text-emerald-800 mt-2">R$ {entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="p-4 border border-rose-250 bg-rose-50/40 rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-sm">
+                        <div className="absolute top-0 right-0 w-12 h-12 bg-rose-500/5 rounded-bl-3xl flex items-center justify-center text-rose-500 font-black text-xs">S</div>
+                        <p className="text-[10px] font-black uppercase text-rose-600 tracking-wider">Total Saídas (Pagas)</p>
+                        <p className="text-xl font-black text-rose-800 mt-2">R$ {saidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className={`p-4 border rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-sm ${saldo >= 0 ? 'border-indigo-250 bg-indigo-50/40' : 'border-amber-250 bg-amber-50/40'}`}>
+                        <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-500/5 rounded-bl-3xl flex items-center justify-center font-black text-xs">L</div>
+                        <p className={`text-[10px] font-black uppercase tracking-wider ${saldo >= 0 ? 'text-indigo-600' : 'text-amber-700'}`}>Saldo Líquido</p>
+                        <p className={`text-xl font-black mt-2 ${saldo >= 0 ? 'text-indigo-800' : 'text-amber-805'}`}>R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
                 </div>
+
+                {/* Balanço Comparativo Proporcional CSS */}
+                <div className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl avoid-break mb-6 shadow-sm">
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">
+                        <span>Balanço Comparativo Proporcional</span>
+                        <span className="text-slate-400 font-bold">Volume Total: R$ {totalVolume.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="w-full h-6 rounded-lg overflow-hidden bg-slate-200 flex border border-slate-300">
+                        {entradaPct > 0 ? (
+                            <div className="bg-emerald-500 h-full flex items-center justify-center text-[10px] font-extrabold text-white transition-all shadow-inner" style={{ width: `${(entradaPct / (entradaPct + saidaPct)) * 100}%` }}>
+                                {entradaPct > 15 ? `Entradas: ${entradaPct.toFixed(1)}%` : `${entradaPct.toFixed(0)}%`}
+                            </div>
+                        ) : null}
+                        {saidaPct > 0 ? (
+                            <div className="bg-rose-500 h-full flex items-center justify-center text-[10px] font-extrabold text-white transition-all shadow-inner" style={{ width: `${(saidaPct / (entradaPct + saidaPct)) * 100}%` }}>
+                                {saidaPct > 15 ? `Saídas: ${saidaPct.toFixed(1)}%` : `${saidaPct.toFixed(0)}%`}
+                            </div>
+                        ) : null}
+                        {totalVolume === 0 ? <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">Sem transações registradas neste período</div> : null}
+                    </div>
+                </div>
+
                 <Table headers={[{label:'Data'}, {label:'Tipo', align:'center'}, {label:'Categoria'}, {label:'Descrição'}, {label:'Valor', align:'right'}]}>
                     {rows.map((r, i) => (
-                        <tr key={i} className={`avoid-break ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                            <td className="p-3 border-r border-slate-200">{formatDateLocal(r.data_competencia || r.data_vencimento)}</td>
-                            <td className="p-3 border-r border-slate-200 text-center"><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${r.tipo==='entrada'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}`}>{r.tipo}</span></td>
-                            <td className="p-3 border-r border-slate-200 text-xs font-bold text-slate-600 uppercase">{r.categoria || '-'}</td>
-                            <td className="p-3 border-r border-slate-200">{r.descricao}</td>
-                            <td className="p-3 text-right font-mono font-bold text-sm">R$ {parseFloat(r.valor).toFixed(2)}</td>
+                        <tr key={i} className={`avoid-break ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
+                            <td className="p-3 border-r border-slate-250 font-mono text-xs text-slate-600">{formatDateLocal(r.data_competencia || r.data_vencimento)}</td>
+                            <td className="p-3 border-r border-slate-250 text-center">
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${r.tipo === 'entrada' ? 'bg-emerald-105 text-emerald-800 border border-emerald-250' : 'bg-rose-105 text-rose-800 border border-rose-250'}`}>
+                                    {r.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                                </span>
+                            </td>
+                            <td className="p-3 border-r border-slate-250 text-xs font-bold text-slate-600 uppercase">{r.categoria || '-'}</td>
+                            <td className="p-3 border-r border-slate-250 text-xs text-slate-700">{r.descricao}</td>
+                            <td className={`p-3 text-right font-mono font-bold text-sm ${r.tipo === 'entrada' ? 'text-emerald-705' : 'text-slate-800'}`}>
+                                {r.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(r.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
                         </tr>
                     ))}
-                    {rows.length === 0 && <tr><td colSpan="5" className="p-4 text-center italic text-slate-500">Nenhum registro encontrado.</td></tr>}
+                    {rows.length === 0 && (
+                        <tr>
+                            <td colSpan={5} className="p-6 text-center italic text-slate-500 font-semibold">Nenhum registro para este período.</td>
+                        </tr>
+                    )}
                 </Table>
             </PageContainer>
         );
@@ -4314,27 +4514,77 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
     // 2 - EBD
     if (mode === 'rel_ebd') {
         const { turmas, alunos, membros } = data;
+        const totalAlunosGeral = alunos.length;
+
         return (
-            <PageContainer title="Escola Bíblica Dominical" subtitle="Relatório de Turmas, Professores e Alunos">
+            <PageContainer title="Relatório de Atividades - EBD" subtitle="Matrículas, Cobertura Docente e Ocupação de Salas">
+                {/* Header Metadados EBD */}
+                <div className="grid grid-cols-3 gap-4 mb-6 avoid-break bg-slate-50 border border-slate-205 p-4 rounded-2xl">
+                    <div className="text-center border-r border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Turmas Ativas</span>
+                        <p className="text-xl font-black text-slate-800 mt-1">{turmas.length}</p>
+                    </div>
+                    <div className="text-center border-r border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Discentes (Alunos)</span>
+                        <p className="text-xl font-black text-indigo-700 mt-1">{totalAlunosGeral}</p>
+                    </div>
+                    <div className="text-center">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Média Alunos / Turma</span>
+                        <p className="text-xl font-black text-emerald-700 mt-1">
+                            {turmas.length > 0 ? (totalAlunosGeral / turmas.length).toFixed(1) : 0}
+                        </p>
+                    </div>
+                </div>
+
                 {turmas.map(t => {
                     const profs = [t.prof1_id, t.prof2_id, t.prof3_id].map(id => membros.find(m=>m.id===id)?.nome).filter(Boolean);
                     const alunosTurma = alunos.filter(a => a.turma_id === t.id);
+                    const ocupacaoPct = totalAlunosGeral > 0 ? (alunosTurma.length / totalAlunosGeral) * 100 : 0;
+
                     return (
-                        <div key={t.id} className="mb-8 border border-slate-400 avoid-break">
-                            <div className="bg-slate-100 p-4 border-b border-slate-400">
-                                <h3 className="text-lg font-black uppercase text-slate-800">{t.nome} <span className="text-sm text-slate-500 font-normal ml-2">({alunosTurma.length} Alunos)</span></h3>
-                                <p className="text-xs font-bold text-slate-600 mt-1">Sala: {t.sala || 'Não definida'} | Professores: {profs.join(', ') || 'Sem professor'}</p>
+                        <div key={t.id} className="mb-6 border border-slate-250 rounded-2xl overflow-hidden shadow-sm avoid-break bg-white">
+                            <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                                <div>
+                                    <h3 className="text-base font-black uppercase text-slate-800 flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                                        {t.nome}
+                                    </h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1.5 flex items-center gap-4">
+                                        <span>Sala: <strong className="text-slate-700 font-extrabold">{t.sala || 'Não definida'}</strong></span>
+                                        <span>Docentes: <strong className="text-slate-700 font-bold">{profs.join(', ') || 'Sem professores vinculados'}</strong></span>
+                                    </p>
+                                </div>
+                                <div className="text-right flex flex-col items-end w-full md:w-fit">
+                                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-150 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                        {alunosTurma.length} Alunos Matriculados
+                                    </span>
+                                    {/* Mini visual indicator space */}
+                                    <div className="w-32 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2 border border-slate-300" title={`${ocupacaoPct.toFixed(1)}% do total geral`}>
+                                        <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${Math.max(4, ocupacaoPct)}%` }}></div>
+                                    </div>
+                                </div>
                             </div>
+                            
                             <div className="p-0">
                                 <table className="w-full text-xs border-collapse">
-                                    <tbody>
+                                    <thead>
+                                        <tr className="bg-slate-100/50 border-b border-slate-205">
+                                            <th className="p-2 w-10 text-center border-r border-slate-200 font-black uppercase text-[9px] text-slate-500">Nº</th>
+                                            <th className="p-2 pl-4 text-left font-black uppercase text-[9px] text-slate-500">Nome Oficial do Aluno Matriculado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-105">
                                         {alunosTurma.map((a, i) => (
-                                            <tr key={a.id} className="border-b border-slate-200 last:border-0 avoid-break">
-                                                <td className="p-2 w-8 text-center border-r border-slate-200 font-bold text-slate-400">{i+1}</td>
-                                                <td className="p-2 font-bold text-slate-700">{a.nome}</td>
+                                            <tr key={a.id} className="hover:bg-slate-55/70 transition-all avoid-break">
+                                                <td className="p-2 border-r border-slate-200 text-center font-bold text-slate-400 font-mono text-[10px]">{i+1}</td>
+                                                <td className="p-2 pl-4 font-bold uppercase text-slate-700 text-xs">{a.nome}</td>
                                             </tr>
                                         ))}
-                                        {alunosTurma.length === 0 && <tr><td className="p-3 italic text-slate-500">Nenhum aluno matriculado nesta turma.</td></tr>}
+                                        {alunosTurma.length === 0 && (
+                                            <tr>
+                                                <td colSpan={2} className="p-4 text-center italic text-slate-400 font-medium">Nenhum discente cadastrado nesta classe.</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -4361,40 +4611,110 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
             return true;
         });
 
-        let saldoMissoes = finFiltrado.reduce((acc, curr) => acc + (curr.tipo==='entrada'?parseFloat(curr.valor):-parseFloat(curr.valor)), 0);
+        const entradasMissoes = finFiltrado.filter(f => f.tipo === 'entrada').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+        const saidasMissoes = finFiltrado.filter(f => f.tipo === 'saida').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+        const saldoMissoes = entradasMissoes - saidasMissoes;
+
         return (
-            <PageContainer title="Departamento de Missões" subtitle="Missionários, Agências e Caixa">
-                <div className="mb-6">
-                    <h3 className="font-bold text-sm bg-slate-800 text-white p-2 uppercase tracking-widest mb-2">1. Missionários Apoiados</h3>
-                    <Table headers={[{label:'Nome'}, {label:'Campo de Atuação'}, {label:'Agência'}]}>
-                        {missionarios.map((m, i) => <tr key={i} className="border-b"><td className="p-2 font-bold">{m.nome}</td><td className="p-2">{m.campo}</td><td className="p-2 text-xs">{m.agencia}</td></tr>)}
-                        {missionarios.length===0 && <tr><td colSpan="3" className="p-2 text-center italic">Sem registros.</td></tr>}
-                    </Table>
+            <PageContainer title="Secretaria de Evangelismo & Missões" subtitle="Acompanhamento Missionário e Balancete do Fundo Missionário">
+                {/* KPI Metrics */}
+                <div className="grid grid-cols-4 gap-4 mb-6 avoid-break">
+                    <div className="p-4 border border-indigo-150 bg-indigo-50/40 rounded-2xl text-center shadow-sm">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Campos Ativos</span>
+                        <p className="text-xl font-black text-indigo-850 mt-1">{missionarios.length}</p>
+                    </div>
+                    <div className="p-4 border border-indigo-150 bg-indigo-50/40 rounded-2xl text-center shadow-sm">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Agências Parceiras</span>
+                        <p className="text-xl font-black text-slate-800 mt-1">{agencias.length}</p>
+                    </div>
+                    <div className="p-4 border border-emerald-150 bg-emerald-50/40 rounded-2xl text-center shadow-sm">
+                        <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider block">Entradas Fundo</span>
+                        <p className="text-xl font-black text-emerald-800 mt-1">R$ {entradasMissoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="p-4 border border-rose-150 bg-rose-50/40 rounded-2xl text-center shadow-sm">
+                        <span className="text-[10px] font-black uppercase text-rose-600 tracking-wider block">Apoio Enviado</span>
+                        <p className="text-xl font-black text-rose-800 mt-1">R$ {saidasMissoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
                 </div>
 
-                <div className="mb-6">
-                    <h3 className="font-bold text-sm bg-slate-800 text-white p-2 uppercase tracking-widest mb-2">2. Agências Parceiras</h3>
-                    <Table headers={[{label:'Agência'}, {label:'Responsável'}]}>
-                        {agencias.map((a, i) => <tr key={i} className="border-b"><td className="p-2 font-bold">{a.nome}</td><td className="p-2">{a.responsavel}</td></tr>)}
-                        {agencias.length===0 && <tr><td colSpan="2" className="p-2 text-center italic">Sem registros.</td></tr>}
-                    </Table>
+                {/* Subtitle balance info */}
+                <div className="bg-indigo-950 text-white rounded-2xl p-4.5 flex justify-between items-center mb-6 shadow-sm avoid-break">
+                    <div>
+                        <span className="text-[9px] font-bold text-indigo-300 uppercase tracking-widest block">Exercício Consolidado</span>
+                        <h4 className="text-sm font-black uppercase tracking-wider mt-0.5">Saldo Operacional de Missões</h4>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-[10px] text-indigo-200">Saldo Atual do Fundo</span>
+                        <p className="text-lg font-black font-mono">R$ {saldoMissoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
                 </div>
 
-                <div>
-                    <h3 className="font-bold text-sm bg-slate-800 text-white p-2 uppercase tracking-widest mb-2 flex justify-between avoid-break">
-                        <span>3. Fluxo Caixa Missões {data_inicio || data_fim ? `(${formatDateLocal(data_inicio)||'Início'} a ${formatDateLocal(data_fim)||'Atual'})` : ''}</span>
-                        <span>Saldo: R$ {saldoMissoes.toFixed(2)}</span>
+                <div className="mb-6 avoid-break">
+                    <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider mb-2 border-b-2 border-slate-200 pb-1 flex items-center gap-1.5">
+                        <span className="w-1.5 h-4 bg-indigo-600 rounded-full inline-block"></span>
+                        1. Missionários Apoiados em Atividade
                     </h3>
-                    <Table headers={[{label:'Data'}, {label:'Histórico'}, {label:'E/S', align:'center'}, {label:'Valor', align:'right'}]}>
-                        {finFiltrado.map((f, i) => (
-                            <tr key={i} className="border-b avoid-break">
-                                <td className="p-3 border-r border-slate-200">{formatDateLocal(f.data_competencia)}</td>
-                                <td className="p-3 border-r border-slate-200 text-xs">{f.descricao}</td>
-                                <td className="p-3 border-r border-slate-200 text-center font-bold text-[10px] uppercase">{f.tipo==='entrada'?'Entrada':'Saída'}</td>
-                                <td className="p-3 text-right font-mono font-bold text-sm">R$ {parseFloat(f.valor).toFixed(2)}</td>
+                    <Table headers={[{label:'Apoiado / Missionário'}, {label:'Campo de Atuação Geográfica'}, {label:'Agenciador / Convênio'}]}>
+                        {missionarios.map((m, i) => (
+                            <tr key={i} className="border-b text-xs hover:bg-slate-50/50">
+                                <td className="p-3 font-semibold text-slate-800 uppercase">{m.nome}</td>
+                                <td className="p-3 font-medium text-slate-600">{m.campo}</td>
+                                <td className="p-3 text-slate-500 font-medium">{m.agencia}</td>
                             </tr>
                         ))}
-                         {finFiltrado.length===0 && <tr><td colSpan="4" className="p-4 text-center italic">Sem movimentação financeira vinculada.</td></tr>}
+                        {missionarios.length === 0 && (
+                            <tr>
+                                <td colSpan={3} className="p-4 text-center italic text-slate-400 font-medium font-semibold">Nenhum missionário cadastrado atualmente.</td>
+                            </tr>
+                        )}
+                    </Table>
+                </div>
+
+                <div className="mb-6 avoid-break">
+                    <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider mb-2 border-b-2 border-slate-200 pb-1 flex items-center gap-1.5">
+                        <span className="w-1.5 h-4 bg-indigo-600 rounded-full inline-block"></span>
+                        2. Agências Parceiras e Secretarias CCM
+                    </h3>
+                    <Table headers={[{label:'Agência Social ou Coordenadora'}, {label:'Responsável Operativo Administrativo'}]}>
+                        {agencias.map((a, i) => (
+                            <tr key={i} className="border-b text-xs hover:bg-slate-50/50">
+                                <td className="p-3 font-semibold text-slate-800 uppercase">{a.nome}</td>
+                                <td className="p-3 font-medium text-slate-600">{a.responsavel}</td>
+                            </tr>
+                        ))}
+                        {agencias.length === 0 && (
+                            <tr>
+                                <td colSpan={2} className="p-4 text-center italic text-slate-400 font-medium font-semibold">Nenhuma agência missionária cadastrada.</td>
+                            </tr>
+                        )}
+                    </Table>
+                </div>
+
+                <div className="avoid-break">
+                    <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider mb-2 border-b-2 border-slate-200 pb-1 flex items-center gap-1.5">
+                        <span className="w-1.5 h-4 bg-indigo-600 rounded-full inline-block"></span>
+                        3. Extrato de Caixa da Secretaria de Missões
+                    </h3>
+                    <Table headers={[{label:'Data Competência'}, {label:'Histórico da Transação'}, {label:'Operação', align:'center'}, {label:'Valor Operado', align:'right'}]}>
+                        {finFiltrado.map((f, i) => (
+                            <tr key={i} className="border-b text-xs hover:bg-slate-50/50 avoid-break">
+                                <td className="p-3 border-r border-slate-200 font-mono text-slate-600">{formatDateLocal(f.data_competencia)}</td>
+                                <td className="p-3 border-r border-slate-200 text-slate-700 font-medium">{f.descricao}</td>
+                                <td className="p-3 border-r border-slate-200 text-center">
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${f.tipo==='entrada'?'bg-emerald-100 text-emerald-800 border border-emerald-250':'bg-rose-100 text-rose-800 border border-rose-250'}`}>
+                                        {f.tipo==='entrada'?'Entrada':'Saída'}
+                                    </span>
+                                </td>
+                                <td className={`p-3 text-right font-mono font-bold text-sm ${f.tipo==='entrada'?'text-emerald-700':'text-slate-800'}`}>
+                                    R$ {parseFloat(f.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                            </tr>
+                        ))}
+                        {finFiltrado.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="p-4 text-center italic text-slate-450 font-medium">Nenhuma movimentação para o caixa de missões.</td>
+                            </tr>
+                        )}
                     </Table>
                 </div>
             </PageContainer>
@@ -4405,36 +4725,68 @@ const PrintSystem = ({ mode, data, palette = 'cinza', marginType = 'abnt', conte
     if (mode === 'rel_carnes') {
         const { carnes, membros } = data;
         let totalGeral = 0, recebidoGeral = 0;
+
         return (
-            <PageContainer title="Controle de Carnês" subtitle="Encontro de Contas e Contribuintes">
+            <PageContainer title="Relatório de Contribuintes & Carnês" subtitle="Encontro de Contas, Campanhas e Dotações Coletivas">
                 {carnes.map(c => {
                     const totalCampanha = parseFloat(c.valor_total) || 0;
                     const recebido = (c.parcelas||[]).filter(p=>p.status==='pago').reduce((a,curr)=>a+(parseFloat(curr.valor)||0), 0);
                     const pendente = totalCampanha - recebido;
                     totalGeral += totalCampanha; recebidoGeral += recebido;
+
+                    // Proporção de quitação da campanha individual
+                    const quitacaoPct = totalCampanha > 0 ? (recebido / totalCampanha) * 100 : 0;
+
                     return (
-                        <div key={c.id} className="mb-6 border-2 border-slate-300 avoid-break">
-                            <div className="bg-slate-100 p-3 border-b border-slate-300 flex justify-between items-center">
-                                <div><h3 className="font-bold text-slate-800 uppercase text-sm">{c.titulo}</h3><p className="text-[10px] text-slate-500 uppercase font-bold mt-0.5">Contribuinte: {membros.find(m=>m.id===c.membro_id)?.nome || 'Não identificado'}</p></div>
-                                <div className="text-right text-[10px] font-bold uppercase"><p>Total: R$ {totalCampanha.toFixed(2)}</p><p className="text-emerald-600">Pago: R$ {recebido.toFixed(2)}</p><p className="text-rose-600">Restante: R$ {pendente.toFixed(2)}</p></div>
+                        <div key={c.id} className="mb-6 border border-slate-250 rounded-2xl overflow-hidden shadow-sm avoid-break bg-white">
+                            <div className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                                <div>
+                                    <h3 className="font-extrabold text-slate-850 uppercase text-xs flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                                        {c.titulo}
+                                    </h3>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-1.5">
+                                        Contribuinte: <span className="text-slate-800 font-extrabold">{membros.find(m=>m.id===c.membro_id)?.nome || 'Não identificado'}</span>
+                                    </p>
+                                </div>
+                                <div className="text-right flex flex-col items-end gap-1 w-full md:w-fit">
+                                    <div className="flex gap-4 text-[10px] font-black uppercase tracking-wider text-slate-650">
+                                        <span>Total: <strong className="text-slate-900 font-extrabold">R$ {totalCampanha.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                                        <span className="text-emerald-700">Pago: <strong className="font-extrabold">R$ {recebido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                                        <span className="text-rose-700">Pendente: <strong className="font-extrabold">R$ {pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                                    </div>
+                                    {/* Progress campaign bar */}
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                        <span className="text-[9px] font-black text-indigo-600 font-mono">{quitacaoPct.toFixed(0)}% Quitada</span>
+                                        <div className="w-24 bg-slate-200 h-1.5 rounded-full overflow-hidden border border-slate-300" title={`${quitacaoPct.toFixed(1)}% integrado`}>
+                                            <div className="bg-emerald-500 h-full rounded-full animate-pulse" style={{ width: `${quitacaoPct}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex flex-wrap p-2 gap-2">
+                            <div className="flex flex-wrap p-3 gap-2 bg-slate-50/15">
                                 {(c.parcelas||[]).map((p, i) => (
-                                    <div key={i} className={`text-[9px] border px-2 py-1 flex items-center gap-2 ${p.status==='pago'?'border-emerald-300 bg-emerald-50 text-emerald-800':'border-slate-300 bg-white text-slate-500'}`}>
-                                        <span className="font-bold">P{p.numero}</span> <span>{formatDateLocal(p.vencimento)}</span>
-                                        {p.status === 'pago' ? <span className="font-black">PAGO</span> : <span>PENDENTE</span>}
+                                    <div key={i} className={`text-[9px] border px-2.5 py-1.5 rounded-lg flex items-center gap-2 font-bold shadow-sm transition-all ${p.status==='pago'?'border-emerald-200 bg-emerald-50/60 text-emerald-800':'border-slate-200 bg-white text-slate-500'}`}>
+                                        <span className="uppercase text-slate-700">P{p.numero}</span> 
+                                        <span className="font-mono font-medium">{formatDateLocal(p.vencimento)}</span>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'pago' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                        <span className="text-[8px] font-black uppercase">{p.status === 'pago' ? 'PAGO' : 'Pendente'}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     );
                 })}
-                <div className="mt-8 border-t-4 border-slate-900 pt-4 flex justify-end">
-                    <div className="text-right w-64">
-                         <h3 className="font-black text-sm uppercase mb-2">Resumo Geral de Carnês</h3>
-                         <div className="flex justify-between border-b border-slate-200 py-1"><span className="text-xs font-bold text-slate-500">Total Esperado</span><span className="font-mono font-bold">R$ {totalGeral.toFixed(2)}</span></div>
-                         <div className="flex justify-between border-b border-slate-200 py-1"><span className="text-xs font-bold text-slate-500">Total Recebido</span><span className="font-mono font-bold text-emerald-600">R$ {recebidoGeral.toFixed(2)}</span></div>
-                         <div className="flex justify-between py-1"><span className="text-xs font-bold text-slate-500">Saldo a Receber</span><span className="font-mono font-black text-rose-600">R$ {(totalGeral - recebidoGeral).toFixed(2)}</span></div>
+
+                {/* Resumo Final box */}
+                <div className="mt-8 border-t border-slate-300 pt-6 flex justify-end avoid-break">
+                    <div className="bg-slate-50 border border-slate-250 rounded-2xl p-5 w-80 shadow-sm">
+                         <h3 className="font-black text-xs uppercase mb-3 text-slate-700 tracking-wider text-center">Balancete Geral de Carnês</h3>
+                         <div className="space-y-2 text-xs">
+                             <div className="flex justify-between border-b border-slate-200 pb-1.5"><span className="font-bold text-slate-500">Total Previsto Esperado</span><span className="font-mono font-extrabold text-slate-800">R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                             <div className="flex justify-between border-b border-slate-200 pb-1.5"><span className="font-bold text-slate-500">Total Efetivamente Recebido</span><span className="font-mono font-black text-emerald-700">R$ {recebidoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                             <div className="flex justify-between pt-1"><span className="font-bold text-slate-500">Total Restante em Aberto</span><span className="font-mono font-black text-rose-700">R$ {(totalGeral - recebidoGeral).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                         </div>
                     </div>
                 </div>
             </PageContainer>
