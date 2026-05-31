@@ -2349,8 +2349,9 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                  const gruposPermissoes = [
                      { titulo: "Administrativo & Cadastros", opcoes: [ { id: 'access_membros', label: 'Gestão de Membros & Acessos do Portal' }, { id: 'access_visitantes', label: 'CRM de Visitantes & Consolidação' }, { id: 'access_igreja', label: 'Matriz, Filiais & Contas Bancárias' }, { id: 'access_patrimonio', label: 'Gestão de Patrimônio & Inventário' }, { id: 'access_celulas', label: 'Células e Grupos' }, { id: 'access_ministerios', label: 'Ministérios (Departamentos)' } ] },
                      { titulo: "Financeiro", opcoes: [ { id: 'access_fin_entradas', label: 'Entradas e Dízimos' }, { id: 'access_fin_saidas', label: 'Saídas e Despesas' }, { id: 'access_fin_analise', label: 'DRE, Relatórios & Conciliação Bancária' }, { id: 'access_fin_carnes', label: 'Gestão de Carnês & Engajamento' }, { id: 'access_fin_cadastros', label: 'Utilitários (Fornecedores/C. Custo)' } ] },
-                     { titulo: "Secretaria & Módulos", opcoes: [ { id: 'access_sec_agenda', label: 'Secretaria Digital (Agenda/Tarefas/Whats)' }, { id: 'access_sec_certificados', label: 'Certificados, Estúdio de Carteirinhas & Credenciais' }, { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, { id: 'access_ebd', label: 'Escola Bíblica (EBD) & Cursos (EAD)' }, { id: 'access_missoes', label: 'Missões (Missionários/Agências/Caixa)' } ] },
-                     { titulo: "Comunicação, Mídia & IA", opcoes: [ { id: 'access_midia', label: 'Estúdio GIPP (Artes e Redes Sociais)' }, { id: 'access_boletim', label: 'Gestão do Boletim Digital' }, { id: 'access_email', label: 'Webmail Direto (Caixa de Entrada)' }, { id: 'access_ia', label: 'Assistente Pastoral IA' } ] }
+                     { titulo: "Secretaria & Módulos", opcoes: [ { id: 'access_sec_agenda', label: 'Secretaria Digital (Agenda/Tarefas/Whats)' }, { id: 'access_sec_certificados', label: 'Certificados, Estúdio de Carteirinhas & Credenciais' }, { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, { id: 'access_ebd', label: 'Gestão EBD' }, { id: 'access_missoes', label: 'Missões (Missionários/Agências/Caixa)' } ] },
+                     { titulo: "Comunicação, Mídia & IA", opcoes: [ { id: 'access_midia', label: 'Estúdio GIPP (Artes e Redes Sociais)' }, { id: 'access_boletim', label: 'Gestão do Boletim Digital' }, { id: 'access_email', label: 'Webmail Direto (Caixa de Entrada)' }, { id: 'access_ia', label: 'Assistente Pastoral IA' } ] },
+                     { titulo: "Configurações Avançadas", opcoes: [ { id: 'access_config_sistema', label: 'Configurações de Sistemas' }, { id: 'access_config_visual', label: 'Personalização Visual' }, { id: 'access_config_backup', label: 'Backup Geral de Dados' }, { id: 'access_auditoria', label: 'Auditoria & Logs' }, { id: 'access_lixeira', label: 'Lixeira Virtual' } ] }
                  ];
                  const togglePermissao = (permId) => { const atuais = data.permissoes || []; if (atuais.includes(permId)) { setData({ ...data, permissoes: atuais.filter(p => p !== permId) }); } else { setData({ ...data, permissoes: [...atuais, permId] }); } };
                  const toggleAllInGroup = (opcoes) => { const atuais = data.permissoes || []; const todosIds = opcoes.map(o => o.id); const todosPresentes = todosIds.every(id => atuais.includes(id)); if (todosPresentes) { setData({ ...data, permissoes: atuais.filter(id => !todosIds.includes(id)) }); } else { const novos = [...new Set([...atuais, ...todosIds])]; setData({ ...data, permissoes: novos }); } };
@@ -7869,7 +7870,8 @@ const ModuleDesenvolvedor = () => {
         {id: 'config_backup', label: 'Backup Geral'},
         {id: 'auditoria', label: 'Auditoria & Logs'},
         {id: 'lixeira', label: 'Lixeira Virtual'},
-        {id: 'config_visual', label: 'Personalização Visual'}
+        {id: 'config_visual', label: 'Personalização Visual'},
+        {id: 'config_sistema', label: 'Configurações de Sistemas'}
     ];
 
     const handleSavePlanosConfig = async () => {
@@ -20530,14 +20532,14 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     </div>
                 )}
 
-                {hasPermission('master') && (
+                {(hasPermission('master') || hasPermission('access_config_sistema') || hasPermission('access_config_visual') || hasPermission('access_config_backup') || hasPermission('access_auditoria') || hasPermission('access_lixeira')) && (
                     <div>
                         <MenuGroup label="Sistema Avançado" />
-                        {checkPlan('config_visual') && <MenuItem id="config_sistema" icon={Settings} label="Configurações do Sistema" />}
-                        {checkPlan('config_visual') && <MenuItem id="config_visual" icon={Palette} label="Personalização Visual" />}
-                        {checkPlan('config_backup') && <MenuItem id="config_backup" icon={Database} label="Backup Geral" />}
-                        {checkPlan('auditoria') && <MenuItem id="auditoria" icon={ShieldCheck} label="Auditoria & Logs" />}
-                        {checkPlan('lixeira') && <MenuItem id="lixeira" icon={Trash2} label="Lixeira Virtual" />}
+                        {hasPermission('access_config_sistema') && checkPlan('config_sistema') && <MenuItem id="config_sistema" icon={Settings} label="Configurações do Sistema" />}
+                        {hasPermission('access_config_visual') && checkPlan('config_visual') && <MenuItem id="config_visual" icon={Palette} label="Personalização Visual" />}
+                        {hasPermission('access_config_backup') && checkPlan('config_backup') && <MenuItem id="config_backup" icon={Database} label="Backup Geral" />}
+                        {hasPermission('access_auditoria') && checkPlan('auditoria') && <MenuItem id="auditoria" icon={ShieldCheck} label="Auditoria & Logs" />}
+                        {hasPermission('access_lixeira') && checkPlan('lixeira') && <MenuItem id="lixeira" icon={Trash2} label="Lixeira Virtual" />}
                     </div>
                 )}
 
@@ -23786,14 +23788,14 @@ const AppLayout = () => {
         'fin_conciliacao': { component: ModuleConciliacaoBancaria, access: 'access_fin_analise' },
         'fin_carnes': { component: ModuleCarnes, access: 'access_fin_carnes' },
         'fin_utilitarios': { component: ModuleUtilitarios, access: 'access_fin_cadastros' },
-        'config_backup': { component: ModuleBackup, access: 'master' },
-        'auditoria': { component: ModuleAuditoria, access: 'master' },
-        'lixeira': { component: ModuleLixeira, access: 'master' },
+        'config_backup': { component: ModuleBackup, access: 'access_config_backup' },
+        'auditoria': { component: ModuleAuditoria, access: 'access_auditoria' },
+        'lixeira': { component: ModuleLixeira, access: 'access_lixeira' },
         'sobre': { component: ModuleSobre, access: 'public' },
         'portal_pastor': { component: ModulePortalPastor, access: 'public' },
         'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
-        'config_visual': { component: ModuleConfigVisual, access: 'master' },
-        'config_sistema': { component: ModuleConfiguracoesSistemas, access: 'master' },
+        'config_visual': { component: ModuleConfigVisual, access: 'access_config_visual' },
+        'config_sistema': { component: ModuleConfiguracoesSistemas, access: 'access_config_sistema' },
         'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
