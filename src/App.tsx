@@ -18103,7 +18103,7 @@ const ModuleBoletim = () => {
 };
 
 const Sidebar = ({ view, setView, open, setOpen, user }) => {
-    const { handleLogoutRequest, db, hasPermission } = useContext(ChurchContext); 
+    const { handleLogoutRequest, db, hasPermission, addToast } = useContext(ChurchContext); 
     
     // --- NOVO: LÓGICA DE VERIFICAÇÃO DE PLANOS (SaaS) ---
     const checkPlan = (moduleId) => {
@@ -18166,18 +18166,27 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const active = view === id;
         const hoverColor = iconColors[id] || 'group-hover:text-indigo-600';
 
+        const isMary = user?.usuario?.toLowerCase() === 'mary';
+        const isAllowedForMary = id === 'suporte_dev' || id === 'changelog' || id === 'sobre';
+        const isMaryDisabled = isMary && !isAllowedForMary;
+
         return (
             <button 
                 onClick={() => { 
+                    if (isMaryDisabled) {
+                        addToast("Acesso inativo para o Assistente Virtual Mary.", "warning");
+                        return;
+                    }
                     playMenuSound(); // Efeito sonoro no clique
                     setView(id); 
                 }} 
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative mb-1.5 overflow-hidden ${active ? 'text-white shadow-xl shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative mb-1.5 overflow-hidden ${active ? 'text-white shadow-xl shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'} ${isMaryDisabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
             >
                 {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 animate-slide-in z-0"></div>}
                 <div className="relative z-10 flex items-center gap-4 w-full">
-                    <Icon size={20} className={`transition-transform duration-300 ${active ? 'text-white scale-110' : `${hoverColor} group-hover:scale-110`}`} />
-                    {open && <span className={`font-bold text-sm tracking-wide transition-colors duration-300 ${active ? 'text-white' : ''}`}>{label}</span>}
+                    <Icon size={20} className={`transition-transform duration-300 ${active ? 'text-white scale-110' : `${hoverColor} group-hover:scale-110`} ${isMaryDisabled ? 'text-slate-400' : ''}`} />
+                    {open && <span className={`font-bold text-sm tracking-wide transition-colors duration-300 ${active ? 'text-white' : ''} ${isMaryDisabled ? 'text-slate-400' : ''}`}>{label}</span>}
+                    {isMaryDisabled && open && <Lock size={12} className="text-slate-400 ml-auto shrink-0 animate-pulse" />}
                 </div>
             </button>
         );
@@ -18278,11 +18287,11 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     </div>
                 )}
 
-                {/* Exclusivo para o Desenvolvedor (Master Owner) */}
-                {user?.id === 'dev' && (
+                {/* Exclusivo para o Desenvolvedor (Master Owner) e Assistente Virtual Mary */}
+                {(user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary') && (
                     <div>
-                        <MenuGroup label="Desenvolvedor (Dev)" />
-                        <MenuItem id="desenvolvedor" icon={Code} label="Painel Master SaaS" />
+                        <MenuGroup label="Desenvolvedor & Suporte" />
+                        {user?.id === 'dev' && <MenuItem id="desenvolvedor" icon={Code} label="Painel Master SaaS" />}
                         <MenuItem id="suporte_dev" icon={Headset} label="Op. de Suporte" />
                     </div>
                 )}
@@ -21575,7 +21584,13 @@ const AppLayout = () => {
                     </div>
                 </div>
                 
-                {hasPermission(access) ? (
+                {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'changelog' && view !== 'sobre') ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                        <Lock size={64} className="text-rose-500 mb-8 animate-bounce"/>
+                        <h2 className="text-4xl font-black text-slate-800 tracking-tight leading-tight mb-2">Acesso Inativo</h2>
+                        <p className="text-sm text-slate-500 font-medium max-w-md">Este módulo está inativo para a conta de Assistente Virtual Mary.</p>
+                    </div>
+                ) : hasPermission(access) ? (
                     <div className="max-w-[1800px] mx-auto pb-16">
                         <ErrorBoundary><CurrentModule /></ErrorBoundary>
                     </div>
@@ -21591,7 +21606,7 @@ const AppLayout = () => {
 };
 
 // --- TELA DE CARREGAMENTO (SPLASH SCREEN) PÓS-LOGIN ---
-const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false }) => {
+const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false, isMaryMode = false }) => {
     const [progress, setProgress] = useState(0);
     const [step, setStep] = useState(-1);
 
@@ -21676,6 +21691,13 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         <div className="mt-6 px-5 py-2 bg-emerald-500/20 border border-emerald-500/50 rounded-full animate-slide-up-fade backdrop-blur-md shadow-[0_0_15px_rgba(16,185,129,0.3)]" style={{ opacity: 0, animationDelay: '2s', animationFillMode: 'forwards' }}>
                             <span className="text-xs md:text-sm font-black text-emerald-400 uppercase tracking-[0.3em] flex items-center gap-2">
                                 <Code size={16} /> Modo Desenvolvedor
+                            </span>
+                        </div>
+                    )}
+                    {isMaryMode && (
+                        <div className="mt-6 px-5 py-2 bg-indigo-500/20 border border-indigo-500/50 rounded-full animate-slide-up-fade backdrop-blur-md shadow-[0_0_15px_rgba(99,102,241,0.3)]" style={{ opacity: 0, animationDelay: '2s', animationFillMode: 'forwards' }}>
+                            <span className="text-xs md:text-sm font-black text-indigo-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                <Sparkles size={16} className="animate-pulse" /> ASSISTENTE VIRTUAL MARY
                             </span>
                         </div>
                     )}
@@ -22376,6 +22398,13 @@ export default function App() {
           addToast("Master", 'success'); 
           return; 
       }
+      if (u.toLowerCase().trim() === 'mary' && p === '2007') {
+          setUser({ id: 'usr-mary', nome: "Mary", usuario: "Mary", senha: "2007", nivel: "virtual_assistant", permissoes: [] });
+          setView('suporte_dev');
+          setIsSystemBooting(true);
+          addToast("Olá, Assistente Mary!", 'success');
+          return;
+      }
       const found = db.usuarios.find(usr => (usr.usuario || '').toLowerCase() === u.toLowerCase() && usr.senha === p);
       if (found) { 
           setUser(found); 
@@ -22402,6 +22431,7 @@ export default function App() {
   const closeModal = () => { setModalOpen(false); setEditingItem(null); setFormData({}); };
   const hasPermission = (perm) => { 
       if (!user) return false; 
+      if (user.usuario?.toLowerCase() === 'mary') return true;
       if (perm === 'public' || user.nivel === 'master') return true; 
       
       if (user.funcao_administrativa) {
@@ -22770,7 +22800,7 @@ export default function App() {
           <GlobalStyles />
           <OsThemeStyles />
           <ToastContainer toasts={toasts} removeToast={removeToast} />
-          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} />}
+          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} />}
           
           <div className="absolute top-6 right-6 z-[100] pointer-events-auto hidden sm:flex gap-3">
               <OsThemeToggle variant="dark" />
@@ -23093,7 +23123,7 @@ export default function App() {
         <DynamicPrintStyles orientation={printOrientation} marginType={printMarginType} mode={printMode} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         <FloatingChatWidget />
-        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} />}
+        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} />}
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
         <BackupModal backupState={backupState} onConfirm={handleBackupConfirm} onCancel={handleBackupCancel} />
