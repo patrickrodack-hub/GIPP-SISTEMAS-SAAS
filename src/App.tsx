@@ -21,7 +21,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
