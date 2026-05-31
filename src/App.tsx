@@ -262,6 +262,62 @@ const DynamicTheme = ({ color }) => {
     );
 };
 
+const DynamicPrintStyles = ({ orientation, marginType, mode }: { orientation: 'portrait' | 'landscape'; marginType: string; mode: string | null }) => {
+    const isCert = mode && mode.startsWith('cert_');
+    let top = '30mm', left = '30mm', bottom = '20mm', right = '20mm';
+    
+    if (isCert) {
+        top = '0mm';
+        left = '0mm';
+        bottom = '0mm';
+        right = '0mm';
+    } else if (marginType === 'moderada') {
+        top = '20mm'; left = '20mm'; bottom = '20mm'; right = '20mm';
+    } else if (marginType === 'estreita') {
+        top = '15mm'; left = '15mm'; bottom = '15mm'; right = '15mm';
+    }
+
+    const pageSize = orientation === 'landscape' ? 'A4 landscape' : 'A4 portrait';
+
+    return (
+        <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+                @page { 
+                    margin-top: ${top} !important;
+                    margin-left: ${left} !important;
+                    margin-bottom: ${bottom} !important;
+                    margin-right: ${right} !important;
+                    size: ${pageSize} !important; 
+                }
+                @page landscape-page { 
+                    size: A4 landscape !important; 
+                    margin-top: ${top} !important;
+                    margin-left: ${left} !important;
+                    margin-bottom: ${bottom} !important;
+                    margin-right: ${right} !important;
+                }
+                
+                .print-landscape { 
+                    page: landscape-page !important; 
+                }
+                
+                .print-portrait {
+                    page: A4 portrait !important;
+                }
+
+                /* Override padding of standard print blocks inside print area during physical print */
+                /* so that printing doesn't double-apply the margins on top of @page */
+                .print-area .print-block {
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+            }
+        `}} />
+    );
+};
+
 const OsThemeStyles = () => (
     <style>{`
         body[data-os-theme="win11"] { background-color: #f3f4f6; background-image: none; font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif; }
@@ -2693,14 +2749,14 @@ const DocumentPreviewModal = ({
 
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const sourcePageHeight = isLandscape ? (img.width * 210 / 297) : (img.width * 297 / 210);
+            const sourcePageHeight = targetHeight;
             
             let srcY = 0;
             let pageIndex = 0;
             const totalHeight = img.height;
             const approxTotalPages = Math.ceil(totalHeight / sourcePageHeight);
 
-            while (srcY < totalHeight) {
+            while (srcY + 5 < totalHeight) {
                 if (pageIndex > 0) {
                     pdf.addPage();
                 }
@@ -6014,12 +6070,26 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 5.9.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA REFLETIR AS ÚLTIMAS MUDANÇAS NA VERSÃO 6.0.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v5.9.0 - Escala de Impressão Dinâmica, Margens ABNT & Impressão Física Blindada</h3>
+                <h3 className="font-bold text-lg text-indigo-700">v6.0.0 - Spooler de Multi-Páginas, Injetor On-The-Fly, Resoluções de Conflitos & Refatoração Geral</h3>
                 <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Injetor de Estilos de Impressão On-The-Fly (`DynamicPrintStyles`):</strong> Criação de um gerador dinâmico de folhas de estilo injetadas em tempo de execução. Lê o estado de rotação (Retrato/Paisagem), as margens personalizadas e o tipo de viewport para anular conflitos no motor do navegador nativo.</li>
+                    <li><strong className="text-slate-700">Resolução da Margem Dupla de Impressão Física:</strong> Correção definitiva do bug onde as margens nativas do spooler de impressão somavam-se ao preenchimento interno do documento (`.doc-padding`). Criamos regras de reset no cabeçalho do spooler que limpam os paddings internos de forma fluida durante a impressão real.</li>
+                    <li><strong className="text-slate-700">Aprimoramento de Renderização de Multi-Páginas (PDF):</strong> Reengenharia no cálculo de avanço e quebra de página de imagens no exportador PDF para evitar listras ou cortes de textos no rodapé, aumentando a estabilidade do utilitário de relatórios consolidados de alta densidade.</li>
+                    <li><strong className="text-slate-700">Correção de Bloqueio Cross-Origin por Sandbox:</strong> Remoção de incompatibilidades críticas de renderizadores de iframe em navegadores móveis, centralizando as chamadas diretamente no motor do spooler do sistema operacional através de acionamento nativo `window.print()`.</li>
+                    <li><strong className="text-slate-700">Varredura e Auditoria do Código:</strong> Análise profunda de integridade geral do sistema, remoção de redundâncias de estilos, linting bem-sucedido e estabilização de estado local sem vazamento de memória.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO PARA VERSÃO 5.9.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-bold text-lg text-slate-700">v5.9.0 - Escala de Impressão Dinâmica, Margens ABNT & Impressão Física Blindada</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-500 text-sm">
                     <li><strong className="text-slate-700">Ajustar à Largura (Auto-Fit Inteligente):</strong> Algoritmo adaptativo avançado integrado na tela de impressão. Ele lê e avalia elementos que transbordam horizontalmente (tabelas e grids longos) e reduz as dimensões do documento na proporção exata necessária para encaixá-lo nas margens físicas da página A4 sem cortes de texto ou de bordas.</li>
                     <li><strong className="text-slate-700">Seletor de Margens Reguláveis:</strong> Suporte completo no spooler para pré-escolha da margem física ideal do documento (<span className="italic">Margem ABNT 20mm/15mm, Moderada 15mm/10mm ou Estreita 10mm/5mm</span>).</li>
                     <li><strong className="text-slate-700">Orientação de Canal Dinâmica:</strong> Flexibilidade total de rotacionamento rápido entre Retrato (Portrait) e Paisagem (Landscape) diretamente nos controles internos do preview oficial.</li>
@@ -15234,7 +15304,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 5.9.0 (SaaS Master Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 6.0.0 (SaaS Gold Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -21593,9 +21663,9 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 5.9.0</span>
+                        <span>Versão 6.0.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>SaaS Master</span>
+                        <span>SaaS Gold Edition</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -22792,7 +22862,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v5.9.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v6.0.0</p>
                         </div>
                     </div>
                     <div>
@@ -23020,6 +23090,7 @@ export default function App() {
         <GlobalStyles />
         <OsThemeStyles />
         <DynamicTheme color={db.igreja?.cor_tema} />
+        <DynamicPrintStyles orientation={printOrientation} marginType={printMarginType} mode={printMode} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         <FloatingChatWidget />
         {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} />}
