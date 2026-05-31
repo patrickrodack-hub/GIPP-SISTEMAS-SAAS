@@ -23528,6 +23528,107 @@ export default function App() {
         
         let processedData = { ...formData };
 
+        // --- CHECAGEM E PREVENÇÃO DE RECONCILIAÇÃO E DUPLICIDADES ---
+        if (colName && db && db[colName] && Array.isArray(db[colName])) {
+            const currentList = db[colName];
+
+            // 1. Evitar membros duplicados (pelo mesmo Nome ou CPF)
+            if (resolvedModalType === 'membro') {
+                if (processedData.nome) {
+                    const lowercaseNome = processedData.nome.trim().toLowerCase();
+                    const duplicatedMemberName = currentList.find(item => 
+                        item.id !== (editingItem?.id) && 
+                        !item.deleted && 
+                        item.nome?.trim().toLowerCase() === lowercaseNome
+                    );
+                    if (duplicatedMemberName) {
+                        addToast(`Aviso: Já existe um membro cadastrado com o nome "${processedData.nome}"!`, "warning");
+                    }
+                }
+
+                if (processedData.cpf) {
+                    const cleanCpfInput = processedData.cpf.replace(/\D/g, '');
+                    if (cleanCpfInput.length > 0) {
+                        const duplicatedCpfMember = currentList.find(item => {
+                            if (item.id === editingItem?.id || item.deleted) return false;
+                            const itemCpf = (item.cpf || '').replace(/\D/g, '');
+                            return itemCpf === cleanCpfInput;
+                        });
+                        if (duplicatedCpfMember) {
+                            addToast(`Erro: O CPF informado já está sendo utilizado pelo membro "${duplicatedCpfMember.nome}"!`, "error");
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 2. Evitar usuários e logins repetidos
+            if (resolvedModalType === 'usuario') {
+                if (processedData.usuario) {
+                    const lowercaseUser = processedData.usuario.trim().toLowerCase();
+                    const duplicatedUser = currentList.find(item => 
+                        item.id !== (editingItem?.id) && 
+                        !item.deleted && 
+                        item.usuario?.trim().toLowerCase() === lowercaseUser
+                    );
+                    if (duplicatedUser) {
+                        addToast(`Erro: O login de usuário "${processedData.usuario}" já está em uso por outro operador!`, "error");
+                        return;
+                    }
+                }
+            }
+
+            // 3. Evitar fornecedores repetidos (mesmo CNPJ ou CPF)
+            if (resolvedModalType === 'fornecedor') {
+                if (processedData.cnpj) {
+                    const cleanCnpj = processedData.cnpj.replace(/\D/g, '');
+                    if (cleanCnpj.length > 0) {
+                        const duplicatedFornecedor = currentList.find(item => {
+                            if (item.id === editingItem?.id || item.deleted) return false;
+                            const itemCnpj = (item.cnpj || '').replace(/\D/g, '');
+                            return itemCnpj === cleanCnpj;
+                        });
+                        if (duplicatedFornecedor) {
+                            addToast(`Erro: Já existe um fornecedor cadastrado com o CNPJ ${processedData.cnpj}!`, "error");
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 4. Evitar turmas de EBD idênticas (mesmo nome)
+            if (resolvedModalType === 'ebd_turma') {
+                if (processedData.nome) {
+                    const lowercaseNome = processedData.nome.trim().toLowerCase();
+                    const duplicatedTurma = currentList.find(item => 
+                        item.id !== (editingItem?.id) && 
+                        !item.deleted && 
+                        item.nome?.trim().toLowerCase() === lowercaseNome
+                    );
+                    if (duplicatedTurma) {
+                        addToast(`Erro: Já existe uma classe de EBD com o nome "${processedData.nome}"!`, "error");
+                        return;
+                    }
+                }
+            }
+
+            // 5. Evitar centros de custo repetidos
+            if (resolvedModalType === 'centro_custo') {
+                if (processedData.nome) {
+                    const lowercaseNome = processedData.nome.trim().toLowerCase();
+                    const duplicatedCC = currentList.find(item => 
+                        item.id !== (editingItem?.id) && 
+                        !item.deleted && 
+                        item.nome?.trim().toLowerCase() === lowercaseNome
+                    );
+                    if (duplicatedCC) {
+                        addToast(`Erro: Já existe um centro de custo ativo chamado "${processedData.nome}"!`, "error");
+                        return;
+                    }
+                }
+            }
+        }
+
         // [C] Força a assinatura da filial ao gravar novos dados por usuários restritos
         if (user && user.nivel !== 'master' && !processedData.congregacao_id) {
             processedData.congregacao_id = user.congregacao_id || 'sede';
