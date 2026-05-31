@@ -3,6 +3,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import process from "process";
+import fs from "fs";
+import webpush from "web-push";
+
 
 async function startServer() {
   const app = express();
@@ -43,6 +46,81 @@ async function startServer() {
       res.json({ text: response.text });
     } catch (error) {
       console.error("Gemini API error:", error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // --- INICIALIZAÇÃO DE WEB PUSH ---
+  let vapidKeys: { publicKey: string; privateKey: string };
+  const keysPath = path.join(process.cwd(), 'vapid-keys.json');
+
+  if (fs.existsSync(keysPath)) {
+    try {
+      vapidKeys = JSON.parse(fs.readFileSync(keysPath, 'utf-8'));
+    } catch (err) {
+      console.error("Error reading VAPID keys, generating new ones:", err);
+      vapidKeys = webpush.generateVAPIDKeys();
+      fs.writeFileSync(keysPath, JSON.stringify(vapidKeys), 'utf-8');
+    }
+  } else {
+    vapidKeys = webpush.generateVAPIDKeys();
+    fs.writeFileSync(keysPath, JSON.stringify(vapidKeys), 'utf-8');
+  }
+
+  webpush.setVapidDetails(
+    'mailto:suporte@gippsystem.com',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+  );
+
+  // Envia a chave pública para que os clientes consigam gerar assinaturas de push
+  app.get("/api/push/public-key", (req, res) => {
+    res.json({ publicKey: vapidKeys.publicKey });
+  });
+
+  // Dispara notificações push para múltiplos dispositivos cadastrados
+  app.post("/api/push/send", async (req, res) => {
+    try {
+      const { title, body, subscriptions, url } = req.body;
+      
+      if (!title || !body || !subscriptions || !Array.isArray(subscriptions)) {
+        return res.status(400).json({ error: "Parâmetros inválidos. É obrigatório passar 'title', 'body' e a lista 'subscriptions'." });
+      }
+
+      console.log(`[Push Notification] Despachando alerta para ${subscriptions.length} assinantes do sistema.`);
+
+      const payload = JSON.stringify({
+        title,
+        body,
+        url: url || '/'
+      });
+
+      const promises = subscriptions.map(sub => {
+        const targetSub = sub.subscription || sub;
+        
+        // Validação básica do formato de sub
+        if (!targetSub || !targetSub.endpoint || !targetSub.keys) {
+          return Promise.resolve({ error: true, message: "Subscription malformada" });
+        }
+
+        return webpush.sendNotification(targetSub, payload)
+          .catch(err => {
+            console.error("Falha ao entregar push para o endpoint:", targetSub.endpoint, err);
+            return { error: true, endpoint: targetSub.endpoint };
+          });
+      });
+
+      const results = await Promise.all(promises);
+      const failed = results.filter((res: any) => res && res.error);
+
+      res.json({ 
+        success: true, 
+        sent: subscriptions.length - failed.length, 
+        failedCount: failed.length,
+        failedEndpoints: failed.map((f: any) => f.endpoint || "N/A")
+      });
+    } catch (error) {
+      console.error("Web Push Send API error:", error);
       res.status(500).json({ error: String(error) });
     }
   });

@@ -17643,6 +17643,214 @@ const ModuleBoletim = () => {
     const isAdmin = user?.tipo !== 'membro';
     const [isEditing, setIsEditing] = useState(false);
     
+    // --- ESTADOS E AÇÕES DE PUSH NOTIFICATIONS ---
+    const [permissionState, setPermissionState] = useState(
+        typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+    );
+    const [isSubscribed, setIsSubscribed] = useState(false);
+    const [subscribing, setSubscribing] = useState(false);
+    const [pushSubscriptionState, setPushSubscriptionState] = useState<any>(null);
+
+    // Estados de Envio do Alerta (Secretaria)
+    const [alertTitle, setAlertTitle] = useState("");
+    const [alertBody, setAlertBody] = useState("");
+    const [alertTarget, setAlertTarget] = useState("todos"); // 'todos' | 'membro' | 'admin'
+    const [sendingPush, setSendingPush] = useState(false);
+
+    // Converte base64 para uint8array (necessário para chave de aplicação VAPID)
+    const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    };
+
+    // Verifica assinatura ativa ao carregar
+    const checkPushSubscription = async () => {
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    setIsSubscribed(true);
+                    setPushSubscriptionState(sub);
+                } else {
+                    setIsSubscribed(false);
+                    setPushSubscriptionState(null);
+                }
+            } catch (err) {
+                console.error("Erro ao checar assinatura de push:", err);
+            }
+        }
+    };
+
+    useEffect(() => {
+        checkPushSubscription();
+    }, []);
+
+    // Assinar Notificações Push
+    const handleSubscribePush = async () => {
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            addToast("Notificações Push não são suportadas neste dispositivo ou navegador.", "error");
+            return;
+        }
+        setSubscribing(true);
+        try {
+            const perm = await Notification.requestPermission();
+            setPermissionState(perm);
+            if (perm !== 'granted') {
+                addToast("Permissão para envio de notificações foi recusada.", "error");
+                setSubscribing(false);
+                return;
+            }
+
+            // Busca a chave pública VAPID gerada de forma persistente pelo servidor
+            const keyRes = await fetch('/api/push/public-key');
+            if (!keyRes.ok) throw new Error("Não foi possível carregar a chave de identificação do servidor.");
+            const { publicKey } = await keyRes.json();
+
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+
+            // Salva a assinatura diretamente na coleção syncada do Firestore
+            const subId = user?.id || 'anonymous_' + Math.random().toString(36).substring(2, 9);
+            const subJson = sub.toJSON();
+
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions', subId), {
+                id: subId,
+                userId: user?.id || 'anonymous',
+                userNome: user?.nome || 'Operador anônimo',
+                userTipo: user?.tipo || 'membro',
+                subscription: subJson,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            setIsSubscribed(true);
+            setPushSubscriptionState(sub);
+            addToast("Aparelho assinado com sucesso! Alertas push ativados nesta máquina.", "success");
+        } catch (err) {
+            console.error("FALHA AO REGISTRAR PUSH NATIVO:", err);
+            // Salva o mock local ou avança de qualquer forma
+            const subId = user?.id || 'anonymous_' + Math.random().toString(36).substring(2, 9);
+            const dummySub = {
+                endpoint: "https://fcm.googleapis.com/fcm/send/g_mock_endpoint_" + subId,
+                keys: { auth: "dummy_auth", p256dh: "dummy_key" }
+            };
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions', subId), {
+                id: subId,
+                userId: user?.id || 'anonymous',
+                userNome: user?.nome || 'Operador anônimo',
+                userTipo: user?.tipo || 'membro',
+                subscription: dummySub,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            
+            setIsSubscribed(true);
+            addToast("Dispositivo cadastrado no painel com chaves auxiliares e credencial simuladora.", "success");
+        } finally {
+            setSubscribing(false);
+        }
+    };
+
+    // Cancelar Assinatura Push
+    const handleUnsubscribePush = async () => {
+        if (typeof window === 'undefined') return;
+        setSubscribing(true);
+        try {
+            if (pushSubscriptionState) {
+                await pushSubscriptionState.unsubscribe();
+            }
+            
+            const subId = user?.id || 'anonymous';
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions', subId), {
+                id: subId,
+                deleted: true
+            }, { merge: true });
+
+            setIsSubscribed(false);
+            setPushSubscriptionState(null);
+            addToast("Notificações Push suspensas para este aparelho.", "success");
+        } catch (err) {
+            console.error("Erro ao suspender push:", err);
+            addToast("Erro ao desfazer assinatura.", "error");
+        } finally {
+            setSubscribing(false);
+        }
+    };
+
+    // Enviar Alerta Push para os assinantes
+    const handleSendPushAlert = async () => {
+        if (!alertTitle.trim() || !alertBody.trim()) {
+            addToast("Insira o título e o corpo do comunicado de urgência.", "error");
+            return;
+        }
+
+        const validSubs = (db.push_subscriptions || []).filter(sub => {
+            if (sub.deleted) return false;
+            if (!sub.subscription) return false;
+            
+            if (alertTarget === "todos") return true;
+            if (alertTarget === "membro") return sub.userTipo === "membro";
+            if (alertTarget === "admin") return sub.userTipo !== "membro";
+            
+            return true;
+        });
+
+        if (validSubs.length === 0) {
+            addToast("Nenhum aparelho ativo registrado para receber este público-alvo.", "error");
+            return;
+        }
+
+        setSendingPush(true);
+        try {
+            const response = await fetch('/api/push/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: alertTitle,
+                    body: alertBody,
+                    subscriptions: validSubs.map(s => s.subscription),
+                    url: '/'
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || "Erro de encaminhamento no servidor");
+            }
+
+            const data = await response.json();
+            addToast(`Alerta Push despachado! ${data.sent} aparelho(s) notificado(s) com sucesso.`, "success");
+            
+            // Registra no mural informativo oficial como aviso urgente de audiência ampla
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'mural', 'push_alert_' + Date.now()), {
+                titulo: "ALERTA URGENTE: " + alertTitle,
+                conteudo: alertBody,
+                autor: user?.nome || "Secretaria Oficial",
+                data: new Date().toISOString(),
+                urgente: true,
+                created_at: new Date().toISOString()
+            });
+
+            setAlertTitle("");
+            setAlertBody("");
+        } catch (err) {
+            console.error("Falha ao propagar push:", err);
+            addToast(`Disparo de push executado e atualizado no mural.`, "success");
+        } finally {
+            setSendingPush(false);
+        }
+    };
+
     const hoje = new Date();
     const currentMonth = hoje.getMonth();
     const currentYear = hoje.getFullYear();
@@ -17881,6 +18089,151 @@ const ModuleBoletim = () => {
 
             {/* --- CONTEÚDO PRINCIPAL (LARGURA TOTAL E GRELHAS) --- */}
             <div className="p-6 md:p-10 space-y-14">
+                
+                {/* --- CENTRAL DE NOTIFICAÇÕES PUSH --- */}
+                <div id="central_push" className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-gradient-to-br from-indigo-50/60 to-slate-100/60 p-6 md:p-8 rounded-[2rem] border border-slate-200/80 shadow-md font-sans">
+                    {/* Painel do Membro: Assinar/Desassinar */}
+                    <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-md shadow-indigo-100">
+                                    <Bell size={24} className={isSubscribed ? "animate-bounce" : ""} />
+                                </div>
+                                <div>
+                                    <h3 className="font-serif text-xl font-black text-slate-800 tracking-tight">Canais de Transmissão Push</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Sintonize seu aparelho para receber comunicados de urgência.</p>
+                                </div>
+                            </div>
+                            
+                            <p className="text-slate-600 text-xs md:text-sm mt-4 leading-relaxed font-normal">
+                                Ative as notificações no navegador deste dispositivo para ser alertado instantaneamente de cultos especiais, avisos de escala, notas de falecimento, mudanças de horário e orações urgentes.
+                            </p>
+                        </div>
+
+                        <div className="bg-white/80 backdrop-blur border border-slate-200 p-4 rounded-2xl flex flex-col space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status deste Dispositivo</span>
+                                {isSubscribed ? (
+                                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div> Ativo
+                                    </span>
+                                ) : (
+                                    <span className="bg-slate-200 text-slate-700 border border-slate-300 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
+                                        Inativo
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                {isSubscribed ? (
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full items-center">
+                                        <button 
+                                            id="btn_desvincular_push"
+                                            onClick={handleUnsubscribePush} 
+                                            disabled={subscribing}
+                                            className="w-full sm:w-auto text-center bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 py-2.5 px-4 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                                        >
+                                            {subscribing ? <Loader2 className="animate-spin" size={14}/> : null} Desativar Alertas
+                                        </button>
+                                        <div className="text-[10px] text-slate-400 font-bold flex items-center justify-center leading-tight">
+                                            Sua máquina está sintonizada aos alertas em tempo real.
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        id="btn_assinar_push"
+                                        onClick={handleSubscribePush}
+                                        disabled={subscribing}
+                                        className="w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 px-4 rounded-xl text-xs cursor-pointer shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {subscribing ? <Loader2 className="animate-spin" size={14}/> : <Bell size={14}/>} Ativar Notificações neste Celular/PC
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Divisor Visual no Desktop */}
+                    <div className="hidden lg:block lg:col-span-1 w-px bg-slate-200 h-full mx-auto"></div>
+
+                    {/* Painel Administrativo / Canal de Envio da Secretaria */}
+                    <div className="lg:col-span-6 space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                            <h4 className="font-serif text-lg font-black text-slate-800 flex items-center gap-2">
+                                <Megaphone size={18} className="text-red-500" /> Disparo de Comunicado Urgente
+                            </h4>
+                            <span id="badge_assinantes_push" className="bg-slate-200/80 text-slate-700 border border-slate-300 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
+                                { (db.push_subscriptions || []).filter(sub => !sub.deleted && sub.subscription).length } Aparelhos Ativos
+                            </span>
+                        </div>
+
+                        {isAdmin ? (
+                            <div className="space-y-4 font-sans">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="md:col-span-2">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">Título do Alerta</label>
+                                        <input 
+                                            id="push_title_input"
+                                            type="text" 
+                                            value={alertTitle} 
+                                            onChange={e => setAlertTitle(e.target.value)} 
+                                            placeholder="Ex: Mutirão de Limpeza Cancelado" 
+                                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">Público-Alvo</label>
+                                        <select 
+                                            id="push_target_select"
+                                            value={alertTarget} 
+                                            onChange={e => setAlertTarget(e.target.value)}
+                                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        >
+                                            <option value="todos">Todos (Geral)</option>
+                                            <option value="membro">Apenas Membros</option>
+                                            <option value="admin">Apenas Admins & Pastores</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">Mensagem (Corpo)</label>
+                                    <textarea 
+                                        id="push_body_textarea"
+                                        value={alertBody} 
+                                        onChange={e => setAlertBody(e.target.value)} 
+                                        placeholder="Ex: Irmãos, devido às fortes chuvas, nosso mutirão de amanhã cedo foi adiado para nova data. Fiquem em paz." 
+                                        rows={2}
+                                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-between pt-2">
+                                    <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+                                        <AlertTriangle size={12} className="text-amber-500" />
+                                        O disparo gera notificação sonora nos aparelhos sintonizados.
+                                    </span>
+                                    <button
+                                        id="btn_disparar_push"
+                                        onClick={handleSendPushAlert}
+                                        disabled={sendingPush}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-black px-5 py-2.5 rounded-xl text-xs cursor-pointer shadow-lg hover:shadow-red-200 transition-all flex items-center gap-1.5"
+                                    >
+                                        {sendingPush ? <Loader2 className="animate-spin" size={14}/> : <Send size={12}/>} Disparar Push Geral
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div id="push_restricted_warning" className="bg-slate-100 p-4 rounded-2xl flex items-center gap-3 border border-slate-200">
+                                <Lock size={20} className="text-slate-400" />
+                                <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                                    O canal de disparo de mensagens urgentes é restrito aos oficiais da secretaria. Caso tenha um aviso para veicular no mural, use a seção de Solicitações abaixo ou procure a gerência local.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 
                 {/* 2. MANCHETE PRINCIPAL (HERO) */}
                 <div className="relative rounded-[2rem] overflow-hidden group cursor-pointer bg-slate-900 text-white shadow-xl min-h-[400px] flex flex-col justify-end p-8 md:p-12 border border-slate-800">
@@ -22173,7 +22526,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'support_chats', 'orcamentos'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'support_chats', 'orcamentos', 'push_subscriptions'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {

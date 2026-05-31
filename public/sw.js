@@ -79,3 +79,52 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
+// --- PUSH NOTIFICATION LISTENERS ---
+self.addEventListener('push', event => {
+  let data = { title: 'Alerta GIPP', body: 'Mensagem urgente da secretaria' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'Alerta GIPP', body: event.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    vibrate: [150, 80, 150],
+    data: {
+      url: data.url || '/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(windowClients => {
+        // Se hover uma aba aberta, foca nela
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          if (client.url.includes(urlToOpen) && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Caso contrário, abre uma nova
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
