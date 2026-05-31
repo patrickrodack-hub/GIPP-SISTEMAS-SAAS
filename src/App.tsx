@@ -2617,6 +2617,72 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
     );
 };
 
+// --- DYNAMIC PAGE BOUNDARY INDICATORS FOR PREVIEW ---
+const PageBoundaryIndicators = ({ marginType, targetHeight, contentRef }: { marginType: string; targetHeight: number; contentRef: React.RefObject<HTMLDivElement | null> }) => {
+    const [totalHeight, setTotalHeight] = useState(0);
+
+    useEffect(() => {
+        const updateHeight = () => {
+            if (contentRef.current) {
+                setTotalHeight(contentRef.current.scrollHeight);
+            }
+        };
+
+        const timer = setTimeout(updateHeight, 600);
+        
+        window.addEventListener('resize', updateHeight);
+        
+        const observer = new MutationObserver(updateHeight);
+        if (contentRef.current) {
+            observer.observe(contentRef.current, { childList: true, subtree: true, attributes: true });
+        }
+
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', updateHeight);
+            observer.disconnect();
+        };
+    }, [contentRef, targetHeight, marginType]);
+
+    const isLandscape = targetHeight === 794;
+    const currentWidth = isLandscape ? 1123 : 794;
+    
+    const getPrintMarginsPx = (type: string) => {
+        if (type === 'moderada') return { top: 76, bottom: 76, left: 76, right: 76 };
+        if (type === 'estreita') return { top: 57, bottom: 57, left: 57, right: 57 };
+        return { top: 113, bottom: 76, left: 113, right: 76 }; // abnt / padrão
+    };
+
+    const margins = getPrintMarginsPx(marginType);
+    const scaleX = (currentWidth - margins.left - margins.right) / currentWidth;
+    const printableHeight = targetHeight - margins.top - margins.bottom;
+    const maxSliceHeight = Math.floor(printableHeight / (scaleX || 1)) || targetHeight;
+
+    if (totalHeight <= maxSliceHeight) return null;
+
+    const pageCount = Math.ceil(totalHeight / maxSliceHeight);
+    const pages = Array.from({ length: pageCount - 1 });
+
+    return (
+        <div className="absolute inset-0 pointer-events-none no-print overflow-hidden select-none z-[1000] page-boundary-overlay">
+            {pages.map((_, index) => {
+                const topPos = (index + 1) * maxSliceHeight;
+                return (
+                    <div 
+                        key={index} 
+                        style={{ top: `${topPos}px` }} 
+                        className="absolute left-0 right-0 border-t-2 border-dashed border-rose-500 opacity-60 flex justify-end items-center"
+                    >
+                        <span className="bg-rose-600 text-white font-black font-mono text-[9px] uppercase tracking-[0.2em] py-1 px-3 rounded-l-md shadow-[0_4px_10px_rgba(225,29,72,0.4)] transform -translate-y-1/2">
+                            Quebra Física de Página {index + 1} (A4 {marginType.toUpperCase()})
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 // --- PREVIEW SYSTEM & DOCUMENT ---
 const DocumentPreviewModal = ({ 
     isOpen, 
@@ -2722,6 +2788,12 @@ const DocumentPreviewModal = ({
             const dataUrl = await toPng(targetEl, {
                 quality: 0.98,
                 backgroundColor: '#ffffff',
+                filter: (node: any) => {
+                    if (node && node.classList && (node.classList.contains('no-print') || node.classList.contains('page-boundary-overlay'))) {
+                        return false;
+                    }
+                    return true;
+                },
                 style: {
                     transform: 'none',
                     margin: '0',
@@ -2749,12 +2821,47 @@ const DocumentPreviewModal = ({
 
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const sourcePageHeight = targetHeight;
             
+            // 1. Obter margens em pixels com base no marginType selecionado
+            const getPrintMarginsPx = (type: string) => {
+                if (type === 'moderada') {
+                    return { top: 76, bottom: 76, left: 76, right: 76 };
+                } else if (type === 'estreita') {
+                    return { top: 57, bottom: 57, left: 57, right: 57 };
+                }
+                // padrão / abnt (Superior/Esquerda: 3cm [113px], Inferior/Direita: 2cm [76px])
+                return { top: 113, bottom: 76, left: 113, right: 76 };
+            };
+
+            const margins = getPrintMarginsPx(marginType);
+            
+            // Fator de escala horizontal para caber nas margens esquerda e direita
+            const scaleX = (targetWidth - margins.left - margins.right) / targetWidth;
+            
+            // Altura útil de impressão no papel em pixels
+            const printableHeight = targetHeight - margins.top - margins.bottom;
+            
+            // Altura máxima proporcional da imagem de entrada a ser cortada por página
+            const maxSliceHeight = Math.floor(printableHeight / scaleX);
+
+            // 2. Coletar os limites verticais de todos os elementos indivisíveis dentro do documento
+            const containerRect = targetEl.getBoundingClientRect();
+            const ranges = Array.from(targetEl.querySelectorAll('tr, .avoid-break, h1, h2, h3, h4, h5, h6, img, .print-block'))
+                .map((node: any) => {
+                    const rect = node.getBoundingClientRect();
+                    return {
+                        top: rect.top - containerRect.top,
+                        bottom: rect.bottom - containerRect.top,
+                        height: rect.height
+                    };
+                })
+                .filter(r => r.height > 0 && r.top >= 0)
+                .sort((a, b) => a.top - b.top);
+
             let srcY = 0;
             let pageIndex = 0;
             const totalHeight = img.height;
-            const approxTotalPages = Math.ceil(totalHeight / sourcePageHeight);
+            const approxTotalPages = Math.ceil(totalHeight / maxSliceHeight);
 
             while (srcY + 5 < totalHeight) {
                 if (pageIndex > 0) {
@@ -2762,21 +2869,38 @@ const DocumentPreviewModal = ({
                 }
 
                 setRenderProgress(`Compilando página ${pageIndex + 1} de ${approxTotalPages}...`);
-                const currentSliceHeight = Math.min(totalHeight - srcY, sourcePageHeight);
+                let currentSliceHeight = Math.min(totalHeight - srcY, maxSliceHeight);
+
+                // Evitar cortar linhas ou títulos no meio se houver espaço remanescente razoável na página
+                if (srcY + currentSliceHeight < totalHeight) {
+                    const idealCutY = srcY + currentSliceHeight;
+                    let adjustedCutY = idealCutY;
+
+                    for (const range of ranges) {
+                        if (range.top > srcY && range.top < idealCutY && range.bottom > idealCutY) {
+                            if (range.top - srcY > 200) {
+                                adjustedCutY = range.top;
+                                break;
+                            }
+                        }
+                    }
+                    currentSliceHeight = adjustedCutY - srcY;
+                }
 
                 // Criar canvas de corte intermediário para desenhar o pedaço da página
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = img.width;
-                tempCanvas.height = sourcePageHeight;
+                tempCanvas.width = targetWidth;
+                tempCanvas.height = targetHeight;
 
                 const tempCtx = tempCanvas.getContext('2d');
                 if (tempCtx) {
                     tempCtx.fillStyle = '#ffffff';
-                    tempCtx.fillRect(0, 0, img.width, sourcePageHeight);
+                    tempCtx.fillRect(0, 0, targetWidth, targetHeight);
+                    // Desenha o conteúdo escalado centralizado entre as margens
                     tempCtx.drawImage(
                         img,
-                        0, srcY, img.width, currentSliceHeight, // Source Rect
-                        0, 0, img.width, currentSliceHeight      // Dest Rect
+                        0, srcY, img.width, currentSliceHeight, 
+                        margins.left, margins.top, targetWidth - margins.left - margins.right, currentSliceHeight * scaleX
                     );
                 }
 
@@ -2784,7 +2908,7 @@ const DocumentPreviewModal = ({
                 pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, 'FAST');
 
                 pageIndex++;
-                srcY += sourcePageHeight;
+                srcY += currentSliceHeight;
             }
 
             // Restaura imediatamente os estilos originais
@@ -3005,11 +3129,13 @@ const DocumentPreviewModal = ({
                             style={{ 
                                 width: `${targetWidth}px`, 
                                 minHeight: `${targetHeight}px`,
-                                boxSizing: 'border-box' 
+                                boxSizing: 'border-box',
+                                position: 'relative'
                             }}
                             className="bg-white shadow-2xl border border-slate-700/30 flex flex-col rounded-sm origin-top animate-fadeIn"
                         >
                             <PrintSystem mode={mode} data={data} palette={palette} marginType={marginType} contentScale={contentScale} orientation={orientation} />
+                            <PageBoundaryIndicators marginType={marginType} targetHeight={targetHeight} contentRef={contentRef} />
                         </div>
                     </div>
                 </div>
