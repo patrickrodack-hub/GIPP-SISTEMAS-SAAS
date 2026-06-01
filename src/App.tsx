@@ -707,7 +707,7 @@ const GlobalStyles = () => (
     body.theme-dark .glass-modern, 
     body.theme-dark .glass-panel, 
     body.theme-dark .glass-card { 
-      background-color: rgba(15, 23, 42, 0.75) !important; /* Slate 900 base */
+      background-color: rgba(15, 23, 42, 0.70) !important; /* Slate 900 base */
       backdrop-filter: blur(20px) saturate(150%) !important;
       border-color: rgba(255, 255, 255, 0.1) !important; 
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important; 
@@ -7875,6 +7875,15 @@ const ModuleDesenvolvedor = () => {
     ];
 
     const handleSavePlanosConfig = async () => {
+        // Validação dos valores dos planos
+        for (const planKey of ['basico', 'standard', 'avancado']) {
+            const valor = planosValores[planKey];
+            if (valor === undefined || valor === null || isNaN(Number(valor)) || Number(valor) <= 0) {
+                addToast(`O valor do plano ${planKey.toUpperCase()} deve ser um número positivo maior que zero!`, "error");
+                return;
+            }
+        }
+
         setIsSavingPlanos(true);
         try {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { 
@@ -8480,10 +8489,15 @@ const ModuleDesenvolvedor = () => {
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mensalidade (R$)</span>
                                         <input 
                                             type="number"
-                                            min="0"
-                                            value={planosValores[planKey]}
-                                            onChange={(e) => setPlanosValores({...planosValores, [planKey]: Number((e.target.value || "").toUpperCase())})}
-                                            className="w-24 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-800 text-right focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                            min="0.01"
+                                            step="0.01"
+                                            value={planosValores[planKey] || ""}
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                setPlanosValores({...planosValores, [planKey]: isNaN(val) ? "" : val});
+                                            }}
+                                            className={`w-28 border rounded-lg p-1.5 text-xs font-bold text-right focus:ring-1 outline-none transition-all ${(!planosValores[planKey] || Number(planosValores[planKey]) <= 0) ? 'border-rose-300 text-rose-600 bg-rose-50/50 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-200 text-slate-800 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                                            placeholder="Ex: 97.00"
                                         />
                                     </div>
 
@@ -23469,41 +23483,41 @@ const MemberPortalLayout = () => {
 
     const getHeaderStyles = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
-            return "bg-black/80 border-b border-white/10 text-white";
+            return "bg-black/70 border-b border-white/10 text-white backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
-            return "bg-[#3d7bad]/85 border-b border-blue-400/30 text-white";
+            return "bg-[#3d7bad]/70 border-b border-blue-400/30 text-white backdrop-blur-md";
         }
         if (osTheme === 'win95') {
-            return "bg-[#008080]/85 border-b border-teal-900/30 text-white";
+            return "bg-[#008080]/70 border-b border-teal-900/30 text-white backdrop-blur-md";
         }
-        return "bg-white/90 border-b border-slate-200/50 text-slate-800";
+        return "bg-white/70 border-b border-slate-200/50 text-slate-800 backdrop-blur-md";
     };
 
     const getFooterStyles = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
-            return "bg-black/90 border-t border-white/10 text-white/70";
+            return "bg-black/70 border-t border-white/10 text-white/70 backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
-            return "bg-[#3d7bad]/95 border-t border-blue-450/40 text-white/80";
+            return "bg-[#3d7bad]/70 border-t border-blue-450/40 text-white/80 backdrop-blur-md";
         }
         if (osTheme === 'win95') {
-            return "bg-[#008080]/95 border-t border-teal-900/40 text-white/80";
+            return "bg-[#008080]/70 border-t border-teal-900/40 text-white/80 backdrop-blur-md";
         }
-        return "bg-white/95 border-t border-slate-200/50 text-slate-500";
+        return "bg-white/70 border-t border-slate-200/50 text-slate-500 backdrop-blur-md";
     };
 
     const getBottomSheetStyles = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
-            return "bg-slate-900 text-white border-t border-white/10";
+            return "bg-slate-900/70 text-white border-t border-white/10 backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
-            return "bg-[#1c5a93] text-white border-t border-blue-400";
+            return "bg-[#1c5a93]/70 text-white border-t border-blue-400 backdrop-blur-md";
         }
         if (osTheme === 'win95') {
-            return "bg-[#008080] text-white border-t border-teal-300";
+            return "bg-[#008080]/70 text-white border-t border-teal-300 backdrop-blur-md";
         }
-        return "bg-white text-slate-900 border-t border-slate-200";
+        return "bg-white/70 text-slate-900 border-t border-slate-200 backdrop-blur-md";
     };
 
     const getBottomSheetTextStyles = () => {
@@ -23644,7 +23658,7 @@ const MemberPortalLayout = () => {
                     ))}
                 </nav>
                 <div className="p-6 border-t border-slate-200/60 shrink-0">
-                    <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-xs">
                         <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{user.nome.charAt(0)}</div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">{user.nome.split(' ')[0]}</p>
@@ -23653,7 +23667,7 @@ const MemberPortalLayout = () => {
                             </p>
                         </div>
                     </div>
-                    <button onClick={logout} className="w-full flex items-center justify-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-50 font-bold transition-colors"><LogOut size={20}/> Terminar Sessão</button>
+                    <button onClick={logout} className="w-full flex items-center justify-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-500/10 font-bold transition-colors"><LogOut size={20}/> Terminar Sessão</button>
                 </div>
             </aside>
 
@@ -23673,11 +23687,88 @@ const MemberPortalLayout = () => {
             </header>
 
             {/* Main Content (Área Rolável) */}
-            <main className="flex-1 p-6 md:p-10 h-screen overflow-y-auto custom-scrollbar relative z-10">
-                <div className="max-w-[1800px] mx-auto pb-16">
+            <main className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative z-10 pb-24 md:pb-16" style={{ height: 'calc(100vh - 4rem)' }}>
+                <div className="max-w-[1800px] mx-auto">
                     {renderView()}
                 </div>
             </main>
+
+            {/* Mobile Bottom Navigation (Strict Flex Item - Fixado no rodapé no mobile) */}
+            <div className={`md:hidden shrink-0 border-t flex items-center justify-around z-45 h-20 px-2 select-none shadow-lg ${getBottomSheetStyles()}`}>
+                {mobileBottomItems.map(item => {
+                    const isActive = view === item.id || (item.id === 'portal_more' && showMoreMenu);
+                    const styles = getBottomNavItemStyles(isActive, item.hoverColor);
+                    return (
+                        <button 
+                            key={item.id} 
+                            onClick={() => {
+                                if (item.id === 'portal_more') {
+                                    setShowMoreMenu(!showMoreMenu);
+                                } else {
+                                    setView(item.id);
+                                    setShowMoreMenu(false);
+                                }
+                            }}
+                            className="flex flex-col items-center justify-center flex-1 h-full py-2 hover:bg-slate-100/10 transition-colors focus:outline-none relative"
+                        >
+                            <div className={`p-1.5 rounded-xl transition-all ${styles.iconBg}`}>
+                                <item.icon size={20} className={`transition-transform duration-300 ${styles.icon} ${isActive ? 'scale-110' : ''}`} />
+                            </div>
+                            <span className={`text-[9px] mt-1 font-bold leading-none select-none text-center ${styles.text}`}>
+                                {item.label}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Mobile "More" Menu Modal */}
+            {showMoreMenu && (
+                <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex flex-col justify-end transition-opacity" onClick={() => setShowMoreMenu(false)}>
+                    <div 
+                        className={`w-full max-h-[85vh] rounded-t-[2rem] p-6 pb-12 overflow-y-auto animate-slide-up shadow-2xl border-t border-white/10 ${getBottomSheetStyles()}`}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="w-12 h-1 bg-slate-300/40 rounded-full mx-auto mb-5" />
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className="font-extrabold text-lg text-emerald-600 block dark:text-emerald-400">Outros Recursos</h3>
+                            <button 
+                                onClick={() => setShowMoreMenu(false)} 
+                                className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            {navItems.map(item => {
+                                const isSelected = view === item.id;
+                                return (
+                                    <button 
+                                        key={item.id} 
+                                        onClick={() => { setView(item.id); setShowMoreMenu(false); }} 
+                                        className={`flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl transition-all border ${isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-xs' : 'bg-slate-500/5 border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-500/10'}`}
+                                    >
+                                        <item.icon size={22} className={isSelected ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'} />
+                                        <span className="text-[10px] font-bold text-center truncate w-full leading-tight">{item.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="mt-6 pt-5 border-t border-slate-200/50 flex flex-col gap-3">
+                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-500/5 border border-slate-200/20">
+                                <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold font-mono">{user.nome.charAt(0)}</div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 truncate">{user.nome}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5">
+                                        {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro')}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={logout} className="w-full flex items-center justify-center gap-3 py-3 rounded-2xl bg-rose-500/10 text-rose-500 font-bold hover:bg-rose-500/20 transition-colors"><LogOut size={16}/> Terminar Sessão</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -24116,6 +24207,84 @@ export default function App() {
           document.head.appendChild(metaTranslate);
       }
   }, []);
+
+  // NOVO: Atualiza dinamicamente o Favicon, Apple Touch Icon e Manifest PWA com o logotipo da igreja
+  useEffect(() => {
+      const logoUrl = db.igreja?.logo || "https://cdn-icons-png.flaticon.com/512/3223/3223605.png";
+      const nomeIgreja = db.igreja?.nome || "GIPP - Gestão de Igreja";
+
+      // 1. Atualizar Favicon e Apple Touch Icon em tempo real
+      let linkIcon = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+      if (!linkIcon) {
+          linkIcon = document.createElement('link');
+          linkIcon.rel = 'icon';
+          linkIcon.type = 'image/png';
+          document.head.appendChild(linkIcon);
+      }
+      linkIcon.href = logoUrl;
+
+      let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement | null;
+      if (!appleIcon) {
+          appleIcon = document.createElement('link');
+          appleIcon.rel = 'apple-touch-icon';
+          document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = logoUrl;
+
+      // 2. Criar e injetar um manifesto PWA dinâmico (Blob) para forçar a adoção do logotipo na instalação
+      const manifestObj = {
+          "name": nomeIgreja,
+          "short_name": nomeIgreja.length > 12 ? nomeIgreja.substring(0, 10) + '..' : nomeIgreja,
+          "start_url": window.location.origin + "/",
+          "display": "standalone",
+          "orientation": "any",
+          "background_color": theme === 'dark' ? '#0f172a' : '#ffffff',
+          "theme_color": theme === 'dark' ? '#0f172a' : '#1e293b',
+          "description": "Sistema de Gestão Integrado para Igrejas e Pastores Digitais",
+          "icons": [
+              {
+                  "src": logoUrl,
+                  "sizes": "192x192",
+                  "type": "image/png",
+                  "purpose": "any maskable"
+              },
+              {
+                  "src": logoUrl,
+                  "sizes": "256x256",
+                  "type": "image/png",
+                  "purpose": "any maskable"
+              },
+              {
+                  "src": logoUrl,
+                  "sizes": "384x384",
+                  "type": "image/png",
+                  "purpose": "any"
+              },
+              {
+                  "src": logoUrl,
+                  "sizes": "512x512",
+                  "type": "image/png",
+                  "purpose": "any"
+              }
+          ]
+      };
+
+      const stringManifest = JSON.stringify(manifestObj);
+      const blob = new Blob([stringManifest], { type: 'application/json' });
+      const manifestUrl = URL.createObjectURL(blob);
+
+      let manifestLink = document.querySelector("link[rel='manifest']") as HTMLLinkElement | null;
+      if (!manifestLink) {
+          manifestLink = document.createElement('link');
+          manifestLink.rel = 'manifest';
+          document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = manifestUrl;
+
+      return () => {
+          URL.revokeObjectURL(manifestUrl);
+      };
+  }, [db.igreja?.logo, db.igreja?.nome, theme]);
 
   useEffect(() => {
       localStorage.setItem('gipp-theme', theme);
