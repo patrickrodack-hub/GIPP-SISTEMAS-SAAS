@@ -305,6 +305,10 @@ const DynamicPrintStyles = ({ orientation, marginType, mode }: { orientation: 'p
                     page: A4 portrait !important;
                 }
 
+                .print-area {
+                    display: block !important;
+                }
+
                 /* Override padding of standard print blocks inside print area during physical print */
                 /* so that printing doesn't double-apply the margins on top of @page */
                 .print-area .print-block {
@@ -888,6 +892,10 @@ const GlobalStyles = () => (
         visibility: hidden !important; 
       }
       
+      .screen-content, .no-print, [class*="no-print"] {
+        display: none !important;
+      }
+      
       .print-area, .print-area * {
         visibility: visible !important; 
         -webkit-print-color-adjust: exact !important; 
@@ -895,6 +903,7 @@ const GlobalStyles = () => (
       }
       
       .print-area { 
+        display: block !important;
         position: absolute !important; 
         left: 0 !important;
         top: 0 !important;
