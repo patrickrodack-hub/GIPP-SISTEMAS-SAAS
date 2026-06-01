@@ -11295,114 +11295,58 @@ const ModuleSecretariaIntegrada = () => {
             </div>
 
             {showLiturgiaModal && (
-                <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-entrance backdrop-blur-lg">
-                    <div className="glass-modern rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/40 border-0 font-sans">
-                        <div className="p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20">
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-800 bg-[length:200%_200%] animate-pulse-glow"></div>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.15] mix-blend-overlay pointer-events-none"></div>
-                            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }}></div>
-                            <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
-                            <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full text-left">
-                                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative">
-                                     <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                     <BookOpen size={36} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] relative z-10 sm:w-10 sm:h-10"/>
-                                 </div>
-                                 <div className="min-w-0 flex-1">
-                                     <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md flex items-center gap-1.5 truncate">
-                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-black/40 border border-white/20 shadow-inner shrink-0">
-                                            {editingLiturgiaId ? <Edit size={10} className="text-amber-300"/> : <Plus size={10} className="text-emerald-300"/>} 
-                                        </span>
-                                        {editingLiturgiaId ? 'Editando Roteiro' : 'Novo Roteiro'} • <span className="text-white/60">Culto & Roteiro</span>
-                                     </p>
-                                     <h3 className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] truncate text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-50 to-slate-300" title={liturgiaForm.titulo || (editingLiturgiaId ? 'Modificar Roteiro' : 'Novo Roteiro')}>
-                                         {liturgiaForm.titulo || (editingLiturgiaId ? 'Modificar Roteiro' : 'Novo Roteiro')}
-                                     </h3>
-                                 </div>
-                            </div>
-                            <button type="button" onClick={() => setShowLiturgiaModal(false)} className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110">
-                                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
-                            </button>
+                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 p-8 space-y-6 my-8 animate-entrance text-left font-sans">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xl font-black text-slate-800">{editingLiturgiaId ? 'Editar Roteiro Litúrgico' : 'Criar Novo Roteiro Litúrgico'}</h3>
+                            <button onClick={()=>setShowLiturgiaModal(false)} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X size={18}/></button>
                         </div>
-                        <form onSubmit={handleSaveLiturgia} className="flex flex-col flex-1 overflow-hidden">
-                            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 bg-white/40 space-y-2 text-left">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormInput 
-                                        label="Data do Culto" 
-                                        type="date" 
-                                        value={liturgiaForm.data} 
-                                        onChange={val => setLiturgiaForm({ ...liturgiaForm, data: val })} 
-                                        required 
-                                    />
-                                    <FormInput 
-                                        label="Hora" 
-                                        type="time" 
-                                        value={liturgiaForm.hora} 
-                                        onChange={val => setLiturgiaForm({ ...liturgiaForm, hora: val })} 
-                                        required 
-                                    />
+                        <form onSubmit={handleSaveLiturgia} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Data do Culto</label>
+                                    <input type="date" value={liturgiaForm.data} onChange={e=>setLiturgiaForm({...liturgiaForm, data: e.target.value})} required className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormInput 
-                                        label="Tema / Título do Culto" 
-                                        value={liturgiaForm.titulo} 
-                                        onChange={val => setLiturgiaForm({ ...liturgiaForm, titulo: val.toUpperCase() })} 
-                                        required 
-                                        placeholder="Ex: CULTO DE ADORAÇÃO E CELEBRAÇÃO" 
-                                    />
-                                    <FormInput 
-                                        label="Série de Sermões (Opcional)" 
-                                        value={liturgiaForm.serie} 
-                                        onChange={val => setLiturgiaForm({ ...liturgiaForm, serie: val.toUpperCase() })} 
-                                        placeholder="Ex: FAMÍLIAS INABALÁVEIS" 
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormInput 
-                                        label="Dirigente da Liturgia" 
-                                        value={liturgiaForm.dirigente} 
-                                        onChange={val => setLiturgiaForm({ ...liturgiaForm, dirigente: val.toUpperCase() })} 
-                                        placeholder="Ex: COOP. FRANCISCO SOUZA" 
-                                    />
-                                    <FormInput 
-                                        label="Pregador (Ministro da Palavra)" 
-                                        value={liturgiaForm.pregador} 
-                                        onChange={val => setLiturgiaForm({ ...liturgiaForm, pregador: val.toUpperCase() })} 
-                                        placeholder="Ex: PR. JOÃO SILVA" 
-                                    />
-                                </div>
-                                <FormInput 
-                                    label="Texto Bíblico Oficial (Atos / Passagem)" 
-                                    value={liturgiaForm.leitura_biblica} 
-                                    onChange={val => setLiturgiaForm({ ...liturgiaForm, leitura_biblica: val.toUpperCase() })} 
-                                    placeholder="Ex: SALMOS 122:1-9 ou JOÃO 3:16" 
-                                />
-                                <div className="mb-6 group">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">Playlist de Cânticos (Louvores / Linha por Linha)</label>
-                                    <textarea 
-                                        value={liturgiaForm.louvor} 
-                                        onChange={e => setLiturgiaForm({ ...liturgiaForm, louvor: e.target.value.toUpperCase() })} 
-                                        placeholder="Ex:&#10;1. ATRAÍDO PELO AMOR - HARPA CRISTÃ&#10;2. GRANDE É O SENHOR - REBANHO&#10;3. VENCENDO VEM JESUS" 
-                                        rows={3} 
-                                        className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm resize-none uppercase focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                    />
-                                </div>
-                                <div className="mb-6 group">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">Declaração / Esboço ou Pontos Críticos do Sermão (Aparece ao Membro)</label>
-                                    <textarea 
-                                        value={liturgiaForm.esboco_pregao} 
-                                        onChange={e => setLiturgiaForm({ ...liturgiaForm, esboco_pregao: e.target.value })} 
-                                        placeholder="Pequena síntese ou divisões homiléticas (ex: I. Introdução, II. Desenvolvimento, III. Conclusão) para que os membros possam acompanhar a mensagem e tomar notas..." 
-                                        rows={4} 
-                                        className="input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm resize-y focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                    />
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Hora</label>
+                                    <input type="time" value={liturgiaForm.hora} onChange={e=>setLiturgiaForm({...liturgiaForm, hora: e.target.value})} required className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" />
                                 </div>
                             </div>
-                            <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex justify-end gap-4 relative shrink-0">
-                                <Button variant="ghost" type="button" onClick={() => setShowLiturgiaModal(false)} className="border border-white/60 bg-white/40 hover:bg-white text-slate-700">Cancelar</Button>
-                                <Button variant="primary" type="submit" className="shadow-indigo-500/40">
-                                    <Save size={20} />
-                                    Salvar Roteiro Litúrgico
-                                </Button>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Tema / Título do Culto</label>
+                                    <input type="text" value={liturgiaForm.titulo} onChange={e=>setLiturgiaForm({...liturgiaForm, titulo: e.target.value.toUpperCase()})} required placeholder="Ex: CULTO DE ADORAÇÃO E CELEBRAÇÃO" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Série de Sermões (Opcional)</label>
+                                    <input type="text" value={liturgiaForm.serie} onChange={e=>setLiturgiaForm({...liturgiaForm, serie: e.target.value.toUpperCase()})} placeholder="Ex: FAMÍLIAS INABALÁVEIS" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Dirigente da Liturgia</label>
+                                    <input type="text" value={liturgiaForm.dirigente} onChange={e=>setLiturgiaForm({...liturgiaForm, dirigente: e.target.value.toUpperCase()})} placeholder="Ex: COOP. FRANCISCO SOUZA" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Pregador (Ministro da Palavra)</label>
+                                    <input type="text" value={liturgiaForm.pregador} onChange={e=>setLiturgiaForm({...liturgiaForm, pregador: e.target.value.toUpperCase()})} placeholder="Ex: PR. JOÃO SILVA" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Texto Bíblico Oficial (Atos / Passagem)</label>
+                                <input type="text" value={liturgiaForm.leitura_biblica} onChange={e=>setLiturgiaForm({...liturgiaForm, leitura_biblica: e.target.value.toUpperCase()})} placeholder="Ex: SALMOS 122:1-9 ou JOÃO 3:16" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Playlist de Cânticos (Louvores / Linha por Linha)</label>
+                                <textarea value={liturgiaForm.louvor} onChange={e=>setLiturgiaForm({...liturgiaForm, louvor: e.target.value.toUpperCase()})} placeholder="Ex:&#10;1. ATRAÍDO PELO AMOR - HARPA CRISTÃ&#10;2. GRANDE É O SENHOR - REBANHO&#10;3. VENCENDO VEM JESUS" rows={3} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none uppercase font-sans" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Declaração / Esboço ou Pontos Críticos do Sermão (Aparece ao Membro)</label>
+                                <textarea value={liturgiaForm.esboco_pregao} onChange={e=>setLiturgiaForm({...liturgiaForm, esboco_pregao: e.target.value})} placeholder="Pequena síntese ou divisões homiléticas (ex: I. Introdução, II. Desenvolvimento, III. Conclusão) para que os membros possam acompanhar a mensagem e tomar notas..." rows={4} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
+                            </div>
+                            <div className="flex gap-4 pt-4 font-sans">
+                                <button type="button" onClick={()=>setShowLiturgiaModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20">Salvar Roteiro Litúrgico</button>
                             </div>
                         </form>
                     </div>
