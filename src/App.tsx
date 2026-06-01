@@ -884,86 +884,20 @@ const GlobalStyles = () => (
       }
       
       /* Ocultar elementos de navegação, chatbot, botões, modais gerais, rodapés interativos, cabeçalhos, notificações, etc. */
-      .screen-content, 
-      .screen-content *, 
-      #toast-container, 
-      .toast,
-      .fixed, 
-      .absolute:not(.print-area *),
-      nav, 
-      aside, 
-      header:not(.print-header), 
-      footer:not(.print-footer),
-      button, 
-      .btn,
-      .no-print,
-      .print-hidden,
-      .print\:hidden,
-      input[type="button"],
-      input[type="submit"],
-      .sidebar,
-      .sidebar-wrapper,
-      #assistente_ai,
-      .floating-copilot,
-      [class*="backdrop-blur"],
-      [class*="bg-slate-900/80"],
-      [class*="z-[12000]"],
-      .pagination-controls,
-      .filter-bar,
-      .user-menu,
-      .tabs-list,
-      .tabs-trigger,
-      .scroll-indicator,
-      .loading-spinner,
-      [role="tooltip"] { 
-        display: none !important; 
+      body * {
         visibility: hidden !important; 
-        opacity: 0 !important;
-        pointer-events: none !important;
       }
-
-      /* Ampliação ultra generosa da classe .no-print e elementos interativos para garantir que ocupem espaço ZERO absoluto e sejam totalmente ocultos */
-      .no-print,
-      .no-print *,
-      [class*="no-print"],
-      .print-hidden,
-      .print\:hidden,
-      .floating-widget,
-      [data-no-print],
-      .floating-copilot,
-      #assistente_ai,
-      .context-menu,
-      .dropdown-menu,
-      .action-buttons,
-      .floating-button,
-      .btn-floating,
-      [role="menu"],
-      [role="listbox"],
-      [role="dialog"]:not(.print-area *) { 
-        display: none !important; 
-        visibility: hidden !important; 
-        opacity: 0 !important; 
-        width: 0 !important;
-        height: 0 !important;
-        min-width: 0 !important;
-        min-height: 0 !important;
-        max-width: 0 !important;
-        max-height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        outline: none !important;
-        position: absolute !important;
-        top: -99999px !important;
-        left: -99999px !important;
-        pointer-events: none !important;
-        overflow: hidden !important;
+      
+      .print-area, .print-area * {
+        visibility: visible !important; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
       }
-
-      /* Garantir que a área de impressão ocupe todo o espaço disponível sem bordas cortadas */
+      
       .print-area { 
-        display: block !important; 
-        position: relative !important; 
+        position: absolute !important; 
+        left: 0 !important;
+        top: 0 !important;
         width: 100% !important; 
         max-width: 100% !important;
         height: auto !important; 
@@ -971,13 +905,6 @@ const GlobalStyles = () => (
         padding: 0 !important; 
         background: white !important; 
         z-index: 99999 !important; 
-        visibility: visible !important; 
-      }
-      
-      .print-area * { 
-        visibility: visible !important; 
-        -webkit-print-color-adjust: exact !important; 
-        print-color-adjust: exact !important; 
       }
 
       /* Forçar textos a ficarem nítidos e pretos para economia de tinta e contraste (exceto certificados) */
@@ -2860,8 +2787,8 @@ const DocumentPreviewModal = ({
                 compress: true
             });
 
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const pdfWidth = typeof pdf.internal.pageSize.getWidth === 'function' ? pdf.internal.pageSize.getWidth() : 210;
+            const pdfHeight = typeof pdf.internal.pageSize.getHeight === 'function' ? pdf.internal.pageSize.getHeight() : 297;
             
             // 1. Obter margens em pixels com base no marginType selecionado
             const getPrintMarginsPx = (type: string) => {
@@ -2877,13 +2804,13 @@ const DocumentPreviewModal = ({
             const margins = getPrintMarginsPx(marginType);
             
             // Fator de escala horizontal para caber nas margens esquerda e direita
-            const scaleX = (targetWidth - margins.left - margins.right) / targetWidth;
+            const scaleX = Math.max(0.01, (targetWidth - margins.left - margins.right) / targetWidth);
             
             // Altura útil de impressão no papel em pixels
             const printableHeight = targetHeight - margins.top - margins.bottom;
             
             // Altura máxima proporcional da imagem de entrada a ser cortada por página
-            const maxSliceHeight = Math.floor(printableHeight / scaleX);
+            const maxSliceHeight = Math.max(10, Math.floor(printableHeight / scaleX));
 
             // 2. Coletar os limites verticais de todos os elementos indivisíveis dentro do documento
             const containerRect = targetEl.getBoundingClientRect();
@@ -2901,8 +2828,8 @@ const DocumentPreviewModal = ({
 
             let srcY = 0;
             let pageIndex = 0;
-            const totalHeight = img.height;
-            const approxTotalPages = Math.ceil(totalHeight / maxSliceHeight);
+            const totalHeight = img.height || 0;
+            const approxTotalPages = Math.max(1, Math.ceil(totalHeight / maxSliceHeight));
 
             while (srcY + 5 < totalHeight) {
                 if (pageIndex > 0) {
@@ -2925,7 +2852,7 @@ const DocumentPreviewModal = ({
                             }
                         }
                     }
-                    currentSliceHeight = adjustedCutY - srcY;
+                    currentSliceHeight = Math.max(1, adjustedCutY - srcY);
                 }
 
                 // Criar canvas de corte intermediário para desenhar o pedaço da página
@@ -2940,16 +2867,19 @@ const DocumentPreviewModal = ({
                     // Desenha o conteúdo escalado centralizado entre as margens
                     tempCtx.drawImage(
                         img,
-                        0, srcY, img.width, currentSliceHeight, 
-                        margins.left, margins.top, targetWidth - margins.left - margins.right, currentSliceHeight * scaleX
+                        0, srcY, img.width || targetWidth, currentSliceHeight, 
+                        margins.left, margins.top, Math.max(1, targetWidth - margins.left - margins.right), Math.max(1, currentSliceHeight * scaleX)
                     );
                 }
 
                 const pageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
-                pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, 'FAST');
+                if (pdfWidth > 0 && pdfHeight > 0) {
+                    pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, 'FAST');
+                }
 
                 pageIndex++;
                 srcY += currentSliceHeight;
+                await new Promise(r => setTimeout(r, 10)); // aliviar thread
             }
 
             // Restaura imediatamente os estilos originais
@@ -6735,11 +6665,21 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.1.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.2.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v6.1.0 - Planeamento Litúrgico Completo, Séries de Sermões & Sistema de Bloqueio de Duplicados (Anti-Duplicidade)</h3>
-                <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Maio 2026 (Atual)</p>
+                <h3 className="font-bold text-lg text-indigo-700">v6.2.0 - Isolamento Estrito de Impressão (Print Isolation) & Correção de PDF</h3>
+                <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Impressão Limpa e Isolada:</strong> Reestruturação da regra CSS `@media print` para garantir que apenas o conteúdo do documento (Relatórios, Carnês, Liturgias) seja exibido. Todo o restante da interface (Menús, Botões, Modais) é removido do spooler de renderização garantindo folhas em branco apenas com as informações centrais injetadas.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO PARA VERSÃO 6.1.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-bold text-lg text-slate-700">v6.1.0 - Planeamento Litúrgico Completo, Séries de Sermões & Sistema de Bloqueio de Duplicados (Anti-Duplicidade)</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Maio 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Mapeamento Litúrgico & Séries de Sermões:</strong> Novo módulo interativo no Portal do Pastor para planeamento completo de cultos. Permite gerenciar temas de mensagens, designar dirigentes da liturgia, pregadores, leituras bíblicas oficiais, gerenciar playlists detalhadas de cânticos (hinos de louvor) e adicionar esboços ou resumos homiléticos das pregações compartilhadas, com suporte técnico a impressão física direta.</li>
                     <li><strong className="text-slate-700">Prevenção e Bloqueio de Registros Duplicados:</strong> Auditoria ativa no momento de novos cadastros e edições. Agora, o sistema previne de forma automática dupla inserção de membros (com mesmo Nome ou CPF), logins redundantes de usuários na plataforma, múltiplos fornecedores com o mesmo CNPJ, classes duplicadas na EBD ou centros de custos idênticos, emitindo alertas imediatos.</li>
@@ -17219,7 +17159,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 6.1.0 (SaaS Gold Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 6.2.0 (SaaS Gold Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -24053,7 +23993,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.1.0</span>
+                        <span>Versão 6.2.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>SaaS Gold Edition</span>
                     </div>
@@ -25497,7 +25437,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v6.1.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v6.2.0</p>
                         </div>
                     </div>
                     <div>
