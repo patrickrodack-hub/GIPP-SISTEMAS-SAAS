@@ -23342,7 +23342,7 @@ const MemberPortalLayout = () => {
     };
 
     const isLicenseValid = () => {
-        if (user?.id === 'dev' || user?.nivel === 'master' || user?.nivel === 'dev') return true;
+        if (user?.id === 'dev') return true;
         if (db.igreja?.licenca_status === 'bloqueado') return false;
         const vencimento = db.igreja?.licenca_vencimento;
         if (vencimento) {
@@ -23712,7 +23712,7 @@ const AppLayout = () => {
     };
 
     const isLicenseValid = () => {
-        if (user?.id === 'dev' || user?.nivel === 'master' || user?.nivel === 'dev') return true;
+        if (user?.id === 'dev') return true;
         if (db.igreja?.licenca_status === 'bloqueado') return false;
         const vencimento = db.igreja?.licenca_vencimento;
         if (vencimento) {
