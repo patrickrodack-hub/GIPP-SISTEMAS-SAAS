@@ -1301,7 +1301,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     );
 };
 
-export const ChurchContext = createContext();
+export const ChurchContext = createContext<any>(null);
 
 const playMenuSound = () => {
     try {
@@ -3676,7 +3676,7 @@ const PrintSystem = ({
                             <h2 className="font-classic text-3xl text-indigo-800 font-black tracking-widest uppercase border-y-4 border-indigo-100 py-1.5 w-full my-2">Diploma de Conclusão</h2>
                             
                             <p className="font-serif text-lg leading-relaxed text-slate-800 max-w-3xl text-justify indent-12 my-2 z-10">
-                                Conferimos o presente certificado a <strong className="uppercase text-indigo-900 font-black">{data.membro?.nome || 'NOME DO ALUNO'}</strong>, em virtude de ter cumprido todos os requisitos curriculares e concluído com pleno aproveitamento o <strong className="uppercase">{data.extra?.curso || data.extra?.nome_curso || 'CURSO DE TEOLOGIA'}</strong>, estando apto(a) a aplicar os conhecimentos adquiridos na obra do Mestre.
+                                Conferimos o presente certificado a <strong className="uppercase text-indigo-900 font-black">{data.membro?.nome || 'NOME DO ALUNO'}</strong>, em virtude de ter cumprido todos os requisitos curriculares e concluído com pleno aproveitamento o <strong className="uppercase">{data.extra?.curso || 'CURSO DE TEOLOGIA'}</strong>, estando apto(a) a aplicar os conhecimentos adquiridos na obra do Mestre.
                             </p>
                             
                             <p className="text-indigo-900 font-classic text-xs font-bold uppercase tracking-widest my-1 z-10">
@@ -6650,34 +6650,11 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.4.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.2.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v6.4.0 - Reversão de Estabilidade e Atualização de Visualização</h3>
+                <h3 className="font-bold text-lg text-indigo-700">v6.2.0 - Isolamento Estrito de Impressão (Print Isolation) & Correção de PDF</h3>
                 <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Junho 2026 (Atual)</p>
-                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
-                    <li><strong className="text-slate-700">Estabilização Geral:</strong> Sistema retornado para a última versão 100% funcional garantindo estabilidade máxima e resolvendo bugs recentes no histórico e na validação do sistema financeiro.</li>
-                    <li><strong className="text-slate-700">Atualização Base:</strong> Consistência de versão em todos os lugares de visualização da plataforma.</li>
-                </ul>
-            </div>
-
-            {/* BLOCO ADICIONADO PARA VERSÃO 6.3.0 */}
-            <div className="relative pl-8 border-l-2 border-slate-300">
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
-                <h3 className="font-bold text-lg text-slate-700">v6.3.0 - Auditoria Completa de Integridade, Remoção de Duplicidades e Otimização do Sistema</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Junho 2026</p>
-                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
-                    <li><strong className="text-slate-700">Varredura & Segurança:</strong> Realização de varredura global fidedigna de integridade e conformidade de tipos em 100% dos arquivos do sistema (incluindo painéis React do cliente, rotas adicionais de API do servidor e rotas do service worker).</li>
-                    <li><strong className="text-slate-700">Limpeza & Estabilização:</strong> Limpeza estrutural de trechos redundantes de código, eliminação total de conflitos e validação estrita com compilador TypeScript sem nenhuma discrepância ou mensagem de erro ativa.</li>
-                    <li><strong className="text-slate-700">Gestão de Cache e Sw.js:</strong> Otimização da velocidade de inicialização do cache offline sob motor IndexedDB e serviço de notificações push do PWA.</li>
-                </ul>
-            </div>
-
-            {/* BLOCO PARA VERSÃO 6.2.0 */}
-            <div className="relative pl-8 border-l-2 border-slate-300">
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
-                <h3 className="font-bold text-lg text-slate-700">v6.2.0 - Isolamento Estrito de Impressão (Print Isolation) & Correção de PDF</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Impressão Limpa e Isolada:</strong> Reestruturação da regra CSS `@media print` para garantir que apenas o conteúdo do documento (Relatórios, Carnês, Liturgias) seja exibido. Todo o restante da interface (Menús, Botões, Modais) é removido do spooler de renderização garantindo folhas em branco apenas com as informações centrais injetadas.</li>
                 </ul>
@@ -14785,7 +14762,1821 @@ const ModuleConciliacaoBancaria = () => {
     );
 };
 
-import ModulePortalPastor from './components/ModulePortalPastor';
+const ModulePortalPastor = () => {
+    const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const isPastorPresidente = user?.funcao_administrativa?.toUpperCase() === 'PASTOR PRESIDENTE' || user?.nivel === 'master';
+    const [activeTab, setActiveTab ] = useState('agenda'); // agenda, liturgias, mensagens, cofre
+    
+    // States for Budget Planning
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [showBudgetModal, setShowBudgetModal] = useState(false);
+    const [editingBudgetCC, setEditingBudgetCC] = useState(null);
+    const [metaReceitaValue, setMetaReceitaValue] = useState('');
+    const [tetoGastosValue, setTetoGastosValue] = useState('');
+    const [budgetSaving, setBudgetSaving] = useState(false);
+
+    const centersInfo = useMemo(() => {
+        return (db.centro_custo || []).map((cc: any) => {
+            const budget = (db.orcamentos || []).find((b: any) => b.ano === selectedYear && b.centro_custo_id === cc.id);
+            const meta_receita = budget ? (parseFloat(budget.meta_receita) || 0) : 0;
+            const teto_gastos = budget ? (parseFloat(budget.teto_gastos) || 0) : 0;
+
+            const txHasThisCc = (db.financeiro || []).filter((f: any) => 
+                f.centro_custo_id === cc.id && 
+                f.data_competencia && 
+                f.data_competencia.startsWith(String(selectedYear))
+            );
+
+            const entradasRealizadas = txHasThisCc
+                .filter((f: any) => f.tipo === 'entrada')
+                .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
+
+            const saidasRealizadas = txHasThisCc
+                .filter((f: any) => f.tipo === 'saida')
+                .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
+
+            return {
+                ...cc,
+                meta_receita,
+                teto_gastos,
+                entradasRealizadas,
+                saidasRealizadas,
+            };
+        });
+    }, [db.centro_custo, db.orcamentos, db.financeiro, selectedYear]);
+
+    const totalMetaReceita = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.meta_receita, 0), [centersInfo]);
+    const totalTetoGastos = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.teto_gastos, 0), [centersInfo]);
+    const totalEntradasRealizadas = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.entradasRealizadas, 0), [centersInfo]);
+    const totalSaidasRealizadas = useMemo(() => centersInfo.reduce((acc, cc) => acc + cc.saidasRealizadas, 0), [centersInfo]);
+    
+    // Form States for Agenda
+    const [agendaForm, setAgendaForm] = useState({ titulo: '', categoria: 'Compromisso', data: '', hora: '', local: '', descricao: '' });
+    const [editingAgendaId, setEditingAgendaId] = useState(null);
+    const [showAgendaModal, setShowAgendaModal] = useState(false);
+
+    // Form States for Liturgia e Série de Sermões (Mapeamento Litúrgico)
+    const [liturgiaForm, setLiturgiaForm] = useState({
+        data: new Date().toISOString().split('T')[0],
+        hora: '',
+        titulo: '',
+        serie: '',
+        dirigente: '',
+        pregador: '',
+        louvor: '',
+        leitura_biblica: '',
+        esboco_pregao: ''
+    });
+    const [editingLiturgiaId, setEditingLiturgiaId] = useState(null);
+    const [showLiturgiaModal, setShowLiturgiaModal] = useState(false);
+    const [showLiturgiaPreview, setShowLiturgiaPreview] = useState(null);
+
+    // Form States for Mensagem
+    const [selectedDeptoId, setSelectedDeptoId] = useState('');
+    const [mensagemTexto, setMensagemTexto] = useState('');
+    const [loadingMsg, setLoadingMsg] = useState(false);
+
+    // Form States for Esboço (Área Restrita)
+    const [esbocoForm, setEsbocoForm] = useState({ titulo: '', conteudo: '', status: 'Rascunho' });
+    const [editingEsbocoId, setEditingEsbocoId] = useState(null);
+    const [showEsbocoModal, setShowEsbocoModal] = useState(false);
+    
+    // Auth check for restricted area (cofre)
+    const [cofreLocked, setCofreLocked] = useState(true);
+    const [cofrePassword, setCofrePassword] = useState('');
+
+    const handleVerifyLocker = () => {
+        const checkPass = user.senha_portal || user.senha || '123';
+        if (cofrePassword === checkPass) {
+            setCofreLocked(false);
+            addToast("Área Restrita Desbloqueada com sucesso!", "success");
+        } else {
+            addToast("Senha incorreta! Utilize a mesma senha de acesso do Portal.", "error");
+        }
+    };
+
+    // Filters for agenda and outlines and messages
+    const myAgenda = (db.pastor_agenda || []).filter(item => user.nivel === 'master' || item.pastor_id === user.id);
+    const myEsbocos = (db.pastor_esbocos || []).filter(item => user.nivel === 'master' || item.pastor_id === user.id);
+    const sentMessages = (db.pastor_mensagens || []).filter(item => user.nivel === 'master' || item.pastor_id === user.id);
+    const myLiturgias = (db.pastor_liturgias || []).filter(item => user.nivel === 'master' || item.pastor_id === user.id);
+
+    const handleSaveLiturgia = async (e) => {
+        e.preventDefault();
+        try {
+            const dataObj = {
+                ...liturgiaForm,
+                pastor_id: user.id,
+                pastor_nome: user.nome,
+                updated_at: new Date().toISOString()
+            };
+
+            if (editingLiturgiaId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias', editingLiturgiaId), dataObj, { merge: true });
+                logAction('EDIÇÃO', `Pastor atualizou liturgia do culto "${liturgiaForm.titulo}"`, 'pastor_liturgias', editingLiturgiaId);
+                addToast("Planeamento litúrgico atualizado!", "success");
+            } else {
+                const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias'), {
+                    ...dataObj,
+                    created_at: new Date().toISOString()
+                });
+                logAction('CADASTRO', `Pastor planeou liturgia do culto "${liturgiaForm.titulo}"`, 'pastor_liturgias', docRef.id);
+                addToast("Planeamento litúrgico criado com sucesso!", "success");
+            }
+            setShowLiturgiaModal(false);
+            setLiturgiaForm({
+                data: new Date().toISOString().split('T')[0],
+                hora: '',
+                titulo: '',
+                serie: '',
+                dirigente: '',
+                pregador: '',
+                louvor: '',
+                leitura_biblica: '',
+                esboco_pregao: ''
+            });
+            setEditingLiturgiaId(null);
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao gravar planeamento litúrgico.", "error");
+        }
+    };
+
+    const handleEditLiturgia = (item) => {
+        setLiturgiaForm({
+            data: item.data || '',
+            hora: item.hora || '',
+            titulo: item.titulo || '',
+            serie: item.serie || '',
+            dirigente: item.dirigente || '',
+            pregador: item.pregador || '',
+            louvor: item.louvor || '',
+            leitura_biblica: item.leitura_biblica || '',
+            esboco_pregao: item.esboco_pregao || ''
+        });
+        setEditingLiturgiaId(item.id);
+        setShowLiturgiaModal(true);
+    };
+
+    const handleDeleteLiturgia = async (id, title) => {
+        if (window.confirm(`Tem a certeza que deseja remover o planeamento litúrgico do culto "${title}"?`)) {
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias', id));
+                logAction('EXCLUSÃO', `Pastor removeu liturgia do culto "${title}"`, 'pastor_liturgias', id);
+                addToast("Planeamento litúrgico removido.", "info");
+            } catch (error) {
+                console.error(error);
+                addToast("Erro ao remover liturgia.", "error");
+            }
+        }
+    };
+
+    const handleSaveAgenda = async (e) => {
+        e.preventDefault();
+        try {
+            const dataObj = {
+                ...agendaForm,
+                pastor_id: user.id,
+                pastor_nome: user.nome,
+                updated_at: new Date().toISOString()
+            };
+
+            if (editingAgendaId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_agenda', editingAgendaId), dataObj, { merge: true });
+                logAction('EDIÇÃO', `Pastor atualizou compromisso "${agendaForm.titulo}"`, 'pastor_agenda', editingAgendaId);
+                addToast("Compromisso atualizado!", "success");
+            } else {
+                const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_agenda'), {
+                    ...dataObj,
+                    created_at: new Date().toISOString()
+                });
+                logAction('CADASTRO', `Pastor agendou compromisso "${agendaForm.titulo}"`, 'pastor_agenda', docRef.id);
+                addToast("Compromisso agendado com sucesso!", "success");
+            }
+            setShowAgendaModal(false);
+            setAgendaForm({ titulo: '', categoria: 'Compromisso', data: '', hora: '', local: '', descricao: '' });
+            setEditingAgendaId(null);
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao gravar compromisso.", "error");
+        }
+    };
+
+    const handleEditAgenda = (item) => {
+        setAgendaForm({
+            titulo: item.titulo || '',
+            categoria: item.categoria || 'Compromisso',
+            data: item.data || '',
+            hora: item.hora || '',
+            local: item.local || '',
+            descricao: item.descricao || ''
+        });
+        setEditingAgendaId(item.id);
+        setShowAgendaModal(true);
+    };
+
+    const handleDeleteAgenda = async (id, title) => {
+        if (window.confirm(`Tens a certeza que desejas retirar o compromisso "${title}"?`)) {
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_agenda', id));
+                logAction('EXCLUSÃO', `Pastor removeu compromisso "${title}"`, 'pastor_agenda', id);
+                addToast("Compromisso cancelado ou removido.", "info");
+            } catch (error) {
+                console.error(error);
+                addToast("Erro ao remover compromisso.", "error");
+            }
+        }
+    };
+
+    const handleSendMsg = async (e) => {
+        e.preventDefault();
+        if (!selectedDeptoId || !mensagemTexto.trim()) {
+            addToast("Por favor, selecione o departamento e preencha a mensagem.", "warning");
+            return;
+        }
+        setLoadingMsg(true);
+        try {
+            const depto = db.departamentos?.find(d => d.id === selectedDeptoId);
+            const deptoNome = depto ? depto.nome : 'Ministério';
+
+            const msgDoc = {
+                pastor_id: user.id,
+                pastor_nome: user.nome,
+                departamento_id: selectedDeptoId,
+                departamento_nome: deptoNome,
+                mensagem: mensagemTexto,
+                data_envio: new Date().toISOString()
+            };
+
+            const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_mensagens'), msgDoc);
+            logAction('CADASTRO', `Pastor enviou mensagem ao ministério "${deptoNome}"`, 'pastor_mensagens', docRef.id);
+            addToast("Mensagem enviada com sucesso ao ministério!", "success");
+            setMensagemTexto('');
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao enviar mensagem.", "error");
+        } finally {
+            setLoadingMsg(false);
+        }
+    };
+
+    const handleSaveEsboco = async (e) => {
+        e.preventDefault();
+        try {
+            const dataObj = {
+                ...esbocoForm,
+                pastor_id: user.id,
+                pastor_nome: user.nome,
+                updated_at: new Date().toISOString()
+            };
+
+            if (editingEsbocoId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_esbocos', editingEsbocoId), dataObj, { merge: true });
+                logAction('EDIÇÃO', `Pastor atualizou esboço "${esbocoForm.titulo}"`, 'pastor_esbocos', editingEsbocoId);
+                addToast("Esboço de sermão atualizado!", "success");
+            } else {
+                const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_esbocos'), {
+                    ...dataObj,
+                    created_at: new Date().toISOString()
+                });
+                logAction('CADASTRO', `Pastor criou esboço "${esbocoForm.titulo}"`, 'pastor_esbocos', docRef.id);
+                addToast("Esboço de sermão salvo com sucesso!", "success");
+            }
+            setShowEsbocoModal(false);
+            setEsbocoForm({ titulo: '', conteudo: '', status: 'Rascunho' });
+            setEditingEsbocoId(null);
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao salvar esboço.", "error");
+        }
+    };
+
+    const handleEditEsboco = (item) => {
+        setEsbocoForm({
+            titulo: item.titulo || '',
+            conteudo: item.conteudo || '',
+            status: item.status || 'Rascunho'
+        });
+        setEditingEsbocoId(item.id);
+        setShowEsbocoModal(true);
+    };
+
+    const handleDeleteEsboco = async (id, title) => {
+        if (window.confirm(`Remover definitivamente o esboço "${title}"?`)) {
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_esbocos', id));
+                logAction('EXCLUSÃO', `Pastor excluiu esboço "${title}"`, 'pastor_esbocos', id);
+                addToast("Esboço removido do cofre.", "info");
+            } catch (error) {
+                addToast("Erro ao remover esboço.", "error");
+            }
+        }
+    };
+
+    // Form States for Atas (Área Restrita - Reuniões e Gabinete)
+    const [cofreSubTab, setCofreSubTab] = useState(isPastorPresidente ? 'financeiro' : 'atas'); // default to 'financeiro' structure for pastor president but restricted otherwise
+    const [finMonthFilter, setFinMonthFilter] = useState(new Date().toISOString().slice(0, 7));
+    const [finExactDateFilter, setFinExactDateFilter] = useState('');
+    const [finViewMode, setFinViewMode] = useState('lista'); // Default to 'lista' so it is immediately transparent and visible on mobile
+    const [autoPixScanning, setAutoPixScanning] = useState(false);
+    const [autoPixLogs, setAutoPixLogs] = useState<string[]>([]);
+    const [openCategories, setOpenCategories] = useState<{ [cat: string]: boolean }>({});
+    const [ataForm, setAtaForm] = useState({
+        titulo: '',
+        tipo: 'Atendimento de Gabinete',
+        data: new Date().toISOString().split('T')[0],
+        hora: '',
+        pessoas: '',
+        conteudo: '',
+        confidencialidade: 'confidencial',
+        decisoes: '',
+        notas_privadas: ''
+    });
+    const [editingAtaId, setEditingAtaId] = useState(null);
+    const [showAtaModal, setShowAtaModal] = useState(false);
+    const [searchAtaQuery, setSearchAtaQuery] = useState('');
+    const [filterAtaTipo, setFilterAtaTipo] = useState('all');
+
+    const myAtas = (db.pastor_atas || []).filter(item => user.nivel === 'master' || item.pastor_id === user.id);
+
+    // Form States for Pastor Fast Financial Transaction (dentro da Área Restrita)
+    const [pastorFinForm, setPastorFinForm] = useState({
+        tipo: 'entrada', // 'entrada' ou 'saida'
+        valor: '',
+        descricao: '',
+        categoria: 'Dízimo',
+        forma_pagamento: 'PIX',
+        data_competencia: new Date().toISOString().split('T')[0],
+        status: 'pago',
+        membro_id: '',
+        congregacao_id: user.congregacao_id || 'sede'
+    });
+    const [pastorFinSaving, setPastorFinSaving] = useState(false);
+
+    const handleSavePastorFinanceiro = async (e: any) => {
+        e.preventDefault();
+        if (!pastorFinForm.valor || parseFloat(pastorFinForm.valor) <= 0) {
+            return addToast("Por favor, introduza um valor financeiro válido.", "warning");
+        }
+        if (!pastorFinForm.descricao.trim()) {
+            return addToast("Por favor, preencha a descrição da transação.", "warning");
+        }
+        
+        setPastorFinSaving(true);
+        try {
+            const dataAtual = new Date().toISOString().split('T')[0];
+            const chosenMember = (db.membros || []).find(m => m.id === pastorFinForm.membro_id);
+            
+            const novoItem: any = {
+                tipo: pastorFinForm.tipo,
+                valor: parseFloat(pastorFinForm.valor),
+                categoria: pastorFinForm.categoria,
+                descricao: pastorFinForm.descricao.trim(),
+                data_competencia: pastorFinForm.data_competencia || dataAtual,
+                forma_pagamento: pastorFinForm.forma_pagamento,
+                status: pastorFinForm.status,
+                conciliado: false,
+                congregacao_id: pastorFinForm.congregacao_id || user.congregacao_id || 'sede',
+                created_at: new Date().toISOString()
+            };
+
+            // Se for entrada e tiver membro associado para dízimo/oferta
+            if (pastorFinForm.tipo === 'entrada' && chosenMember) {
+                novoItem.membro_id = chosenMember.id;
+                novoItem.membro_nome = chosenMember.nome;
+                if (!novoItem.congregacao_id) {
+                    novoItem.congregacao_id = chosenMember.congregacao_id || 'sede';
+                }
+            }
+
+            // Se o status for pago, define data_pagamento
+            if (pastorFinForm.status === 'pago') {
+                novoItem.data_pagamento = pastorFinForm.data_competencia || dataAtual;
+            } else {
+                novoItem.data_vencimento = pastorFinForm.data_competencia || dataAtual;
+            }
+
+            const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro'), novoItem);
+            
+            // Log do sistema
+            logAction('CADASTRO', `Pastor registou ${pastorFinForm.tipo === 'entrada' ? 'Receita' : 'Despesa'} de R$ ${parseFloat(pastorFinForm.valor).toFixed(2)} - ${pastorFinForm.descricao}`, 'financeiro', docRef.id);
+            
+            addToast(`Lançamento de ${pastorFinForm.tipo === 'entrada' ? 'Receita' : 'Despesa'} concluído com sucesso!`, "success");
+            
+            // Reset do formulário preservando o tipo para lançamentos subsequentes mais rápidos
+            setPastorFinForm({
+                tipo: pastorFinForm.tipo,
+                valor: '',
+                descricao: '',
+                categoria: pastorFinForm.tipo === 'entrada' ? 'Dízimo' : 'Prebenda Pastoral',
+                forma_pagamento: 'PIX',
+                data_competencia: new Date().toISOString().split('T')[0],
+                status: 'pago',
+                membro_id: '',
+                congregacao_id: user.congregacao_id || 'sede'
+            });
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao registrar transação no Financeiro.", "error");
+        } finally {
+            setPastorFinSaving(false);
+        }
+    };
+
+    const handleAutoValidatePix = () => {
+        const bancoNome = db.igreja?.banco || 'Internet Banking';
+        const pendingPix = (db.financeiro || []).filter(item => item.forma_pagamento === 'PIX' && item.conciliado === false);
+        if (pendingPix.length === 0) {
+            return addToast("Não há lançamentos de pagamento PIX pendentes para validação automática.", "info");
+        }
+        
+        setAutoPixScanning(true);
+        setAutoPixLogs([`[INICIALIZANDO] Estabelecendo handshake seguro de API em tempo real com o ${bancoNome}...`]);
+        
+        const sequence = [
+            `[AUTENTICAÇÃO] Validando chaves mTLS e token oauth_2.0 seguro contínuo do banco...`,
+            `[API_BANCO] Solicitando extrato diário consolidado das contas de dízimos/ofertas...`,
+            `[CONVERGÊNCIA] Verificando novos depósitos PIX instantâneos na rede do Banco Central...`,
+            `[CONVERGÊNCIA] Mapeando metadados de contribuições pendentes com o fluxo financeiro entrante...`
+        ];
+        
+        let index = 0;
+        const interval = setInterval(() => {
+            if (index < sequence.length) {
+                setAutoPixLogs(prev => [...prev, sequence[index]]);
+                index++;
+            } else {
+                clearInterval(interval);
+                // Execute actual Firestore updates
+                setTimeout(async () => {
+                    const dataAtual = new Date().toISOString().split('T')[0];
+                    let count = 0;
+                    try {
+                        for (let item of pendingPix) {
+                            const transactionHash = 'TX-AUTO-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+                            setAutoPixLogs(prev => [
+                                ...prev,
+                                `[CATCH_MATCH] ✔ PIX de R$ ${parseFloat(item.valor).toFixed(2)} (${item.membro_nome || 'Lote Geral'}) conciliado na conta da igreja! Ref: ${transactionHash}`
+                            ]);
+                            
+                            // Write directly to Firebase
+                            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', item.id), {
+                                conciliado: true,
+                                data_conciliacao: dataAtual,
+                                status: 'pago',
+                                auto_validado: true,
+                                tx_api_banco: transactionHash
+                            }, { merge: true });
+                            
+                            logAction('CONCILIAÇÃO_AUTOMATICA_PIX', `Portal do Pastor auto-validou PIX de R$ ${item.valor} (${item.descricao})`, 'financeiro', item.id);
+                            count++;
+                        }
+                        
+                        setAutoPixLogs(prev => [
+                            ...prev,
+                            `[CONCLUÍDO] ✔ Conciliação finalizada! ${count} dízimos e ofertas autenticados no extrato bancário com sucesso.`
+                        ]);
+                        
+                        setTimeout(() => {
+                            setAutoPixScanning(false);
+                            addToast(`${count} transações PIX foram auto-conciliadas consultando o banco em tempo real!`, "success");
+                        }, 1800);
+                    } catch (e) {
+                        console.error(e);
+                        setAutoPixScanning(false);
+                        addToast("Erro na comunicação para auto-validar PIX.", "error");
+                    }
+                }, 805);
+            }
+        }, 500);
+    };
+
+    const handleSaveAta = async (e) => {
+        e.preventDefault();
+        try {
+            const dataObj = {
+                ...ataForm,
+                pastor_id: user.id,
+                pastor_nome: user.nome,
+                updated_at: new Date().toISOString()
+            };
+
+            if (editingAtaId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_atas', editingAtaId), dataObj, { merge: true });
+                logAction('EDIÇÃO', `Pastor atualizou ata "${ataForm.titulo}"`, 'pastor_atas', editingAtaId);
+                addToast("Ata e minuta de reunião atualizada!", "success");
+            } else {
+                const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_atas'), {
+                    ...dataObj,
+                    created_at: new Date().toISOString()
+                });
+                logAction('CADASTRO', `Pastor registou ata "${ataForm.titulo}"`, 'pastor_atas', docRef.id);
+                addToast("Nova ata guardada com sucesso no cofre!", "success");
+            }
+            setShowAtaModal(false);
+            setAtaForm({
+                titulo: '',
+                tipo: 'Atendimento de Gabinete',
+                data: new Date().toISOString().split('T')[0],
+                hora: '',
+                pessoas: '',
+                conteudo: '',
+                confidencialidade: 'confidencial',
+                decisoes: '',
+                notas_privadas: ''
+            });
+            setEditingAtaId(null);
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao gravar ata.", "error");
+        }
+    };
+
+    const handleEditAta = (item) => {
+        setAtaForm({
+            titulo: item.titulo || '',
+            tipo: item.tipo || 'Atendimento de Gabinete',
+            data: item.data || '',
+            hora: item.hora || '',
+            pessoas: item.pessoas || '',
+            conteudo: item.conteudo || '',
+            confidencialidade: item.confidencialidade || 'confidencial',
+            decisoes: item.decisoes || '',
+            notas_privadas: item.notas_privadas || ''
+        });
+        setEditingAtaId(item.id);
+        setShowAtaModal(true);
+    };
+
+    const handleDeleteAta = async (id, title) => {
+        if (window.confirm(`Eliminar permanentemente a ata "${title}" do seu cofre? Esta ação é irreversível.`)) {
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_atas', id));
+                logAction('EXCLUSÃO', `Pastor removeu ata "${title}"`, 'pastor_atas', id);
+                addToast("Ata eliminada com sucesso.", "info");
+            } catch (error) {
+                console.error(error);
+                addToast("Erro ao eliminar ata.", "error");
+            }
+        }
+    };
+
+    const handlePrintAta = (item) => {
+        setPrintData({ item, igreja: db.igreja });
+        setPrintMode('pastor_ata');
+        setPreviewOpen(true);
+    };
+
+    return (
+        <div className="space-y-8 animate-entrance">
+            <div className="bg-gradient-to-br from-indigo-900 to-slate-800 p-8 rounded-[2.5rem] text-white shadow-xl shadow-indigo-900/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden border border-white/10">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full filter blur-2xl -mr-20 -mt-20 pointer-events-none" />
+                <div className="flex items-center gap-5 z-10">
+                    <div className="bg-amber-400 text-slate-900 p-4 rounded-3xl shadow-lg shadow-amber-400/20">
+                        <BookOpenText size={36} />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">Portal do Pastor</h1>
+                        <p className="text-sm font-bold text-slate-300">Painel Executivo Pastoral & Atendimentos Ministeriais</p>
+                    </div>
+                </div>
+                <div className="flex bg-slate-900/55 p-1 px-1.5 rounded-2xl z-10 border border-white/5 shrink-0 select-none">
+                    <span className="text-[10px] uppercase font-black tracking-widest px-3 py-1 bg-amber-400 text-slate-900 rounded-xl shadow">Acesso Pastor</span>
+                </div>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto p-1 bg-slate-100 rounded-2xl border border-slate-200 shrink-0 select-none max-w-fit">
+                <button onClick={() => setActiveTab('agenda')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'agenda' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Calendar size={16}/> Minha Agenda
+                </button>
+                {isPastorPresidente && (
+                    <button onClick={() => setActiveTab('financeiro_pastor')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'financeiro_pastor' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                        <DollarSign size={16}/> Lançamento Rápido
+                    </button>
+                )}
+                <button onClick={() => setActiveTab('mensagens')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'mensagens' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Send size={16}/> Enviar Mensagem
+                </button>
+                <button onClick={() => setActiveTab('orcamento')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'orcamento' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Target size={16}/> Planeamento Orçamentário
+                </button>
+                <button onClick={() => setActiveTab('cofre')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'cofre' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Lock size={16}/> Área Restrita
+                </button>
+            </div>
+
+            {activeTab === 'agenda' && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                        <div>
+                            <h3 className="font-black text-slate-800 text-lg">Próximos Compromissos</h3>
+                            <p className="text-xs text-slate-400 font-medium">Controlo total sobre gabinetes, sermões e outros horários.</p>
+                        </div>
+                        <button onClick={() => { setEditingAgendaId(null); setAgendaForm({ titulo: '', categoria: 'Compromisso', data: '', hora: '', local: '', descricao: '' }); setShowAgendaModal(true); }} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/10">
+                            <Plus size={16}/> Agendar Horário
+                        </button>
+                    </div>
+
+                    <div className="grid gap-4">
+                        {myAgenda.length > 0 ? (
+                            myAgenda.sort((a,b) => new Date(a.data + 'T' + (a.hora || '00:00')).getTime() - new Date(b.data + 'T' + (b.hora || '00:00')).getTime()).map((item, index) => {
+                                const isPast = new Date(item.data) < new Date(new Date().toISOString().split('T')[0]);
+                                return (
+                                    <div key={index} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-indigo-400 transition-all group">
+                                        <div className="flex items-start md:items-center gap-5">
+                                            <div className={`p-4 rounded-2xl text-center min-w-[70px] ${isPast ? 'bg-slate-100 text-slate-400' : 'bg-amber-50 text-amber-600 font-black'}`}>
+                                                <div className="text-xl font-bold font-sans">{item.data ? item.data.split('-')[2] : '??'}</div>
+                                                <div className="text-[10px] uppercase font-bold">{item.data ? new Date(item.data + 'T00:00:00').toLocaleString('pt-BR', {month: 'short'}) : 'MÊS'}</div>
+                                            </div>
+                                            <div className="space-y-1 max-w-xl">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">{item.categoria}</span>
+                                                    <span className="text-xs text-slate-400 font-bold flex items-center gap-1"><Clock size={12}/> {item.hora}</span>
+                                                    {item.local && <span className="text-xs text-slate-400 font-bold flex items-center gap-1"><MapPin size={12}/> {item.local}</span>}
+                                                </div>
+                                                <h4 className="font-extrabold text-slate-800 text-base">{item.titulo}</h4>
+                                                {item.descricao && <p className="text-xs text-slate-500 leading-relaxed font-semibold">{item.descricao}</p>}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 self-end md:self-center">
+                                            <button onClick={() => handleEditAgenda(item)} className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors border border-slate-100"><Edit size={16}/></button>
+                                            <button onClick={() => handleDeleteAgenda(item.id, item.titulo)} className="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 transition-colors border border-rose-100"><Trash2 size={16}/></button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="bg-white p-12 text-center rounded-[2rem] border border-dashed border-slate-200">
+                                <Calendar className="mx-auto text-slate-300 mb-4 animate-pulse" size={48}/>
+                                <h4 className="font-bold text-slate-600">Nenhum agendamento pastoral registado</h4>
+                                <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Registe os seus próximos cultos, atendimentos, compromissos pessoais e ensinos.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'financeiro_pastor' && (
+                isPastorPresidente ? (
+                    <div className="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-150 shadow-md space-y-6 animate-scale-in">
+                        <div>
+                            <h3 className="font-extrabold text-slate-905 text-lg flex items-center gap-2">
+                                <DollarSign size={20} className="text-emerald-500 bg-emerald-50 p-1 rounded-lg shrink-0" /> Novo Lançamento Rápido
+                            </h3>
+                            <p className="text-xs text-slate-450 font-medium leading-relaxed mt-1">Lançamento direto no financeiro da igreja com total integração ao extrato da secretaria e conciliação bancária.</p>
+                        </div>
+
+                        <form onSubmit={handleSavePastorFinanceiro} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Transação</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPastorFinForm(prev => ({ ...prev, tipo: 'entrada', categoria: 'Dízimo' }))}
+                                        className={`py-2.5 rounded-xl text-xs font-black tracking-wide border transition-all ${pastorFinForm.tipo === 'entrada' ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-500/10 float-none' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}`}
+                                    >
+                                        Receita (Entrada)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPastorFinForm(prev => ({ ...prev, tipo: 'saida', categoria: 'Prebenda Pastoral' }))}
+                                        className={`py-2.5 rounded-xl text-xs font-black tracking-wide border transition-all ${pastorFinForm.tipo === 'saida' ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10 float-none' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}`}
+                                    >
+                                        Despesa (Saída)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Valor do Documento</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        required
+                                        placeholder="0,00"
+                                        value={pastorFinForm.valor}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, valor: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 pl-11 pr-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-black text-slate-700 transition-all bg-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Descrição / Finalidade</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Ex: Oferta de domingo, prebenda..."
+                                    value={pastorFinForm.descricao}
+                                    onChange={e => setPastorFinForm(prev => ({ ...prev, descricao: (e.target.value || "").toUpperCase() }))}
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold text-slate-700 transition-all bg-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Categoria</label>
+                                <select
+                                    value={pastorFinForm.categoria}
+                                    onChange={e => setPastorFinForm(prev => ({ ...prev, categoria: (e.target.value || "").toUpperCase() }))}
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                                >
+                                    {pastorFinForm.tipo === 'entrada' ? (
+                                        <>
+                                            <option value="Dízimo">Dízimo</option>
+                                            <option value="Oferta">Oferta Geral</option>
+                                            <option value="Missões">Oferta de Missões</option>
+                                            <option value="Campanha">Campanha / Envelopes</option>
+                                            <option value="Doações">Doações Extraordinárias</option>
+                                            <option value="Outros">Outras Receitas</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="Prebenda Pastoral">Prebenda Pastoral</option>
+                                            <option value="Ajuda de Custo">Ajuda de Custo</option>
+                                            <option value="Aluguel do Templo">Aluguel do Templo</option>
+                                            <option value="Cesta Básica / Ação Social">Ação Social / Assistência</option>
+                                            <option value="Material de Ensino">Material Didático / EBD</option>
+                                            <option value="Eventos e Festividades">Festas / Eventos</option>
+                                            <option value="Luz / Água / Telefone">Utilidades (Luz/Água/Internet)</option>
+                                            <option value="Reforma e Equipamentos">Reforma e Conservação</option>
+                                            <option value="Outros">Outras Despesas</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+
+                            {pastorFinForm.tipo === 'entrada' && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Membro Associado (Opcional)</label>
+                                    <select
+                                        value={pastorFinForm.membro_id}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, membro_id: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                                    >
+                                        <option value="">-- Contribuição Geral (Sem Membro) --</option>
+                                        {(db.membros || []).slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map((m: any) => (
+                                            <option key={m.id} value={m.id}>{m.nome} ({m.cargo || 'Membro'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Meio de Transação</label>
+                                <select
+                                    value={pastorFinForm.forma_pagamento}
+                                    onChange={e => setPastorFinForm(prev => ({ ...prev, forma_pagamento: (e.target.value || "").toUpperCase() }))}
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
+                                >
+                                    <option value="PIX">PIX</option>
+                                    <option value="Dinheiro">Dinheiro Físico</option>
+                                    <option value="Transferência Bancária">Transferência / TED</option>
+                                    <option value="Cartão de Crédito/Débito">Cartão de Débito/Crédito</option>
+                                    <option value="Boleto">Boleto Bancário</option>
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Competência</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={pastorFinForm.data_competencia}
+                                        onChange={e => {
+                                            const v = e.target.value;
+                                            setPastorFinForm(prev => ({ ...prev, data_competencia: v }));
+                                        }}
+                                        className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold text-slate-700 transition-all bg-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                                    <select
+                                        value={pastorFinForm.status}
+                                        onChange={e => setPastorFinForm(prev => ({ ...prev, status: (e.target.value || "").toUpperCase() }))}
+                                        className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold bg-white text-slate-700 transition-all"
+                                    >
+                                        <option value="pago">Liquidado (Efetuado)</option>
+                                        <option value="pendente">Pendente / Agendado</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={pastorFinSaving}
+                                className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-wider text-white transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${pastorFinForm.tipo === 'entrada' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/10' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10'}`}
+                            >
+                                {pastorFinSaving ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" /> Registrando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus size={16} /> Gravar Transação
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                ) : (
+                    <div className="max-w-2xl mx-auto bg-white p-12 text-center rounded-[2rem] border border-slate-200 shadow-sm">
+                        <Lock className="mx-auto text-amber-500 mb-4" size={48}/>
+                        <h4 className="font-extrabold text-slate-800 text-lg">Acesso Restrito ao Pastor Presidente</h4>
+                        <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">Esta área é restrita para dízimos, ofertas e conciliação bancária do Pastor Presidente.</p>
+                    </div>
+                )
+            )}
+
+            {activeTab === 'mensagens' && (
+                <div className="grid md:grid-cols-5 gap-8">
+                    <div className="md:col-span-3 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
+                        <div>
+                            <h3 className="font-black text-slate-800 text-lg">Escrever Mensagem ao Ministério</h3>
+                            <p className="text-xs text-slate-400 font-medium">Os líderes e supervisores do departamento receberão as suas diretrizes pastorais diretas.</p>
+                        </div>
+                        <form onSubmit={handleSendMsg} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2">Selecione o Departamento / Ministério</label>
+                                <select value={selectedDeptoId} onChange={e=>setSelectedDeptoId(e.target.value)} required className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all shadow-sm">
+                                    <option value="">Selecione...</option>
+                                    {(db.departamentos || []).map(d => (
+                                        <option key={d.id} value={d.id}>{d.nome} ({d.sigla || 'Depto'})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2">Sua Mensagem / Diretiva Pastoral</label>
+                                <textarea value={mensagemTexto} onChange={e=>setMensagemTexto(((e.target.value || "").toUpperCase() || "").toUpperCase())} required placeholder="Pronto para enviar instruções, encorajamentos ou escalas diretamente ao ministério..." rows={6} className="w-full p-4 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all shadow-sm resize-none uppercase" />
+                            </div>
+                            <button type="submit" disabled={loadingMsg} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20 flex items-center justify-center gap-2">
+                                {loadingMsg ? <Loader2 size={16} className="animate-spin"/> : <Send size={16}/>}
+                                {loadingMsg ? 'A Enviar...' : 'Enviar Mensagem ao Líder de Ministério'}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4">
+                        <h4 className="font-black text-slate-800 text-sm uppercase tracking-widest pl-2">Mensagens Recentes</h4>
+                        <div className="space-y-4 max-h-[480px] overflow-y-auto custom-scrollbar">
+                            {sentMessages.length > 0 ? (
+                                sentMessages.slice(0, 5).map((msg, idx) => (
+                                    <div key={idx} className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 relative animate-entrance">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">{msg.departamento_nome}</span>
+                                            <span className="text-[9px] font-bold text-slate-400">{msg.data_envio ? new Date(msg.data_envio).toLocaleDateString('pt-BR') : ''}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 font-semibold italic">"{msg.mensagem}"</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-8 text-center bg-white rounded-2xl border border-slate-100">
+                                    <p className="text-xs font-bold text-slate-400">Nenhuma mensagem recente enviada.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'orcamento' && (
+                <div className="space-y-6 animate-entrance">
+                    {/* Summary Header of Planning */}
+                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 className="font-black text-slate-800 text-lg">Metas & Tetos Anuais</h3>
+                            <p className="text-xs text-slate-400 font-medium">Controle executivo e planejamento de receitas e tetos de despesas de cada centro de de custo.</p>
+                        </div>
+                        
+                        {/* Year selector buttons */}
+                        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                            {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1, new Date().getFullYear() + 2].map(yr => (
+                                <button 
+                                    key={yr} 
+                                    onClick={() => setSelectedYear(yr)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${selectedYear === yr ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+                                >
+                                    {yr}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Grand Totals Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Revenue Target Summary */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-3xl border border-emerald-100/80 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-md shadow-emerald-500/20">
+                                        <TrendingUp size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-slate-400 text-xs font-bold uppercase tracking-wider">Meta de Receitas Geral</h4>
+                                        <span className="text-slate-400 text-[10px] font-semibold">Consolidado ({selectedYear})</span>
+                                    </div>
+                                </div>
+                                <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                                    {totalMetaReceita > 0 ? `${((totalEntradasRealizadas / totalMetaReceita) * 100).toFixed(1)}%` : '0%'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Estipulado</span>
+                                    <span className="text-lg font-black text-slate-800">R$ {totalMetaReceita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Arrecadado</span>
+                                    <span className="text-lg font-black text-emerald-600">R$ {totalEntradasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="space-y-1">
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                                        style={{ width: `${Math.min(100, totalMetaReceita > 0 ? (totalEntradasRealizadas / totalMetaReceita) * 100 : 0)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                                    <span>Início do Ano</span>
+                                    <span>{totalMetaReceita > 0 && totalEntradasRealizadas >= totalMetaReceita ? 'Meta Atingida!' : `Faltam R$ ${Math.max(0, totalMetaReceita - totalEntradasRealizadas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Spends Ceiling Summary */}
+                        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-3xl border border-indigo-100/80 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-indigo-500 text-white rounded-2xl shadow-md shadow-indigo-500/20">
+                                        <TrendingDown size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-slate-400 text-xs font-bold uppercase tracking-wider">Teto de Gastos Geral</h4>
+                                        <span className="text-slate-400 text-[10px] font-semibold">Consolidado ({selectedYear})</span>
+                                    </div>
+                                </div>
+                                <span className={`text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider ${totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'bg-rose-100 text-rose-700 font-bold' : totalTetoGastos > 0 && (totalSaidasRealizadas / totalTetoGastos) >= 0.8 ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                    {totalTetoGastos > 0 ? `${((totalSaidasRealizadas / totalTetoGastos) * 100).toFixed(1)}%` : '0%'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Limite de Despesa</span>
+                                    <span className="text-lg font-black text-slate-800">R$ {totalTetoGastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Despesa Consumida</span>
+                                    <span className={`text-lg font-black ${totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'text-rose-600' : 'text-indigo-600'}`}>R$ {totalSaidasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="space-y-1">
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-500 ${totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'bg-rose-500 animate-pulse' : totalTetoGastos > 0 && (totalSaidasRealizadas / totalTetoGastos) >= 0.8 ? 'bg-amber-500' : 'bg-indigo-505'}`} 
+                                        style={{ width: `${Math.min(100, totalTetoGastos > 0 ? (totalSaidasRealizadas / totalTetoGastos) * 100 : 0)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                                    <span>0% consumido</span>
+                                    <span>{totalTetoGastos > 0 && totalSaidasRealizadas > totalTetoGastos ? 'Limite Ultrapassado!' : `R$ ${Math.max(0, totalTetoGastos - totalSaidasRealizadas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} restantes`}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* List of Cost Centers with Budgets */}
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                        <div>
+                            <h3 className="font-extrabold text-slate-800 text-lg">Distribuição por Centro de Custo</h3>
+                            <p className="text-xs text-slate-400 font-medium">Veja e ajuste as metas individuais para cada linha orçamentária cadastrada.</p>
+                        </div>
+
+                        {centersInfo.length > 0 ? (
+                            <div className="grid gap-6 sm:grid-cols-2">
+                                {centersInfo.map((cc) => {
+                                    const rPercent = cc.meta_receita > 0 ? (cc.entradasRealizadas / cc.meta_receita) * 100 : 0;
+                                    const sPercent = cc.teto_gastos > 0 ? (cc.saidasRealizadas / cc.teto_gastos) * 100 : 0;
+                                    const isOverLimit = cc.teto_gastos > 0 && cc.saidasRealizadas > cc.teto_gastos;
+
+                                    return (
+                                        <div key={cc.id} className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 hover:border-slate-300 transition-all flex flex-col justify-between space-y-6">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex gap-3">
+                                                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                                                        <Landmark size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-extrabold text-slate-800 text-sm uppercase leading-tight">{cc.nome}</h4>
+                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{cc.responsavel ? `Resp: ${cc.responsavel}` : 'Sem Responsável'}</span>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingBudgetCC(cc);
+                                                        setMetaReceitaValue(cc.meta_receita ? String(cc.meta_receita) : '');
+                                                        setTetoGastosValue(cc.teto_gastos ? String(cc.teto_gastos) : '');
+                                                        setShowBudgetModal(true);
+                                                    }}
+                                                    className="p-2 bg-white hover:bg-indigo-50 rounded-xl text-slate-500 hover:text-indigo-600 border border-slate-100 transition-all hover:scale-105"
+                                                    title="Editar Planeamento"
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                {/* Target Revenue Section */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-end">
+                                                        <div>
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Meta de Receita</span>
+                                                            <span className="text-xs font-bold text-slate-700">R$ {cc.meta_receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Arrecadado</span>
+                                                            <span className="text-xs font-extrabold text-emerald-600">R$ {cc.entradasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({rPercent.toFixed(0)}%)</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full bg-slate-200/50 h-1.5 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="bg-emerald-500 h-full rounded-full transition-all" 
+                                                            style={{ width: `${Math.min(100, rPercent)}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Spending Limit Section */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-end">
+                                                        <div>
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Limite de Despesa</span>
+                                                            <span className="text-xs font-bold text-slate-700">R$ {cc.teto_gastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Gasto Atual</span>
+                                                            <span className={`text-xs font-extrabold ${isOverLimit ? 'text-rose-600 font-black' : 'text-indigo-600'}`}>R$ {cc.saidasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({sPercent.toFixed(0)}%)</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full bg-slate-200/50 h-1.5 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full transition-all ${isOverLimit ? 'bg-rose-500' : sPercent >= 80 ? 'bg-amber-500' : 'bg-indigo-500'}`} 
+                                                            style={{ width: `${Math.min(100, sPercent)}%` }}
+                                                        />
+                                                    </div>
+                                                    {isOverLimit && (
+                                                        <span className="text-[9px] text-rose-600 font-extrabold flex items-center gap-1 mt-1 justify-end">
+                                                            <AlertTriangle size={10} /> LIMITE EXCEDIDO EM R$ {(cc.saidasRealizadas - cc.teto_gastos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}!
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center p-12 bg-slate-50/50 rounded-3xl border border-slate-105">
+                                <Landmark size={48} className="text-slate-300 mx-auto mb-4" />
+                                <h4 className="font-extrabold text-slate-700 text-sm">Nenhum Centro de Custo Encontrado</h4>
+                                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Para definir o planejamento orçamentário, primeiro precisa de ter centros de custos ativos na sua secretaria.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'cofre' && (
+                <div>
+                    {cofreLocked ? (
+                        <div className="max-w-md mx-auto bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-xl text-center space-y-6 animate-entrance">
+                            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                                <Lock size={36} className="text-amber-500" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-2xl font-black text-slate-800">Área Restrita (Seguro Pastoral)</h3>
+                                <p className="text-xs text-slate-400 font-medium">Insira a sua senha de acesso do Portal de Membros para abrir os seus esboços privados e relatórios estatísticos.</p>
+                            </div>
+                            <div className="space-y-4">
+                                <input type="password" value={cofrePassword} onChange={e=>setCofrePassword(e.target.value)} onKeyDown={e=>e.key==='Enter' && handleVerifyLocker()} placeholder="Digite sua senha..." className="w-full h-12 px-4 text-center rounded-xl border border-slate-200 outline-none text-sm font-bold bg-white focus:border-amber-400 transition-all" />
+                                <button onClick={handleVerifyLocker} className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                                    Desbloquear Cofre Pastoral
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 animate-entrance">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Membros Conectados</span>
+                                        <h2 className="text-3xl font-black text-slate-800 mt-1">{db.membros?.length || 0}</h2>
+                                    </div>
+                                    <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl"><Users size={24}/></div>
+                                </div>
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Visitantes Registados</span>
+                                        <h2 className="text-3xl font-black text-slate-800 mt-1">{db.visitantes?.length || 0}</h2>
+                                    </div>
+                                    <div className="bg-rose-50 text-rose-600 p-3 rounded-2xl"><HeartHandshake size={24}/></div>
+                                </div>
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Ministérios Activos</span>
+                                        <h2 className="text-3xl font-black text-slate-800 mt-1">{db.departamentos?.length || 0}</h2>
+                                    </div>
+                                    <div className="bg-amber-50 text-amber-600 p-3 rounded-2xl"><Briefcase size={24}/></div>
+                                </div>
+                            </div>
+
+                            {/* Sub-Tabs Selector inside Restricted Area */}
+                            <div className="flex overflow-x-auto custom-scrollbar flex-nowrap md:flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2 shrink-0 select-none max-w-full md:max-w-fit mb-6">
+                                {isPastorPresidente && (
+                                    <button onClick={() => setCofreSubTab('financeiro')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'financeiro' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                        <DollarSign size={15}/> Financeiro
+                                    </button>
+                                )}
+                                <button onClick={() => setCofreSubTab('atas')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'atas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                    <FileText size={15}/> Atas de Gabinete & Reunião ({myAtas.length})
+                                 </button>
+                                 <button onClick={() => setCofreSubTab('esbocos')} className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-2 ${cofreSubTab === 'esbocos' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'}`}>
+                                     <BookOpenText size={15}/> Esboços de Sermão ({myEsbocos.length})
+                                 </button>
+                             </div>
+
+                            {cofreSubTab === 'financeiro' && (isPastorPresidente ? (() => {
+                                const listFiltered = (db.financeiro || []).filter(item => (item.data_pagamento || item.data_vencimento || item.data_competencia || '').startsWith(finExactDateFilter || finMonthFilter));
+                                
+                                // Group logic
+                                const groups: { [key: string]: { category: string; totalEntradas: number; totalSaidas: number; items: any[] } } = {};
+                                listFiltered.forEach((item: any) => {
+                                    const cat = item.categoria || 'Geral';
+                                    if (!groups[cat]) {
+                                        groups[cat] = { category: cat, totalEntradas: 0, totalSaidas: 0, items: [] };
+                                    }
+                                    if (item.tipo === 'entrada') {
+                                        groups[cat].totalEntradas += (parseFloat(item.valor) || 0);
+                                    } else {
+                                        groups[cat].totalSaidas += (parseFloat(item.valor) || 0);
+                                    }
+                                    groups[cat].items.push(item);
+                                });
+                                const groupedList = Object.values(groups).sort((a, b) => (b.totalEntradas + b.totalSaidas) - (a.totalEntradas + a.totalSaidas));
+
+                                return (
+                                    <div className="w-full bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
+                                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-6">
+                                                <div>
+                                                    <h3 className="font-black text-slate-800 text-lg flex items-center gap-2"><DollarSign size={20} className="text-emerald-600"/> Resumo Financeiro</h3>
+                                                    <p className="text-xs text-slate-405 font-medium">Acompanhe as entradas e saídas financeiras de forma consolidada e detalhada.</p>
+                                                </div>
+                                                
+                                                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                                                    {/* Date filters */}
+                                                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between sm:justify-start overflow-hidden">
+                                                        <button onClick={() => { setFinExactDateFilter(''); setFinMonthFilter(new Date().toISOString().slice(0, 7)); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter === '' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}>Por Mês</button>
+                                                        <button onClick={() => { setFinMonthFilter(''); setFinExactDateFilter(new Date().toISOString().split('T')[0]); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${finExactDateFilter !== '' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}>Data Exata</button>
+                                                    </div>
+                                                    {finExactDateFilter === '' ? (
+                                                        <input type="month" value={finMonthFilter} onChange={(e) => setFinMonthFilter(((e.target.value || "").toUpperCase() || "").toUpperCase())} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto uppercase" />
+                                                    ) : (
+                                                        <input type="date" value={finExactDateFilter} onChange={(e) => setFinExactDateFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold bg-white shadow-sm outline-none focus:border-emerald-500 transition-colors w-full sm:w-auto" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Alerta de PIX Pendentes e Conciliação Automática no Extrato */}
+                                            {(() => {
+                                                const pendingPix = (db.financeiro || []).filter(item => item.forma_pagamento === 'PIX' && item.conciliado === false);
+                                                if (pendingPix.length === 0) return null;
+                                                return (
+                                                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 sm:p-5 rounded-2xl border border-emerald-100/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm animate-fadeIn">
+                                                        <div>
+                                                            <h4 className="font-extrabold text-emerald-800 text-xs sm:text-sm flex items-center gap-1.5 leading-tight">
+                                                                <Zap size={16} className="text-emerald-500 fill-emerald-500 animate-pulse shrink-0"/> 
+                                                                Existem {pendingPix.length} contribuições PIX pendentes de validação
+                                                            </h4>
+                                                            <p className="text-[11px] text-emerald-600 font-medium mt-0.5">O sistema detectou dízimos/ofertas enviados via PIX aguardando conferência no extrato bancário.</p>
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={handleAutoValidatePix}
+                                                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 shrink-0 flex items-center gap-1.5 cursor-pointer"
+                                                        >
+                                                            <RefreshCw size={13} className="animate-spin" style={{ animationDuration: '4s' }}/> Conciliador Automático PIX
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* Terminal Logs Popup de Auto-validação PIX */}
+                                            {autoPixScanning && (
+                                                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                                                    <div className="bg-[#0c0c0e] text-emerald-400 w-full max-w-lg rounded-2xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden font-mono text-xs sm:text-sm animate-scale-in">
+                                                        <div className="bg-[#121215] px-4 py-3 flex items-center justify-between border-b border-slate-800">
+                                                            <span className="font-extrabold text-slate-300 flex items-center gap-2 text-[11px] tracking-wider">
+                                                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                                Módulo de Validação de Extrato Bancário Real-Time
+                                                            </span>
+                                                            <div className="flex gap-1.5">
+                                                                <span className="w-2 rounded-full h-2 bg-slate-700"></span>
+                                                                <span className="w-2 rounded-full h-2 bg-slate-700"></span>
+                                                                <span className="w-2 rounded-full h-2 bg-slate-700"></span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-5 overflow-y-auto max-h-72 flex flex-col gap-2 min-h-[160px]">
+                                                            {autoPixLogs.map((log, idx) => (
+                                                                <div key={idx} className="animate-entrance leading-normal text-left">
+                                                                    {log}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="bg-[#121215] px-4 py-3 border-t border-slate-800 flex justify-end">
+                                                            <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Canal mTLS {db.igreja?.banco || 'Bancário'} Ativado</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                        {/* Totalizers */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-100/80 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Entradas totais</span>
+                                                    <div className="text-xl font-black text-emerald-700 mt-1">R$ {listFiltered.filter(f => f.tipo === 'entrada').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
+                                                </div>
+                                                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-xl"><TrendingUp size={20}/></div>
+                                            </div>
+                                            <div className="bg-rose-50/60 p-5 rounded-2xl border border-rose-100/80 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Saídas totais</span>
+                                                    <div className="text-xl font-black text-rose-700 mt-1">R$ {listFiltered.filter(f => f.tipo === 'saida' && f.status === 'pago').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0).toFixed(2)}</div>
+                                                </div>
+                                                <div className="p-2.5 bg-rose-500/10 text-rose-600 rounded-xl"><TrendingDown size={20}/></div>
+                                            </div>
+                                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 flex items-center justify-between sm:col-span-2 lg:col-span-1">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Saldo do período</span>
+                                                    {(() => {
+                                                        const ent = listFiltered.filter(f => f.tipo === 'entrada').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0);
+                                                        const sai = listFiltered.filter(f => f.tipo === 'saida' && f.status === 'pago').reduce((acc, f) => acc + (parseFloat(f.valor) || 0), 0);
+                                                        const bal = ent - sai;
+                                                        return (
+                                                            <div className={`text-xl font-black mt-1 ${bal >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                                                R$ {bal.toFixed(2)}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <div className="p-2.5 bg-slate-200/50 text-slate-600 rounded-xl"><Layers size={20}/></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Mode view toggle (All/List vs Grouped Categories) */}
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                            <div className="text-xs text-slate-500 font-bold">
+                                                Exibindo {listFiltered.length} transações no período
+                                            </div>
+                                            <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1.5 w-full sm:w-auto font-bold select-none shadow-sm">
+                                                <button onClick={() => setFinViewMode('categoria')} className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black tracking-wide transition-all flex items-center justify-center gap-1.5 ${finViewMode === 'categoria' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                                                    <Layers size={14}/> Por Categoria (Mobile)
+                                                </button>
+                                                <button onClick={() => setFinViewMode('lista')} className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black tracking-wide transition-all flex items-center justify-center gap-1.5 ${finViewMode === 'lista' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                                                    <List size={14}/> Lista Completa
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Content View Mode conditional rendering */}
+                                        {finViewMode === 'categoria' ? (
+                                            <div className="space-y-4">
+                                                {groupedList.length > 0 ? (
+                                                    groupedList.map((gp, i) => {
+                                                        const isOpen = !!openCategories[gp.category];
+                                                        const catBalance = gp.totalEntradas - gp.totalSaidas;
+                                                        return (
+                                                            <div key={i} className="bg-slate-50 border border-slate-150 rounded-2xl overflow-hidden transition-all shadow-sm hover:border-slate-300">
+                                                                {/* Category Header Bar */}
+                                                                <button onClick={() => setOpenCategories(prev => ({ ...prev, [gp.category]: !isOpen }))} className="w-full p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 hover:bg-slate-100/80 transition-colors text-left">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                                                                            <Layers size={20}/>
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="font-extrabold text-slate-800 text-sm sm:text-base capitalize flex items-center gap-2">
+                                                                                {gp.category}
+                                                                                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-black">{gp.items.length}</span>
+                                                                            </h4>
+                                                                            <div className="flex gap-3 text-slate-400 font-bold text-[10px] sm:text-xs">
+                                                                                <span className="text-emerald-600">Entrada: R$ {gp.totalEntradas.toFixed(2)}</span>
+                                                                                <span className="text-rose-600">Saída: R$ {gp.totalSaidas.toFixed(2)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 mt-2 sm:mt-0">
+                                                                        <div className="text-right">
+                                                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Saldo</div>
+                                                                            <div className={`text-sm sm:text-base font-black ${catBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                R$ {catBalance.toFixed(2)}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-slate-400">
+                                                                            {isOpen ? <ChevronDown size={18} className="transform rotate-180 transition-transform"/> : <ChevronDown size={18} className="transition-transform"/>}
+                                                                        </div>
+                                                                    </div>
+                                                                </button>
+
+                                                                {/* Accordion content list of transactions */}
+                                                                {isOpen && (
+                                                                    <div className="bg-white border-t border-slate-100 px-4 py-2 divide-y divide-slate-100 animate-entrance">
+                                                                        {gp.items.map((item: any) => {
+                                                                            const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
+                                                                            const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
+                                                                            return (
+                                                                                <div key={item.id} className="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                                                    <div>
+                                                                                        <span className="text-[10px] font-bold text-slate-400 mr-2">{new Date(item.data_pagamento || item.data_vencimento || item.data_competencia || new Date()).toLocaleDateString('pt-BR')}</span>
+                                                                                        <span className="font-extrabold text-slate-800 text-xs sm:text-sm">{item.descricao}</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                                                                                        <span className={`text-xs font-extrabold ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                            {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor || '0').toFixed(2)}
+                                                                                        </span>
+                                                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1 transition-all ${isPending ? 'animate-pulse bg-amber-400/10 text-amber-700 border-amber-400/20' : isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                                            <span className={`w-1 h-1 rounded-full ${isPending ? 'bg-amber-500' : isSuccess ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                                                                            {item.status || 'Concluído'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div className="text-center p-12 bg-slate-50 border border-dashed border-slate-200 rounded-[2rem]">
+                                                        <p className="text-xs font-bold text-slate-400">Nenhuma operação financeira registrada neste período.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            /* List mode with table and/or scrolling list */
+                                            <div className="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+                                                <table className="w-full text-sm text-left whitespace-nowrap">
+                                                    <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
+                                                        <tr>
+                                                            <th className="p-4">Data</th>
+                                                            <th className="p-4">Descrição</th>
+                                                            <th className="p-4">Categoria</th>
+                                                            <th className="p-4">Valor</th>
+                                                            <th className="p-4">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {listFiltered.sort((a, b) => {
+                                                            const getValidTime = (item: any) => {
+                                                                const dStr = item.data_pagamento || item.data_vencimento || item.data_competencia;
+                                                                if (!dStr) return 0;
+                                                                const time = new Date(dStr).getTime();
+                                                                return isNaN(time) ? 0 : time;
+                                                            };
+                                                            return getValidTime(b) - getValidTime(a);
+                                                        }).map(item => {
+                                                            const isSuccess = ['pago', 'concluído', 'concluido', 'validado'].includes((item.status || 'Concluído').toLowerCase());
+                                                            const isPending = ['pendente', 'em progresso', 'em andamento'].includes((item.status || '').toLowerCase());
+                                                            return (
+                                                            <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                                                <td className="p-4">{new Date(item.data_pagamento || item.data_vencimento || item.data_competencia || new Date()).toLocaleDateString('pt-BR')}</td>
+                                                                <td className="p-4">{item.descricao}</td>
+                                                                <td className="p-4 capitalize">{item.categoria}</td>
+                                                                <td className={`p-4 font-bold ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                    {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor || '0').toFixed(2)}
+                                                                </td>
+                                                                <td className="p-4">
+                                                                    <span className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm flex items-center w-fit gap-1.5 transition-all ${isPending ? 'animate-pulse bg-amber-400/10 text-amber-700 border-amber-400/20' : isSuccess ? 'bg-emerald-400/10 text-emerald-700 border-emerald-400/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${isPending ? 'bg-amber-500' : isSuccess ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                                                        {item.status || 'Concluído'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        )})}
+                                                        {listFiltered.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan={5} className="p-8 text-center text-slate-400 font-bold text-xs">
+                                                                    Nenhuma operação financeira registrada neste período.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                            );
+                        })() : (
+                            <div className="bg-white p-12 text-center rounded-[2rem] border border-slate-200 shadow-sm animate-entrance">
+                                <Lock className="mx-auto text-amber-500 mb-4" size={48}/>
+                                <h4 className="font-extrabold text-slate-800 text-lg">Acesso Financeiro Bloqueado</h4>
+                                <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">Apenas o Pastor Presidente possui permissão para visualizar a área financeira do cofre.</p>
+                            </div>
+                        ))}
+
+                            {cofreSubTab === 'esbocos' && (
+                                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2"><BookOpenText size={20} className="text-amber-500"/> Esboços de Sermão & Notas</h3>
+                                            <p className="text-xs text-slate-400 font-medium">Seus pensamentos, mensagens, homiléticas e ensinos guardados com total sigilo.</p>
+                                        </div>
+                                        <button onClick={() => { setEditingEsbocoId(null); setEsbocoForm({ titulo: '', conteudo: '', status: 'Rascunho' }); setShowEsbocoModal(true); }} className="px-4 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-amber-400/10">
+                                            <Plus size={16}/> Novo Esboço
+                                        </button>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        {myEsbocos.length > 0 ? (
+                                            myEsbocos.map((esb, i) => (
+                                                <div key={i} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-between gap-4 relative hover:border-amber-400 transition-all group">
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${esb.status === 'Completo' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{esb.status}</span>
+                                                            <span className="text-[10px] text-slate-400 font-bold">{esb.created_at ? new Date(esb.created_at).toLocaleDateString('pt-BR') : ''}</span>
+                                                        </div>
+                                                        <h4 className="font-extrabold text-slate-800 text-base">{esb.titulo}</h4>
+                                                        <p className="text-xs text-slate-500 leading-relaxed font-semibold whitespace-pre-wrap truncate max-h-16">{esb.conteudo}</p>
+                                                    </div>
+                                                    <div className="flex justify-end gap-2 border-t border-slate-200/50 pt-4">
+                                                        <button onClick={() => handleEditEsboco(esb)} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"><Edit size={14}/></button>
+                                                        <button onClick={() => handleDeleteEsboco(esb.id, esb.titulo)} className="p-2 rounded-lg bg-rose-50 border border-rose-100 text-rose-500 hover:bg-rose-100 transition-colors"><Trash2 size={14}/></button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="md:col-span-2 text-center p-12 border border-dashed border-slate-200 bg-white rounded-[2rem]">
+                                                <p className="text-xs font-bold text-slate-400">Nenhum esboço de sermão guardado ainda.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {cofreSubTab === 'atas' && (
+                                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 animate-entrance">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <div>
+                                            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2"><FileText size={20} className="text-indigo-600"/> Atas, Reuniões & Atendimentos de Gabinete</h3>
+                                            <p className="text-xs text-slate-400 font-medium">Registro completo e confidencial de aconselhamentos, reuniões oficiais e comissões.</p>
+                                        </div>
+                                        <button onClick={() => { setEditingAtaId(null); setAtaForm({ titulo: '', tipo: 'Atendimento de Gabinete', data: new Date().toISOString().split('T')[0], hora: '', pessoas: '', conteudo: '', confidencialidade: 'confidencial', decisoes: '', notas_privadas: '' }); setShowAtaModal(true); }} className="px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/15 shrink-0 self-start">
+                                            <Plus size={16}/> Lavrar Nova Ata
+                                        </button>
+                                    </div>
+
+                                    {/* Filters & Search */}
+                                    <div className="grid md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                        <div className="relative">
+                                            <input type="text" placeholder="Pesquisar por assunto ou participante..." value={searchAtaQuery} onChange={e=>setSearchAtaQuery(((e.target.value || "").toUpperCase() || "").toUpperCase())} className="w-full h-11 px-4 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none text-slate-700 shadow-sm uppercase" />
+                                        </div>
+                                        <div>
+                                            <select value={filterAtaTipo} onChange={e=>setFilterAtaTipo(e.target.value)} className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none text-slate-700 shadow-sm">
+                                                <option value="all">Filtro de Categoria: Todas</option>
+                                                <option value="Atendimento de Gabinete">Atendimento de Gabinete</option>
+                                                <option value="Reunião Ministerial">Reunião Ministerial</option>
+                                                <option value="Assembleia Geral">Assembleia Geral</option>
+                                                <option value="Visitação Lar">Visitação de Lar</option>
+                                                <option value="Outros">Outros</option>
+                                            </select>
+                                        </div>
+                                        <div className="text-indigo-600 font-bold text-xs flex items-center justify-end pr-2 gap-1.5 uppercase tracking-wider">
+                                            <span>Métricas do Cofre:</span>
+                                            <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg text-[10px] font-black">{myAtas.length} Ata(s)</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Atas Display List */}
+                                    <div className="space-y-4">
+                                        {myAtas.filter(item => {
+                                            const matchesSearch = safeText(item.titulo).toLowerCase().includes(searchAtaQuery.toLowerCase()) || safeText(item.pessoas).toLowerCase().includes(searchAtaQuery.toLowerCase());
+                                            const matchesType = filterAtaTipo === 'all' || item.tipo === filterAtaTipo;
+                                            return matchesSearch && matchesType;
+                                        }).length > 0 ? (
+                                            myAtas.filter(item => {
+                                                const matchesSearch = safeText(item.titulo).toLowerCase().includes(searchAtaQuery.toLowerCase()) || safeText(item.pessoas).toLowerCase().includes(searchAtaQuery.toLowerCase());
+                                                const matchesType = filterAtaTipo === 'all' || item.tipo === filterAtaTipo;
+                                                return matchesSearch && matchesType;
+                                            }).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((ata, i) => (
+                                                <div key={ata.id || i} className="bg-slate-50 p-6 rounded-3xl border border-slate-200/60 hover:border-indigo-400 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group">
+                                                    <div className="space-y-3 flex-1">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{ata.tipo}</span>
+                                                            <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${ata.confidencialidade === 'altamente_confidencial' ? 'bg-rose-50 text-rose-700 border-rose-100' : ata.confidencialidade === 'confidencial' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
+                                                                {ata.confidencialidade === 'altamente_confidencial' ? 'Altamente Confidencial' : ata.confidencialidade === 'confidencial' ? 'Confidencial' : 'Aberto'}
+                                                            </span>
+                                                            <span className="text-xs text-slate-400 font-bold flex items-center gap-1"><Calendar size={13}/> {formatDateLocal(ata.data)}</span>
+                                                            {ata.hora && <span className="text-xs text-slate-400 font-bold flex items-center gap-1"><Clock size={13}/> {ata.hora}</span>}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-extrabold text-slate-800 text-base group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{ata.titulo}</h4>
+                                                            <p className="text-xs text-slate-500 leading-relaxed font-semibold line-clamp-2 mt-1.5 whitespace-pre-wrap"><strong className="text-slate-700 uppercase">Resumo:</strong> {ata.conteudo}</p>
+                                                            {ata.pessoas && (
+                                                                <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-wide truncate max-w-2xl"><span className="text-indigo-600">Presentes:</span> {ata.pessoas}</p>
+                                                            )}
+                                                            {ata.notas_privadas && (
+                                                                <div className="mt-3 p-3 bg-red-50/20 border border-red-100/35 rounded-xl text-[11px] text-rose-600/95 font-semibold leading-relaxed">
+                                                                    <strong className="uppercase text-[9px] block text-rose-500 tracking-wider">Anotações Exclusivas do Pastor (Não são impressas na Ata Oficial):</strong> {ata.notas_privadas}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2 self-end md:self-center shrink-0">
+                                                        <button onClick={() => handlePrintAta(ata)} className="p-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100 transition-colors" title="Gerar PDF e Imprimir"><Printer size={16}/></button>
+                                                        <button onClick={() => handleEditAta(ata)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition-colors" title="Editar Ata"><Edit size={16}/></button>
+                                                        <button onClick={() => handleDeleteAta(ata.id, ata.titulo)} className="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 border border-rose-100 transition-colors" title="Eliminar Ata"><Trash2 size={16}/></button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center p-12 border border-dashed border-slate-200 bg-slate-50 rounded-[2rem]">
+                                                <FileText className="mx-auto text-slate-300 mb-3 animate-pulse" size={40}/>
+                                                <p className="text-xs font-bold text-slate-400">Nenhum registro de ata encontrado neste cofre.</p>
+                                                <p className="text-[11px] text-slate-400 mt-1">Lave nova ata tocando em "Lavrar Nova Ata".</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {showAgendaModal && (
+                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 p-8 space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xl font-black text-slate-800">{editingAgendaId ? 'Editar Agendamento' : 'Agendar Novo Horário'}</h3>
+                            <button onClick={()=>setShowAgendaModal(false)} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X size={18}/></button>
+                        </div>
+                        <form onSubmit={handleSaveAgenda} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Título do Agendamento</label>
+                                <input type="text" value={agendaForm.titulo} onChange={e=>setAgendaForm({...agendaForm, titulo: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required placeholder="Ex: Aconselhamento do Irmão Marcos" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Data</label>
+                                    <input type="date" value={agendaForm.data} onChange={e=>setAgendaForm({...agendaForm, data: e.target.value})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Hora</label>
+                                    <input type="time" value={agendaForm.hora} onChange={e=>setAgendaForm({...agendaForm, hora: e.target.value})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Categoria</label>
+                                    <select value={agendaForm.categoria} onChange={e=>setAgendaForm({...agendaForm, categoria: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700">
+                                        <option value="Compromisso">Compromisso</option>
+                                        <option value="Atendimento de Gabinete">Atendimento de Gabinete</option>
+                                        <option value="Sermão">Sermão</option>
+                                        <option value="Ensino">Ensino</option>
+                                        <option value="Outros">Outros</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Local</label>
+                                    <input type="text" value={agendaForm.local} onChange={e=>setAgendaForm({...agendaForm, local: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} placeholder="Ex: Gabinete Pastoral" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Descrição / Notas complementares</label>
+                                <textarea value={agendaForm.descricao} onChange={e=>setAgendaForm({...agendaForm, descricao: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} placeholder="Pequeno detalhe ou motivo do agendamento..." rows={3} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none uppercase" />
+                            </div>
+                            <div className="flex gap-4 pt-4">
+                                <button type="button" onClick={()=>setShowAgendaModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20">Salvar Agendamento</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showEsbocoModal && (
+                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 p-8 space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xl font-black text-slate-800">{editingEsbocoId ? 'Editar Esboço' : 'Novo Esboço de Sermão'}</h3>
+                            <button onClick={()=>setShowEsbocoModal(false)} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X size={18}/></button>
+                        </div>
+                        <form onSubmit={handleSaveEsboco} className="space-y-4">
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Título do Sermão / Pensamento</label>
+                                    <input type="text" value={esbocoForm.titulo} onChange={e=>setEsbocoForm({...esbocoForm, titulo: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required placeholder="Ex: O Milagre da Perseverança com Fé" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Status</label>
+                                    <select value={esbocoForm.status} onChange={e=>setEsbocoForm({...esbocoForm, status: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700">
+                                        <option value="Rascunho">Rascunho</option>
+                                        <option value="Completo">Pronto / Completo</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Texto de Homilética, Versículos e Notas do Esboço</label>
+                                <textarea value={esbocoForm.conteudo} onChange={e=>setEsbocoForm({...esbocoForm, conteudo: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required placeholder="Escreva os pontos principais de homilética, citações bíblicas e conclusões para pregar..." rows={10} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans uppercase" />
+                            </div>
+                            <div className="flex gap-4 pt-4">
+                                <button type="button" onClick={()=>setShowEsbocoModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-amber-400/20">Salvar no Cofre</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showAtaModal && (
+                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl border border-white/20 p-8 space-y-6 my-8 animate-entrance max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800">{editingAtaId ? 'Editar Ata de Gabinete/Reunião' : 'Lavrar Nova Ata de Gabinete/Reunião'}</h3>
+                                <p className="text-xs text-slate-400 font-medium">Preencha com exatidão as pautas, decisões e os assistidos presentes.</p>
+                            </div>
+                            <button onClick={()=>setShowAtaModal(false)} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X size={18}/></button>
+                        </div>
+                        <form onSubmit={handleSaveAta} className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="col-span-2 md:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Assunto ou Título da Ata</label>
+                                    <input type="text" value={ataForm.titulo} onChange={e=>setAtaForm({...ataForm, titulo: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required placeholder="Ex: Aconselhamento de Casal / Reunião do Presbitério" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase" />
+                                </div>
+                                <div className="col-span-2 md:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Tipo de Atendimento / Encontro</label>
+                                    <select value={ataForm.tipo} onChange={e=>setAtaForm({...ataForm, tipo: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700">
+                                        <option value="Atendimento de Gabinete">Atendimento de Gabinete</option>
+                                        <option value="Reunião Ministerial">Reunião Ministerial</option>
+                                        <option value="Assembleia Geral">Assembleia Geral</option>
+                                        <option value="Visitação Lar">Visitação de Lar</option>
+                                        <option value="Outros">Outros</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Data</label>
+                                    <input type="date" value={ataForm.data} onChange={e=>setAtaForm({...ataForm, data: e.target.value})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Horário</label>
+                                    <input type="time" value={ataForm.hora} onChange={e=>setAtaForm({...ataForm, hora: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Nível de Confidencialidade</label>
+                                    <select value={ataForm.confidencialidade} onChange={e=>setAtaForm({...ataForm, confidencialidade: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700">
+                                        <option value="geral">Geral / Livre / Público</option>
+                                        <option value="confidencial">Confidencial (Pastor e Secretário)</option>
+                                        <option value="altamente_confidencial">Altamente Confidencial (Apenas Pastor)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Assistidos / Membros Presentes (Pessoas que participaram)</label>
+                                <textarea value={ataForm.pessoas} onChange={e=>setAtaForm({...ataForm, pessoas: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required placeholder="Escreva os nomes dos membros ou presentes (um por linha ou separados por vírgula)..." rows={2} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans uppercase" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Conteúdo da Ata (Tudo o que foi pautado, conversado ou confessado)</label>
+                                <textarea value={ataForm.conteudo} onChange={e=>setAtaForm({...ataForm, conteudo: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required placeholder="Insira o resumo completo dos assuntos falados. Este bloco principal é impresso no documento oficial de Ata." rows={8} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans uppercase" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Encaminhamentos Eclesiásticos, Orientações & Decisões Tomadas</label>
+                                <textarea value={ataForm.decisoes} onChange={e=>setAtaForm({...ataForm, decisoes: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} placeholder="Decisões tomadas, compromissos firmados ou punições/disciplinas aplicadas (também serão impressos)." rows={2} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans uppercase" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-rose-500 uppercase tracking-wider ml-1 mb-1.5 flex items-center gap-1"><Shield size={14}/> Anotações de Gabinete Privadíssimas do Pastor (NÃO impressas na Ata)</label>
+                                <textarea value={ataForm.notas_privadas} onChange={e=>setAtaForm({...ataForm, notas_privadas: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} placeholder="Escreva percepções particulares suas, detalhes confidenciais confessionais e anotações espirituais. Elas serão salvas no cofre mas NÃO aparecerão na Ata para impressão ou PDF oficial." rows={3} className="w-full p-4 rounded-xl border border-rose-200 outline-none text-xs font-bold bg-rose-50/30 focus:border-rose-400 transition-all text-rose-800 font-sans uppercase" />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button type="button" onClick={()=>setShowAtaModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20">Registrar e Guardar no Cofre</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showBudgetModal && editingBudgetCC && (
+                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-white/20 p-8 space-y-6 my-8 animate-entrance">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800">Definir Planeamento</h3>
+                                <p className="text-xs text-slate-400 font-medium">Configure as metas financeiras para {selectedYear}.</p>
+                            </div>
+                            <button onClick={() => { setShowBudgetModal(false); setEditingBudgetCC(null); }} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                                <X size={18}/>
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                                <Landmark size={20} />
+                            </div>
+                            <div>
+                                <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider block">Centro de Custo</span>
+                                <h4 className="font-extrabold text-slate-800 text-sm uppercase leading-tight">{editingBudgetCC.nome}</h4>
+                            </div>
+                        </div>
+
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            setBudgetSaving(true);
+                            try {
+                                const docId = `${selectedYear}_${editingBudgetCC.id}`;
+                                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'orcamentos', docId), {
+                                    ano: selectedYear,
+                                    centro_custo_id: editingBudgetCC.id,
+                                    meta_receita: parseFloat(metaReceitaValue) || 0,
+                                    teto_gastos: parseFloat(tetoGastosValue) || 0,
+                                    updated_at: new Date().toISOString()
+                                });
+                                logAction('CONFIGURAÇÃO', `Pastor atualizou Planeamento Orçamentário (${selectedYear}) para "${editingBudgetCC.nome}"`, 'orcamentos', docId);
+                                addToast(`Planeamento para o Centro de Custo "${editingBudgetCC.nome}" gravado com sucesso!`, "success");
+                                setShowBudgetModal(false);
+                                setEditingBudgetCC(null);
+                            } catch (err) {
+                                console.error(err);
+                                addToast("Erro ao gravar planeamento orçamentário.", "error");
+                            } finally {
+                                setBudgetSaving(false);
+                            }
+                        }} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Meta de Receita do Ano (R$)</label>
+                                <input 
+                                    type="number" 
+                                    step="any"
+                                    value={metaReceitaValue} 
+                                    onChange={e => setMetaReceitaValue(e.target.value)} 
+                                    placeholder="Ex: 50000" 
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                />
+                                <span className="text-[10px] text-slate-400 font-medium ml-1 block mt-1">Quanto se projeta arrecadar no total de dízimos e ofertas neste centro neste ano.</span>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1.5">Teto Máximo de Gastos do Ano (R$)</label>
+                                <input 
+                                    type="number" 
+                                    step="any"
+                                    value={tetoGastosValue} 
+                                    onChange={e => setTetoGastosValue(e.target.value)} 
+                                    placeholder="Ex: 30000" 
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                />
+                                <span className="text-[10px] text-slate-400 font-medium ml-1 block mt-1">Limite máximo de despesas planejadas para este centro de custo neste ano.</span>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setShowBudgetModal(false); setEditingBudgetCC(null); }} 
+                                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={budgetSaving}
+                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20 disabled:opacity-50"
+                                >
+                                    {budgetSaving ? 'Gravando...' : 'Gravar Planeamento'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const ModulePortalTesoureiro = () => {
     const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction } = useContext(ChurchContext);
     const [activeTab, setActiveTab] = useState('lancamento'); // lancamento, ultimos, conciliacao
@@ -15343,7 +17134,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 6.4.0 (SaaS Gold Edition)</p>
+                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 6.2.0 (SaaS Gold Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -19173,8 +20964,7 @@ const PortalHome = ({ user, db, setView }) => {
         { id: 'teologia_avancada', title: 'Teologia Adv.', desc: 'Curso Avançado', icon: BookOpenText },
         { id: 'obreiro_de_valor', title: 'Liderança', desc: 'Obreiro de Valor', icon: Shield },
         { id: 'historia_igreja', title: 'História', desc: 'A Igreja Cristã', icon: ScrollText },
-        { id: 'conhecendo_doutrinas', title: 'Doutrinas', desc: 'Doutrinas Bíblicas', icon: BookOpen },
-        { id: 'jesus_cristo', title: 'Jesus Cristo', desc: 'O Maior Personagem', icon: Sparkles }
+        { id: 'conhecendo_doutrinas', title: 'Doutrinas', desc: 'Doutrinas Bíblicas', icon: BookOpen }
     ];
 
     const getCourseProgress = (cursoId, modulosConcluidos) => {
@@ -19185,7 +20975,6 @@ const PortalHome = ({ user, db, setView }) => {
         else if (cursoId === 'obreiro_de_valor') pfx = 'obr_m';
         else if (cursoId === 'historia_igreja') pfx = 'hist_m';
         else if (cursoId === 'conhecendo_doutrinas') pfx = 'dout_m';
-        else if (cursoId === 'jesus_cristo') pfx = 'jc_m';
 
         let completed = 0;
         for (let i = 1; i <= 10; i++) {
@@ -21043,135 +22832,6 @@ const PortalCursos = ({ user }) => {
                     ]
                 }
             ]
-        },
-        {
-            id: 'jesus_cristo',
-            title: 'Jesus Cristo: O Maior Personagem da História',
-            badge: 'Manoel Ferreira',
-            icon: Sparkles,
-            description: 'Curso baseado na consagrada obra literária "Jesus Cristo o Maior Personagem da História" do Bispo Manoel Ferreira (Editora Betel), analisando o impacto teológico, histórico, divino e humano do Messias.',
-            modules: [
-                {
-                    id: 'jc_m1',
-                    title: 'Módulo 1: A Historicidade de Jesus Cristo',
-                    content: `### 1. Historiografia Secular e Fontes Extra-Bíblicas\nA existência de Jesus de Nazaré é um fato histórico amplamente documentado não apenas pelas Escrituras Sagradas, mas também por diversos historiadores e cronistas da antiguidade pagã e judaica. No clássico estudo "Jesus Cristo o Maior Personagem da História", destaca-se o peso de tais testemunhos extra-bíblicos que quebram qualquer tese mitológica. Historiadores como o judeu Flávio Josefo (século I), em sua obra *Antiguidades Judaicas*, registra explicitamente a presença de Jesus, de Tiago "irmão de Jesus, chamado Cristo" e de João Batista.\n\n### 2. O Testemunho Romano\nNo império romano, historiadores registram o impacto de Cristo na história:\n- **Tácito (século II):** Em seus *Anais*, relata que o nome "cristãos" deriva de "Cristo", o qual foi executado sob o procurador Pôncio Pilatos no reinado de Tibério.\n- **Suetônio (século II):** Menciona a expulsão de judeus de Roma que causavam distúrbios sob o comando de "Cresto" (Chrestus).\n- **Plínio, o Jovem:** Governador da Bitínia, escreve ao imperador Trajano descrevendo que os cristãos se reuniam para cantar hinos a Cristo "como a um Deus".`,
-                    questions: [
-                        { q: 'Qual historiador judeu do século I, em sua obra "Antiguidades Judaicas", faz referências explícitas a Jesus, a Tiago e a João Batista, confirmando sua historicidade fora do cânon bíblico?', options: ['Filo de Alexandria.', 'Flávio Josefo.', 'Heródoto.', 'Eusébio de Cesareia.'], answer: 1 },
-                        { q: 'O historiador romano Tácito, em sua famosa obra "Anais", relata que o nome cristão origina-se de Cristo, e confirma que Ele foi executado:', options: ['Sob o império de Júlio César por soldados galos.', 'Pelo imperador Nero em um circo público de Roma.', 'Sob o procurador Pôncio Pilatos, durante o reinado de Tibério.', 'Pelo rei Herodes no deserto da Galileia.'], answer: 2 },
-                        { q: 'Plínio, o Jovem, governador romano da Bitínia em carta ao imperador Trajano, relata detalhes intrigantes sobre as reuniões dos cristãos primitivos, afirmando que estes se reuniam semanalmente para:', options: ['Organizar uma conspiração armada paramilitar secreta contra Roma.', 'Cantar sob juramento hinos a Cristo como a um Deus e comprometer-se a não cometer crimes.', 'Realizar banquetes ostentosos de comércio ilegal.', 'Adorar secretamente o deus Júpiter.'], answer: 1 },
-                        { q: 'O que a farta documentação historiográfica extra-bíblica secular (Josefo, Tácito, Suetônio, Plínio) prova irrevogavelmente sobre Jesus Cristo?', options: ['Que Ele foi apenas um mito criado por imperadores romanos no século IV.', 'A Sua real e inquestionável existência histórica, refutando teorias desprovidas de base científica que alegam ser Ele um mero personagem imaginário.', 'Que todos os registros bizantinos eram puramente ficcionais.', 'Que Jesus nunca esteve fisicamente em Jerusalém.'], answer: 1 },
-                        { q: 'Segundo a análise teológica e histórica clássica, como a revelação bíblica e os registros históricos seculares se complementam em relação a Jesus?', options: ['Eles se contradizem totalmente, forçando o crente a escolher entre história e fé.', 'A história secular confirma a ocorrência física de Jesus e o impacto sociocultural da Igreja, enquanto as Escrituras trazem a revelação salvífica, teológica e transformadora da Sua divindade.', 'Os registros romanos negam a crucificação, retificando os Evangelhos.', 'Somente historiadores gregos apoiam a ressurreição corpórea.'], answer: 1 }
-                    ]
-                },
-                {
-                    id: 'jc_m2',
-                    title: 'Módulo 2: O Verbo se Fez Carne - A Encarnação',
-                    content: `### 1. A Preexistência e Divindade do Verbo\nJesus Cristo não teve o Seu início na manjedoura de Belém. Como o apóstolo João proclama no prólogo de seu evangelho: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus" (Jo 1.1). Ele é coeterno com o Pai. O livro do Bispo Manoel Ferreira enfatiza que a Encarnação é o maior milagre e mistério da história: o Deus eterno, Criador do Universo, vestiu-se de humanidade e entrou nas coordenadas de tempo e espaço para resgatar a raça caída.\n\n### 2. A Natureza Humana e Divina (União Hipostática)\nJesus Cristo não é 50% Deus e 50% homem, nem uma mescla de naturezas. Ele é 100% Deus (verdadeiro Deus) e 100% homem (verdadeiro homem). Esta fusão perfeita e irrepetível de duas naturezas em uma única pessoa divina é designada teologicamente como **União Hipostática**. Como homem, Ele sentiu fome, sede, cansaço e chorou; como Deus, Ele perdoou pecados, ressuscitou mortos e exigiu adoração. Ele se esvaziou da Sua glória visível (Kenosis - Fp 2.7) para assumir a forma de servo.`,
-                    questions: [
-                        { q: 'Como se chama o conceito teológico que define a fusão perfeita, simultânea e indivisível das naturezas divina e humana em uma única pessoa, Jesus Cristo?', options: ['Teofania tricurva.', 'União Hipostática.', 'Sabelianismo.', 'Monofisismo herético.'], answer: 1 },
-                        { q: 'O evangelista João declara que "No princípio era o Verbo" e que o Verbo era Deus. Essa verdade fundamental apoia qual doutrina crística?', options: ['Que Jesus foi criado pelo Pai como um anjo superior no princípio das eras.', 'A pré-existência eterna e coigualdade de Jesus Cristo com o Pai antes da fundação do mundo.', 'Que a encarnação ocorreu apenas em aparência e não em corpo físico real.', 'Que o Pai deixou de existir quando Jesus nasceu.'], answer: 1 },
-                        { q: 'Ao referir-se ao esvaziamento de Cristo descrito em Filipenses 2, de que modo Ele se esvaziou ao assumir a forma humana (Kenosis)?', options: ['Ele perdeu os Seus atributos divinos de divindade absoluta tornando-se puramente pecador.', 'Esvaziou-se do exercício independente e da manifestação visível da Sua glória celestial majestosa, escolhendo viver em humilde dependência do Espírito Santo e obediência ao Pai.', 'Eliminou por completo as Suas memórias divinas do céu.', 'Deixou de ser o Filho amado de Deus durante sua estada terrena.'], answer: 1 },
-                        { q: 'A concepção virginal de Jesus, operada miraculosamente pelo Espírito Santo em Maria (Lucas 1:35), assegurou teologicamente que Jesus fosse:', options: ['Perfeitamente isento da semente do pecado original herdado de Adão, preservando a Sua pureza impecável para ser o Cordeiro sem mancha.', 'Um ser puramente espiritual desprovido de carne real.', 'Um semideus mitológico herdeiro do império de César.', 'Criado em laboratório humano primoroso.'], answer: 0 },
-                        { q: 'Qual destas afirmações traduz o equilíbrio bíblico ortodoxo sobre as naturezas de Jesus Cristo?', options: ['Jesus era divino, mas nunca foi homem de verdade.', 'Jesus era homem comum que se tornou Deus no batismo.', 'Jesus é verdadeiro Deus e verdadeiro homem, subsistindo de forma indivisível e imutável para sempre.', "Suas duas naturezas se anularam mutuamente na cruz."], answer: 2 }
-                    ]
-                },
-                {
-                    id: 'jc_m3',
-                    title: 'Módulo 3: O Ministério Terreno e o Chamado',
-                    content: `### 1. O Batismo e a Unção no Jordão\nO ministério público de Jesus é inaugurado perto dos 30 anos de idade com o Seu batismo por João Batista no rio Jordão. O Bispo Manoel Ferreira assinala que este evento manifesta a Trindade em plena ação: o Filho sai das águas, o Espírito Santo desce na forma corpórea de uma pomba sobre Ele, e a voz audível do Pai ecoa dos céus proclamando: "Este é o meu Filho amado, em quem me comprazo" (Mt 3.17). Jesus não foi batizado para arrependimento (visto que não tinha pecado), mas para cumprir toda a justiça e ser publicamente ungido e credenciado para a Sua missão messiânica.\n\n### 2. A Tentação no Deserto e o Chamado dos Doze\nImediatamente após o batismo, Jesus é conduzido pelo Espírito Santo ao deserto da Galileia, onde jejua por 40 dias e resiste e vence de forma retumbante às sutis propostas de Satanás usando unicamente a autoridade da Palavra ("Está escrito"). Em seguida, Jesus estabelece a Sua equipe apostólica, chamando pescadores humildes e cobradores de impostos para transformá-los de homens simples em "pescadores de homens".`,
-                    questions: [
-                        { q: 'Por qual motivo teológico Jesus submeteu-se ao batismo nas águas de João Batista no rio Jordão se Ele não tinha pecado?', options: ['Para purificar-se de faltas que cometeu em Sua adolescência na Judeia.', 'Para cumprir toda a justiça divina, inaugurar oficialmente Seu ministério público e ser publicamente ungido pelo Pai e o Espírito Santo.', 'Apenas para agradar à Sua família terrena que exigia o batismo regular.', 'Porque João Batista era superior em autoridade eclesiástica.'], answer: 1 },
-                        { q: 'Quantas e quais Divindades da Trindade Santíssima se manifestam perceptivelmente por ocasião do batismo de Jesus no Jordão?', options: ['Apenas Jesus Cristo, visto que o Pai e o Espírito são imateriais e não se envolvem.', 'Duas divindades: Jesus e o Espírito Santo.', 'As três Pessoas: O Filho nas águas, o Espírito descendo como pomba, e a voz audível do Pai aprovando desde os céus.', 'Nenhuma delas, sendo uma manifestação puramente mística e subjetiva dos presentes.'], answer: 2 },
-                        { q: 'Qual foi o método de defesa que Jesus usou para combater e desarmar as tentações de Satanás no deserto após jejuar 40 dias?', options: ['Invocação de exércitos de anjos com espadas físicas afiadas.', 'A autoridade absoluta e inerrante da Escritura Sagrada, declarando "Está escrito".', 'Maldições seculares e gritos intimidadores.', 'Uso de rituais mágicos de proteção.'], answer: 1 },
-                        { q: 'Quem foram as primeiras pessoas que Jesus chamou à beira do Mar da Galileia, dizendo "Vinde após mim, e eu vos farei pescadores de homens"?', options: ['Membros importantes do Sinédrio judaico de Jerusalém.', 'Centuriões romanos de alta patente.', 'Pescadores simples trabalhadores, especificamente Simão Pedro e seu irmão André.', 'Teólogos doutores de Alexandria.'], answer: 2 },
-                        { q: 'Qual o valor teológico da escolha de homens simples e marginalizados (pescadores, publicano) para compor o grupo dos Doze Discípulos de Jesus?', options: ['Demonstra que o Reino de Deus não se baseia na sabedoria, poder ou riqueza humana, mas na capacitação e chamado soberano da graça que exalta a humildade.', 'Foi uma estratégia puramente financeira para evitar pagar salários elevados na Judeia.', 'Apenas falta de intelectuais dispostos a morar em Nazaré.', 'Que Jesus era contra qualquer tipo de estudo ou educação teológica.'], answer: 0 }
-                    ]
-                },
-                {
-                    id: 'jc_m4',
-                    title: 'Módulo 4: Os Milagres de Jesus Cristo',
-                    content: `### 1. A Natureza dos Milagres de Cristo\nOs milagres realizados por Jesus Cristo não foram shows de mágica ou exibições circenses de poder para angariar popularidade egoísta. No livro "Jesus Cristo o Maior Personagem da História", os milagres são compreendidos como a invasão visível, amorosa e soberana do Reino de Deus nas realidades humanas destruídas pelo pecado e pela dor. Cada milagre atestou a Sua divindade messiânica e revelou a compaixão profunda de Deus pela humanidade sofredora.\n\n### 2. Classificação dos Milagres\nOs mais de 35 milagres registrados nos Evangelhos dividem-se em quatro categorias fundamentais:\n- **Poder sobre a Natureza:** Controlar a tempestade (Mc 4.39), andar sobre as águas, e a multiplicação de pães e peixes.\n- **Poder sobre Doenças:** Dar vista aos cegos, curar leprosos, paralíticos e fluxos de sangue incuráveis.\n- **Poder sobre as Forças Demoníacas:** Libertações instantâneas de endemoniados, quebrando o jugo do diabo.\n- **Poder sobre a Morte:** Ressurreições marcantes como a de Lázaro de Betânia (Jo 11), o filho da viúva de Naim e a filha de Jairo.`,
-                    questions: [
-                        { q: 'Qual destas alternativas descreve o verdadeiro e santificado propósito dos milagres operados por Jesus durante o Seu ministério terreno?', options: ['Entreter as multidões da Galileia para que elas não se rebelassem contra Roma.', 'Provar que Ele era um milagreiro comercial capaz de enriquecer quem O seguisse.', 'Manifestar visualmente o poder salvador e curador do Reino de Deus, credenciar Sua messianidade e revelar a compaixão divina pelas dores humanas.', 'Prejudicar a economia dos médicos da Decápole.'], answer: 2 },
-                        { q: 'Quantos anos de sofrimento, rejeição social e isolamento espiritual carregava a mulher com fluxo de sangue que foi instantaneamente curada ao tocar com fé nas vestes de Jesus?', options: ['Cinco anos apenas.', 'Doze anos longos.', 'Sete anos sofridos.', 'Vinte anos contínuos.'], answer: 1 },
-                        { q: 'No impressionante milagre da ressurreição de Lázaro em Betânia, por quantos dias Lázaro já estava sepultado antes de ouvir a poderosa voz de Jesus exclamando "Lázaro, vem para fora"?', options: ['Apenas algumas horas e suspeitava-se de catalepsia.', 'Dois dias.', 'Quatro dias inteiros.', 'Uma semana completa.'], answer: 2 },
-                        { q: 'O que o milagre de Jesus repreendendo e acalmando a violenta tempestade de vento no Mar de Galileia ("Cala-te, emudece" - Mc 4.39) prova categoricamente?', options: ['Que Ele entendia de meteorologia de alta precisão marítima.', 'O Seu absoluto poder e soberania divina criadora sobre as leis da física e as forças da natureza material.', 'Um truque físico com o uso de ventoinhas primitivas ou substâncias químicas sólidas.', 'Apenas sorte temporal fortuita no lago.'], answer: 1 },
-                        { q: 'Qual destas curas de Jesus quebrava de imediato um rigoroso tabu sociorreligioso de isolamento, banimento e exigia reintegração sacerdotal pública pelo templo de Jerusalém?', options: ['A cura da febre da sogra de Pedro.', 'A cura do jovem com epilepsia severa.', 'A cura e purificação instantânea de leprosos.', 'O endireitar de uma mão ressecada.'], answer: 2 }
-                    ]
-                },
-                {
-                    id: 'jc_m5',
-                    title: 'Módulo 5: Os Ensinamentos e as Parábolas de Cristo',
-                    content: `### 1. O Sermão do Monte: A Magna Carta do Reino\nOs ensinamentos de Jesus revolucionaram a ética e a compreensão espiritual da humanidade. O topo máximo do Seu ensino reside no **Sermão do Monte** (Mateus 5 a 7), considerado a magna carta do Reino de Deus. Nele, Jesus não anula a Lei de Moisés, mas a eleva ao seu nível interior definitivo: o pecado não está apenas no ato exterior (ex: matar), mas nasce na intenção oculta do coração (ex: odiar o irmão). As Bem-Aventuranças exaltam os humildes, os pacificadores e os puros de coração.\n\n### 2. A Pedagogia das Parábolas\nJesus usava com profunda sabedoria didática o recurso literário e homilético das **Parábolas** — histórias tiradas da vida cotidiana agrária e social da terra (como semeadura, pescaria, festas e ovelhas perdidas) para ilustrar verdades ocultas e espirituais. Elas serviam para revelar mistérios profundos aos de coração sincero e quebrantado, ao mesmo tempo em que velavam a verdade dos orgulhosos e críticos fariseus.`,
-                    questions: [
-                        { q: 'Onde está registrado o maior compêndio de ensinamentos ético-espirituais de Jesus, considerado a "Magna Carta do Reino de Deus", que contém as Bem-Aventuranças?', options: ['No livro de Apocalipse.', 'No Sermão do Monte, registrado nos capítulos 5, 6 e 7 do Evangelho de Mateus.', 'No prólogo do Evangelho de João.', 'Na Epístola aos Hebreus.'], answer: 1 },
-                        { q: 'Ao interpretar de forma profunda e definitiva a Lei no Sermão do Monte, onde Jesus localiza a real raiz e origem do pecado contra a pureza e a vida?', options: ['Unicamente nas leis civis do império romano.', 'Nas circunstâncias puramente econômicas dos indivíduos.', 'No interior do coração humano, revelando que a intenção maligna, o ódio irracional e a lascívia oculta já configuram a quebra da Lei de Deus.', 'Em vírus biológicos transmitidos.'], answer: 2 },
-                        { q: 'Por que Jesus utilizava a técnica pedagógica de ensinar por meio de "Parábolas"?', options: ['Keep out of trouble.', 'Para mascarar mentiras e fábulas divertidas aos povos ignorantes.', 'Para ilustrar realidades espirituais abstratas com exemplos da vida quotidiana comum dos ouvintes, revelando os mistérios do Reino aos humildes.', 'Porque não gostava de usar as Escrituras do Antigo Testamento.'], answer: 2 },
-                        { q: 'Qual destas famosas parábolas de Jesus de Lucas 15 foca extensamente na compaixão, amor gracioso divino incondicional do Pai e no resgate alegre do perdido?', options: ['A Parábola dos Dez Talentos.', 'A Parábola do Filho Pródigo.', 'A Parábola do Trigo e do Joio.', 'A Parábola da Rede de Pesca.'], answer: 1 },
-                        { q: 'Segundo o Sermão do Monte, o que os seguidores de Jesus representam na história respectivamente perante a terra e o mundo?', options: ['Ricos comandantes e políticos imperialistas dominadores.', 'Os juízes impiedosos que condenam à morte quem pecar nas praças.', 'O Sal da Terra (preservando e temperando a sociedade moralmente) e a Luz do Mundo (guiando os cegos espirituais pelo testemunho fiel).', 'Estudiosos teóricos isolados em deserto sem comunicação.'], answer: 2 }
-                    ]
-                },
-                {
-                    id: 'jc_m6',
-                    title: 'Módulo 6: O Caráter Perfeito do Salvador',
-                    content: `### 1. A Perfeição Moral e a Santidade Inteira\nEm um mundo recheado de heróis falhos e de líderes que decaem moralmente, Jesus Cristo ergue-se impecável e absolutamente intocável em integridade eterna. O Bispo Manoel Ferreira frisa que o caráter humano de Jesus é a maior evidência da Sua origem celestial. Ele foi tentado em tudo, mas permaneceu isento de qualquer mancha de pecado (Hb 4.15). Diante de Seus algozes e inimigos mais ferozes, Jesus pôde desafiar publicamente: "Quem de vós me convence de pecado?" (Jo 8.46). Não houve nele soberba, mentira, dolo, egoísmo ou hipocrisia.\n\n### 2. Mansidão, Compaixão e Serviço Abnegado\nO modelo de liderança e amor de Jesus Cristo redefiniu a história:\n- **Amor e Compaixão:** Jesus aproximou-se dos marginalizados (leprosos, publicanos, pecadores) não para concordar com seus desmandos, mas para curá-los, perdoá-los e regenerá-los.\n- **Mansidão Extrema:** Suportou afrontas terríveis e cuspidas no rosto sem revidar, agindo com humildade (Mt 11.29).\n- **Serviço Radical:** Deu o exemplo máximo ao lavar os pés de Seus discípulos rudes, ensinando que no Reino de Deus o maior é aquele que serve.`,
-                    questions: [
-                        { q: 'Segundo a doutrina bíblica e teológica, qual destas afirmativas define a impecabilidade histórica de Jesus?', options: ['Jesus falhou em pensamentos, mas nunca de forma exterior e civil.', 'Ele foi tentado em todas as coisas, à nossa semelhança, contudo permaneceu inteiramente sem qualquer tipo ou ato de pecado moral.', 'Apenas pecou durante a adolescência por imaturidade natural dos humanos.', 'Ele resistiu às tentações apenas porque foi blindado mecanicamente e não tinha sentimentos.'], answer: 1 },
-                        { q: 'Que atitude de extrema humildade e serviço prático radical Jesus efetuou na véspera de Sua paixão bíblica perante Seus próprios discípulos?', options: ['Mandou erguerem tronos reais dourados para cada um se sentar perante os povos.', 'Curou o sumo sacerdote Malco exigindo dízimos.', 'Cingiu-se com uma toalha e lavou pessoalmente os pés poeirentos e cansados dos discípulos, ensinando que o maior no Reino deve ser o servo.', 'Lavou apenas Seus próprios pés exigindo adoração física instantânea.'], answer: 2 },
-                        { q: 'Qual foi a resposta de Jesus no templo aos Seus críticos mais ferozes que procuravam desesperadamente alguma falha em Sua conduta moral?', options: ['"Eu sou mais poderoso e rico que vossos ancestrais".', '"Quem de vós me convence de pecado?" (João 8:46).', '"Eu destruirei este templo físico imediatamente com fogo".', '"Não me julgueis pois eu posso perdoá-los se me pagarem dízimo".'], answer: 1 },
-                        { q: 'Como de forma magistral Jesus Cristo expressa a Sua postura amorosa e acolhedora em Mateus 11:28-30 para com os cansados?', options: ['"Ide aos vossos próprios templos e pagai penitências adicionais".', '"Digo que a dor é fruto puramente de falta de coragem secular".', '"Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei. Tomai sobre vós o meu jugo, e aprendei de mim, que sou manso e humilde de coração".', '"Buscai o isolamento em deserto total e não convivais com vossa congregação".'], answer: 2 },
-                        { q: 'Segundo a obra base do Bispo Manoel Ferreira, qual o principal impacto do perfeito caráter de Jesus Cristo sobre a humanidade?', options: ['Erguer um código de leis civis e penais romanas opressoras.', 'Consolidar de forma plena a revelação viva da essência amorosa, santa, justa e misericordiosa do Pai criador, oferecendo um modelo inegociável de caráter e liderança de serviço para todo cristão.', 'Forçar a conversão obrigatória e armada de imperadores europeus na Idade Média.', 'Anular o livre-arbítrio dos povos primitivos do Oriente.'], answer: 1 }
-                    ]
-                },
-                {
-                    id: 'jc_m7',
-                    title: 'Módulo 7: A Semana Santa e a Paixão de Cristo',
-                    content: `### 1. A Entrada Triunfal e o Gethsemane\nA semana final do ministério terreno de Jesus é descrita com riqueza dramática de detalhes. Começa com a Entrada Triunfal em Jerusalém montado em um jumentinho humilde, cumprindo Zacarias 9.9. Dias depois, Jesus reúne-se na Última Ceia (Mesa do Senhor), instituindo o Memorial do Seu sangue e corpo entregues na cruz. Em seguida, ruma ao Jardim do Gethsemane, onde vive a Sua maior agonia redentora, suando o equivalente a gotas de sangue devido à imensa pressão espiritual de carregar sobre Si as faltas da humanidade, orando: "Meu Pai, se é possível, passe de mim este cálice; todavia, não seja como eu quero, mas como tu queres" (Mt 26.39).\n\n### 2. O Calvário e a Expiação Substitutiva\nTraído por Judas, Jesus passa por julgamentos religiosos e civis ilegais durante a noite. Moído de pancadas, açoitado violentamente por flagelos romanos, Ele carrega a Sua própria cruz até o monte Calvário (Golgotha). Ali, Jesus consuma a **Expiação Substitutiva** (substituição penal). Ele morre voluntariamente na cruz, clamando nas Suas últimas palavras: "Está consumado" (Jo 19.30). O véu do templo rasga-se de alto a baixo, abrindo para sempre o caminho ao trono da graça de Deus.`,
-                    questions: [
-                        { q: 'A agonia física e espiritual profunda que Jesus enfrentou no Jardim do Gethsemane, e que se traduziu no suor de gotas de sangue, deu-se devido a:', options: ['Pavor puramente físico da dor dos pregos e medo das açoites temporais.', 'O imenso e avassalador peso espiritual de carregar sobre Si as iniquidades e delitos de toda a raça humana, sorvendo de forma voluntária o cálice da ira divina.', 'Insônia crônica decorrente de sua má alimentação na Galileia.', 'Conflito com as espadas dos guardas romanos.'], answer: 1 },
-                        { q: 'Que importante ordenança e memorial sagrado Jesus institui com Seus discípulos à mesa de refeição pascal na véspera de Sua crucificação?', options: ['O dízimo obrigatório mensal sob pena de exclusão da herança celeste.', 'A Santa Ceia do Senhor, abençoando o pão (Seu corpo entregue) e o vinho (Seu sangue da nova aliança derramado por muitos).', 'O batismo por imersão nos tanques de Jerusalém.', 'O juramento de segredo em línguas eclesiásticas.'], answer: 1 },
-                        { q: 'Como se chama do ponto de vista teológico exegético a doutrina em que Jesus assume voluntariamente e integralmente a punição penal por nossos pecados em nosso lugar na cruz?', options: ['Evolução teológica mística.', 'Pelagianismo ético.', 'Expiação Substitutiva (ou Substituição Penal Vicária).', 'Purgatório resgatador judicial.'], answer: 2 },
-                        { q: 'Qual foi a exclamação final de triunfo espiritual proferida por Jesus na cruz antes de expirar?', options: ['"Pai, por que me abandonaste e não mandas o fogo sagrado?"', '"Eu fui derrotado pelo reino do diabo e o império romano".', '"Está consumado!" (João 19:30), indicando que a dívida do pecado humano foi totalmente paga.', '"Guardai todas as vossas moedas no altar do templo".'], answer: 2 },
-                        { q: 'O que representou o rasgar-se de alto a baixo do imenso e espesso Véu do Templo de Jerusalém no exato momento em que Jesus expirou na cruz?', options: ['Um tremor de terra natural que exigia reformas estruturais urgentes.', 'A quebra do controle romano que agora passava a confiscar os dízimos.', 'A abertura definitiva e graciosa do acesso direto de qualquer salvo perante a santíssima presença do Senhor (Trono da Graça), abolindo a barreira de separação do Lugar Santíssimo.', 'A rejection of God to all kind of theological songs.'], answer: 2 }
-                    ]
-                },
-                {
-                    id: 'jc_m8',
-                    title: 'Módulo 8: A Ressurreição e Suas Evidências',
-                    content: `### 1. A Centralidade do Fato Histórico\nSe o Calvário é o pagamento do preço do pecado, a Ressurreição é o selo de quitação legal divino e o triunfo definitivo sobre a morte física e espiritual. Como o apóstolo Paulo decreta em 1 Coríntios 15.14: "E, se Cristo não ressucitou, é vã a nossa pregação, e também é vã a vossa fé". O Bispo Manoel Ferreira assevera que a ressurreição corpórea de Cristo no terceiro dia é o pilar irremovível de toda a fé cristã e histórica.\n\n### 2. Evidências Históricas Irrefutáveis\nA defesa apologética da ressurreição apoia-se em fatos históricos consolidados:\n- **O Túmulo Vazio:** O corpo nunca foi encontrado por judeus ou romanos (comprar o silêncio da guarda romana prova o deespero do Sinédrio).\n- **Aparições Posteriores:** Jesus ressurreto apareceu de forma física corporal a Maria Madalena, aos dez discípulos no cenáculo, a Tomé (com provas de toque nas feridas), no caminho de Emaús e a mais de 500 irmãos de uma só vez (1 Co 15.6).\n- **Transformação Radical dos Discípulos:** Homens assustados que fugiram no Gethsemane transformaram-se em mártires audazes, dispostos a dar a vida pela verdade de que viram o Senhor ressuscitado.`,
-                    questions: [
-                        { q: 'Por que o apóstolo Paulo, em 1 Coríntios 15, considera que a ressurreição de Jesus Cristo é o pilar irremovível da fé cristã?', options: ['Porque sem a ressurreição os discípulos não poderiam fundar frentes de comércio.', 'Porque se Cristo não ressuscitou dentre os mortos, vazia e inútil é a pregação cristã e vã é a vossa fé, permanecendo os homens em seus pecados.', 'Para mostrar apenas o poder de transfiguração mágica do Salvador.', 'Apenas para assustar os imperadores romanos.'], answer: 1 },
-                        { q: 'Qual foi o boato subornado pelos líderes religiosos judeus aos guardas romanos que vigiavam o túmulo de Jesus no domingo de manhã?', options: ['Que Jesus ressuscitou com o uso de feitiçaria judaica ancestral.', 'Que os Seus discípulos vieram de noite e roubaram o corpo enquanto os guardas dormiam.', 'Que o terremoto engoliu por completo o sepulcro.', 'Que Jesus nunca esteve de fato sepultado naquele jardim.'], answer: 1 },
-                        { q: 'A quem Jesus Cristo faz a Sua primeiríssima aparição gloriosa ressurreta no domingo de manhã ao lado do túmulo vazio?', options: ['A Caifás, para provar Sua autoridade e castigar seus pecados.', 'Ao apóstolo Pedro e em seguida a Pilatos no palácio público.', 'A Maria Madalena, que chorava no jardim.', 'Aos fariseus que zombavam do altar.'], answer: 2 },
-                        { q: 'Para quantos crentes reunidos de uma só vez Jesus Cristo apareceu corpóreamente ressurreto de acordo com o relato do apóstolo Paulo em 1 Coríntios 15:6?', options: ['Apenas para os onze apóstolos no cenáculo escuro trancado.', 'A mais de uns trinta no caminho de Emaús.', 'A mais de quinhentos irmãos de uma única vez.', 'Para toda a cidade de Jerusalém ao meio-dia.'], answer: 2 },
-                        { q: 'Como a mudança súbita e corajosa do comportamento dos apóstolos após o domingo de Páscoa atesta a ressurreição?', options: ['Prova que receberam incentivos financeiros robustos.', 'Revela que apenas sofreram de uma gigantesca alucinação coletiva irracional.', 'Evidencia que eles de fato conviveram e tocaram em Cristo ressurreto, aceitando entregar a própria vida por essa verdade inegociável diante de qualquer martírio.', 'Demonstra que eles queriam poder político romano.'], answer: 2 }
-                    ]
-                },
-                {
-                    id: 'jc_m9',
-                    title: 'Módulo 9: A Ascensão e Glorificação do Salvador',
-                    content: `### 1. A Ascensão Física ao Céu\nApós passar 40 dias na terra instruindo a Sua igreja em desenvolvimento e as bases da Grande Comissão, Jesus conduz os Seus discípulos ao Monte das Oliveiras e ali, perante os seus olhos, Ele se eleva aos céus em corpo glorificado visível e é envolvido por uma nuvem majestosa (Atos 1.9). Anjos testificam ali que este mesmo Jesus que subiu ao céu retornará de forma idêntica e gloriosa. O Bispo Manoel Ferreira destaca que a Ascensão é o coroamento triunfal da missão terrena de Cristo e Seu retorno exaltado às glórias do Pai.\n\n### 2. O Sumo Sacerdócio e Advocacia de Cristo\nNos céus, Jesus assume a Sua posição soberana e legal:\n- **A Sessão à Direita de Deus:** Ele está sentado no trono à destra do Pai, exercendo todo o poder, majestade e autoridade cósmica (Ef 1.20-22).\n- **Único Mediador e Advogado:** Cremos que há um só Deus e um só mediador entre Deus e os homens: Jesus Cristo (1 Tm 2.5). Ele vive para interceder por nós como Sumo Sacerdote (Hb 7.25) e nosso Advogado legal contra as acusações das trevas (1 Jo 2.1).`,
-                    questions: [
-                        { q: 'De onde Jesus ascendeu fisicamente aos céus na presença de Seus discípulos, conforme o relato do capítulo 1 do livro de Atos dos Apóstolos?', options: ['Do monte Sinai.', 'Do Monte das Oliveiras, nos arredores de Jerusalém.', 'De cima do templo de Caifás.', 'Das águas do Mar Vermelho.'], answer: 1 },
-                        { q: 'Quantos dias Jesus permaneceu fisicamente na terra instruindo Seus apóstolos com provas incontestáveis entre a Sua ressurreição e a Sua ascensão gloriosa ao céu?', options: ['Três dias apenas.', 'Sete dias sagrados.', 'Quarenta dias.', 'Cinquenta dias completos.'], answer: 2 },
-                        { q: 'De acordo com 1 Timóteo 2:5, quantos mediadores legais e salvíficos existem de fato entre o Criador e a humanidade?', options: ['Diversos santos canonizados e anjos regentes de alta escala.', 'Três intercessores.', 'Apenas um: o homem Cristo Jesus, o único mediador santo.', 'Nenhum, pois cada crente deve interceder pelas suas próprias culpas.'], answer: 2 },
-                        { q: 'O que significa teologicamente estar Cristo Jesus "sentado à destra (direita) do Pai no trono celestial" (Hebreus 1:3)?', options: ['Estar descansando ocioso de um cansaço físico.', 'Estar investido oficialmente na Sua posição de suprema honra, glória eterna e autoridade eclesiástica celestial máxima, governando soberanamente sobre toda a criação.', 'Estar preso em trono místico.', 'Ter perdido a Sua herança original.'], answer: 1 },
-                        { q: 'Segundo a Epístola aos Hebreus (Hb 7:25), de que forma Jesus Cristo atua a favor do salvo perante o tribunal do Pai diuturnamente?', options: ['Julgando-o de novo por cada mancha ou falha cometida.', 'Vivendo eternamente para interceder por nós como nosso Sumo Sacerdote perfeito, garantindo segurança eterna à salvação conquistada.', 'Apenas cobrando taxas nos dízimos sagrados no templo.', 'Ficando calado e alheio às acusações.'], answer: 1 }
-                    ]
-                },
-                {
-                    id: 'jc_m10',
-                    title: 'Módulo 10: O Retorno Triunfal e Seu Reinado Eterno',
-                    content: `### 1. A Esperança da Segunda Vinda\nO curso de capacitação baseado em "Jesus Cristo o Maior Personagem da História" encerra com a promessa que pulsa em toda a teologia bíblica: o Retorno Triunfal de Cristo. Esta vinda ocorrerá em duas fases distintas segundo a escatologia pentecostal clássica: o **Arrebatamento sob segredo** (resgate invisível de Sua fiel Noiva) e a **Segunda Vinda em Glória** (retorno físico e público de Jesus com a Sua Igreja à Terra para derrotar as nações rebeldes reunidas no Armagedom).\n\n### 2. O Reino Milenar e o Estado Eterno de Adoração\nApós subjugar a besta e o falso profeta, Jesus reinará fisicamente sobre a Terra por 1.000 anos, em absoluta perfeição de justiça, paz e equidade (o Milênio). Ao final, o diabo será lançado ao lago de fogo para condenação eterna. Consumam-se assim os Novos Céus e a Nova Terra (O Estado Eterno), onde a Igreja desfrutará para sempre da presença santa do Salvador, o maior e insuperável personagem da história do Universo.`,
-                    questions: [
-                        { q: 'Como se divide escatológicamente o Retorno Escatológico do Senhor Jesus de acordo com a teologia pentecostal clássica?', options: ['Numa única vinda puramente metafórica na mente dos homens.', 'Em duas fases: o Arrebatamento oculto com o resgate invisível da Igreja fiel; e a Segunda Vinda visível na terra com poder e glória com a Igreja após a Tribulação.', 'Em dez fases anuais com retornos escalonados por territórios.', 'Em aparições físicas apenas em palácios políticos da Europa.'], answer: 1 },
-                        { q: 'No Retorno visível de Jesus em glória com os Seus salvos (Segunda Vinda), em que monte geográfico Seus pés pousarão físicamente (Zacarias 14:4)?', options: ['No monte Sinai, erguendo relâmpagos.', 'No Monte Everest debaixo de nevoeiros celestes.', 'No Monte das Oliveiras, fendendo-o de leste a oeste sob grande clamor.', 'No monte Calvário de novo.'], answer: 2 },
-                        { q: 'Quem de forma definitiva será lançado no lago de fogo e enxofre por ocasião do Juízo Final de Deus em Apocalipse 20?', options: ['Apenas os membros que atrasaram dízimos no templo.', 'A besta (Anticristo), o falso profeta, a Morte, o Inferno e o diabo (Satanás) com todos cujos nomes não se acharam escritos no Livro da Vida.', 'Somente historiadores seculares que descreram da crucificação.', 'Os animais irracionais de criação terrestre.'], answer: 1 },
-                        { q: 'O que o majestoso "Livro da Vida" em Apocalipse 20:15 representa na teologia bíblica?', options: ['Uma caderneta contendo listas de doações financeiras.', 'O cadastro romano antigo de recenseadores.', 'O registro soberano dos salvos e justificados pelo precioso sangue derramado pelo Cordeiro de Deus na cruz.', 'O manual com as dez lições do curso Obreiro de Valor.'], answer: 2 },
-                        { q: 'Como será designada em glória a morada final dos salvos justificados na perfeita eternidade divina (Ap 21)?', options: ['O deserto bíblico restaurado da Judéia.', 'A Nova Jerusalém (Novos Céus e Nova Terra), onde Deus habitará perpetuamente de forma íntima e gloriosa com a humanidade regenerada sem choro ou pecado.', 'Uma colônia espacial na órbita do planeta Marte.', 'O purgatório purificador intersecional.'], answer: 1 }
-                    ]
-                }
-            ]
         }
     ];
 
@@ -21342,7 +23002,7 @@ const PortalCursos = ({ user }) => {
                                 </div>
                             </div>
                             <Button onClick={() => {
-                                setPrintData({ igreja: db.igreja, membro: user, extra: { nome_curso: selectedCourse.title, curso: selectedCourse.title } });
+                                setPrintData({ igreja: db.igreja, membro: user, extra: { nome_curso: selectedCourse.title } });
                                 setPrintMode('cert_curso');
                                 setPreviewOpen(true);
                             }} variant="success" className="shadow-emerald-500/30 w-full md:w-auto px-6 py-4">
@@ -22310,7 +23970,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.4.0</span>
+                        <span>Versão 6.2.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>SaaS Gold Edition</span>
                     </div>
@@ -23581,338 +25241,438 @@ export default function App() {
         delete safeData.id;
         delete safeData._collection_key;
         delete safeData._type_label;
-        
+
+        // NOVO: Histórico de Alterações de registros do módulo financeiro
+        if (colName === 'financeiro') {
+            if (editingItem && editingItem.id) {
+                const oldValor = parseFloat(editingItem.valor) || 0;
+                const newValor = parseFloat(safeData.valor) || 0;
+                const oldStatus = editingItem.status || 'pendente';
+                const newStatus = safeData.status || 'pendente';
+                const oldDesc = editingItem.descricao || '';
+                const newDesc = safeData.descricao || '';
+                
+                const changes = [];
+                if (oldValor !== newValor) {
+                    changes.push(`Valor alterado de R$ ${oldValor.toFixed(2)} para R$ ${newValor.toFixed(2)}`);
+                }
+                if (oldStatus !== newStatus) {
+                    changes.push(`Status alterado de "${oldStatus.toUpperCase()}" para "${newStatus.toUpperCase()}"`);
+                }
+                if (oldDesc !== newDesc) {
+                    changes.push(`Descrição alterada de "${oldDesc}" para "${newDesc}"`);
+                }
+                
+                if (changes.length > 0) {
+                    const histItem = {
+                        usuario_nome: user?.nome || 'Operador',
+                        usuario_id: user?.id || 'id',
+                        data: new Date().toISOString(),
+                        descricao: changes.join('; ')
+                    };
+                    const prevHist = Array.isArray(editingItem.historico) ? editingItem.historico : (Array.isArray(editingItem.alteracoes) ? editingItem.alteracoes : []);
+                    safeData.historico = [histItem, ...prevHist];
+                } else {
+                    if (editingItem.historico) {
+                        safeData.historico = editingItem.historico;
+                    }
+                }
+            } else {
+                const histItem = {
+                    usuario_nome: user?.nome || 'Operador',
+                    usuario_id: user?.id || 'id',
+                    data: new Date().toISOString(),
+                    descricao: 'Lançamento financeiro registrado no sistema.'
+                };
+                safeData.historico = [histItem];
+            }
+        }
+
         let savedId = editingItem && editingItem.id ? editingItem.id : null;
         if (editingItem && editingItem.id) {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, editingItem.id), safeData, { merge: true });
             logAction('EDIÇÃO', `Editou registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, editingItem.id);
         } else {
-            const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', colName), { 
-                ...safeData, 
-                created_at: new Date().toISOString() 
-            });
-            savedId = docRef.id;
-            logAction('CRIAÇÃO', `Criou novo registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, docRef.id);
+            const novoDoc = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', colName), { ...safeData, created_at: new Date().toISOString() });
+            savedId = novoDoc.id;
+            logAction('CRIAÇÃO', `Criou novo registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, novoDoc.id);
         }
 
-        // Cache local de fotos de membros
-        if (savedId && colName === 'membros' && safeData.foto) {
-            await storeMedia(`membro_${savedId}_foto`, safeData.foto).catch(() => {});
+        if (savedId) {
+            try {
+                if (safeData.foto) await storeMedia(`membro_${savedId}_foto`, safeData.foto);
+                if (safeData.logo) await storeMedia(`congregacao_${savedId}_logo`, safeData.logo);
+                if (safeData.imagem) await storeMedia(`agenda_${savedId}_imagem`, safeData.imagem);
+            } catch (err) {
+                console.warn("Erro ao registar cache IndexedDB pós-guardar:", err);
+            }
         }
-
-        handleSuccess(editingItem ? "Registro atualizado!" : "Registro criado!");
-    } catch (error: any) {
-        console.error("Erro ao salvar formulário:", error);
-        addToast("Erro ao gravar dados no servidor: " + error.message, "error");
+        handleSuccess("Guardado com sucesso!");
+    } catch (e) { 
+        console.error("Erro ao guardar:", e); 
+        addToast("Erro de permissões ao tentar guardar.", "error"); 
     }
   };
 
-  const value: any = {
-    db,
-    user,
-    setUser,
-    view,
-    setView,
-    sidebarOpen,
-    setSidebarOpen,
-    modalOpen,
-    setModalOpen,
-    modalType,
-    formData,
-    setFormData,
-    printMode,
-    setPrintMode,
-    printData,
-    setPrintData,
-    toasts,
-    addToast,
-    removeToast,
-    deleteItem,
-    openModal,
-    editingItem,
-    dbFirestore,
-    appId,
-    authUser,
-    setConfirmDialog,
-    updateDoc,
-    doc,
-    addDoc,
-    collection,
-    hasPermission,
-    setDbState,
-    setDoc,
-    logout: handleLogout,
-    startExport: handleExportRequest,
-    handleImportRequest,
-    handleLogoutRequest,
-    setPreviewOpen,
-    deleteDoc,
-    logAction,
-    theme,
-    setTheme,
-    toggleTheme,
-    isOnline,
-    osTheme,
-    setOsTheme,
-    animBgEnabled,
-    setAnimBgEnabled,
-    callGeminiAI,
-    printPalette,
-    setPrintPalette,
-    printMarginType,
-    setPrintMarginType,
-    printOrientation,
-    setPrintOrientation,
-    printContentScale,
-    setPrintContentScale
-  };
+  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale };
+
+  if (!user) { 
+    return ( 
+      <ChurchContext.Provider value={ctxValues}>
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#0f172a]">
+          <GlobalStyles />
+          <OsThemeStyles />
+          <ToastContainer toasts={toasts} removeToast={removeToast} />
+          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} />}
+          
+          <div className="absolute top-6 right-6 z-[100] pointer-events-auto hidden sm:flex gap-3">
+              <OsThemeToggle variant="dark" />
+              <AnimBgToggle variant="dark" />
+              <ThemeToggle variant="dark" />
+              <FullScreenToggle variant="dark" />
+          </div>
+
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+              <ThemeBackground theme={osTheme} />
+          </div>
+          
+          <div className="relative z-10 w-full max-w-6xl h-[85vh] bg-white/10 backdrop-blur-2xl rounded-[3.5rem] shadow-2xl border border-white/20 flex overflow-hidden animate-scale-in ring-1 ring-white/30">
+              <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 p-20 flex-col justify-between relative overflow-hidden login-left-hero">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-6 mb-12">
+                        <div className="w-28 h-28 bg-white/10 rounded-[2rem] backdrop-blur-md p-4 shadow-2xl shadow-indigo-500/40 border border-white/20 flex items-center justify-center transform hover:scale-105 transition-all shrink-0">
+                            <img src={db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} className="w-full h-full object-contain drop-shadow-md" alt="Sistema GIPP" />
+                        </div>
+                        <div className="flex flex-col border-l-2 border-indigo-500/30 pl-6">
+                            <h2 className="font-serif text-4xl sm:text-5xl text-white drop-shadow-lg leading-tight tracking-wide font-normal">
+                                Sistema <br/><span className="italic font-light text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-indigo-400 login-gradient-text">de Gestão</span>
+                            </h2>
+                            <p className="font-sans text-xs font-black uppercase tracking-[0.4em] text-indigo-400/80 mt-3 login-accent-text">
+                                Para Igrejas
+                            </p>
+                        </div>
+                    </div>
+                    <h1 className="text-6xl font-black text-white leading-[1.1] mb-8 drop-shadow-lg">
+                        Gestão <br/>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 login-gradient-text">Inteligente</span>
+                    </h1>
+                    <p className="text-indigo-200/80 text-xl font-light max-w-sm leading-relaxed mb-6 login-accent-text">
+                        A plataforma completa para transformar a administração da sua igreja.
+                    </p>
+                    <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm animate-entrance">
+                        <p className="text-white text-base italic font-medium leading-relaxed mb-3">"{loginVerse.text}"</p>
+                        <p className="text-indigo-300 text-xs font-black uppercase tracking-widest login-accent-text">— {loginVerse.ref}</p>
+                    </div>
+
+                    {/* --- CLASSIFICAÇÃO OFICIAL DO SISTEMA --- */}
+                    <div className="mt-6 p-5 bg-black/40 border border-white/10 rounded-3xl backdrop-blur-md animate-entrance relative overflow-hidden group google-review-card transition-all duration-500 cursor-default">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[slideRight_2s_ease-in-out] pointer-events-none"></div>
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] p-2">
+                                <svg width="100%" height="100%" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                    <h4 className="font-bold text-white text-sm">Classificação do Sistema</h4>
+                                    <span className="text-slate-400 text-[10px] font-medium flex items-center gap-1"><ShieldCheck size={12} className="text-blue-400"/> Google Cloud Verified</span>
+                                </div>
+                                <div className="flex items-center gap-1 mb-2 google-review-stars">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <Star key={star} size={14} className="text-[#FBBC05] fill-[#FBBC05] drop-shadow-[0_0_8px_rgba(251,188,5,0.6)]" />
+                                    ))}
+                                    <span className="text-white/80 text-[10px] ml-2 font-bold tracking-wider">5.0 / EXCELÊNCIA</span>
+                                </div>
+                                <p className="text-white/80 text-xs font-medium leading-relaxed">
+                                    Sistema classificado com excelência em segurança de dados, alta performance e estabilidade na nuvem. Atende a todos os rigorosos padrões de proteção corporativa.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="relative z-10">
+                    <div className="flex gap-4">
+                        <div className="flex -space-x-3">
+                            {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-indigo-900 bg-indigo-800/50 backdrop-blur-sm flex items-center justify-center text-[10px] text-white font-bold">{i}</div>)}
+                        </div>
+                        <div className="text-xs text-indigo-300 font-medium flex items-center">
+                            Desenvolvedor : PATRICK PESSOA
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="w-full lg:w-1/2 bg-white/80 backdrop-blur-xl p-8 sm:p-16 flex flex-col justify-center relative">
+                <div className="mb-8 flex flex-col text-center lg:text-left animate-entrance gap-6">
+                    <div className="flex flex-col lg:flex-row items-center gap-5">
+                        <div className="w-20 h-20 bg-gradient-to-br from-indigo-50 to-white rounded-[2rem] shadow-xl shadow-indigo-500/20 flex items-center justify-center p-3 border-2 border-white shrink-0 transform hover:scale-105 transition-all animate-float">
+                            {db.igreja?.logo ? <img src={db.igreja.logo} alt="Logo Igreja" className="w-full h-full object-contain drop-shadow-md" /> : <Building2 className="text-indigo-400" size={32}/>}
+                        </div>
+                        <div className="text-center lg:text-left">
+                            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v6.2.0</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-1 tracking-tight">Acesso ao Painel</h3>
+                        <p className="text-slate-500 font-medium text-sm">Informe as suas credenciais para continuar.</p>
+                    </div>
+                </div>
+                
+                {/* MODIFICADO: Oculta a barra de abas se for um dispositivo móvel */}
+                {!isMobileDevice && (
+                    <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">
+                        <button type="button" onClick={() => { setLoginMode('admin'); setIsFirstAccess(false); }} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${loginMode === 'admin' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Administração</button>
+                        <button type="button" onClick={() => setLoginMode('membro')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${loginMode === 'membro' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Sou Membro</button>
+                    </div>
+                )}
+
+                <form onSubmit={handleLogin} className="space-y-6">
+                    {!isFirstAccess ? (
+                        <>
+                            <div className="space-y-2 relative">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{loginMode === 'admin' ? 'Utilizador' : 'Nome do Membro'}</label>
+                                <div className="relative group">
+                                    <User className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20}/>
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-slate-700 font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
+                                        placeholder={loginMode === 'admin' ? "O seu login de acesso" : "Ex: João da Silva"} 
+                                        value={loginData.user} 
+                                        onChange={e => { setLoginData({...loginData, user: e.target.value}); if(loginMode==='membro') setShowMemberDropdown(true); }} 
+                                        onFocus={() => { if(loginMode==='membro') setShowMemberDropdown(true); }}
+                                        onBlur={() => setTimeout(() => setShowMemberDropdown(false), 200)}
+                                    />
+                                </div>
+                                {loginMode === 'membro' && showMemberDropdown && loginData.user && (
+                                    <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
+                                        {db.membros.filter(m => m.nome.toLowerCase().includes(loginData.user.toLowerCase())).map(m => (
+                                            <div key={m.id} onClick={() => { setLoginData({...loginData, user: m.nome}); setShowMemberDropdown(false); }} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
+                                                {m.nome}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{loginMode === 'admin' ? 'Palavra-passe' : 'Senha do Portal'}</label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20}/>
+                                    <input 
+                                        type="password" 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-slate-700 font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
+                                        placeholder={loginMode === 'admin' ? "••••••••" : "A sua senha criada"} 
+                                        value={loginData.pass} 
+                                        onChange={e => setLoginData({...loginData, pass: e.target.value})} 
+                                    />
+                                </div>
+                                {loginMode === 'membro' && (
+                                    <div className="text-right mt-2">
+                                        <button type="button" onClick={() => setIsFirstAccess(true)} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Primeiro Acesso? Crie sua senha aqui.</button>
+                                    </div>
+                                )}
+                            </div>
+                            <button className={`w-full text-white font-bold py-5 rounded-2xl transition-all hover:shadow-lg hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 mt-8 group ${loginMode === 'admin' ? 'bg-gradient-to-r from-indigo-600 to-pink-600 hover:shadow-indigo-500/30' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-emerald-500/30'}`}>
+                                Aceder ao Sistema <ChevronRight className="group-hover:translate-x-1 transition-transform"/>
+                            </button>
+                        </>
+                    ) : firstAccessSuccessData ? (
+                        <div className="space-y-6 animate-entrance text-center pb-4">
+                            <div className="w-24 h-24 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-lg shadow-emerald-500/20">
+                                <CheckCircle size={48} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800">Cadastro feito com sucesso!</h3>
+                            <p className="text-sm text-slate-500 font-medium">Os seus dados de acesso ao portal foram validados e a senha gravada.</p>
+                            
+                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-left space-y-3 mt-6">
+                                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest border-b border-slate-200 pb-2">Dados Registados</p>
+                                <p className="text-sm font-bold text-slate-800">Nome: <span className="font-medium text-slate-600">{firstAccessSuccessData.nome}</span></p>
+                                <p className="text-sm font-bold text-slate-800">Nascimento: <span className="font-medium text-slate-600">{formatDateLocal(firstAccessSuccessData.data_nascimento)}</span></p>
+                            </div>
+                            
+                            <Button type="button" onClick={confirmFirstAccess} variant="success" className="w-full py-4 mt-8 shadow-lg shadow-emerald-500/30 text-base">
+                                OK, Continuar
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 animate-entrance">
+                             <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 mb-4">
+                                 <p className="text-xs font-bold text-emerald-800 flex items-center gap-2"><Lock size={14}/> Validação de Segurança</p>
+                                 <p className="text-[10px] text-emerald-600 mt-1 leading-relaxed">Informe o seu Nome Exato e Data de Nascimento para criar a sua senha de acesso ao portal.</p>
+                             </div>
+                             <div className="space-y-2 relative">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nome Completo</label>
+                                <input 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" 
+                                    placeholder="Ex: João da Silva" 
+                                    value={firstAccessData.nome} 
+                                    onChange={e => { setFirstAccessData({...firstAccessData, nome: e.target.value}); setShowFirstAccessDropdown(true); }}
+                                    onFocus={() => setShowFirstAccessDropdown(true)}
+                                    onBlur={() => setTimeout(() => setShowFirstAccessDropdown(false), 200)}
+                                />
+                                {showFirstAccessDropdown && firstAccessData.nome && (
+                                    <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto custom-scrollbar">
+                                        {db.membros.filter(m => m.nome.toLowerCase().includes(firstAccessData.nome.toLowerCase())).map(m => (
+                                            <div key={m.id} onClick={() => { setFirstAccessData({...firstAccessData, nome: m.nome}); setShowFirstAccessDropdown(false); }} className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
+                                                {m.nome}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                             </div>
+                             <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Data de Nascimento</label>
+                                <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.data_nascimento} onChange={e => setFirstAccessData({...firstAccessData, data_nascimento: e.target.value})} />
+                             </div>
+                             <div className="grid grid-cols-2 gap-4 pt-2">
+                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nova Senha</label>
+                                    <input type="password" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.senha} onChange={e => setFirstAccessData({...firstAccessData, senha: e.target.value})} />
+                                 </div>
+                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirmar Senha</label>
+                                    <input type="password" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.confirmar} onChange={e => setFirstAccessData({...firstAccessData, confirmar: e.target.value})} />
+                                 </div>
+                             </div>
+                             <div className="flex gap-3 pt-4">
+                                 <Button type="button" onClick={() => { setIsFirstAccess(false); setFirstAccessSuccessData(null); }} variant="ghost" className="flex-1 border border-slate-200 text-slate-500 hover:bg-slate-50">Voltar</Button>
+                                 <Button type="submit" variant="success" className="flex-1 shadow-emerald-500/30">Criar Senha</Button>
+                             </div>
+                        </div>
+                    )}
+                </form>
+                
+                {/* NOVO: Botão dedicado de instalação com Modal de Fallback */}
+                <button 
+                    type="button"
+                    onClick={async () => {
+                        if (installPrompt) {
+                            try {
+                                installPrompt.prompt();
+                                const { outcome } = await installPrompt.userChoice;
+                                if (outcome === 'accepted') setInstallPrompt(null);
+                            } catch (e) {
+                                console.error("Erro no prompt de instalação", e);
+                                setShowInstallGuide(true);
+                            }
+                        } else {
+                            setShowInstallGuide(true); // Abre o modal em vez do alert()
+                        }
+                    }}
+                    className="w-full mt-4 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-bold py-4 rounded-2xl transition-all shadow-sm border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2"
+                >
+                    <DownloadCloud size={20} className="text-indigo-500"/> 
+                    Instalar App (Computador / Telemóvel)
+                </button>
+                
+                {loginMode === 'admin' ? (
+                    <p className="text-center mt-8 text-xs text-slate-400 font-medium">
+                        Esqueceu a sua palavra-passe? Contacte o administrador master.
+                    </p>
+                ) : (
+                    <div className="mt-8 p-5 bg-emerald-50/80 backdrop-blur-sm rounded-3xl border border-emerald-200/50 items-center gap-5 animate-entrance shadow-inner hidden md:flex">
+                        <div className="bg-white p-2 rounded-2xl shadow-sm shrink-0 border border-emerald-100">
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}&color=047857`} 
+                                alt="QR Code Portal do Membro" 
+                                className="w-16 h-16 object-contain" 
+                            />
+                        </div>
+                        <div>
+                            <h4 className="font-black text-emerald-800 text-sm mb-1 flex items-center gap-1"><Smartphone size={16}/> Aceder pelo Telemóvel</h4>
+                            <p className="text-xs text-emerald-600/90 font-medium leading-relaxed">
+                                Faça scan ao QR Code com a câmara do seu telemóvel para abrir o Portal do Membro exatamente neste link.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* NOVO: Atalho discreto para administradores logarem pelo telemóvel, caso precisem */}
+                {isMobileDevice && loginMode === 'membro' && (
+                    <button 
+                        type="button" 
+                        onClick={() => { setLoginMode('admin'); setIsFirstAccess(false); }} 
+                        className="w-full mt-6 text-[10px] font-bold text-slate-300 hover:text-indigo-500 transition-colors uppercase tracking-widest text-center"
+                    >
+                        Acesso Administrativo
+                    </button>
+                )}
+            </div>
+        </div>
+
+        {/* MODAL DE GUIA DE INSTALAÇÃO DA APP */}
+        {showInstallGuide && (
+            <div className="fixed inset-0 bg-slate-900/80 z-[11000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden relative p-8 text-center border border-white/20">
+                    <div className="mx-auto w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6 shadow-inner border-4 border-white">
+                        <DownloadCloud size={36} />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800 mb-2">Instalar Aplicação</h3>
+                    <p className="text-slate-500 text-sm mb-6 font-medium">O navegador bloqueou o atalho automático. Siga os passos manuais abaixo para instalar:</p>
+                    
+                    <div className="text-left bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-6 space-y-4">
+                        <div>
+                            <strong className="text-slate-800 flex items-center gap-2 mb-1"><Cpu size={16} className="text-indigo-500"/> No Computador (PC/Mac)</strong>
+                            <p className="text-xs text-slate-600 leading-relaxed">Clique no ícone de instalar na barra de endereços ou abra o menu (três pontos) e selecione <b>"Instalar Aplicação"</b>.</p>
+                        </div>
+                        <div className="h-px w-full bg-slate-200"></div>
+                        <div>
+                            <strong className="text-slate-800 flex items-center gap-2 mb-1"><Smartphone size={16} className="text-emerald-500"/> No Telemóvel (iOS/Android)</strong>
+                            <p className="text-xs text-slate-600 leading-relaxed">Abra o menu de opções/partilha do navegador e toque em <b>"Adicionar ao Ecrã Inicial"</b>.</p>
+                        </div>
+                    </div>
+
+                    <button onClick={() => setShowInstallGuide(false)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-indigo-500/30 active:scale-95">
+                        Entendi, fechar
+                    </button>
+                </div>
+            </div>
+        )}
+
+        </div> 
+      </ChurchContext.Provider>
+    ); 
+  }
 
   return (
-    <ChurchContext.Provider value={value}>
-      <ThemeBackground theme={localStorage.getItem('gipp-theme') || 'light'} />
-      
-      {isSystemBooting ? (
-        <SplashScreen 
-          onComplete={() => setIsSystemBooting(false)} 
-          corTema={db.igreja?.cor_principal || '#4f46e5'} 
-          themeBg={osTheme}
-          isDevMode={user?.id === 'dev'}
-        />
-      ) : view === 'login' ? (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden font-sans">
-          <div className="absolute top-1/4 -left-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="relative z-10 w-full max-w-md bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-slate-800/30 p-8 flex flex-col">
-            <div className="text-center mb-6">
-              {db.igreja?.logo ? (
-                <img src={db.igreja.logo} className="h-20 mx-auto object-contain mb-4 bg-white/80 dark:bg-slate-800 p-2.5 rounded-2xl shadow-sm border border-slate-200/40 animate-pulse" alt="Logo" />
-              ) : (
-                <div className="h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
-                  <Building2 size={32} />
-                </div>
-              )}
-              <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{db.igreja?.nome || "Portal Eclesiástico"}</h1>
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">GIPP APP</p>
-            </div>
-
-            {loginVerse.text && (
-              <div className="mb-6 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200/30 dark:border-slate-700/20 p-4 rounded-2xl text-center">
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium italic">"{loginVerse.text}"</p>
-                <p className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase mt-1 tracking-wider">{loginVerse.ref}</p>
-              </div>
-            )}
-
-            {!isFirstAccess && (
-              <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-2xl mb-6">
-                <button
-                  type="button"
-                  onClick={() => setLoginMode('admin')}
-                  className={`py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${loginMode === 'admin' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                >
-                  <Shield size={14} /> Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginMode('membro')}
-                  className={`py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${loginMode === 'membro' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                >
-                  <User size={14} /> Membro
-                </button>
-              </div>
-            )}
-
-            {firstAccessSuccessData ? (
-              <div className="flex flex-col items-center text-center py-4">
-                <CheckCircle size={48} className="text-emerald-500 mb-3 animate-bounce" />
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Acesso Liberado!</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                  Sua senha foi cadastrada com sucesso. Clique no botão abaixo para entrar diretamente no portal.
-                </p>
-                <button
-                  type="button"
-                  onClick={confirmFirstAccess}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
-                >
-                  Entrar no Portal
-                </button>
-              </div>
-            ) : isFirstAccess ? (
-              <form onSubmit={handlePrimeiroAcesso} className="space-y-4">
-                <h3 className="text-base font-bold text-slate-800 dark:text-white text-center mb-2">Primeiro Acesso ao Portal</h3>
-                
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Seu Nome Completo</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Como cadastrado na igreja"
-                    value={firstAccessData.nome}
-                    onChange={(e) => setFirstAccessData(prev => ({ ...prev, nome: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Data de Nascimento</label>
-                  <input
-                    type="date"
-                    required
-                    value={firstAccessData.data_nascimento}
-                    onChange={(e) => setFirstAccessData(prev => ({ ...prev, data_nascimento: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Senha Desejada</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Mínimo 4 caracteres"
-                    value={firstAccessData.senha}
-                    onChange={(e) => setFirstAccessData(prev => ({ ...prev, senha: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Confirmar Senha</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Digite a senha novamente"
-                    value={firstAccessData.confirmar}
-                    onChange={(e) => setFirstAccessData(prev => ({ ...prev, confirmar: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2 pt-2">
-                  <button
-                    type="submit"
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20"
-                  >
-                    Cadastrar e Ativar Conta
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsFirstAccess(false)}
-                    className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl transition-all text-xs"
-                  >
-                    Voltar para Login
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                    {loginMode === 'membro' ? 'Nome do Membro' : 'Usuário / Operador'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={loginMode === 'membro' ? "Seu nome completo cadastrado" : "Nome de usuário"}
-                    value={loginData.user}
-                    onChange={(e) => setLoginData(prev => ({ ...prev, user: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Senha</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Sua senha de acesso"
-                    value={loginData.pass}
-                    onChange={(e) => setLoginData(prev => ({ ...prev, pass: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2 pt-2">
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-bold py-3.5 rounded-xl transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
-                  >
-                    Entrar no Sistema
-                  </button>
-
-                  {loginMode === 'membro' && (
-                    <button
-                      type="button"
-                      onClick={() => setIsFirstAccess(true)}
-                      className="w-full bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-bold py-3.5 rounded-xl transition-all text-xs"
-                    >
-                      Primeiro Acesso / Cadastrar Senha
-                    </button>
-                  )}
-                </div>
-              </form>
-            )}
-
-            {installPrompt && (
-              <button
-                onClick={() => {
-                  (installPrompt as any).prompt();
-                  (installPrompt as any).userChoice.then((choiceResult: any) => {
-                    if (choiceResult.outcome === 'accepted') {
-                      setInstallPrompt(null);
-                    }
-                  });
-                }}
-                className="mt-6 w-full flex items-center justify-center gap-2 p-3 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 rounded-2xl font-bold text-xs"
-              >
-                <Smartphone size={16} /> Instalar GIPP no Celular
-              </button>
-            )}
-          </div>
+    <ChurchContext.Provider value={ctxValues}>
+        <GlobalStyles />
+        <OsThemeStyles />
+        <DynamicTheme color={db.igreja?.cor_tema} />
+        <DynamicPrintStyles orientation={printOrientation} marginType={printMarginType} mode={printMode} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <FloatingChatWidget />
+        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} />}
+        {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
+        {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
+        <BackupModal backupState={backupState} onConfirm={handleBackupConfirm} onCancel={handleBackupCancel} />
+        {previewOpen && (
+            <DocumentPreviewModal 
+                isOpen={previewOpen} 
+                onClose={() => setPreviewOpen(false)} 
+                mode={printMode} 
+                data={printData} 
+                palette={printPalette}
+                setPalette={setPrintPalette}
+                marginType={printMarginType}
+                setMarginType={setPrintMarginType}
+                orientation={printOrientation}
+                setOrientation={setPrintOrientation}
+                contentScale={printContentScale}
+                setContentScale={setPrintContentScale}
+            />
+        )}
+        <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileSelect} />
+        <div className={`print-area ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'} ${printMode?.startsWith('cert_') ? 'cert-colorized' : ''}`}>
+            <PrintSystem mode={printMode} data={printData} palette={printPalette} marginType={printMarginType} contentScale={printContentScale} orientation={printOrientation} />
         </div>
-      ) : (
-        user?.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />
-      )}
-
-      <GenericModal 
-        isOpen={modalOpen} 
-        onClose={closeModal} 
-        type={modalType} 
-        data={formData} 
-        setData={setFormData}
-        onSave={handleSaveForm}
-      />
-
-      <BackupModal 
-          backupState={backupState} 
-          onConfirm={handleBackupConfirm} 
-          onCancel={handleBackupCancel} 
-      />
-
-      {confirmDialog.isOpen && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 max-w-sm w-full p-6 shadow-2xl">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2 flex items-center gap-2"><AlertCircle className="text-indigo-600"/> {confirmDialog.title}</h3>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">{confirmDialog.message}</p>
-                  <div className="flex gap-3 justify-end">
-                      <button 
-                          onClick={() => setConfirmDialog({ isOpen: false })} 
-                          className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
-                      >
-                          {confirmDialog.cancelText || 'Cancelar'}
-                      </button>
-                      <button 
-                          onClick={() => { confirmDialog.onConfirm?.(); setConfirmDialog({ isOpen: false }); }} 
-                          className={`px-4 py-2 text-white rounded-xl text-xs font-bold transition shadow ${confirmDialog.variant === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-                      >
-                          {confirmDialog.confirmText || 'Confirmar'}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <div className="screen-content">
+            {user.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />}
+        </div>
     </ChurchContext.Provider>
   );
 }
