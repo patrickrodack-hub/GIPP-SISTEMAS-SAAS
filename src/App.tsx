@@ -2067,19 +2067,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                 label="Data Vencimento" 
                                 type="date" 
                                 value={data.data_vencimento} 
-                                onChange={v => {
-                                    if (v) {
-                                        const today = new Date();
-                                        today.setHours(0,0,0,0);
-                                        const [yr, mo, dy] = v.split('-').map(Number);
-                                        const selected = new Date(yr, mo - 1, dy);
-                                        if (selected < today) {
-                                            addToast("A data de vencimento não pode ser anterior à data atual!", "warning");
-                                            return;
-                                        }
-                                    }
-                                    setData({...data, data_vencimento:v});
-                                }} 
+                                onChange={v => setData({...data, data_vencimento:v})} 
                                 required
                             />
                             {data.status === 'pago' && (
@@ -2087,19 +2075,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                     label="Data Pagamento" 
                                     type="date" 
                                     value={data.data_pagamento} 
-                                    onChange={v => {
-                                        if (v) {
-                                            const today = new Date();
-                                            today.setHours(0,0,0,0);
-                                            const [yr, mo, dy] = v.split('-').map(Number);
-                                            const selected = new Date(yr, mo - 1, dy);
-                                            if (selected < today) {
-                                                addToast("A data de pagamento não pode ser anterior à data atual!", "warning");
-                                                return;
-                                            }
-                                        }
-                                        setData({...data, data_pagamento:v});
-                                    }} 
+                                    onChange={v => setData({...data, data_pagamento:v})} 
                                 />
                             )}
                         </div>
@@ -2158,7 +2134,7 @@ const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) => {
                                      <FormInput label="Valor Total (R$)" type="number" step="0.01" value={data.valor_total} onChange={v=>setData({...data, valor_total:v})} required/>
                                      <FormInput label="Qtd. Parcelas" type="number" value={data.qtd_parcelas} onChange={v=>setData({...data, qtd_parcelas:v})} required/>
                                  </div>
-                                 <FormInput label="Data 1º Vencimento" type="date" value={data.primeiro_vencimento} onChange={v=>{if(v){const today=new Date();today.setHours(0,0,0,0);const [yr,mo,dy]=v.split("-").map(Number);const selected=new Date(yr,mo-1,dy);if(selected<today){addToast("A data do 1º vencimento não pode ser anterior à data atual!", "warning");return;}}setData({...data, primeiro_vencimento:v});}} required/>
+                                 <FormInput label="Data 1º Vencimento" type="date" value={data.primeiro_vencimento} onChange={v => setData({...data, primeiro_vencimento: v})} required/>
                              </>
                          ) : (
                              <div className="bg-amber-50 p-4 border border-amber-200 rounded-2xl text-xs text-amber-700 font-bold mt-2">
@@ -15572,16 +15548,6 @@ const ModulePortalPastor = () => {
                                         value={pastorFinForm.data_competencia}
                                         onChange={e => {
                                             const v = e.target.value;
-                                            if (v && pastorFinForm.tipo === 'saida') {
-                                                const today = new Date();
-                                                today.setHours(0,0,0,0);
-                                                const [yr, mo, dy] = v.split('-').map(Number);
-                                                const selected = new Date(yr, mo - 1, dy);
-                                                if (selected < today) {
-                                                    addToast("A data para despesas não pode ser anterior à data atual!", "warning");
-                                                    return;
-                                                }
-                                            }
                                             setPastorFinForm(prev => ({ ...prev, data_competencia: v }));
                                         }}
                                         className="w-full h-11 px-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-[11px] font-bold text-slate-700 transition-all bg-white"
