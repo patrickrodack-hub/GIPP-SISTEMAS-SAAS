@@ -65,26 +65,8 @@ app.use("/api", (req, res, next) => {
 });
 
 // API Routes
-let recoveryStatus = "Not executed";
-import { execSync } from "child_process";
-try {
-    console.log("[Recovery] Tentando restaurar App.tsx via git...");
-    const resGit = execSync("git checkout -- src/App.tsx 2>&1", { encoding: "utf8" });
-    recoveryStatus = "Success: " + resGit;
-    console.log("[Recovery] App.tsx restaurado com sucesso!");
-} catch (err: any) {
-    recoveryStatus = "Failed: " + err.message + " - stderr: " + (err.stderr || '') + " - stdout: " + (err.stdout || '');
-    console.error("[Recovery] Falha ao restaurar App.tsx:", recoveryStatus);
-}
-
-try {
-    fs.writeFileSync(path.join(process.cwd(), "src", "log_git.txt"), recoveryStatus, "utf8");
-} catch (e: any) {
-    console.error("[Recovery] Falha ao escrever log_git.txt:", e.message);
-}
-
 app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", recoveryStatus });
+    res.json({ status: "ok" });
 });
 
 app.get("/api/push/public-key", (req, res) => {
