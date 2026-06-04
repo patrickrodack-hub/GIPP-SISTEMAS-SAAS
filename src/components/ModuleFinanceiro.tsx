@@ -236,6 +236,74 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
     const [isAgendamentoAutomAtivo, setIsAgendamentoAutomAtivo] = useState(false);
 
+    const currentYear = useMemo(() => {
+        return filterDate ? filterDate.split('-')[0] : String(new Date().getFullYear());
+    }, [filterDate]);
+
+    const transacoesAnoCorrente = useMemo(() => {
+        return (db.financeiro || []).filter(f => {
+            const congMatch = congregacaoFilter === 'todas' || f.congregacao_id === congregacaoFilter || (!f.congregacao_id && congregacaoFilter === 'sede');
+            const dateStr = f.data_pagamento || f.data_vencimento || f.data_competencia || f.data || '';
+            const matchYear = dateStr.startsWith(String(currentYear));
+            return congMatch && matchYear;
+        });
+    }, [db.financeiro, currentYear, congregacaoFilter]);
+
+    const dataMensalEntradasSaidas = useMemo(() => {
+        const monthNamesAbbr = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        return monthNamesAbbr.map((label, idx) => {
+            const mNum = String(idx + 1).padStart(2, '0');
+            const mensalTrans = transacoesAnoCorrente.filter((f: any) => {
+                const dateStr = f.data_pagamento || f.data_vencimento || f.data_competencia || f.data || '';
+                return dateStr.includes(`-${mNum}-`) || dateStr.startsWith(`${currentYear}-${mNum}`);
+            });
+            
+            const entradasTotal = mensalTrans
+                .filter((f: any) => f.tipo === 'entrada' && !(f.conciliado === false && String(f.descricao).includes('via Portal')))
+                .reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+
+            const saidasTotal = mensalTrans
+                .filter((f: any) => f.tipo === 'saida')
+                .reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+
+            return {
+                mes: label,
+                "Entradas": parseFloat(entradasTotal.toFixed(2)),
+                "Saídas": parseFloat(saidasTotal.toFixed(2))
+            };
+        });
+    }, [transacoesAnoCorrente, currentYear]);
+
+    const categoriaEntradasData = useMemo(() => {
+        const entries = financeiroFiltrado.filter(f => f.tipo === 'entrada');
+        const map = new Map();
+        entries.forEach(f => {
+            const cat = f.categoria || 'Geral/Outros';
+            map.set(cat, (map.get(cat) || 0) + (parseFloat(f.valor) || 0));
+        });
+        const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#14b8a6', '#6366f1', '#64748b'];
+        return Array.from(map.entries()).map(([name, value], index) => ({
+            name,
+            value: parseFloat(value.toFixed(2)),
+            fill: colors[index % colors.length]
+        })).sort((a, b) => b.value - a.value);
+    }, [financeiroFiltrado]);
+
+    const categoriaSaidasData = useMemo(() => {
+        const expenses = financeiroFiltrado.filter(f => f.tipo === 'saida');
+        const map = new Map();
+        expenses.forEach(f => {
+            const cat = f.categoria || 'Geral/Outros';
+            map.set(cat, (map.get(cat) || 0) + (parseFloat(f.valor) || 0));
+        });
+        const colors = ['#ef4444', '#f59e0b', '#8b5cf6', '#3b82f6', '#ec4899', '#06b6d4', '#14b8a6', '#e11d48', '#64748b'];
+        return Array.from(map.entries()).map(([name, value], index) => ({
+            name,
+            value: parseFloat(value.toFixed(2)),
+            fill: colors[index % colors.length]
+        })).sort((a, b) => b.value - a.value);
+    }, [financeiroFiltrado]);
+
     const menuItems = [
         {id: 1, label: 'Dashboard', icon: LayoutDashboard}, 
         {id: 2, label: 'Entradas', icon: ArrowUpCircle}, 
@@ -314,6 +382,144 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                             <StatCard title="Despesas (Mês)" value={`R$ ${saidas.toFixed(2)}`} icon={TrendingDown} color="rose" />
                             <StatCard title="Saldo do Período" value={`R$ ${saldoAtual.toFixed(2)}`} sub={saldoAtual >= 0 ? "Positivo" : "Negativo"} icon={Wallet} color={saldoAtual >= 0 ? "indigo" : "amber"} />
                             <StatCard title="A Pagar (Geral)" value={`R$ ${despesasPendentes.toFixed(2)}`} sub={`Saldo Geral Disp: R$ ${saldoGeral.toFixed(2)}`} icon={AlertCircle} color="orange" active={despesasPendentes > saldoGeral} />
+                        </div>
+
+                        {/* Evolução Financeira Mensal */}
+                        <div className="glass-modern p-6 rounded-[2.5rem]">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                        <Activity size={20} className="text-indigo-500" /> Fluxo de Caixa Mensal ({currentYear})
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-medium">Comparativo mensal de Entradas vs Saídas do ano corrente</p>
+                                </div>
+                                <div className="flex gap-3 text-xs font-bold">
+                                    <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                                        Entradas
+                                    </span>
+                                    <span className="flex items-center gap-1.5 bg-rose-50 text-rose-700 px-3 py-1.5 rounded-xl border border-rose-100 shadow-sm">
+                                        <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+                                        Saídas
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="h-72 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={dataMensalEntradasSaidas} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorSaidas" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15}/>
+                                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="mes" tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} axisLine={false} />
+                                        <YAxis tickLine={false} tickFormatter={(val) => `R$ ${val}`} tick={{ fontSize: 10, fontWeight: 'medium', fill: '#64748b' }} axisLine={false} />
+                                        <RechartsTooltip 
+                                            formatter={(value: any) => [`R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]}
+                                            contentStyle={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }} 
+                                        />
+                                        <Area type="monotone" dataKey="Entradas" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorEntradas)" animationDuration={1000} />
+                                        <Area type="monotone" dataKey="Saídas" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorSaidas)" animationDuration={1000} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Distribuição por Categoria */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Entradas */}
+                            <div className="glass-modern p-6 rounded-[2.5rem]">
+                                <h3 className="font-bold text-lg text-slate-800 mb-6 flex items-center gap-2">
+                                    <ArrowUpCircle size={20} className="text-emerald-500"/> Entradas por Categoria ({filterDate})
+                                </h3>
+                                <div className="h-64 w-full relative">
+                                    {categoriaEntradasData.length > 0 ? (
+                                        <>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie 
+                                                        data={categoriaEntradasData} 
+                                                        cx="50%" 
+                                                        cy="50%" 
+                                                        innerRadius={50} 
+                                                        outerRadius={80} 
+                                                        paddingAngle={5} 
+                                                        dataKey="value"
+                                                    >
+                                                        {categoriaEntradasData.map((entry: any, index: number) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip 
+                                                        formatter={(value: any) => [`R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]}
+                                                    />
+                                                    <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{fontSize: '10px'}}/>
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="text-center">
+                                                    <span className="text-xs font-semibold text-slate-400 block tracking-wider uppercase">Receitas</span>
+                                                    <span className="text-lg font-black text-emerald-600">R$ {entradas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-slate-405 dark:text-slate-400 font-medium text-xs italic">
+                                            Nenhuma receita registrada neste mês.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Saídas */}
+                            <div className="glass-modern p-6 rounded-[2.5rem]">
+                                <h3 className="font-bold text-lg text-slate-800 mb-6 flex items-center gap-2">
+                                    <ArrowDownCircle size={20} className="text-rose-500"/> Saídas por Categoria ({filterDate})
+                                </h3>
+                                <div className="h-64 w-full relative">
+                                    {categoriaSaidasData.length > 0 ? (
+                                        <>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie 
+                                                        data={categoriaSaidasData} 
+                                                        cx="50%" 
+                                                        cy="50%" 
+                                                        innerRadius={50} 
+                                                        outerRadius={80} 
+                                                        paddingAngle={5} 
+                                                        dataKey="value"
+                                                    >
+                                                        {categoriaSaidasData.map((entry: any, index: number) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip 
+                                                        formatter={(value: any) => [`R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]}
+                                                    />
+                                                    <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{fontSize: '10px'}}/>
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="text-center">
+                                                    <span className="text-xs font-semibold text-slate-400 block tracking-wider uppercase">Despesas</span>
+                                                    <span className="text-lg font-black text-rose-600">R$ {saidas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-slate-405 dark:text-slate-400 font-medium text-xs italic">
+                                            Nenhuma despesa registrada neste mês.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         
                         <div className="glass-card p-6 rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-purple-50/50">
