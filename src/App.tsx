@@ -6762,47 +6762,161 @@ const PortalPerfil = ({ user, db, setView }) => {
     };
 
     return (
-        <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-lg mx-auto space-y-6 animate-entrance">
-            <div className="text-center space-y-2">
-                <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-black text-2xl mx-auto border-4 border-white shadow-md">
-                    {formData.nome ? formData.nome.charAt(0) : '?'}
+        <div className="max-w-6xl mx-auto space-y-6 animate-entrance pb-10">
+            {/* Header consolidado com visual robusto */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border border-slate-100 shadow-xs">
+                <div>
+                    <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                        <UserCheck size={28} className="text-emerald-500" />
+                        Perfil do Membro
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium mt-1">Gerencie suas credenciais de segurança e atualize suas informações cadastrais em tempo real.</p>
                 </div>
-                <h3 className="text-xl font-black text-slate-800">Meus Dados Cadastrais</h3>
-                <p className="text-xs text-slate-400 font-medium">Mantenha os seus dados atualizados junto à secretaria da igreja.</p>
+                <button onClick={() => setView('portal_home')} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer">
+                    <ChevronLeft size={16} /> Voltar ao Painel
+                </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Nome Completo</label>
-                    <input type="text" value={formData.nome} onChange={e=>setFormData({...formData, nome: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700 uppercase" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">E-mail</label>
-                    <input type="email" value={formData.email} onChange={e=>setFormData({...formData, email: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Telemóvel / Celular</label>
-                        <input type="text" value={formData.telefone} onChange={e=>setFormData({...formData, telefone: ((e.target.value || "").toUpperCase() || "").toUpperCase()})} placeholder="(11) 98765-4321" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700 uppercase" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Painel Esquerdo (Dados de Resumo & Visuals) */}
+                <div className="lg:col-span-4 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-between min-h-[500px] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full pointer-events-none"></div>
+                    
+                    <div className="w-full relative z-10 text-center space-y-6 flex-1 flex flex-col justify-center">
+                        <div className="relative inline-block mx-auto">
+                            <div className="w-28 h-28 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-[2rem] flex items-center justify-center font-black text-4xl mx-auto border-8 border-slate-100 shadow-xl transition-transform duration-500 group-hover:scale-105">
+                                {formData.nome ? formData.nome.charAt(0) : '?'}
+                            </div>
+                            <span className="absolute -bottom-1 -right-1 bg-emerald-500 border-4 border-white w-7 h-7 rounded-full flex items-center justify-center text-white" title="Status Online">
+                                <span className="w-2.5 h-2.5 bg-emerald-200 rounded-full animate-ping"></span>
+                            </span>
+                        </div>
+                        
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800 truncate px-2">{formData.nome || 'Membro do Sistema'}</h3>
+                            <p className="text-[10px] text-indigo-600 bg-indigo-50 px-3.5 py-1.5 rounded-full font-black uppercase tracking-wider inline-block mt-2 border border-indigo-100 shadow-2xs">
+                                {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro Oficial')}
+                            </p>
+                        </div>
+
+                        {/* Metadados do Sistema para preencher a tela */}
+                        <div className="space-y-3 pt-6 border-t border-slate-150 w-full text-left">
+                            <div className="flex items-center justify-between text-xs py-1">
+                                <span className="font-bold text-slate-400">Congregação:</span>
+                                <span className="font-extrabold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md uppercase text-[10px]">
+                                    {user.congregacao_id === 'sede' || !user.congregacao_id ? 'Tempo Sede' : 'Filial Registrada'}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs py-1">
+                                <span className="font-bold text-slate-400">Admissão:</span>
+                                <span className="font-extrabold text-slate-600">
+                                    {user.dataAdmissao ? formatDateLocal(user.dataAdmissao) : 'Não Informada'}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs py-1">
+                                <span className="font-bold text-slate-400">ID Eletrônico:</span>
+                                <span className="font-mono text-slate-400 text-[10px] truncate max-w-[140px]">{user.id}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Aniversário</label>
-                        <input type="date" value={formData.dataNascimento} onChange={e=>setFormData({...formData, dataNascimento: e.target.value})} className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
+
+                    <div className="w-full pt-6 border-t border-slate-100 relative z-10 text-center">
+                        <p className="text-slate-400 text-[10px] font-bold leading-relaxed">
+                            As atualizações de dados sensíveis devem ser protocoladas diretamente perante a secretaria administrativa de sua congregação.
+                        </p>
                     </div>
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Nova Senha de Acesso</label>
-                    <input type="password" value={formData.senha_portal} onChange={e=>setFormData({...formData, senha_portal: e.target.value})} required className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-emerald-500 transition-all text-slate-700" />
                 </div>
 
-                <div className="flex gap-4 pt-4">
-                    <button type="button" onClick={()=>setView('portal_home')} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Voltar</button>
-                    <button type="submit" disabled={saving} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2">
-                        {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-                        {saving ? 'A Guardar...' : 'Salvar Perfil'}
-                    </button>
+                {/* Painel Direito (Formulário Otimizado e Expandido) */}
+                <div className="lg:col-span-8 bg-white p-8 md:p-10 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div className="mb-6">
+                            <h3 className="text-xl font-extrabold text-slate-800">Ficha Informativa & Credenciais</h3>
+                            <p className="text-xs text-slate-400 font-medium">Os campos abaixo refletem sua identificação oficial sincronizada em nuvem.</p>
+                        </div>
+
+                        <form onSubmit={handleSave} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            value={formData.nome} 
+                                            onChange={e=>setFormData({...formData, nome: (e.target.value || "").toUpperCase()})} 
+                                            required 
+                                            className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 outline-none text-xs font-black bg-slate-50/50 focus:bg-white focus:border-emerald-500 transition-all text-slate-800 uppercase shadow-inner" 
+                                        />
+                                        <User size={16} className="absolute left-4 top-4 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Endereço de E-mail</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="email" 
+                                            value={formData.email} 
+                                            onChange={e=>setFormData({...formData, email: e.target.value})} 
+                                            className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 outline-none text-xs font-black bg-slate-50/50 focus:bg-white focus:border-emerald-500 transition-all text-slate-800 shadow-inner" 
+                                        />
+                                        <Mail size={16} className="absolute left-4 top-4 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Telemóvel / Celular</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            value={formData.telefone} 
+                                            onChange={e=>setFormData({...formData, telefone: (e.target.value || "").toUpperCase()})} 
+                                            placeholder="(11) 98765-4321" 
+                                            className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 outline-none text-xs font-black bg-slate-50/50 focus:bg-white focus:border-emerald-500 transition-all text-slate-800 uppercase shadow-inner" 
+                                        />
+                                        <Phone size={16} className="absolute left-4 top-4 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Data de Nascimento</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="date" 
+                                            value={formData.dataNascimento} 
+                                            onChange={e=>setFormData({...formData, dataNascimento: e.target.value})} 
+                                            className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 outline-none text-xs font-black bg-slate-50/50 focus:bg-white focus:border-emerald-500 transition-all text-slate-800 shadow-inner" 
+                                        />
+                                        <Calendar size={16} className="absolute left-4 top-4 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nova Senha do Portal</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="password" 
+                                            value={formData.senha_portal} 
+                                            onChange={e=>setFormData({...formData, senha_portal: e.target.value})} 
+                                            required 
+                                            className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 outline-none text-xs font-black bg-slate-50/50 focus:bg-white focus:border-emerald-500 transition-all text-slate-800 shadow-inner" 
+                                        />
+                                        <Lock size={16} className="absolute left-4 top-4 text-slate-400" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-6 border-t border-slate-100">
+                                <button type="button" onClick={()=>setView('portal_home')} className="flex-1 py-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">Cancelar</button>
+                                <button type="submit" disabled={saving} className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={16} />}
+                                    {saving ? 'A Processar...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-            </form>
+            </div>
         </div>
     );
 };
@@ -7483,7 +7597,7 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
     };
 
     // Estado para o fluxo de nova contribuição PIX Inteligente
-    const [novaOferta, setNovaOferta] = useState({ valor: '', categoria: 'Dízimo', etapa: 1, payload: '' });
+    const [novaOferta, setNovaOferta] = useState({ valor: '', categoria: 'Dízimo', etapa: 1, payload: '', descricao: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [buscaTermo, setBuscaTermo] = useState('');
     const chavePix = db.igreja?.chave_pix;
@@ -7534,11 +7648,12 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
         const dataAtual = new Date().toISOString().split('T')[0];
         try {
             const numericValue = parseBRLToFloat(novaOferta.valor);
+            const descPersonalizada = novaOferta.descricao ? ` - Metadados: ${novaOferta.descricao.toUpperCase()}` : '';
             const novaEntrada = {
                 tipo: 'entrada',
                 valor: numericValue,
                 categoria: novaOferta.categoria,
-                descricao: `Contribuição via Portal (${novaOferta.categoria})`,
+                descricao: `Contribuição via Portal (${novaOferta.categoria})${descPersonalizada}`,
                 data_competencia: dataAtual,
                 forma_pagamento: 'PIX',
                 status: 'pago',
@@ -7553,7 +7668,7 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
             logAction('CRIAÇÃO', `Membro enviou notificação de pagamento PIX de ${formatBRL(novaOferta.valor)}`, 'financeiro', docRef.id);
             
             addToast('Notificação enviada! A aguardar conferência da Tesouraria.', 'success');
-            setNovaOferta({ valor: '', categoria: 'Dízimo', etapa: 1, payload: '' });
+            setNovaOferta({ valor: '', categoria: 'Dízimo', etapa: 1, payload: '', descricao: '' });
         } catch (e) {
             console.error(e);
             addToast('Erro ao comunicar com a secretaria.', 'error');
@@ -7586,7 +7701,7 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
 
                 {/* --- MÓDULO INOVADOR DE PIX COM VALOR EXATO --- */}
                 <div className="md:col-span-2 bg-white hover:bg-gradient-to-br hover:from-white hover:to-emerald-50/50 rounded-[2rem] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 transition-all duration-500 border border-emerald-100 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-0"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full pointer-events-none"></div>
                     
                     <div className="p-8 relative z-10">
                         {novaOferta.etapa === 1 ? (
@@ -7596,38 +7711,78 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
                                 </h3>
                                 <p className="text-xs text-slate-500 font-medium mb-6">Preencha o valor e escolha o destino. O sistema irá gerar um código PIX com a quantia exata para o seu banco.</p>
                                 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor a Transferir</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            placeholder="R$ 0,00"
-                                            value={novaOferta.valor}
-                                            onChange={(e) => {
-                                                const raw = e.target.value;
-                                                const formatted = formatBRL(raw);
-                                                setNovaOferta({...novaOferta, valor: formatted});
-                                            }}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-emerald-600 font-black text-lg focus:border-emerald-500 outline-none shadow-inner"
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Valor a Transferir</label>
+                                            <input 
+                                                type="text" 
+                                                inputMode="numeric"
+                                                placeholder="R$ 0,00"
+                                                value={novaOferta.valor}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value;
+                                                    const formatted = formatBRL(raw);
+                                                    setNovaOferta({...novaOferta, valor: formatted});
+                                                }}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-emerald-600 font-black text-lg focus:border-emerald-500 outline-none shadow-inner"
+                                            />
+                                        </div>
+                                        
+                                        {/* Botoões de Valores Rápidos (Presets) */}
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {[20, 50, 100, 200, 500].map((val) => (
+                                                <button 
+                                                    key={val}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const brixValue = formatBRL((val * 100).toString());
+                                                        setNovaOferta(prev => ({...prev, valor: brixValue}));
+                                                    }}
+                                                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 hover:text-emerald-600 rounded-lg text-[11px] font-black tracking-tight text-slate-600 transition-all cursor-pointer"
+                                                >
+                                                    R$ {val}
+                                                </button>
+                                            ))}
+                                            <button 
+                                                type="button"
+                                                onClick={() => setNovaOferta(prev => ({...prev, valor: ''}))}
+                                                className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 hover:border-rose-200 text-rose-600 rounded-lg text-[11px] font-black tracking-tight transition-all cursor-pointer"
+                                            >
+                                                Limpar
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Destino / Categoria</label>
-                                        <select 
-                                            value={novaOferta.categoria}
-                                            onChange={(e) => setNovaOferta({...novaOferta, categoria: (e.target.value || "").toUpperCase()})}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-4 text-slate-700 font-bold focus:border-emerald-500 outline-none shadow-sm cursor-pointer"
-                                        >
-                                            <option value="Dízimo">Dízimo Mensal</option>
-                                            <option value="Oferta">Oferta Alçada</option>
-                                            <option value="Missões">Carnê / Voto de Missões</option>
-                                            <option value="Construção">Campanha de Construção</option>
-                                        </select>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Destino / Categoria</label>
+                                            <select 
+                                                value={novaOferta.categoria}
+                                                onChange={(e) => setNovaOferta({...novaOferta, categoria: (e.target.value || "").toUpperCase()})}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-4 text-slate-700 font-black focus:border-[#10b981] outline-none shadow-sm cursor-pointer"
+                                            >
+                                                <option value="Dízimo">Dízimo Mensal</option>
+                                                <option value="Oferta">Oferta Alçada</option>
+                                                <option value="Missões">Carnê / Voto de Missões</option>
+                                                <option value="Construção">Campanha de Construção</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Observação / Descrição (Opcional)</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Ex: Dízimo de Maio, Oferta de Missões..."
+                                                value={novaOferta.descricao}
+                                                onChange={e => setNovaOferta({...novaOferta, descricao: e.target.value})}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-4 text-slate-800 text-xs font-bold focus:border-[#10b981] outline-none shadow-inner"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <Button onClick={handleGerarPix} variant="success" className="w-full shadow-emerald-500/20 py-3.5">
-                                    Gerar Código PIX
+                                <Button onClick={handleGerarPix} variant="success" className="w-full shadow-emerald-500/20 py-3.5 cursor-pointer flex items-center justify-center gap-2">
+                                    <Zap size={16} /> Gerar Código PIX
                                 </Button>
                             </>
                         ) : (
@@ -8565,9 +8720,9 @@ const PortalMural = ({ user, db }) => {
             const post = {
                 tipo: 'oracao',
                 texto: novoPost,
-                autor_id: user.id,
-                autor_nome: user.nome,
-                autor_foto: user.foto || null,
+                autor_id: user?.id || 'membro_anonimo',
+                autor_nome: user?.nome || 'Membro do Portal',
+                autor_foto: user?.foto || null,
                 data: new Date().toISOString(),
                 oradores: [] 
             };
@@ -8583,8 +8738,10 @@ const PortalMural = ({ user, db }) => {
     const handleTogglePray = async (post) => {
         try {
             const oradores = post.oradores || [];
-            const isPraying = oradores.includes(user.id);
-            const novosOradores = isPraying ? oradores.filter(id => id !== user.id) : [...oradores, user.id];
+            const userId = user?.id || '';
+            if (!userId) return;
+            const isPraying = oradores.includes(userId);
+            const novosOradores = isPraying ? oradores.filter(id => id !== userId) : [...oradores, userId];
             
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'mural', post.id), { oradores: novosOradores }, { merge: true });
         } catch(e) {
@@ -8603,7 +8760,7 @@ const PortalMural = ({ user, db }) => {
     };
 
     return (
-        <div className="space-y-6 animate-entrance pb-10">
+        <div className="space-y-6 animate-entrance pb-10 max-w-full">
             <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-rose-50 rounded-2xl text-rose-500 shadow-sm"><Heart size={28}/></div>
                 <div>
@@ -8612,20 +8769,20 @@ const PortalMural = ({ user, db }) => {
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+            <div className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-200">
                 <div className="flex gap-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 shrink-0 overflow-hidden border border-slate-200">
-                        {user.foto ? <img src={user.foto} className="w-full h-full object-cover" /> : user.nome.charAt(0)}
+                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 shrink-0 overflow-hidden border border-slate-200 shadow-inner">
+                        {user?.foto ? <img src={user.foto} className="w-full h-full object-cover" /> : (user?.nome ? user.nome.charAt(0) : '?')}
                     </div>
                     <div className="flex-1 min-w-0">
                         <textarea 
                             value={novoPost}
                             onChange={e => setNovoPost((e.target.value || "").toUpperCase())}
                             placeholder="Partilhe um pedido de oração com a igreja..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-rose-500 outline-none resize-none min-h-[100px] mb-3"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none resize-none min-h-[100px] mb-3 text-slate-800"
                         ></textarea>
                         <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
-                            <Button onClick={handlePost} disabled={isSaving || !novoPost.trim()} variant="danger" className="py-2.5 px-6 shadow-md text-xs w-full sm:w-auto">
+                            <Button onClick={handlePost} disabled={isSaving || !novoPost.trim()} variant="danger" className="py-2.5 px-6 shadow-md text-xs w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2">
                                 {isSaving ? <Loader2 size={16} className="animate-spin"/> : <SendIcon size={16}/>} Publicar Pedido
                             </Button>
                         </div>
@@ -8637,49 +8794,63 @@ const PortalMural = ({ user, db }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {posts.map(post => {
                         const oradores = post.oradores || [];
-                        const isPraying = oradores.includes(user.id);
+                        const isPraying = user?.id ? oradores.includes(user.id) : false;
+                        
+                        // Formatação ultra defensiva de data
+                        let dataFormatada = 'Data Indefinida';
+                        try {
+                            if (post.data) {
+                                const parsedDate = new Date(post.data);
+                                if (!isNaN(parsedDate.getTime())) {
+                                    dataFormatada = parsedDate.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                                }
+                            }
+                        } catch (err) {
+                            console.warn("Erro ao formatar data de postagem:", err);
+                        }
+
                         return (
-                            <div key={post.id} className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-200 transition-all hover:border-slate-300 flex flex-col justify-between">
+                            <div key={post.id} className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-200 transition-all hover:border-slate-300 flex flex-col justify-between overflow-hidden">
                                 <div>
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 shrink-0 overflow-hidden border border-slate-200">
-                                                {post.autor_foto ? <img src={post.autor_foto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : post.autor_nome.charAt(0)}
+                                    <div className="flex justify-between items-start mb-4 gap-2">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center font-bold text-slate-500 shrink-0 overflow-hidden border border-slate-200 shadow-inner">
+                                                {post.autor_foto ? <img src={post.autor_foto} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : (post.autor_nome ? post.autor_nome.charAt(0) : '?')}
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-black text-slate-800 leading-tight mb-0.5">{post.autor_nome}</p>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-[10px] font-bold text-slate-500">{new Date(post.data).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                                                    <span className="text-slate-300">•</span>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border shadow-sm bg-rose-50 text-rose-600 border-rose-200">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-black text-slate-800 leading-tight mb-0.5 truncate">{post.autor_nome || 'Membro do Portal'}</p>
+                                                <div className="flex flex-wrap items-center gap-y-1 gap-x-2">
+                                                    <p className="text-[10px] font-bold text-slate-500 whitespace-nowrap">{dataFormatada}</p>
+                                                    <span className="text-slate-300 hidden sm:inline">•</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border shadow-2xs bg-rose-50 text-rose-600 border-rose-200 whitespace-nowrap">
                                                         Pedido de Oração
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        {post.autor_id === user.id && (
-                                            <button onClick={() => handleDeletePost(post.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0 animate-pulse-once">
+                                        {post.autor_id === user?.id && (
+                                            <button onClick={() => handleDeletePost(post.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer">
                                                 <Trash2 size={16}/>
                                             </button>
                                         )}
                                     </div>
                                     
-                                    <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed mb-6 font-medium">
+                                    <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed mb-6 font-medium break-words">
                                         {post.texto}
                                     </p>
                                 </div>
                                 
-                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-                                    <div className="flex items-center gap-3">
+                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto gap-4">
+                                    <div className="flex items-center gap-2 max-w-full overflow-hidden">
                                         <button 
                                             onClick={() => handleTogglePray(post)}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${isPraying ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold transition-all border shadow-2xs cursor-pointer select-none shrink-0 ${isPraying ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                                         >
-                                            <Heart size={16} className={isPraying ? 'fill-rose-500 text-rose-500 animate-pulse' : 'text-slate-400'}/>
-                                            {isPraying ? 'Estou orando por isto' : 'Orar por isto'}
+                                            <Heart size={14} className={isPraying ? 'fill-rose-500 text-rose-500 animate-pulse' : 'text-slate-400'}/>
+                                            {isPraying ? 'Estou orando' : 'Orar por isto'}
                                         </button>
                                         {oradores.length > 0 && (
-                                            <span className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                            <span className="text-[11px] font-bold text-slate-500 bg-slate-50 px-2.5 py-2 rounded-xl border border-slate-100 shrink-0">
                                                 {oradores.length} {oradores.length === 1 ? 'oração' : 'orações'}
                                             </span>
                                         )}
@@ -11167,7 +11338,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP. v6.4.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.5.0</p>
                         </div>
                     </div>
                     <div>
