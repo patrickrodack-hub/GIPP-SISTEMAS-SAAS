@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   GraduationCap, Users, Clock, Flame, BookOpenText, Shield, 
   ScrollText, BookOpen, Sparkles, ArrowUpCircle, MessageSquare, 
   Award, Send, Search, Filter, ShieldAlert, BadgeInfo, CheckCircle, 
-  AlertCircle, Phone, Mail, Calendar, HelpCircle, FileText, Download, Printer, X
+  AlertCircle, Phone, Mail, Calendar, HelpCircle, FileText, Download, Printer, X, Edit
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 
@@ -13,17 +14,7 @@ import {
   playMenuSound, playNotificationSound, formatDateLocal, safeText 
 } from '../App';
 
-// Metadata matches standard courses defined in App.tsx
-const COURSES_METADATA = [
-  { id: 'fundamentos_pentecostais', title: 'Fundamentos da Fé Pentecostal', icon: Flame, modulesCount: 10, pfx: 'm' },
-  { id: 'teologia_avancada', title: 'Teologia Sistemática Avançada', icon: BookOpenText, modulesCount: 10, pfx: 'adv_m' },
-  { id: 'obreiro_de_valor', title: 'Obreiro de Valor (Liderança)', icon: Shield, modulesCount: 10, pfx: 'obr_m' },
-  { id: 'historia_igreja', title: 'História da Igreja Cristã', icon: ScrollText, modulesCount: 10, pfx: 'hist_m' },
-  { id: 'conhecendo_doutrinas', title: 'Conhecendo as Doutrinas Bíblicas', icon: BookOpen, modulesCount: 10, pfx: 'dout_m' },
-  { id: 'jesus_cristo', title: 'Jesus Cristo: O Maior Personagem da História', icon: Sparkles, modulesCount: 10, pfx: 'jc_m' },
-  { id: 'manual_biblico_macarthur', title: 'Manual Bíblico MacArthur: Livro por Livro', icon: BookOpenText, modulesCount: 10, pfx: 'mb_m' },
-  { id: 'licoes_biblicas_defesa_fe', title: 'Lições Bíblicas em Defesa da Fé (CPAD)', icon: Shield, modulesCount: 10, pfx: 'df_m' }
-];
+import { COURSES_METADATA } from './ModuleCoursesData';
 
 export default function ModuleGestaoCursos() {
   const { db, user, dbFirestore, appId, addToast } = useContext(ChurchContext);
@@ -322,8 +313,9 @@ export default function ModuleGestaoCursos() {
               type="text"
               placeholder="Buscar aluno ou cargo..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(v) => setSearch(v)}
               className="pl-10 pb-0"
+              preserveCase={true}
             />
           </div>
 
@@ -332,7 +324,7 @@ export default function ModuleGestaoCursos() {
               <FormSelect
                 label=""
                 value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
+                onChange={(v) => setSelectedCourse(v)}
                 options={[
                   { value: 'todos', label: 'Todos os Cursos' },
                   ...COURSES_METADATA.map(c => ({ value: c.id, label: c.title }))
@@ -343,7 +335,7 @@ export default function ModuleGestaoCursos() {
               <FormSelect
                 label=""
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
+                onChange={(v) => setSelectedStatus(v)}
                 options={[
                   { value: 'todos', label: 'Todos os Estados' },
                   { value: 'ativos', label: 'Ativos' },
@@ -510,57 +502,70 @@ export default function ModuleGestaoCursos() {
       </div>
 
       {/* MODAL 1: MANDAR MENSAGENS E EMOTICONS DE INCENTIVAR ALUNO */}
-      {incentiveModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in print:hidden">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col h-[85vh]">
+      {incentiveModal && createPortal(
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-lg animate-entrance print:hidden">
+          <div className="glass-modern rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/40 border-0">
             
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <MessageSquare size={20} />
+            {/* Modal Header inside gradient wrapper */}
+            <div className="p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-800 bg-[length:200%_200%] animate-pulse-glow"></div>
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.15] mix-blend-overlay pointer-events-none"></div>
+              <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }}></div>
+              <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+              <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative">
+                  <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <MessageSquare size={36} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] relative z-10 sm:w-10 sm:h-10 text-white"/>
                 </div>
-                <div>
-                  <h3 className="font-black text-slate-800 text-lg">Incentivar com Mensagem e Emoticons</h3>
-                  <p className="text-xs text-slate-500">Enviar e-mail de mentoria e ânimo para o Webmail de {incentiveModal.nome}.</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md">
+                    Incentivar Estudante • <span className="text-white/60">E-learning EAD</span>
+                  </p>
+                  <h3 className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] text-white">
+                    Mensagem para {incentiveModal.nome}
+                  </h3>
                 </div>
               </div>
               <button 
                 onClick={() => setIncentiveModal(null)} 
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110 cursor-pointer"
               >
-                <X size={18} />
+                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
               </button>
             </div>
 
-            {/* Modal Scroll Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Modal Scroll Content wrapped with custom bg */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white/40 backdrop-blur-md custom-scrollbar">
               
-              {/* Profile Card Summary */}
-              <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/30">
-                <p className="text-xs font-black uppercase text-indigo-500 tracking-wider">Cursos de {incentiveModal.nome}</p>
-                <div className="mt-2 space-y-2">
+              {/* Profile Card Summary - Standardised with member form cards */}
+              <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <GraduationCap size={16} className="text-indigo-500" /> Resumo de Cursos & Progresso
+                </h4>
+                <div className="space-y-2.5 mt-2">
                   {incentiveModal.activeCoursesProgress.map((cp: any) => (
-                    <div key={cp.id} className="flex justify-between items-center text-xs">
+                    <div key={cp.id} className="flex justify-between items-center text-xs bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
                       <span className="font-bold text-slate-700">{cp.title}</span>
-                      <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-black">{cp.percentage}% ({cp.completedCount}/{cp.totalCount})</span>
+                      <span className="bg-indigo-50 text-indigo-700 border border-indigo-100/40 px-2.5 py-1 rounded-lg font-black">{cp.percentage}% ({cp.completedCount}/{cp.totalCount})</span>
                     </div>
                   ))}
-                  <p className="text-[11px] text-slate-500 font-bold mt-1">Inativo há {incentiveModal.daysInactive} dias (Última atividade: {incentiveModal.formattedLastActivity})</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase tracking-wider pl-1 font-mono">Inativo há {incentiveModal.daysInactive} dias (Última atividade: {incentiveModal.formattedLastActivity})</p>
                 </div>
               </div>
 
-              {/* Templates Selector */}
-              <div>
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2.5">Escolha um Modelo de Incentivo</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Templates Selector - Standardised */}
+              <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <MessageSquare size={16} className="text-indigo-500" /> Escolha um Modelo Pastoral de Incentivo
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                   {templates.map((tpl, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleSelectTemplate(tpl, incentiveModal)}
-                      className="p-3 text-left border border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer group"
+                      className="p-3 text-left bg-white border border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer group shadow-xs animate-fade-in"
                     >
-                      <h4 className="font-black text-xs text-slate-800 group-hover:text-indigo-600 flex items-center gap-1.5">
+                      <h4 className="font-extrabold text-xs text-slate-800 group-hover:text-indigo-600 flex items-center gap-1.5">
                         {tpl.label}
                       </h4>
                       <p className="text-[10px] text-slate-400 truncate mt-1">Assunto: {tpl.subject}</p>
@@ -569,30 +574,33 @@ export default function ModuleGestaoCursos() {
                 </div>
               </div>
 
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Assunto do E-mail</label>
-                  <FormInput
-                    label=""
-                    type="text"
-                    required
-                    placeholder="E.g., Continue Avançando nos Seus Estudos! 📚⚡"
-                    value={messageSubject}
-                    onChange={(e) => setMessageSubject(e.target.value)}
-                    className="pb-0"
-                  />
-                </div>
+              {/* Form Fields - Styled exactly like member forms */}
+              <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200 space-y-4">
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <Edit size={16} className="text-indigo-500" /> Detalhes Práticos do E-mail
+                </h4>
+                
+                <FormInput
+                  label="Assunto do E-mail"
+                  type="text"
+                  required
+                  placeholder="E.g., Continue Avançando nos Seus Estudos! 📚⚡"
+                  value={messageSubject}
+                  onChange={(v) => setMessageSubject(v)}
+                  preserveCase={true}
+                  className="!mb-4"
+                />
 
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">Mensagem (Insira Emoticons à vontade! 😊✨🙏🚀)</label>
+                  <div className="flex justify-between items-center mb-2 px-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider transition-colors group-focus-within:text-indigo-600">Mensagem (Com emoticons pastorais 😊✨🙏🚀)</label>
                     <div className="flex flex-wrap gap-1">
                       {['😊', '✨', '🙏', '📚', '🚀', '🔥', '🏆', '👏', '🌟', '💪', '📖'].map(emo => (
                         <button
                           key={emo}
+                          type="button"
                           onClick={() => setMessageBody(p => p + emo)}
-                          className="px-1.5 py-0.5 border border-slate-100 rounded bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 text-xs transition-colors cursor-pointer"
+                          className="px-2 py-0.5 border border-slate-200 rounded-lg bg-white hover:bg-indigo-50 hover:border-indigo-300 text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
                         >
                           {emo}
                         </button>
@@ -605,7 +613,7 @@ export default function ModuleGestaoCursos() {
                     placeholder="Escreva a mensagem personalizada com consolo e incentivos..."
                     value={messageBody}
                     onChange={(e) => setMessageBody(e.target.value)}
-                    className="w-full text-sm border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none font-medium text-slate-700"
+                    className="w-full text-sm border border-slate-200 rounded-2xl p-4 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none font-medium text-slate-700 shadow-sm"
                   />
                 </div>
               </div>
@@ -613,8 +621,8 @@ export default function ModuleGestaoCursos() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
-              <Button onClick={() => setIncentiveModal(null)} variant="secondary" className="cursor-pointer">Cancelar</Button>
+            <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex justify-end gap-3 rounded-b-[2.5rem] relative shrink-0">
+              <Button onClick={() => setIncentiveModal(null)} variant="ghost" className="border border-white/60 bg-white/40 hover:bg-white cursor-pointer">Cancelar</Button>
               <Button 
                 onClick={handleSendIncentive} 
                 variant="primary" 
@@ -632,128 +640,148 @@ export default function ModuleGestaoCursos() {
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: CERTIFICADO DE CONCLUSÃO OFICIAL EM ALTA RESOLUÇÃO */}
-      {certificateModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in cursor-default overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full flex flex-col p-6 my-10 relative print:m-0 print:border-none print:bg-white print:p-0">
+      {certificateModal && createPortal(
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-lg animate-entrance select-none overflow-y-auto no-print">
+          <div className="glass-modern rounded-[2.5rem] border-0 shadow-2xl max-w-4xl w-full flex flex-col max-h-[95vh] ring-1 ring-white/40 overflow-hidden relative print:p-0 print:m-0 print:bg-white print:shadow-none print:max-h-none print:ring-0 print:rounded-none">
             
-            {/* Modal Title Actions (Hidden when printing) */}
-            <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4 print:hidden">
-              <div className="flex items-center gap-3 text-white">
-                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
-                  <Award size={20} />
+            {/* Modal Title Actions inside gradient header */}
+            <div className="p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20 print:hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-600 bg-[length:200%_200%] animate-pulse-glow"></div>
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.15] mix-blend-overlay pointer-events-none"></div>
+              <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }}></div>
+              <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+              <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative">
+                  <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Award size={36} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] relative z-10 sm:w-10 sm:h-10 text-white"/>
                 </div>
-                <div>
-                  <h3 className="font-black text-lg">Emissão de Certificado Digital de Conclusão</h3>
-                  <p className="text-slate-400 text-xs">Visualização e homologação automática para {certificateModal.student.nome}.</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md">
+                    Homologar Formatura • <span className="text-white/60">Emissão de Certificados</span>
+                  </p>
+                  <h3 className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] text-white">
+                    Certificado de Conclusão EAD
+                  </h3>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={handlePrintCertificate}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-100 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer border border-slate-700"
-                >
-                  <Printer size={13} /> Imprimir A4
-                </button>
-                <button 
-                  onClick={async () => {
-                    playMenuSound();
-                    await handleSendCertificateEmail(certificateModal.student, certificateModal.course);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded-xl transition-all shadow-lg cursor-pointer shadow-indigo-500/15"
-                >
-                  <Send size={13} /> Enviar p/ Webmail
-                </button>
-                <button 
-                  onClick={() => setCertificateModal(null)} 
-                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+              <button 
+                onClick={() => setCertificateModal(null)} 
+                className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110 cursor-pointer"
+              >
+                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
+              </button>
             </div>
-
-            {/* Print Area - Diploma Layout */}
-            <div className="bg-white p-12 py-16 border-12 border-double border-amber-600 rounded-2xl flex flex-col items-center justify-between shadow-2xl relative select-none w-full max-w-[800px] mx-auto min-h-[560px] text-slate-900 border-spacing-4 print:shadow-none print:border-amber-600">
+ 
+            {/* Scrollable workspace for certificate template page */}
+            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 bg-slate-900/10 backdrop-blur-xs print:p-0 print:bg-white print:overflow-visible text-center bg-slate-900/20">
               
-              {/* Border Background Overlays */}
-              <div className="absolute inset-4 border border-amber-600/20 rounded pointer-events-none" />
-              
-              {/* Header */}
-              <div className="text-center flex flex-col items-center gap-2 w-full">
-                <div className="w-16 h-16 bg-amber-50 rounded-full border border-amber-500/35 flex items-center justify-center text-amber-600 mb-2">
-                  <GraduationCap size={36} />
-                </div>
-                <h4 className="font-serif tracking-widest text-xs font-black uppercase text-amber-700">ASSEMBLEIA DE DEUS - SISTEMA GIPP</h4>
-                <div className="w-16 h-0.5 bg-amber-500/55 my-1" />
-              </div>
-
-              {/* Title Corp */}
-              <div className="text-center my-6 space-y-3 w-full">
-                <h1 className="font-serif text-3xl font-black text-amber-800 uppercase tracking-wide">Certificado de Conclusão</h1>
-                <p className="text-sm font-serif italic text-slate-500 text-center px-4">
-                  Certificamos para os devidos fins que o(a) estudante e colaborador(a) eclesiástico(a)
-                </p>
-                <div className="py-2">
-                  <h2 className="text-2xl font-black text-slate-800 border-b-2 border-dashed border-slate-300 w-fit mx-auto px-6 italic font-serif">
-                    {certificateModal.student.nome}
-                  </h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Membro Ativo da Congregação / Corpo Docente</p>
-                </div>
-              </div>
-
-              {/* Dedication Text */}
-              <div className="text-center max-w-lg space-y-4">
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Concluiu com êxito acadêmico extraordinário todas as exigências curriculares, questionários e lições do curso de capacitação de nível avançado
-                </p>
-                <h3 className="text-base font-black text-amber-700 uppercase tracking-widest">
-                  {certificateModal.course.title}
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  Carga Horária de 40 Horas de Estudo Teológico Integrado. Certificação homologada através de dotação de mérito e gremiação na data de {new Date().toLocaleDateString('pt-BR')}.
-                </p>
-              </div>
-
-              {/* Signatures */}
-              <div className="flex justify-around items-end w-full mt-10 text-center gap-6">
-                <div className="flex flex-col items-center w-1/3">
-                  <div className="w-32 h-[1px] bg-slate-300 mb-1" />
-                  <p className="text-[10px] font-black text-slate-800">Direção Acadêmica</p>
-                  <p className="text-[8px] text-slate-400 uppercase">Coord. Geral EBD</p>
-                </div>
+              {/* Print Area - Diploma Layout */}
+              <div className="bg-white p-12 py-16 border-12 border-double border-amber-600 rounded-2xl flex flex-col items-center justify-between shadow-2xl relative select-none w-full max-w-[800px] mx-auto min-h-[560px] text-slate-900 border-spacing-4 print:shadow-none print:border-amber-600 text-left">
                 
-                <div className="flex items-center justify-center pb-2">
-                  <div className="w-12 h-12 border-2 border-double border-amber-600 rounded-full flex items-center justify-center text-amber-600 text-[10px] font-black tracking-widest uppercase scale-110">
-                    SELO
+                {/* Border Background Overlays */}
+                <div className="absolute inset-4 border border-amber-600/20 rounded pointer-events-none" />
+                
+                {/* Header */}
+                <div className="text-center flex flex-col items-center gap-2 w-full">
+                  <div className="w-16 h-16 bg-amber-50 rounded-full border border-amber-500/35 flex items-center justify-center text-amber-600 mb-2">
+                    <GraduationCap size={36} />
+                  </div>
+                  <h4 className="font-serif tracking-widest text-xs font-black uppercase text-amber-700">ASSEMBLEIA DE DEUS - SISTEMA GIPP</h4>
+                  <div className="w-16 h-0.5 bg-amber-500/55 my-1" />
+                </div>
+
+                {/* Title Corp */}
+                <div className="text-center my-6 space-y-3 w-full">
+                  <h1 className="font-serif text-3xl font-black text-amber-800 uppercase tracking-wide">Certificado de Conclusão</h1>
+                  <p className="text-sm font-serif italic text-slate-500 text-center px-4">
+                    Certificamos para os devidos fins que o(a) estudante e colaborador(a) eclesiástico(a)
+                  </p>
+                  <div className="py-2">
+                    <h2 className="text-2xl font-black text-slate-800 border-b-2 border-dashed border-slate-300 w-fit mx-auto px-6 italic font-serif">
+                      {certificateModal.student.nome}
+                    </h2>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Membro Ativo da Congregação / Corpo Docente</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center w-1/3">
-                  <div className="w-32 h-[1px] bg-slate-300 mb-1" />
-                  <p className="text-[10px] font-black text-slate-800">Pastor Presidente</p>
-                  <p className="text-[8px] text-slate-400 uppercase">Conselho Eclesiástico</p>
+                {/* Dedication Text */}
+                <div className="text-center max-w-lg space-y-4 mx-auto">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Concluiu com êxito acadêmico extraordinário todas as exigências curriculares, questionários e lições do curso de capacitação de nível avançado
+                  </p>
+                  <h3 className="text-base font-black text-amber-700 uppercase tracking-widest">
+                    {certificateModal.course.title}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Carga Horária de 40 Horas de Estudo Teológico Integrado. Certificação homologada através de dotação de mérito e gremiação na data de {new Date().toLocaleDateString('pt-BR')}.
+                  </p>
                 </div>
+
+                {/* Signatures */}
+                <div className="flex justify-around items-end w-full mt-10 text-center gap-6">
+                  <div className="flex flex-col items-center w-1/3">
+                    <div className="w-32 h-[1px] bg-slate-300 mb-1" />
+                    <p className="text-[10px] font-black text-slate-800">Direção Acadêmica</p>
+                    <p className="text-[8px] text-slate-400 uppercase">Coord. Geral EBD</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-center pb-2">
+                    <div className="w-12 h-12 border-2 border-double border-amber-600 rounded-full flex items-center justify-center text-amber-600 text-[10px] font-black tracking-widest uppercase scale-110">
+                      SELO
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center w-1/3">
+                    <div className="w-32 h-[1px] bg-slate-300 mb-1" />
+                    <p className="text-[10px] font-black text-slate-800">Pastor Presidente</p>
+                    <p className="text-[8px] text-slate-400 uppercase">Conselho Eclesiástico</p>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="absolute bottom-3 text-[8px] text-slate-400 tracking-wider">
+                  ID do Registro: SYS-{certificateModal.student.id.substring(0,6).toUpperCase()}-{certificateModal.course.id.substring(0,4).toUpperCase()}
+                </div>
+
               </div>
 
-              {/* Footer */}
-              <div className="absolute bottom-3 text-[8px] text-slate-400 tracking-wider">
-                ID do Registro: SYS-{certificateModal.student.id.substring(0,6).toUpperCase()}-{certificateModal.course.id.substring(0,4).toUpperCase()}
-              </div>
-
+              {/* Disclaimer when viewing on screen */}
+              <p className="text-slate-400 text-[10px] text-center mt-4 print:hidden">
+                Dica: A impressão do certificado em folhas do tipo couchê ou vergê destaca o padrão estético dourado de formatura.
+              </p>
             </div>
 
-            {/* Disclaimer when viewing on screen */}
-            <p className="text-slate-400 text-[10px] text-center mt-4 print:hidden">
-              Dica: A impressão do certificado em folhas do tipo couchê ou vergê destaca o padrão estético dourado de formatura.
-            </p>
+            {/* Modal Actions Footer */}
+            <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex justify-end gap-3 rounded-b-[2.5rem] print:hidden relative shrink-0">
+              <Button onClick={() => setCertificateModal(null)} variant="ghost" className="border border-white/60 bg-white/40 hover:bg-white cursor-pointer w-32">Fechar</Button>
+              <Button 
+                onClick={handlePrintCertificate}
+                variant="secondary"
+                className="gap-1.5 bg-white border border-slate-200 cursor-pointer text-slate-700 hover:bg-slate-50 w-36"
+              >
+                <Printer size={16} /> Imprimir A4
+              </Button>
+              <Button 
+                onClick={async () => {
+                  playMenuSound();
+                  await handleSendCertificateEmail(certificateModal.student, certificateModal.course);
+                }}
+                variant="success"
+                className="gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md shadow-emerald-500/25 cursor-pointer text-white w-48"
+              >
+                <Send size={16} /> Enviar p/ Webmail
+              </Button>
+            </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

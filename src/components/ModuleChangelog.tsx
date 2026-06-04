@@ -47,11 +47,26 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.3.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.4.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v6.3.0 - Rename da Mentoria Acadêmica, Novo Curso Apologético CPAD & Gremiação</h3>
+                <h3 className="font-bold text-lg text-indigo-700">v6.4.0 - Arquitetura Modular de Cursos, Certificados de Alta Resolução & Formulários Unificados</h3>
                 <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Modularização de Dados de Cursos:</strong> Transferência e descentralização da pesada estrutura do banco de dados de cursos, ementas de perguntas de quiz e mídias de `src/App.tsx` para o módulo `/src/components/ModuleCoursesData.tsx`. Otimização que reduz o tamanho do pacote principal, tornando o sistema infinitas vezes mais suave, rápido e leve.</li>
+                    <li><strong className="text-slate-700">Certificados HD e Resolução de Camadas:</strong> Implementação de portal de renderização (React Portals) para os certificados oficiais de conclusão e visualizadores de PDF, operando com empilhamento z-index seguro a nível de body, contornando sobreposições na impressão e garantindo downloads imaculados em alta resolução.</li>
+                    <li><strong className="text-slate-700">Unificação de Envio e Mensagens de Incentivo:</strong> Padronização do formulário de correspondência e mensagens de felicitação aos estudantes no módulo de EAD, unificando a experiência visual com a mesma linguagem premium dos demais cadastros do sistema.</li>
+                </ul>
+                <div className="mt-4 p-3 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs text-indigo-700 font-medium">
+                  <strong>Solicitante Oficial:</strong> O desenvolvimento e as atualizações do módulo de Acompanhamento de Cursos e Capacitações EAD foram idealizados e solicitados pelo <span className="underline decoration-indigo-300 decoration-2 font-bold text-indigo-800 font-black">Pb. Deivison Pessoa</span>.
+                </div>
+            </div>
+            
+            {/* BLOCO ADICIONADO PARA VERSÃO 6.3.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-bold text-lg text-slate-700">v6.3.0 - Rename da Mentoria Acadêmica, Novo Curso Apologético CPAD & Gremiação</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Módulo EAD Cursos de Capacitação:</strong> Alteração formal do nome do antigo módulo de "Acompanhar Alunos" para "EAD Cursos de Capacitação", alinhando o sistema de mentoria com propostas pedagógicas modernas e interativas.</li>
                     <li><strong className="text-slate-700">Lições Bíblicas em Defesa da Fé:</strong> Inserção do novo curso curricular baseado na clássica obra de apologética do comentarista Esequias Soares (Editora CPAD). O curso possui 10 módulos doutrinários completos cobrindo defesa teísta, inerrância bíblica, doutrina da Trindade e refutação de seitas contemporâneas com quizes de 5 perguntas.</li>

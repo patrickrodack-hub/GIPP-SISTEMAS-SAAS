@@ -98,6 +98,42 @@ const ModulePortalTesoureiro = () => {
         };
     }, [db.financeiro]);
 
+    const chartData = useMemo(() => {
+        const list = db.financeiro || [];
+        const months = [];
+        const now = new Date();
+        
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const y = d.getFullYear();
+            const mNum = d.getMonth() + 1;
+            const key = `${y}-${mNum.toString().padStart(2, '0')}`;
+            const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '');
+            months.push({ key, label, receitas: 0, despesas: 0 });
+        }
+
+        list.forEach(item => {
+            if (item.data_competencia) {
+                const ym = item.data_competencia.substring(0, 7);
+                const bucket = months.find(m => m.key === ym);
+                if (bucket) {
+                    const value = parseFloat(item.valor) || 0;
+                    if (item.tipo === 'entrada' && item.status === 'pago') {
+                        bucket.receitas += value;
+                    } else if (item.tipo === 'saida' && item.status === 'pago') {
+                        bucket.despesas += value;
+                    }
+                }
+            }
+        });
+
+        return months.map(m => ({
+            ...m,
+            receitas: Math.round(m.receitas * 100) / 100,
+            despesas: Math.round(m.despesas * 100) / 100
+        }));
+    }, [db.financeiro]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const numValor = parseFloat(form.valor);
@@ -270,6 +306,62 @@ const ModulePortalTesoureiro = () => {
                         <h3 className="text-2xl font-black text-amber-600">{stats.pendingPix} transações</h3>
                     </div>
                     <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Zap size={20}/></div>
+                </div>
+            </div>
+
+            {/* Comparativo de Entradas e Saídas (Despesas) - Últimos 12 Meses */}
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2">
+                        <FileBarChart className="text-emerald-600" size={24} />
+                        <div>
+                            <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wider">
+                                Balanço de Fluxo de Caixa (Últimos 12 Meses)
+                            </h3>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
+                                Comparativo mensal de receitas confirmadas versus despesas confirmadas
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5 text-emerald-600">
+                            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm"></span> Receitas
+                        </span>
+                        <span className="flex items-center gap-1.5 text-rose-500">
+                            <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm"></span> Despesas
+                        </span>
+                    </div>
+                </div>
+
+                <div className="h-72 w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                            data={chartData}
+                            margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis 
+                                dataKey="label" 
+                                tick={{ fill: '#64748b', fontSize: 10, fontWeight: '700' }} 
+                                axisLine={false} 
+                                tickLine={false}
+                            />
+                            <YAxis 
+                                tickFormatter={(v) => `R$ ${v}`}
+                                tick={{ fill: '#64748b', fontSize: 10, fontWeight: '700' }} 
+                                axisLine={false} 
+                                tickLine={false}
+                            />
+                            <RechartsTooltip 
+                                formatter={(value) => [`R$ ${parseFloat(value as string).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '']}
+                                labelStyle={{ fontWeight: 'bold', fontSize: 11, color: '#1e293b' }}
+                                itemStyle={{ fontSize: 11, fontWeight: 'bold' }}
+                                contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
+                            />
+                            <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} name="Receitas" />
+                            <Bar dataKey="despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Despesas" />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
