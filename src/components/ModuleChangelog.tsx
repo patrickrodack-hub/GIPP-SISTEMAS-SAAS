@@ -47,13 +47,26 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.4.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.5.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-bold text-lg text-indigo-700">v6.4.0 - Arquitetura Modular de Cursos, Certificados de Alta Resolução & Formulários Unificados</h3>
-                <p className="text-xs text-indigo-500 font-bold uppercase mb-3">Junho 2026 (Atual)</p>
+                <h3 className="font-extrabold text-lg text-indigo-700 font-[Outfit]">v6.5.0 - Manual de Bordo Integrado, Matriz de Recursos SaaS & Segurança de Acessos Orbital</h3>
+                <p className="text-xs text-indigo-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
-                    <li><strong className="text-slate-700">Modularização de Dados de Cursos:</strong> Transferência e descentralização da pesada estrutura do banco de dados de cursos, ementas de perguntas de quiz e mídias de `src/App.tsx` para o módulo `/src/components/ModuleCoursesData.tsx`. Otimização que reduz o tamanho do pacote principal, tornando o sistema infinitas vezes mais suave, rápido e leve.</li>
+                    <li><strong className="text-slate-700">Manual Interativo GIPP:</strong> Desenvolvimento e acoplamento do Manual do Usuário oficial, composto por 26 tópicos dedicados que explicam as capacidades, regras e fluxos de cada módulo operacional do software de forma fluida.</li>
+                    <li><strong className="text-slate-700 font-sans">Segurança & Usuários com Design Orbital:</strong> Redesenho integral da ficha cadastral de "Usuários & Níveis". Implementação de layout Glassmorphism com elementos em órbita holográfica, brasão de segurança em rotação, campos de atalho rápido e isolamento absoluto de z-index via Portrais do React (`createPortal`) no escopo do body.</li>
+                    <li><strong className="text-slate-700">Matriz de Ativação de Módulos (SaaS):</strong> Nova tabela panorâmica e ativa no módulo do desenvolvedor, demonstrando visualmente a liberação, status e dotação de recursos por classificação contratual (Planos Básico, Standard e Avançado) em tempo real.</li>
+                    <li><strong className="text-slate-700">Vitrine de Ecossistema de Software:</strong> Expansão técnica substancial do módulo "Sobre", promovendo o detalhamento dinâmico de 10 motores e subsistemas tecnológicos que dão solidez, alta redundância e velocidade ao GIPP Gold Edition.</li>
+                </ul>
+            </div>
+
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.4.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-bold text-lg text-slate-700">v6.4.0 - Arquitetura Modular de Cursos, Certificados de Alta Resolução & Formulários Unificados</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3">Junho 2026</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans">Modularização de Dados de Cursos:</strong> Transferência e descentralização da pesada estrutura do banco de dados de cursos, ementas de perguntas de quiz e mídias de `src/App.tsx` para o módulo `/src/components/ModuleCoursesData.tsx`. Otimização que reduz o tamanho do pacote principal, tornando o sistema infinitas vezes mais suave, rápido e leve.</li>
                     <li><strong className="text-slate-700">Certificados HD e Resolução de Camadas:</strong> Implementação de portal de renderização (React Portals) para os certificados oficiais de conclusão e visualizadores de PDF, operando com empilhamento z-index seguro a nível de body, contornando sobreposições na impressão e garantindo downloads imaculados em alta resolução.</li>
                     <li><strong className="text-slate-700">Unificação de Envio e Mensagens de Incentivo:</strong> Padronização do formulário de correspondência e mensagens de felicitação aos estudantes no módulo de EAD, unificando a experiência visual com a mesma linguagem premium dos demais cadastros do sistema.</li>
                 </ul>

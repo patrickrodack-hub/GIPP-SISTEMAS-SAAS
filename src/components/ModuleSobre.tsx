@@ -51,33 +51,25 @@ const ModuleSobre = () => {
                 <div className="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/30 transform rotate-3 hover:rotate-0 transition-transform">
                     <Building2 size={48} className="text-white"/>
                 </div>
-                <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm">Versão 6.3.0 (SaaS Gold Edition)</p>
+                <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight block">GIPP - GESTÃO DE IGREJA</h2>
+                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">Versão 6.5.0 (SaaS Gold Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
                 <div className="bg-white/70 p-8 rounded-3xl border border-white/60 shadow-sm transition-all hover:shadow-md hover:bg-white/90">
-                    <h3 className="font-black text-xl text-indigo-800 mb-6 flex items-center gap-3 pb-4 border-b border-slate-200/50"><Cpu size={24}/> Arquitetura e Tecnologias</h3>
+                    <h3 className="font-black text-xl text-indigo-800 mb-6 flex items-center gap-3 pb-4 border-b border-slate-200/50"><Cpu size={24}/> Arquitetura Geral</h3>
                     <ul className="space-y-5 text-sm text-slate-700">
                         <li className="flex items-start gap-3">
                             <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600 shrink-0 border border-indigo-100"><Code size={18}/></div>
-                            <div><strong className="block text-slate-900 mb-0.5">Frontend & SPA</strong>Construído em React.js (Single Page Application) garantindo fluidez, velocidade e ausência de recarregamentos na navegação.</div>
+                            <div><strong className="block text-slate-900 mb-0.5 font-bold">Frontend & SPA</strong>Construído em React.js moderno (Single Page Application) garantindo fluidez absoluta, velocidade instantânea e transição de páginas livre de recarregamentos.</div>
                         </li>
                         <li className="flex items-start gap-3">
                             <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 shrink-0 border border-emerald-100"><Database size={18}/></div>
-                            <div><strong className="block text-slate-900 mb-0.5">Banco de Dados & Cloud</strong>Firebase Firestore (NoSQL em tempo real) aliado ao Firebase Auth para segurança robusta e sincronização em nuvem.</div>
+                            <div><strong className="block text-slate-900 mb-0.5 font-bold font-sans">Banco de Dados & Cloud Sincronizado</strong>Firebase Firestore (NoSQL em tempo real) com persistência local ativa e sincronização imediata multicliente.</div>
                         </li>
                         <li className="flex items-start gap-3">
                             <div className="p-2.5 bg-pink-50 rounded-xl text-pink-600 shrink-0 border border-pink-100"><Palette size={18}/></div>
-                            <div><strong className="block text-slate-900 mb-0.5">Design, Visual & UI/UX</strong>Tailwind CSS para estilização moderna, com efeitos Glassmorphism, animações dinâmicas e ícones vetorizados do Lucide React.</div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <div className="p-2.5 bg-purple-50 rounded-xl text-purple-600 shrink-0 border border-purple-100"><Sparkles size={18}/></div>
-                            <div><strong className="block text-slate-900 mb-0.5">Inteligência Artificial (IA)</strong>Integração direta com a API do Google Gemini (LLM Generativo) para consultoria financeira, esboços de sermões e melhoria de textos.</div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600 shrink-0 border border-amber-100"><FileBarChart size={18}/></div>
-                            <div><strong className="block text-slate-900 mb-0.5">Gráficos & Relatórios</strong>Recharts para visualização de dados (Data Visualization) e motor nativo HTML2Canvas para geração de PDFs/Imagens de alta resolução.</div>
+                            <div><strong className="block text-slate-900 mb-0.5 font-bold">Interface e Visual Design</strong>Tailwind CSS para customização rica em Design Tokens, transição sutil em micro-interações, efeitos Glassmorphism elegantes e ergonomia de visão.</div>
                         </li>
                     </ul>
                 </div>
@@ -107,6 +99,105 @@ const ModuleSobre = () => {
                                 <ExternalLink size={14} className="opacity-80" />
                             </a>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ECOSSISTEMA TECNOLÓGICO SELECIONADO (GOLD VALUE METRICS) */}
+            <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] border border-slate-200 shadow-sm p-8 mt-10">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-100">
+                    <div>
+                        <h3 className="font-extrabold text-2xl text-slate-800 flex items-center gap-3 uppercase tracking-tight font-[Outfit]">
+                            <Layers size={24} className="text-indigo-600"/>
+                            Mapeamento Tecnológico GIPP Gold
+                        </h3>
+                        <p className="text-slate-500 text-xs mt-1 font-semibold">Os pilares e engenharia de software de classe mundial integrados ao nosso ecossistema eclesiástico.</p>
+                    </div>
+                    <div className="text-xs font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+                        Tecnologias de Ponta Ativas: <span className="text-indigo-600 font-extrabold">10 Motores</span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* React & Vite */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600 border border-indigo-100"><Cpu size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">React 18 + Vite Engine</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Renderização virtual ultrarrápida com compilação sob demanda e reatividade assíncrona instantânea de componentes.</p>
+                    </div>
+
+                    {/* TypeScript Code */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-sky-50 rounded-xl text-sky-600 border border-sky-100"><Code size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">TypeScript Strict Type</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Tipagem estática que previne erros de tempo de execução em produção, blindando a consistência dos dados internos eclesiásticos.</p>
+                    </div>
+
+                    {/* Firebase NoSQL */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600 border border-amber-100"><Database size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">Cloud Firestore NoSQL</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium font-sans">Banco de dados serverless estruturado e distribuído mundialmente com sincronização offline persistente nativa (Zero Delay).</p>
+                    </div>
+
+                    {/* Authentication Security */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600 border border-rose-100"><Lock size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">JWT & Security Tokens</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Autenticação militar e de alta conformidade com a LGPD usando persistência de sessão criptografada por token JWT.</p>
+                    </div>
+
+                    {/* Cognitive AI Gemini */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-purple-50 rounded-xl text-purple-600 border border-purple-100"><Sparkles size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">Google Gemini LLM AI</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Inteligência Artificial de ponta integrada para apoiar a criação de lições EBD, resumos estatísticos pastorais e consultoria de dados.</p>
+                    </div>
+
+                    {/* IndexedDB Cache Local */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-100"><CheckCircle size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">IndexedDB Local Cache</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Armazenamento local em banco de dados do navegador para salvar permanentemente as mídias, dízimos locais e dados em 0ms.</p>
+                    </div>
+
+                    {/* Portal DOM Inject */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-pink-50 rounded-xl text-pink-600 border border-pink-100"><Layers size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">React Portals & DOM Overlay</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Injeção dinâmica de diálogos no nível da raiz do documento, garantindo estabilidade e sobreposição de 100% em impressões.</p>
+                    </div>
+
+                    {/* BI Recharts Viz */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-teal-50 rounded-xl text-teal-600 border border-teal-100"><FileBarChart size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850">Recharts Business Analytics</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Motor de gráficos analíticos sofisticados e interativos focados no Business Intelligence (DRE, Fluxo de Caixa, Balanços).</p>
+                    </div>
+
+                    {/* Canvas & PDF HD Spooler */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-yellow-50 rounded-xl text-yellow-600 border border-yellow-100"><FileText size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850 font-sans">PDF & Canvas HD Spooler</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Geração e captura rasterizada vetorizada em alta resolução para a emissão canônica instantânea de certificados, comprovantes e relatórios.</p>
                     </div>
                 </div>
             </div>
