@@ -5122,8 +5122,10 @@ export const PrintSystem = ({
                             <Box label="Profissão / Ocupação" value={m.profissao} span={2}/>
                             <Box label="Telefone / WhatsApp" value={m.telefone} span={2}/>
                             <Box label="Endereço Residencial" value={m.endereco} span={4}/>
-                            <Box label="Bairro" value={m.bairro} span={2}/>
+                            <Box label="Bairro" value={m.bairro} span={1}/>
                             <Box label="Cidade / UF" value={m.cidade ? `${m.cidade}/${m.uf||''}` : ''} span={2}/>
+                            <Box label="CEP" value={m.cep} span={1}/>
+                            <Box label="E-mail" value={m.email} span={4}/>
                         </div>
                     </div>
 

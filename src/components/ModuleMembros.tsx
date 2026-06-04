@@ -74,12 +74,13 @@ const ModuleMembros = memo(() => {
             <div className="flex-1 overflow-hidden">
                 <GenericTable title="Listagem de Membros" type="membro" data={membrosFiltrados} columns={cols} customActions={(item) => (
                     <div className="flex gap-2">
-                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2.5 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100 bg-white" title="Carteirinha"><FileBadge size={18}/></button>
-                        <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2.5 text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100 bg-white" title="Escala de Compromissos"><ClipboardList size={18}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2.5 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100 bg-white cursor-pointer" title="Carteirinha"><FileBadge size={18}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('rel_ficha_membro'); setPreviewOpen(true); }} className="p-2.5 text-amber-500 hover:bg-amber-500 hover:text-white rounded-xl transition-all shadow-sm border border-amber-100 bg-white cursor-pointer" title="Ficha do Membro"><FileText size={18}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2.5 text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100 bg-white cursor-pointer" title="Escala de Compromissos"><ClipboardList size={18}/></button>
                         <button onClick={() => {
                             const text = encodeURIComponent(`Olá ${item.nome}, a Paz do Senhor!`);
                             window.open(`https://wa.me/55${item.telefone?.replace(/\D/g,'')}?text=${text}`, '_blank');
-                        }} className="p-2.5 text-emerald-500 hover:bg-emerald-555 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white" title="WhatsApp"><MessageCircle size={18}/></button>
+                        }} className="p-2.5 text-emerald-500 hover:bg-emerald-555 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white cursor-pointer" title="WhatsApp"><MessageCircle size={18}/></button>
                     </div>
                 )} />
             </div>
