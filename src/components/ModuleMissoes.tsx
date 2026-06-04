@@ -43,7 +43,7 @@ import {
 
 // Exporting component
 const ModuleMissoes = () => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, logAction, deleteItem } = useContext(ChurchContext);
+    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, logAction, deleteItem, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
     const [tab, setTab] = useState(1);
     const [subTab, setSubTab] = useState('eventos');
     const [viewModeKanban, setViewModeKanban] = useState('kanban');
@@ -56,6 +56,21 @@ const ModuleMissoes = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
 
+    // --- CARNÊ DE MISSÕES MODERN MANAGEMENTS ---
+    const [selectedCampaign, setSelectedCampaign] = useState('');
+    const [isBulkCreating, setIsBulkCreating] = useState(false);
+    const [bulkCampaignTitle, setBulkCampaignTitle] = useState('CARNÊ DE MISSÕES ' + new Date().getFullYear());
+    const [bulkValue, setBulkValue] = useState(50);
+    const [bulkInstallments, setBulkInstallments] = useState(12);
+    const [bulkFirstDue, setBulkFirstDue] = useState(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-10`;
+    });
+    const [bulkSelectedMembers, setBulkSelectedMembers] = useState([]);
+    const [bulkSearch, setBulkSearch] = useState('');
+
     const filterByCong = (item) => congregacaoFilter === 'todas' || item.congregacao_id === congregacaoFilter || (!item.congregacao_id && congregacaoFilter === 'sede');
 
     const financeiroMissoes = db.financeiro.filter(f => f.categoria === 'Missões').filter(filterByCong);
@@ -63,16 +78,191 @@ const ModuleMissoes = () => {
     const agenciasList = (db.missoes.agencias || []).filter(filterByCong);
     const colaboradoresList = (db.missoes.colaboradores || []).filter(filterByCong);
     
+    // Extracted Unique campaign titles
+    const campaigns = useMemo(() => {
+        const list = db.carnes || [];
+        return Array.from(new Set(list.map(c => c.titulo || '').filter(Boolean)));
+    }, [db.carnes]);
+
+    // Auto-select a missions related campaign as default
+    useEffect(() => {
+        if (campaigns.length > 0 && !selectedCampaign) {
+            const match = campaigns.find(c => c.toLowerCase().includes('miss'));
+            if (match) setSelectedCampaign(match);
+            else setSelectedCampaign(campaigns[0]);
+        }
+    }, [campaigns, selectedCampaign]);
+
+    const campaignCarnes = useMemo(() => {
+        return (db.carnes || []).filter(c => c.titulo === selectedCampaign).filter(filterByCong);
+    }, [db.carnes, selectedCampaign, congregacaoFilter]);
+
+    // General campaign calculations
+    const campaignStats = useMemo(() => {
+        const total = campaignCarnes.length;
+        let totalPrometido = campaignCarnes.reduce((acc, c) => acc + (parseFloat(c.valor_total) || 0), 0);
+        let totalPago = 0;
+        let totalAtrasado = 0;
+        const hoje = new Date().toISOString().split('T')[0];
+
+        campaignCarnes.forEach(c => {
+            (c.parcelas || []).forEach(p => {
+                const val = parseFloat(p.valor) || 0;
+                if (p.status === 'pago') {
+                    totalPago += val;
+                } else if (p.vencimento < hoje) {
+                    totalAtrasado += val;
+                }
+            });
+        });
+
+        const adimplencia = totalPrometido > 0 ? ((totalPago / totalPrometido) * 100).toFixed(1) : '100';
+
+        return {
+            total,
+            prometido: totalPrometido,
+            pago: totalPago,
+            atrasado: totalAtrasado,
+            adimplencia
+        };
+    }, [campaignCarnes]);
+
+    // Handler logic for inline installment clicks
+    const handleToggleInstallment = async (carne, parcela) => {
+        if (!carne || !parcela) return;
+        const novasParcelas = (carne.parcelas || []).map(p => {
+            if (p.numero === parcela.numero) {
+                const novoStatus = p.status === 'pago' ? 'pendente' : 'pago';
+                return {
+                    ...p,
+                    status: novoStatus,
+                    data_pagamento: novoStatus === 'pago' ? new Date().toISOString().split('T')[0] : null
+                };
+            }
+            return p;
+        });
+
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'carnes', carne.id), { 
+                parcelas: novasParcelas 
+            }, { merge: true });
+            
+            const mNome = db.membros.find(m => m.id === carne.membro_id)?.nome || 'Membro';
+            logAction('BAIXA_CARNE', `Alterou status da parcela ${parcela.numero} do carnê ${carne.titulo} de ${mNome}`, 'carnes', carne.id);
+            addToast(`Parcela ${parcela.numero} de ${mNome} atualizada!`, "success");
+            if (playNotificationSound) playNotificationSound();
+        } catch (err) {
+            addToast("Erro ao atualizar status da parcela.", "error");
+        }
+    };
+
+    // Handler for billing message to WhatsApp
+    const handleSendReminder = (membro, carne, p = null) => {
+        const primeiroNome = miembroName(membro.id).split(' ')[0];
+        const contato = membro.telefone || membro.contato || '';
+        
+        if (!contato) {
+            addToast("Membro não possui telefone de contato cadastrado.", "warning");
+            return;
+        }
+
+        let msg = '';
+        if (p) {
+            msg = `Olá ${primeiroNome}, a Paz do Senhor! Lembramos do seu voto de carinho com a Obra Missionária na campanha "${carne.titulo}". Segue o lembrete da parcela de R$ ${parseFloat(p.valor).toFixed(2)} com vencimento em ${formatDateLocal(p.vencimento)}. Que Deus multiplique a sua generosidade e sustento! Chave Pix da Igreja se preferir pagamento digital. 🙌🌍`;
+        } else {
+            msg = `Olá ${primeiroNome}, a Paz do Senhor! Queremos agradecer e abençoar a sua vida por apoiar ativamente o Departamento de Missões na campanha "${carne.titulo}". Seu voto mensal nos ajuda a sustentar famílias em campos transculturais. Caso queira consultar suas parcelas pendentes ou realizar contribuição, fale com nossa tesouraria. Obrigado por semear! 🌍🛡️`;
+        }
+        
+        window.open(`https://wa.me/55${contato.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    // Assistant helpers
+    const miembroName = (id) => db.membros.find(m => m.id === id)?.nome || 'Membro';
+    const hasActiveInstallments = (carne) => carne.parcelas && carne.parcelas.length > 0;
+
+    const membersEligibleForBulk = useMemo(() => {
+        const list = (db.membros || []).filter(m => m.status !== 'Inativo').filter(filterByCong);
+        const alreadyCampaignMemberIds = new Set(
+            (db.carnes || [])
+                .filter(c => c.titulo === bulkCampaignTitle)
+                .map(c => c.membro_id)
+        );
+        return list.filter(m => !alreadyCampaignMemberIds.has(m.id));
+    }, [db.membros, db.carnes, bulkCampaignTitle, congregacaoFilter]);
+
+    const filteredEligibleMembers = useMemo(() => {
+        return membersEligibleForBulk.filter(m => 
+            m.nome?.toLowerCase().includes((bulkSearch || '').toLowerCase())
+        );
+    }, [membersEligibleForBulk, bulkSearch]);
+
+    const handleBulkCreateCarnes = async () => {
+        if (bulkSelectedMembers.length === 0) {
+            return addToast("Selecione pelo menos um membro.", "warning");
+        }
+        if (!bulkCampaignTitle.trim()) {
+            return addToast("Digite o título da campanha.", "warning");
+        }
+        if (bulkValue <= 0) {
+            return addToast("Defina um valor mensal válido.", "warning");
+        }
+        
+        setIsBulkCreating(true);
+        addToast(`Gerando ${bulkSelectedMembers.length} carnês em lote...`, "info");
+        
+        try {
+            let count = 0;
+            for (let mId of bulkSelectedMembers) {
+                const pList = [];
+                const base = new Date(bulkFirstDue + 'T12:00:00');
+                const valorTotal = bulkValue * bulkInstallments;
+                
+                for (let i = 0; i < bulkInstallments; i++) {
+                    const d = new Date(base);
+                    d.setMonth(d.getMonth() + i);
+                    pList.push({
+                        numero: i + 1,
+                        valor: bulkValue,
+                        vencimento: d.toISOString().split('T')[0],
+                        status: 'pendente'
+                    });
+                }
+                
+                await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'carnes'), {
+                    titulo: bulkCampaignTitle.trim(),
+                    membro_id: mId,
+                    valor_total: valorTotal,
+                    parcelas: pList,
+                    congregacao_id: congregacaoFilter === 'todas' ? 'sede' : congregacaoFilter,
+                    data_criacao: new Date().toISOString()
+                });
+                count++;
+            }
+            
+            logAction('CRIAÇÃO_LOTADA', `Criou ${count} carnês da campanha "${bulkCampaignTitle}" em lote`, 'carnes', 'lote');
+            addToast(`${count} carnês de Missões gerados com sucesso!`, "success");
+            setBulkSelectedMembers([]);
+            setBulkSearch('');
+        } catch (err) {
+            console.error("Erro ao gerar carnês em massa:", err);
+            addToast("Erro ao gerar registros em massa.", "error");
+        } finally {
+            setIsBulkCreating(false);
+        }
+    };
+    
     const menuItems = [
         {id: 1, label: 'Dashboard', icon: LayoutDashboard}, 
         {id: 2, label: 'Missionários', icon: Users}, 
         {id: 3, label: 'Agências', icon: Building2}, 
         {id: 4, label: 'Colaboradores', icon: HeartHandshake}, 
+        {id: 6, label: 'Carnê de Missões', icon: CreditCard},
         {id: 5, label: 'Financeiro', icon: DollarSign}, 
         {id: 7, label: 'Agenda & Tarefas', icon: Calendar}
     ];
     
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+
 
     // Dashboard Calculations
     const totalMissionarios = missionariosList.length;
@@ -80,6 +270,29 @@ const ModuleMissoes = () => {
     const totalMembros = (db.membros || []).filter(filterByCong).length;
     const totalColaboradores = colaboradoresList.length;
     const participantesCarne = new Set((db.carnes || []).filter(filterByCong).map(c => c.membro_id)).size;
+
+    const pLineForMonth = (carne, monthIdx) => {
+        const parcelas = carne.parcelas || [];
+        return parcelas.find(p => {
+            if (!p.vencimento) return false;
+            try {
+                const date = new Date(p.vencimento + 'T12:00:00');
+                return date.getMonth() === monthIdx;
+            } catch {
+                return false;
+            }
+        });
+    };
+
+    const nextPendingInstallment = (carne) => {
+        const parcelas = carne.parcelas || [];
+        const hoje = new Date().toISOString().split('T')[0];
+        const pending = parcelas.filter(p => p.status !== 'pago');
+        if (pending.length === 0) return null;
+        const overdue = pending.find(p => p.vencimento < hoje);
+        if (overdue) return overdue;
+        return pending[0];
+    };
 
     // Agenda & Tarefas Lógica
     const agendaGeral = (db.missoes.agenda || []).filter(filterByCong).sort((a,b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
@@ -224,6 +437,321 @@ const ModuleMissoes = () => {
                 {tab === 3 && <GenericTable title="Agências" type="agencia_missoes" data={agenciasList} columns={[{header:'Agência', key:'nome'}, {header:'Responsável', key:'responsavel'}]} />}
                 {tab === 4 && <GenericTable title="Colaboradores" type="missoes_colaborador" data={colaboradoresList} columns={[{header:'Nome', key:'nome'}, {header:'Tipo Apoio', key:'tipo'}]} />}
                 {tab === 5 && <GenericTable title="Caixa Missões" type="missoes_financeiro" data={financeiroMissoes} columns={[{header:'Data', key:'data_competencia', render: d=>formatDateLocal(d.data_competencia)}, {header:'Descrição', key:'descricao'}, {header:'Valor', key:'valor', render: v=>`R$ ${parseFloat(v.valor).toFixed(2)}`}, {header:'Tipo', key:'tipo'}]} />}
+                
+                {/* --- NOVO: ABA CARNÊ DE MISSÕES --- */}
+                {tab === 6 && (
+                    <div className="h-full flex flex-col space-y-6 overflow-y-auto custom-scrollbar p-2 pb-16">
+                        {/* Upper Stats Panel */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 shrink-0">
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl w-fit mb-4"><Users size={20}/></div>
+                                <div>
+                                    <h3 className="text-3xl font-black text-slate-800 tracking-tight mb-1">{campaignStats.total}</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contribuintes Ativos</p>
+                                </div>
+                            </div>
+                            
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl w-fit mb-4"><DollarSign size={20}/></div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-1">R$ {campaignStats.prometido.toFixed(2)}</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor Total Prometido</p>
+                                </div>
+                            </div>
+                            
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl w-fit mb-4"><Activity size={20}/></div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-emerald-600 tracking-tight mb-1">R$ {campaignStats.pago.toFixed(2)}</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Arrecadado</p>
+                                </div>
+                            </div>
+                            
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                                <div className="p-3 bg-purple-50 text-purple-600 rounded-xl w-fit mb-4"><CheckCircle size={20}/></div>
+                                <div>
+                                    <h3 className="text-3xl font-black text-purple-600 tracking-tight mb-1">{campaignStats.adimplencia}%</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Taxa de Adimplência</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Control actions & Campaign selector */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
+                            <div className="lg:col-span-1 glass-modern p-6 rounded-[2.5rem] border border-slate-200 flex flex-col justify-between">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">Campanha Ativa</label>
+                                    <select 
+                                        value={selectedCampaign} 
+                                        onChange={e => setSelectedCampaign(e.target.value)} 
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none shadow-sm focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        {campaigns.length === 0 && <option value="">Nenhum carnê no sistema</option>}
+                                        {campaigns.map((c, idx) => (
+                                            <option key={idx} value={c}>{c}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[11px] text-slate-400 mt-2 font-medium">Toque nos quadradinhos da matriz para registrar as contribuições mensais.</p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
+                                    <Button onClick={() => openModal('carne_novo')} variant="secondary" className="w-full text-xs py-2">
+                                        <Plus size={14}/> Criar Carnê Unitário
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Inscrição em Lote Wizard (Bulk Creator) */}
+                            <div className="lg:col-span-2 glass-modern p-6 rounded-[2.5rem] border border-indigo-100 bg-gradient-to-br from-indigo-50/20 via-white to-white flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={16} className="text-indigo-500"/> Assistente de Inscrição em Massa</h4>
+                                            <p className="text-xs text-slate-500 font-medium">Cadastre vários contribuintes no Carnê de Missões de uma vez só em 3 segundos.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-[9px] font-black text-rose-500 uppercase mb-1">Título do Lote</label>
+                                            <input 
+                                                type="text" 
+                                                value={bulkCampaignTitle} 
+                                                onChange={e => setBulkCampaignTitle(e.target.value.toUpperCase())} 
+                                                className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none uppercase shadow-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Valor Parcela (R$)</label>
+                                            <input 
+                                                type="number" 
+                                                value={bulkValue} 
+                                                onChange={e => setBulkValue(parseFloat(e.target.value) || 0)} 
+                                                className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-none shadow-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Primeiro Venc.</label>
+                                            <input 
+                                                type="date" 
+                                                value={bulkFirstDue} 
+                                                onChange={e => setBulkFirstDue(e.target.value)} 
+                                                className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-none shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Member selection checkboard */}
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{filteredEligibleMembers.length} membros elegíveis</span>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => setBulkSelectedMembers(membersEligibleForBulk.map(m=>m.id))} 
+                                                    className="text-[9px] font-black text-indigo-600 hover:underline uppercase"
+                                                >
+                                                    Marcar Todos
+                                                </button>
+                                                <span className="text-slate-300">|</span>
+                                                <button 
+                                                    onClick={() => setBulkSelectedMembers([])} 
+                                                    className="text-[9px] font-black text-slate-500 hover:underline uppercase"
+                                                >
+                                                    Limpar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Buscar membros..." 
+                                            value={bulkSearch} 
+                                            onChange={e => setBulkSearch(e.target.value)} 
+                                            className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs mb-2 outline-none uppercase font-semibold"
+                                        />
+                                        <div className="max-h-24 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pr-1">
+                                            {filteredEligibleMembers.map(m => {
+                                                const isSelected = bulkSelectedMembers.includes(m.id);
+                                                return (
+                                                    <button 
+                                                        key={m.id} 
+                                                        onClick={() => {
+                                                            if (isSelected) setBulkSelectedMembers(bulkSelectedMembers.filter(id => id !== m.id));
+                                                            else setBulkSelectedMembers([...bulkSelectedMembers, m.id]);
+                                                        }}
+                                                        className={`p-2 rounded-xl border text-left text-xs font-bold flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                                    >
+                                                        <span className="truncate pr-1">{m.nome}</span>
+                                                        <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                            {isSelected && <Check size={10} strokeWidth={4}/>}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                            {filteredEligibleMembers.length === 0 && (
+                                                <p className="text-[11px] text-slate-400 italic col-span-full text-center py-2">Nenhum membro ativo restante.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 pt-3 flex justify-between items-center bg-slate-50/50 p-2 rounded-xl">
+                                    <span className="text-xs font-bold text-slate-600">
+                                        {bulkSelectedMembers.length} membros selecionados • Total: R$ {(bulkSelectedMembers.length * bulkValue * bulkInstallments).toFixed(2)}
+                                    </span>
+                                    <Button 
+                                        onClick={handleBulkCreateCarnes} 
+                                        disabled={isBulkCreating || bulkSelectedMembers.length === 0} 
+                                        variant="primary" 
+                                        className="text-xs py-2 px-5 bg-gradient-to-r from-indigo-600 to-rose-600 select-none shadow text-white font-bold"
+                                    >
+                                        {isBulkCreating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Gerar Carnês em Lote
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Interactive Matrix Grid (The Showpiece) */}
+                        <div className="glass-modern p-6 rounded-[2.5rem] border border-slate-200 overflow-hidden flex flex-col">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 shrink-0">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                        <Globe size={20} className="text-indigo-500" /> Matriz do Carnê de Missões
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-medium">Mapa anual de recolhimento de parcelas e votos missionários.</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase">
+                                    <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-200">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Pago
+                                    </span>
+                                    <span className="flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-1 rounded-lg border border-rose-200">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Atrasado
+                                    </span>
+                                    <span className="flex items-center gap-1 bg-slate-50 text-slate-600 px-2 py-1 rounded-lg border border-slate-200">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Pendente
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-x-auto custom-scrollbar">
+                                <table className="w-full text-left border-collapse min-w-[1000px]">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50/60 text-slate-500 text-[10px] uppercase font-black tracking-wider">
+                                            <th className="py-3 px-4 font-black">Contribuinte / Membro</th>
+                                            {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((label, idx) => (
+                                                <th key={idx} className="py-3 px-1 text-center font-black w-[60px]">{label}</th>
+                                            ))}
+                                            <th className="py-3 px-2 text-center font-black w-[100px]">Arrecadado</th>
+                                            <th className="py-3 px-3 text-right font-black">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-sm">
+                                        {campaignCarnes.map((carne) => {
+                                            const memberObj = db.membros.find(m => m.id === carne.membro_id) || { id: carne.membro_id, nome: 'Não localizado', telefone: '' };
+                                            
+                                            // Calculate paid / total for this booklet
+                                            const totalPromisedLine = parseFloat(carne.valor_total) || 0;
+                                            const paidCountLine = (carne.parcelas || [])
+                                                .filter(p => p.status === 'pago')
+                                                .reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
+                                                
+                                            const progressPct = totalPromisedLine > 0 ? Math.round((paidCountLine / totalPromisedLine) * 100) : 0;
+
+                                            return (
+                                                <tr key={carne.id} className="hover:bg-slate-50/60 transition-colors group">
+                                                    <td className="py-3.5 px-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-xs text-indigo-700 shadow-sm shrink-0">
+                                                                {memberObj.nome ? memberObj.nome.substring(0, 2).toUpperCase() : 'M'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-slate-800 leading-snug">{memberObj.nome}</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{carne.titulo}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    {/* Month Matrix Cells */}
+                                                    {Array.from({ length: 12 }).map((_, mIdx) => {
+                                                        const p = pLineForMonth(carne, mIdx);
+                                                        if (!p) {
+                                                            return (
+                                                                <td key={mIdx} className="py-3 text-center text-slate-200">
+                                                                    <span className="text-[10px] font-bold text-slate-300">—</span>
+                                                                </td>
+                                                            );
+                                                        }
+
+                                                        const isPago = p.status === 'pago';
+                                                        const isAtrasado = !isPago && p.vencimento < new Date().toISOString().split('T')[0];
+
+                                                        return (
+                                                            <td key={mIdx} className="py-3 px-1 text-center">
+                                                                <button 
+                                                                    onClick={() => handleToggleInstallment(carne, p)}
+                                                                    title={`Parcela ${p.numero} - Vencimento: ${formatDateLocal(p.vencimento)} - clique para alternar status`}
+                                                                    className={`w-11 h-8 rounded-xl font-bold text-[9px] flex flex-col items-center justify-center transition-all border outline-none shadow-sm ${
+                                                                        isPago 
+                                                                            ? 'bg-emerald-500 border-emerald-600 text-white hover:bg-emerald-600' 
+                                                                            : isAtrasado 
+                                                                                ? 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100' 
+                                                                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                                                    }`}
+                                                                >
+                                                                    <span>M{mIdx + 1}</span>
+                                                                    <span className="text-[7.5px] font-bold opacity-90">R${Math.round(p.valor)}</span>
+                                                                </button>
+                                                            </td>
+                                                        );
+                                                    })}
+
+                                                    <td className="py-3.5 px-2 text-center">
+                                                        <div className="inline-flex flex-col items-center">
+                                                            <span className="font-bold text-slate-800">R$ {paidCountLine}</span>
+                                                            <span className="text-[10px] text-slate-400 font-bold">({progressPct}%)</span>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="py-3.5 px-4 text-right">
+                                                        <div className="flex justify-end gap-2 shrink-0">
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setPrintData({ 
+                                                                        igreja: db.igreja, 
+                                                                        carne: carne, 
+                                                                        membro: db.membros.find(m => m.id === carne.membro_id) || memberObj 
+                                                                    }); 
+                                                                    setPrintMode('carne_print'); 
+                                                                    setPreviewOpen(true);
+                                                                }}
+                                                                className="p-1 px-2.5 text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100 flex items-center gap-1 shadow-sm"
+                                                                title="Imprimir Carnê"
+                                                            >
+                                                                <PrintIcon size={12}/> Carnê
+                                                            </button>
+                                                            
+                                                            <button 
+                                                                onClick={() => handleSendReminder(memberObj, carne, nextPendingInstallment(carne))}
+                                                                className="p-1 px-2 text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-200 flex items-center gap-1 shadow-sm"
+                                                                title="Contatar Prazos no WhatsApp"
+                                                            >
+                                                                <MessageCircle size={12}/> Cobrar
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {campaignCarnes.length === 0 && (
+                                            <tr>
+                                                <td colSpan={15} className="py-12 text-center text-slate-400 italic">
+                                                    Nenhum contribuinte vinculado a esta campanha. Use o assistente acima para criar o lote de Missões.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* --- NOVO: ABA AGENDA, TAREFAS E WHATSAPP --- */}
                 {tab === 7 && (
