@@ -6630,7 +6630,7 @@ const ThemeToggle = ({ variant = 'default', className = "" }) => {
 
 // --- CENTRAL DE NOTIFICAÇÕES INTELIGENTE ---
 const NotificationCenter = () => {
-    const { db, user } = useContext(ChurchContext);
+    const { notifications, clearAllNotifications } = useContext(ChurchContext);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -6641,108 +6641,6 @@ const NotificationCenter = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-    const notifications = useMemo(() => {
-        const notifs = [];
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        today.setHours(0,0,0,0);
-        
-        if (db.financeiro) {
-            const despesas = db.financeiro.filter(f => f.tipo === 'saida' && f.status === 'pendente');
-            despesas.forEach(d => {
-                if (!d.data_vencimento) return;
-                const vDate = new Date(d.data_vencimento + 'T00:00:00'); 
-                const diffTime = vDate.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                if (diffDays < 0) {
-                    notifs.push({ id: `desp_${d.id}`, type: 'danger', icon: AlertCircle, title: 'Despesa Vencida', desc: `R$ ${parseFloat(d.valor).toFixed(2)} - ${d.descricao}`, time: 'Vencida', color: 'rose' });
-                } else if (diffDays <= 5) {
-                    notifs.push({ id: `desp_${d.id}`, type: 'warning', icon: DollarSign, title: 'Vencimento Próximo', desc: `R$ ${parseFloat(d.valor).toFixed(2)} - ${d.descricao}`, time: diffDays === 0 ? 'Hoje' : `Em ${diffDays} dias`, color: 'amber' });
-                }
-            });
-        }
-
-        if (db.membros) {
-            const aniversariantes = db.membros.filter(m => m.data_nascimento && parseInt(m.data_nascimento.split('-')[1]) - 1 === currentMonth);
-            const hojeDia = today.getDate();
-            aniversariantes.forEach(a => {
-                 const diaNasc = parseInt(a.data_nascimento.split('-')[2]);
-                 if (diaNasc === hojeDia) {
-                     notifs.push({ id: `aniv_${a.id}`, type: 'success', icon: Gift, title: 'Aniversante Hoje', desc: `${a.nome} faz anos hoje!`, time: 'Hoje', color: 'emerald' });
-                 } else if (diaNasc > hojeDia && diaNasc <= hojeDia + 5) {
-                     notifs.push({ id: `aniv_${a.id}`, type: 'info', icon: Gift, title: 'Aniversário a Chegar', desc: `${a.nome}`, time: `Dia ${diaNasc}`, color: 'blue' });
-                 }
-            });
-        }
-        
-        if (db.tarefas) {
-             const pendentes = db.tarefas.filter(t => t.status !== 'Concluido');
-             pendentes.forEach(t => {
-                 if(!t.data) return;
-                 const tDate = new Date(t.data + 'T00:00:00');
-                 const diffTime = tDate.getTime() - today.getTime();
-                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                 if (diffDays >= 0 && diffDays <= 3) {
-                     notifs.push({ id: `tar_${t.id}`, type: 'primary', icon: CheckSquare, title: 'Tarefa Agendada', desc: t.descricao, time: diffDays === 0 ? 'Hoje' : `Em ${diffDays} dias`, color: 'indigo' });
-                 }
-             });
-        }
-
-        // Alertas de dízimos recorrentes atrasados por mais de 3 meses para liderança sacerdotal e administrativa (visando apoio pastoral)
-        const isPastoral = user?.cargo?.toLowerCase().includes('pastor') || 
-                           user?.funcao?.toLowerCase().includes('pastor') || 
-                           (db.igreja?.pastor && user?.nome && db.igreja.pastor.toLowerCase().trim() === user.nome.toLowerCase().trim()) ||
-                           user?.nivel === 'master' || 
-                           user?.id === 'dev' ||
-                           user?.cargo?.toLowerCase().includes('tesour') || 
-                           user?.funcao?.toLowerCase().includes('tesour') || 
-                           user?.nivel === 'tesour';
-
-        if (isPastoral && db.membros && db.financeiro) {
-            const mAtivos = db.membros.filter(m => m.status !== 'Inativo');
-            const dizimos = db.financeiro.filter(f => 
-                f.tipo === 'entrada' && 
-                f.categoria?.toLowerCase().includes('dízimo') && 
-                !(f.conciliado === false && String(f.descricao).includes('via Portal'))
-            );
-
-            mAtivos.forEach(membro => {
-                const dizimosMembro = dizimos.filter(d => d.membro_id === membro.id)
-                    .sort((a,b) => new Date(b.data_competencia || b.data_pagamento || 0).getTime() - new Date(a.data_competencia || a.data_pagamento || 0).getTime());
-                
-                if (dizimosMembro.length > 0) {
-                    const ultimoDizimo = dizimosMembro[0];
-                    const dateClean = (ultimoDizimo.data_competencia || ultimoDizimo.data_pagamento || '').split('T')[0];
-                    if (dateClean) {
-                        const dataUltimo = new Date(dateClean + 'T00:00:00');
-                        const diffTime = today.getTime() - dataUltimo.getTime();
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-                        if (diffDays > 90) {
-                            const meses = Math.floor(diffDays / 30);
-                            notifs.push({
-                                id: `dizimo_recorrente_atrasado_${membro.id}`,
-                                type: 'warning',
-                                icon: HeartHandshake,
-                                title: 'Apoio Pastoral: Dízimo Atrasado',
-                                desc: `O dizimista ${membro.nome} está sem registro de dízimo há ${meses} meses. Considere um contato amável para suporte espiritual.`,
-                                time: 'Apoio Pastoral',
-                                color: 'amber'
-                            });
-                        }
-                    }
-                }
-            });
-        }
-
-        return notifs.sort((a, b) => {
-            if (a.type === 'danger' && b.type !== 'danger') return -1;
-            if (b.type === 'danger' && a.type !== 'danger') return 1;
-            return 0;
-        });
-    }, [db, user]);
 
     return (
         <div className="relative pointer-events-auto" ref={dropdownRef}>
@@ -6764,9 +6662,21 @@ const NotificationCenter = () => {
                         <h3 className="font-black text-slate-800 flex items-center gap-2">
                             <Bell size={18} className="text-indigo-600"/> Notificações
                         </h3>
-                        <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg uppercase">
-                            {notifications.length} Alertas
-                        </span>
+                        {notifications.length > 0 ? (
+                            <button 
+                                onClick={() => {
+                                    clearAllNotifications(notifications.map(n => n.id));
+                                    playMenuSound();
+                                }}
+                                className="text-[10px] font-black tracking-wider uppercase text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-105/40 transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                                <Trash2 size={10} /> Limpar
+                            </button>
+                        ) : (
+                            <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg uppercase">
+                                {notifications.length} Alertas
+                            </span>
+                        )}
                     </div>
                     <div className="max-h-[60vh] overflow-y-auto custom-scrollbar bg-white/40">
                         {notifications.length === 0 ? (
@@ -6881,10 +6791,11 @@ const PortalPerfil = ({ user, db, setView }) => {
 
 // --- PORTAL DO MEMBRO (AUTOATENDIMENTO) ---
 const PortalHome = ({ user, db, setView }) => {
+    const { notifications, clearAllNotifications } = useContext(ChurchContext);
     const hojeObj = new Date();
     const hoje = hojeObj.toISOString().split('T')[0];
     const currentMonthStr = hojeObj.toISOString().slice(0, 7);
-    const currentUser = db.membros.find(m => m.id === user.id) || user;
+    const currentUser = db.membros.find((m: any) => m.id === user.id) || user;
     
     const [devocional, setDevocional] = useState('');
     const [loadingDev, setLoadingDev] = useState(false);
@@ -6953,6 +6864,31 @@ const PortalHome = ({ user, db, setView }) => {
             text: 'text-blue-600',
             isNew: false,
             action: () => setView('portal_ebd')
+        });
+    }
+
+    if (notifications && notifications.length > 0) {
+        notifications.forEach((notif: any) => {
+            const alreadyExists = inboxItems.some(item => item.id === notif.id);
+            if (!alreadyExists) {
+                inboxItems.push({
+                    id: notif.id,
+                    sender: 'Notificação do Sistema',
+                    subject: `${notif.title}: ${notif.desc}`,
+                    date: hoje,
+                    icon: notif.icon || Bell,
+                    bg: notif.color === 'rose' ? 'bg-rose-100' : notif.color === 'amber' ? 'bg-amber-100' : 'bg-indigo-100',
+                    text: notif.color === 'rose' ? 'text-rose-600' : notif.color === 'amber' ? 'text-amber-600' : 'text-indigo-600',
+                    isNew: true,
+                    action: () => {
+                        if (notif.id.startsWith('tar_')) {
+                            setView('portal_tarefas');
+                        } else if (notif.id.startsWith('aniv_')) {
+                            setView('portal_mural');
+                        }
+                    }
+                });
+            }
         });
     }
 
@@ -7229,6 +7165,30 @@ const PortalHome = ({ user, db, setView }) => {
                         </h3>
                         <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-widest">Atividades</span>
                     </div>
+
+                    {notifications && notifications.length > 0 && (
+                        <div className="mb-6 bg-indigo-50/60 transition-all border border-indigo-100/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-entrance">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+                                    <Bell size={18} className="animate-bounce" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-black text-indigo-900 uppercase tracking-wide">Alertas do Sistema</h4>
+                                    <p className="text-slate-500 font-medium text-[11px] leading-tight">Você possui {notifications.length} notificações que demandam atenção.</p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    clearAllNotifications(notifications.map((n: any) => n.id));
+                                    playMenuSound();
+                                }}
+                                className="text-[10px] font-black tracking-wider uppercase text-slate-500 hover:text-rose-600 bg-white hover:bg-rose-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-rose-100/50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                                <Trash2 size={10} /> Dispensar Alertas
+                            </button>
+                        </div>
+                    )}
 
                     <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-4">
                         {inboxItems.length > 0 ? inboxItems.map((msg, i) => (
@@ -9464,6 +9424,24 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [db, setDbState] = useState(MOCK_DB);
+  const [clearedNotifications, setClearedNotifications] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('gipp_cleared_notifs') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gipp_cleared_notifs', JSON.stringify(clearedNotifications));
+  }, [clearedNotifications]);
+
+  const clearAllNotifications = (idsToClear: string[]) => {
+    setClearedNotifications(prev => {
+      const updated = Array.from(new Set([...prev, ...idsToClear]));
+      return updated;
+    });
+  };
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState(null); 
   const [editingItem, setEditingItem] = useState(null);
@@ -9495,6 +9473,109 @@ export default function App() {
       return saved !== 'false';
   });
   const [isMobileDevice, setIsMobileDevice] = useState(false); // NOVO: Identifica acesso por telemóvel
+
+  const notifications = useMemo(() => {
+    const notifs = [];
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    today.setHours(0,0,0,0);
+    
+    if (db.financeiro) {
+        const despesas = db.financeiro.filter((f: any) => f.tipo === 'saida' && f.status === 'pendente');
+        despesas.forEach((d: any) => {
+            if (!d.data_vencimento) return;
+            const vDate = new Date(d.data_vencimento + 'T00:00:00'); 
+            const diffTime = vDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+                notifs.push({ id: `desp_${d.id}`, type: 'danger', icon: AlertCircle, title: 'Despesa Vencida', desc: `R$ ${parseFloat(d.valor).toFixed(2)} - ${d.descricao}`, time: 'Vencida', color: 'rose' });
+            } else if (diffDays <= 5) {
+                notifs.push({ id: `desp_${d.id}`, type: 'warning', icon: DollarSign, title: 'Vencimento Próximo', desc: `R$ ${parseFloat(d.valor).toFixed(2)} - ${d.descricao}`, time: diffDays === 0 ? 'Hoje' : `Em ${diffDays} dias`, color: 'amber' });
+            }
+        });
+    }
+
+    if (db.membros) {
+        const aniversariantes = db.membros.filter((m: any) => m.data_nascimento && parseInt(m.data_nascimento.split('-')[1]) - 1 === currentMonth);
+        const hojeDia = today.getDate();
+        aniversariantes.forEach((a: any) => {
+             const diaNasc = parseInt(a.data_nascimento.split('-')[2]);
+             if (diaNasc === hojeDia) {
+                 notifs.push({ id: `aniv_${a.id}`, type: 'success', icon: Gift, title: 'Aniversante Hoje', desc: `${a.nome} faz anos hoje!`, time: 'Hoje', color: 'emerald' });
+             } else if (diaNasc > hojeDia && diaNasc <= hojeDia + 5) {
+                 notifs.push({ id: `aniv_${a.id}`, type: 'info', icon: Gift, title: 'Aniversário a Chegar', desc: `${a.nome}`, time: `Dia ${diaNasc}`, color: 'blue' });
+             }
+        });
+    }
+    
+    if (db.tarefas) {
+         const pendentes = db.tarefas.filter((t: any) => t.status !== 'Concluido');
+         pendentes.forEach((t: any) => {
+             if(!t.data) return;
+             const tDate = new Date(t.data + 'T00:00:00');
+             const diffTime = tDate.getTime() - today.getTime();
+             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+             if (diffDays >= 0 && diffDays <= 3) {
+                 notifs.push({ id: `tar_${t.id}`, type: 'primary', icon: CheckSquare, title: 'Tarefa Agendada', desc: t.descricao, time: diffDays === 0 ? 'Hoje' : `Em ${diffDays} dias`, color: 'indigo' });
+             }
+         });
+    }
+
+    const isPastoral = user?.cargo?.toLowerCase().includes('pastor') || 
+                       user?.funcao?.toLowerCase().includes('pastor') || 
+                       (db.igreja?.pastor && user?.nome && db.igreja.pastor.toLowerCase().trim() === user.nome.toLowerCase().trim()) ||
+                       user?.nivel === 'master' || 
+                       user?.id === 'dev' ||
+                       user?.cargo?.toLowerCase().includes('tesour') || 
+                       user?.funcao?.toLowerCase().includes('tesour') || 
+                       user?.nivel === 'tesour';
+
+    if (isPastoral && db.membros && db.financeiro) {
+        const mAtivos = db.membros.filter((m: any) => m.status !== 'Inativo');
+        const dizimos = db.financeiro.filter((f: any) => 
+            f.tipo === 'entrada' && 
+            f.categoria?.toLowerCase().includes('dízimo') && 
+            !(f.conciliado === false && String(f.descricao).includes('via Portal'))
+        );
+
+        mAtivos.forEach((membro: any) => {
+            const dizimosMembro = dizimos.filter((d: any) => d.membro_id === membro.id)
+                .sort((a: any, b: any) => new Date(b.data_competencia || b.data_pagamento || 0).getTime() - new Date(a.data_competencia || a.data_pagamento || 0).getTime());
+            
+            if (dizimosMembro.length > 0) {
+                const ultimoDizimo = dizimosMembro[0];
+                const dateClean = (ultimoDizimo.data_competencia || ultimoDizimo.data_pagamento || '').split('T')[0];
+                if (dateClean) {
+                    const dataUltimo = new Date(dateClean + 'T00:00:00');
+                    const diffTime = today.getTime() - dataUltimo.getTime();
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays > 90) {
+                        const meses = Math.floor(diffDays / 30);
+                        notifs.push({
+                            id: `dizimo_recorrente_atrasado_${membro.id}`,
+                            type: 'warning',
+                            icon: HeartHandshake,
+                            title: 'Apoio Pastoral: Dízimo Atrasado',
+                            desc: `O dizimista ${membro.nome} está sem registro de dízimo há ${meses} meses. Considere um contato amável para suporte espiritual.`,
+                            time: 'Apoio Pastoral',
+                            color: 'amber'
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    return notifs
+        .filter(n => !clearedNotifications.includes(n.id))
+        .sort((a, b) => {
+            if (a.type === 'danger' && b.type !== 'danger') return -1;
+            if (b.type === 'danger' && a.type !== 'danger') return 1;
+            return 0;
+        });
+  }, [db, user, clearedNotifications]);
 
   // NOVO: Detetar telemóvel e forçar Portal do Membro
   useEffect(() => {
@@ -10724,7 +10805,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale };
+  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications };
 
   if (!user) { 
     return ( 

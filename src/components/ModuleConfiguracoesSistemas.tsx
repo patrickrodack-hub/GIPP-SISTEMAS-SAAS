@@ -49,7 +49,8 @@ const ModuleConfiguracoesSistemas = () => {
         db, dbFirestore, appId, addToast, user, 
         printPalette, setPrintPalette, printMarginType, setPrintMarginType, 
         printOrientation, setPrintOrientation, printContentScale, setPrintContentScale,
-        setPrintData, setPrintMode, setPreviewOpen, setDoc, doc
+        setPrintData, setPrintMode, setPreviewOpen, setDoc, doc,
+        notifications, clearAllNotifications
     } = context;
 
     const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte'>('performance');
@@ -354,17 +355,39 @@ const ModuleConfiguracoesSistemas = () => {
                                         <span className="text-xs font-bold text-slate-500">Consistência DB:</span>
                                         <span className="text-xs font-black text-emerald-600">Perfeita</span>
                                     </div>
+                                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-500">Notificações Ativas:</span>
+                                        <span className={`text-xs font-black ${notifications && notifications.length > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                            {notifications?.length || 0} pendentes
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <button 
-                                onClick={handleRunOtimizacao}
-                                disabled={optRunning}
-                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-xs tracking-wider uppercase border border-transparent shadow ${optRunning ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
-                            >
-                                <RefreshCw size={14} className={optRunning ? 'animate-spin' : ''}/>
-                                {optRunning ? 'Executando Otimização...' : 'Executar Otimização'}
-                            </button>
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={handleRunOtimizacao}
+                                    disabled={optRunning}
+                                    className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-xs tracking-wider uppercase border border-transparent shadow ${optRunning ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'}`}
+                                >
+                                    <RefreshCw size={14} className={optRunning ? 'animate-spin' : ''}/>
+                                    {optRunning ? 'Executando Otimização...' : 'Executar Otimização'}
+                                </button>
+
+                                <button 
+                                    onClick={() => {
+                                        if (!notifications || notifications.length === 0) {
+                                            return addToast("Não há notificações pendentes para limpar.", "info");
+                                        }
+                                        clearAllNotifications(notifications.map((n: any) => n.id));
+                                        addToast("Notificações limpas com sucesso!", "success");
+                                    }}
+                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-xs tracking-wider uppercase border-2 border-rose-100 hover:border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition duration-305 cursor-pointer"
+                                >
+                                    <Trash2 size={14}/>
+                                    Limpar Notificações
+                                </button>
+                            </div>
                         </div>
 
                         {/* Interactive Animation Showcase Container */}

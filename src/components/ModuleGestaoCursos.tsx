@@ -17,7 +17,7 @@ import {
 import { COURSES_METADATA } from './ModuleCoursesData';
 
 export default function ModuleGestaoCursos() {
-  const { db, user, dbFirestore, appId, addToast } = useContext(ChurchContext);
+  const { db, user, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
   
   const [search, setSearch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('todos');
@@ -224,16 +224,21 @@ export default function ModuleGestaoCursos() {
         recipientName: student.nome,
         recipientType: 'membro',
         subject: `🏆 Seu Certificado de Conclusão de Curso: ${course.title}!`,
-        body: `Parabéns, querido(a) irmão(ã) ${student.nome}!\n\nÉ com enorme alegria que enviamos o seu Certificado de Conclusão do curso "${course.title}".\n\nVocê concluiu com sucesso todos os 10 módulos com dedicação máxima. Seu esforço é motivo de honra e celebração para todos nós!\n\nVocê pode visualizar e imprimir o seu diploma em alta resolução diretamente na sua Área de Membro, acessando o Portal de Cursos.\n\nContinue estudando e crescendo na graça e conhecimento!\n\nFraternalmente,\nPastor e Conselho de Ensino`,
+        body: `Parabéns, querido(a) irmão(ã) ${student.nome}!\n\nÉ com enorme alegria que enviamos em anexo o seu Certificado de Conclusão do curso "${course.title}".\n\nVocê concluiu com sucesso todos os módulos do curso EAD com excelente mérito. Seu esforço é motivo de honra e celebração para todos nós!\n\nO certificado digital oficial em alta definição segue em anexo para impressão.\n\nContinue estudando e crescendo na graça e conhecimento!\n\nFraternalmente,\nPastor e Conselho de Ensino`,
         timestamp: new Date().toISOString(),
         readByRecipient: false,
         deletedBySender: false,
         deletedByRecipient: false,
-        attachments: []
+        attachments: [
+          {
+            name: `CERTIFICADO_EAD_${course.title.toUpperCase().replace(/\s+/g, '_')}_${student.nome.toUpperCase().replace(/\s+/g, '_')}.pdf`,
+            data: "pdf_certificate_high_res_payload"
+          }
+        ]
       };
 
       await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'emails'), emailDoc);
-      addToast(`Mensagem de parabéns e Certificado enviado para o Webmail de ${student.nome}! 📑🎉`, "success");
+      addToast(`Mensagem de parabéns e Certificado enviado com anexo para ${student.nome}! 📑🎉`, "success");
     } catch (err) {
       console.error(err);
       addToast("Erro ao processar envio do certificado.", "error");
@@ -242,7 +247,21 @@ export default function ModuleGestaoCursos() {
 
   const handlePrintCertificate = () => {
     playMenuSound();
-    window.print();
+    
+    // Mount the precise format utilized in ModuleCertificados.tsx for print templates
+    const finalData = { 
+      igreja: db.igreja, 
+      membro: certificateModal.student, 
+      extra: {
+        curso: certificateModal.course.title,
+        cargo: certificateModal.student.cargo || 'Membro Ativo'
+      } 
+    }; 
+    
+    setPrintData(finalData); 
+    setPrintMode('cert_curso'); 
+    setPreviewOpen(true); 
+    setCertificateModal(null); // Close preview modal
   };
 
   return (
@@ -689,10 +708,14 @@ export default function ModuleGestaoCursos() {
                 
                 {/* Header */}
                 <div className="text-center flex flex-col items-center gap-2 w-full">
-                  <div className="w-16 h-16 bg-amber-50 rounded-full border border-amber-500/35 flex items-center justify-center text-amber-600 mb-2">
-                    <GraduationCap size={36} />
-                  </div>
-                  <h4 className="font-serif tracking-widest text-xs font-black uppercase text-amber-700">ASSEMBLEIA DE DEUS - SISTEMA GIPP</h4>
+                  {db.igreja?.logo ? (
+                    <img src={db.igreja.logo} className="w-16 h-16 object-contain mb-2 p-1 bg-white rounded-full border border-amber-500/35 shadow-sm" />
+                  ) : (
+                    <div className="w-16 h-16 bg-amber-50 rounded-full border border-amber-500/35 flex items-center justify-center text-amber-600 mb-2">
+                       <GraduationCap size={36} />
+                    </div>
+                  )}
+                  <h4 className="font-serif tracking-widest text-xs font-black uppercase text-amber-700">{db.igreja?.nome || 'ASSEMBLEIA DE DEUS'} - SISTEMA GIPP</h4>
                   <div className="w-16 h-0.5 bg-amber-500/55 my-1" />
                 </div>
 
@@ -739,8 +762,8 @@ export default function ModuleGestaoCursos() {
 
                   <div className="flex flex-col items-center w-1/3">
                     <div className="w-32 h-[1px] bg-slate-300 mb-1" />
-                    <p className="text-[10px] font-black text-slate-800">Pastor Presidente</p>
-                    <p className="text-[8px] text-slate-400 uppercase">Conselho Eclesiástico</p>
+                    <p className="text-[10px] font-black text-slate-800">{db.igreja?.pastor || "Pastor Presidente"}</p>
+                    <p className="text-[8px] text-slate-400 uppercase">Pastor Presidente</p>
                   </div>
                 </div>
 

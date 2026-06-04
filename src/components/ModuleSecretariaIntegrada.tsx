@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -451,146 +452,179 @@ const ModuleSecretariaIntegrada = () => {
                 )}
             </div>
 
-            {showLiturgiaModal && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 p-8 space-y-6 my-8 animate-entrance text-left font-sans">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-xl font-black text-slate-800">{editingLiturgiaId ? 'Editar Roteiro Litúrgico' : 'Criar Novo Roteiro Litúrgico'}</h3>
-                            <button onClick={()=>setShowLiturgiaModal(false)} className="p-1 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X size={18}/></button>
+            {showLiturgiaModal && createPortal(
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-lg animate-entrance overflow-y-auto no-print text-left">
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden relative">
+                        {/* Header Banner */}
+                        <div className="p-6 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white shrink-0 relative overflow-hidden flex justify-between items-center">
+                            <div className="relative z-10">
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200">GIPP Mapeamento Litúrgico</span>
+                                <h3 className="text-xl md:text-2xl font-black mt-1 font-['Outfit']">
+                                    {editingLiturgiaId ? 'Editar Roteiro Litúrgico' : 'Novo Roteiro Litúrgico'}
+                                </h3>
+                            </div>
+                            <button 
+                                onClick={() => setShowLiturgiaModal(false)}
+                                className="bg-white/10 hover:bg-rose-500 backdrop-blur-md p-2.5 rounded-2xl text-white/80 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group cursor-pointer"
+                            >
+                                <X size={18} className="group-hover:rotate-90 transition-transform duration-300"/>
+                            </button>
+                            <div className="absolute top-[-50%] right-[-10%] w-72 h-72 bg-white/[0.05] rounded-full blur-2xl pointer-events-none"></div>
                         </div>
-                        <form onSubmit={handleSaveLiturgia} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+
+                        <form onSubmit={handleSaveLiturgia} className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-4 max-h-[70vh] text-slate-705">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Data do Culto</label>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Data do Culto</label>
                                     <input type="date" value={liturgiaForm.data} onChange={e=>setLiturgiaForm({...liturgiaForm, data: e.target.value})} required className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Hora</label>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-2 mb-1">Hora</label>
                                     <input type="time" value={liturgiaForm.hora} onChange={e=>setLiturgiaForm({...liturgiaForm, hora: e.target.value})} required className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Tema / Título do Culto</label>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Tema / Título do Culto</label>
                                     <input type="text" value={liturgiaForm.titulo} onChange={e=>setLiturgiaForm({...liturgiaForm, titulo: e.target.value.toUpperCase()})} required placeholder="Ex: CULTO DE ADORAÇÃO E CELEBRAÇÃO" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Série de Sermões (Opcional)</label>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-2 mb-1">Série de Sermões (Opcional)</label>
                                     <input type="text" value={liturgiaForm.serie} onChange={e=>setLiturgiaForm({...liturgiaForm, serie: e.target.value.toUpperCase()})} placeholder="Ex: FAMÍLIAS INABALÁVEIS" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Dirigente da Liturgia</label>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Dirigente da Liturgia</label>
                                     <input type="text" value={liturgiaForm.dirigente} onChange={e=>setLiturgiaForm({...liturgiaForm, dirigente: e.target.value.toUpperCase()})} placeholder="Ex: COOP. FRANCISCO SOUZA" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-2 mb-1">Pregador (Ministro da Palavra)</label>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-2 mb-1">Pregador (Ministro da Palavra)</label>
                                     <input type="text" value={liturgiaForm.pregador} onChange={e=>setLiturgiaForm({...liturgiaForm, pregador: e.target.value.toUpperCase()})} placeholder="Ex: PR. JOÃO SILVA" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Texto Bíblico Oficial (Atos / Passagem)</label>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1 flex items-center">Texto Bíblico Oficial (Atos / Passagem)</label>
                                 <input type="text" value={liturgiaForm.leitura_biblica} onChange={e=>setLiturgiaForm({...liturgiaForm, leitura_biblica: e.target.value.toUpperCase()})} placeholder="Ex: SALMOS 122:1-9 ou JOÃO 3:16" className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Playlist de Cânticos (Louvores / Linha por Linha)</label>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1 border-slate-200">Playlist de Cânticos (Louvores / Linha por Linha)</label>
                                 <textarea value={liturgiaForm.louvor} onChange={e=>setLiturgiaForm({...liturgiaForm, louvor: e.target.value.toUpperCase()})} placeholder="Ex:&#10;1. ATRAÍDO PELO AMOR - HARPA CRISTÃ&#10;2. GRANDE É O SENHOR - REBANHO&#10;3. VENCENDO VEM JESUS" rows={3} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none uppercase font-sans" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1">Declaração / Esboço ou Pontos Críticos do Sermão (Aparece ao Membro)</label>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Declaração / Esboço ou Pontos Críticos do Sermão (Aparece ao Membro)</label>
                                 <textarea value={liturgiaForm.esboco_pregao} onChange={e=>setLiturgiaForm({...liturgiaForm, esboco_pregao: e.target.value})} placeholder="Pequena síntese ou divisões homiléticas (ex: I. Introdução, II. Desenvolvimento, III. Conclusão) para que os membros possam acompanhar a mensagem e tomar notas..." rows={4} className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" />
                             </div>
-                            <div className="flex gap-4 pt-4 font-sans">
-                                <button type="button" onClick={()=>setShowLiturgiaModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">Cancelar</button>
-                                <button type="submit" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20">Salvar Roteiro Litúrgico</button>
+                            <div className="flex gap-4 pt-4 font-sans border-t border-slate-100">
+                                <button type="button" onClick={()=>setShowLiturgiaModal(false)} className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg hover:shadow-indigo-505/20 cursor-pointer">Salvar Roteiro</button>
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {showLiturgiaPreview && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 p-8 space-y-6 my-8 animate-entrance relative text-left font-sans">
-                        <button onClick={()=>setShowLiturgiaPreview(null)} className="absolute top-6 right-6 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors z-20"><X size={18}/></button>
+            {showLiturgiaPreview && createPortal(
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-lg animate-entrance overflow-y-auto print:p-0 print:bg-white text-left">
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden relative print:border-0 print:shadow-none print:rounded-none print:max-h-none print:overflow-visible">
+                        {/* Header Banner */}
+                        <div className="p-6 bg-slate-900 text-white shrink-0 relative overflow-hidden flex justify-between items-center print:hidden">
+                            <div className="relative z-10 flex items-center gap-3">
+                                <div className="w-10 h-10 bg-amber-500 text-slate-950 rounded-xl flex items-center justify-center font-black">
+                                    <BookOpen size={20}/>
+                                </div>
+                                <div>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Preview Oficial</span>
+                                    <h3 className="text-base font-black mt-0.5 uppercase tracking-wide leading-none">Guia Litúrgico do Culto</h3>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowLiturgiaPreview(null)}
+                                className="bg-white/10 hover:bg-rose-600 backdrop-blur-md p-2 sm:px-3 text-[10px] font-black uppercase tracking-widest rounded-xl text-white/80 hover:text-white transition-all duration-350 shadow-lg border border-white/15 relative z-10 cursor-pointer flex items-center gap-1.5"
+                            >
+                                <X size={14} /> Fechar
+                            </button>
+                        </div>
                         
-                        <div id="print-liturgia-area" className="p-4 space-y-6 bg-slate-50 rounded-3xl border border-slate-100 font-sans text-slate-800 text-left">
-                            <div className="text-center pb-6 border-b border-slate-200/60">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#FFC500] px-3 py-1 bg-slate-900 rounded-full inline-block mb-3">Guia Litúrgico GIPP</span>
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight uppercase font-sans">{showLiturgiaPreview.titulo}</h2>
-                                <p className="text-xs font-bold text-slate-500 mt-1 uppercase flex items-center justify-center gap-1.5 font-sans">
-                                    <Calendar size={14} className="text-indigo-600"/> {showLiturgiaPreview.data ? new Date(showLiturgiaPreview.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : ''}
-                                    {showLiturgiaPreview.hora && <span> • {showLiturgiaPreview.hora}</span>}
-                                </p>
-                            </div>
-
-                            {showLiturgiaPreview.serie && (
-                                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-center font-sans">
-                                    <span className="text-[9px] font-black uppercase text-amber-600 tracking-widest block mb-1">Série de Mensagens Ativa</span>
-                                    <h3 className="text-lg font-black text-amber-900 leading-tight flex items-center justify-center gap-2 font-sans">
-                                        <Award size={18}/> {showLiturgiaPreview.serie}
-                                    </h3>
-                                </div>
-                            )}
-
-                            <div className="grid md:grid-cols-2 gap-6 font-sans">
-                                <div className="space-y-4 font-sans text-left">
-                                    <div className="p-4 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-1.5 font-sans">
-                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Direção Litúrgica</span>
-                                        <p className="text-xs font-bold text-slate-800 uppercase font-sans">{showLiturgiaPreview.dirigente || "Não Informado"}</p>
-                                    </div>
-                                    <div className="p-4 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-1.5 font-sans">
-                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Ministro da Palavra</span>
-                                        <p className="text-xs font-bold text-slate-800 uppercase font-sans">{showLiturgiaPreview.pregador || "Não Informado"}</p>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-2 font-sans text-left">
-                                    <span className="text-[9px] font-black text-[#FFC500] bg-slate-900 px-2 py-0.5 rounded uppercase tracking-widest inline-block font-sans">Leitura Bíblica Oficial</span>
-                                    <p className="text-sm font-extrabold text-slate-800 leading-tight uppercase flex items-center gap-1.5 font-sans">
-                                        <Book size={16} className="text-[#FFC500]" /> {showLiturgiaPreview.leitura_biblica || "Salmos 122"}
+                        <div className="p-6 sm:p-8 overflow-y-auto flex-1 custom-scrollbar bg-slate-55/35 print:p-0 print:bg-white print:overflow-visible text-slate-800">
+                            <div id="print-liturgia-area" className="p-6 space-y-6 bg-slate-50 rounded-3xl border border-slate-100 font-sans text-slate-800 text-left print:p-0 print:bg-white print:border-0 print:rounded-none">
+                                <div className="text-center pb-6 border-b border-slate-200/60 font-sans">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#FFC500] px-3 py-1 bg-slate-900 rounded-full inline-block mb-3 print:hidden">Guia Litúrgico GIPP</span>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight uppercase font-sans">{showLiturgiaPreview.titulo}</h2>
+                                    <p className="text-xs font-bold text-slate-500 mt-1 uppercase flex items-center justify-center gap-1.5 font-sans">
+                                        <Calendar size={14} className="text-indigo-600"/> {showLiturgiaPreview.data ? new Date(showLiturgiaPreview.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : ''}
+                                        {showLiturgiaPreview.hora && <span> • {showLiturgiaPreview.hora}</span>}
                                     </p>
-                                    <p className="text-[11px] text-slate-400 font-medium font-sans">Recomendamos que todos acompanhem a leitura oficial com a Bíblia impressa ou digital aberta.</p>
                                 </div>
+
+                                {showLiturgiaPreview.serie && (
+                                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-center font-sans">
+                                        <span className="text-[9px] font-black uppercase text-amber-600 tracking-widest block mb-1">Série de Mensagens Ativa</span>
+                                        <h3 className="text-lg font-black text-amber-900 leading-tight flex items-center justify-center gap-2 font-sans">
+                                            <Award size={18}/> {showLiturgiaPreview.serie}
+                                        </h3>
+                                    </div>
+                                )}
+
+                                <div className="grid md:grid-cols-2 gap-6 font-sans">
+                                    <div className="space-y-4 font-sans text-left">
+                                        <div className="p-4 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-1.5 font-sans">
+                                            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Direção Litúrgica</span>
+                                            <p className="text-xs font-bold text-slate-800 uppercase font-sans">{showLiturgiaPreview.dirigente || "Não Informado"}</p>
+                                        </div>
+                                        <div className="p-4 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-1.5 font-sans">
+                                            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Ministro da Palavra</span>
+                                            <p className="text-xs font-bold text-slate-800 uppercase font-sans">{showLiturgiaPreview.pregador || "Não Informado"}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-2 font-sans text-left">
+                                        <span className="text-[9px] font-black text-[#FFC500] bg-slate-950 px-2 py-0.5 rounded uppercase tracking-widest inline-block font-sans">Leitura Bíblica Oficial</span>
+                                        <p className="text-sm font-extrabold text-slate-800 leading-tight uppercase flex items-center gap-1.5 font-sans">
+                                            <Book size={16} className="text-[#FFC500]" /> {showLiturgiaPreview.leitura_biblica || "Salmos 122"}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400 font-medium font-sans">Recomendamos que todos acompanhem a leitura oficial com a Bíblia aberta.</p>
+                                    </div>
+                                </div>
+
+                                {showLiturgiaPreview.louvor && (
+                                    <div className="p-5 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-3 font-sans text-left">
+                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Playlist de Cânticos Louvores</span>
+                                        <div className="grid gap-2">
+                                            {showLiturgiaPreview.louvor.split('\n').filter(Boolean).map((song, idx) => (
+                                                <div key={idx} className="flex items-center gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-sans">
+                                                    <Music size={14} className="text-slate-400 shrink-0"/>
+                                                    <span className="uppercase font-sans">{song}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {showLiturgiaPreview.esboco_pregao && (
+                                    <div className="p-5 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-3 font-sans text-left">
+                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Notas de Estudo e Esboço do Sermão</span>
+                                        <div className="text-xs text-slate-600 leading-relaxed font-semibold whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-100 max-h-56 overflow-y-auto font-sans text-left">
+                                            {showLiturgiaPreview.esboco_pregao}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-
-                            {showLiturgiaPreview.louvor && (
-                                <div className="p-5 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-3 font-sans text-left">
-                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Playlist de Cânticos (Louvores Oficial)</span>
-                                    <div className="grid gap-2">
-                                        {showLiturgiaPreview.louvor.split('\n').filter(Boolean).map((song, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-sans">
-                                                <Music size={14} className="text-slate-400 shrink-0"/>
-                                                <span className="uppercase font-sans">{song}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {showLiturgiaPreview.esboco_pregao && (
-                                <div className="p-5 bg-white rounded-2xl border border-slate-150 shadow-sm space-y-3 font-sans text-left">
-                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block font-sans">Notas de Estudo e Esboço do Sermão</span>
-                                    <div className="text-xs text-slate-600 leading-relaxed font-semibold whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-100 max-h-56 overflow-y-auto font-sans text-left">
-                                        {showLiturgiaPreview.esboco_pregao}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
-                        <div className="flex gap-4 pt-4 border-t border-slate-100 font-sans text-left">
-                            <button onClick={()=>setShowLiturgiaPreview(null)} className="flex-1 py-3 bg-slate-150 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all">Fechar Guia</button>
-                            <button onClick={()=>{ window.print(); }} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20 flex items-center justify-center gap-1.5 opacity-90 font-sans">
+                        <div className="p-6 border-t border-slate-150 bg-slate-50 flex gap-4 font-sans text-left shrink-0 print:hidden">
+                            <button onClick={()=>setShowLiturgiaPreview(null)} className="flex-1 py-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">Fechar Guia</button>
+                            <button onClick={()=>{ window.print(); }} className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20 flex items-center justify-center gap-1.5 cursor-pointer">
                                 <Printer size={16}/> Imprimir Guia Litúrgico
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
 };
-
 
 export default ModuleSecretariaIntegrada;
