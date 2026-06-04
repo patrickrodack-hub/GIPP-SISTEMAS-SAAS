@@ -1,0 +1,335 @@
+import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { toPng, toJpeg, toBlob } from 'html-to-image';
+import { 
+  PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line
+} from 'recharts';
+import { 
+  LayoutDashboard, Users, Building2, CreditCard, FileText, Settings, 
+  LogOut, ChevronDown, ChevronRight, Plus, Edit, Trash2, Printer, 
+  Search, Menu, X, DollarSign, BookOpen, Globe, Calendar, UserCheck, 
+  CheckCircle, AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter, MapPin, Briefcase, Heart, GraduationCap, Shield, Download,
+  ClipboardList, Gift, PieChart as PieChartIcon, Upload, Image as ImageIcon, Database, Save, RefreshCw, Trash,
+  Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
+  CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
+  FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
+  MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
+  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
+  TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
+  MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
+  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
+  LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
+  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+} from 'lucide-react';
+
+import { 
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 
+  setDoc, onSnapshot, query, writeBatch, where, getDocs,
+  enableIndexedDbPersistence
+} from 'firebase/firestore';
+
+import { preprocessImage, storeMedia, getMedia, clearMedia } from '../lib/indexedDbService';
+
+import {
+  ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
+  Button, FormInput, FormSelect, BackupModal, ConfirmModal,
+  GenericTable, GenericModal, PageBoundaryIndicators, DocumentPreviewModal, PrintSystem,
+  AutocompleteRecipient, SharedEmailModule,
+  playMenuSound, playNotificationSound, getTodayDate, formatDateLocal, isValidCPF, formatCPF,
+  copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
+} from '../App';
+
+import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
+
+// Exporting component
+const ModuleConfigVisual = () => {
+    const { db, setDoc, doc, dbFirestore, appId, addToast, theme, setTheme } = useContext(ChurchContext);
+    const configData = db.igreja || {};
+    
+    const [selectedWall, setSelectedWall] = useState(configData.papel_parede || null);
+    const [selectedAnim, setSelectedAnim] = useState(configData.tipo_animacao || 'auto');
+    const [opacityFilter, setOpacityFilter] = useState(configData.papel_parede_opacidade !== undefined ? Number(configData.papel_parede_opacidade) : 40);
+    const [customUrl, setCustomUrl] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    // Sincroniza estados caso d_igreja mude externamente
+    useEffect(() => {
+        if (configData.papel_parede !== undefined) {
+            setSelectedWall(configData.papel_parede);
+        }
+        if (configData.tipo_animacao !== undefined) {
+            setSelectedAnim(configData.tipo_animacao);
+        }
+        if (configData.papel_parede_opacidade !== undefined) {
+            setOpacityFilter(Number(configData.papel_parede_opacidade));
+        }
+    }, [db.igreja]);
+
+    const handleSaveConfig = async (wall = selectedWall, anim = selectedAnim, opacity = opacityFilter) => {
+        setSaving(true);
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
+                papel_parede: wall,
+                tipo_animacao: anim,
+                papel_parede_opacidade: opacity
+            }, { merge: true });
+            addToast("Preferências visuais atualizadas com sucesso!", "success");
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao gravar novas configurações visuais.", "error");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 800 * 1024) { 
+                alert("Para melhor performance, escolha imagens de até 800KB.");
+                return; 
+            }
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result as string;
+                setSelectedWall(base64);
+                handleSaveConfig(base64, selectedAnim, opacityFilter);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleUrlSubmit = (e) => {
+        e.preventDefault();
+        if (!customUrl.startsWith('http://') && !customUrl.startsWith('https://')) {
+            addToast("Insira um endereço web de imagem válido (começando com http ou https).", "error");
+            return;
+        }
+        setSelectedWall(customUrl);
+        handleSaveConfig(customUrl, selectedAnim, opacityFilter);
+        setCustomUrl('');
+    };
+
+    return (
+        <div className="h-full flex flex-col space-y-8 animate-entrance font-sans text-slate-800 pb-12">
+            {/* Header decorativo */}
+            <div className="flex justify-between items-center bg-white/70 backdrop-blur-xl p-6 rounded-[2rem] border border-white/80 shadow-xs">
+                <div className="flex items-center gap-4">
+                    <div className="p-4 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl text-white shadow-md shadow-indigo-200">
+                        <Palette size={32}/>
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Experiência Visual & Temas</h2>
+                        <p className="text-sm text-slate-500 font-medium">Personalize a atmosfera visual do sistema com papéis de parede e estilos de animação.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Quadrante 1: Papel de Parede */}
+                <div className="lg:col-span-12 xl:col-span-7 bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                        <ImageIcon className="text-indigo-600" size={24}/>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800">1. Papel de Parede do Portal</h3>
+                            <p className="text-xs text-slate-550 font-medium">Selecione uma imagem para cobrir os fundos das páginas do sistema.</p>
+                        </div>
+                    </div>
+
+                    {/* Previa e Controles de Contraste */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                        <div className="md:col-span-5 relative h-36 w-full rounded-2xl overflow-hidden shadow-inner border border-slate-200/60 bg-slate-200 flex items-center justify-center">
+                            {selectedWall ? (
+                                <>
+                                    <div className="absolute inset-0 bg-cover bg-center transition-all duration-300" style={{ backgroundImage: `url(${selectedWall})` }} />
+                                    {opacityFilter > 0 && <div className="absolute inset-0 bg-black transition-all duration-300" style={{ opacity: opacityFilter / 100 }} />}
+                                    <span className="relative z-10 px-3 py-1.5 rounded-full bg-slate-900/80 text-white text-[10px] font-black uppercase tracking-widest leading-none">Live Prévia</span>
+                                </>
+                            ) : (
+                                <div className="text-center text-slate-400 p-4">
+                                    <ImageIcon className="mx-auto mb-2 opacity-40" size={28}/>
+                                    <span className="text-[11px] font-bold">Fundo Padrão Sólido</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="md:col-span-7 flex flex-col space-y-4">
+                            <div>
+                                <label className="text-xs font-black text-slate-700 block mb-1">Película de Contraste (Opacidade Escura)</label>
+                                <p className="text-[11px] text-slate-450 leading-relaxed mb-3">Escurece o papel de parede para garantir que os textos do menu e os cards fiquem perfeitamente visíveis.</p>
+                                <div className="flex items-center gap-4">
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="90" 
+                                        step="10" 
+                                        value={opacityFilter} 
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value);
+                                            setOpacityFilter(val);
+                                            handleSaveConfig(selectedWall, selectedAnim, val);
+                                        }}
+                                        className="flex-1 h-2 bg-slate-250 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none"
+                                    />
+                                    <span className="text-xs font-black bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-100 font-mono w-12 text-center">{opacityFilter}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Galeria de presets */}
+                    <div>
+                        <h4 className="text-xs font-black text-slate-550 uppercase tracking-wider mb-3">Galeria de Fundos de Alta Qualidade</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {GALLERY_WALLPAPERS.map((item, idx) => {
+                                const isSelected = selectedWall === item.value;
+                                return (
+                                    <button 
+                                        key={idx} 
+                                        onClick={() => {
+                                            setSelectedWall(item.value);
+                                            handleSaveConfig(item.value, selectedAnim, opacityFilter);
+                                        }}
+                                        className={`group relative flex flex-col h-24 rounded-2xl overflow-hidden border-2 text-left transition-all ${isSelected ? 'border-indigo-600 shadow-md shadow-indigo-100 ring-2 ring-indigo-600/20' : 'border-slate-100 hover:border-slate-300'}`}
+                                    >
+                                        <div className="absolute inset-0 bg-cover bg-center bg-slate-100 group-hover:scale-105 transition-transform duration-300" style={{ backgroundImage: `url(${item.thumb})` }} />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
+                                            <span className="text-[10px] font-bold text-white leading-tight truncate w-full">{item.name}</span>
+                                        </div>
+                                        {isSelected && (
+                                            <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-1 shadow-md">
+                                                <CheckCircle size={12} className="fill-white text-indigo-600"/>
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Envios personalizados */}
+                    <div className="pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <span className="text-xs font-black text-slate-700 block mb-2">Upload de Imagem Própria</span>
+                            <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50/10 cursor-pointer transition-all text-center">
+                                <Upload className="text-indigo-500 mb-2" size={24}/>
+                                <span className="text-xs font-black text-slate-700">Escolher arquivo JPG/PNG</span>
+                                <span className="text-[10px] text-slate-400 mt-1">Máximo 800 KB recomendado</span>
+                                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden"/>
+                            </label>
+                        </div>
+
+                        <div>
+                            <span className="text-xs font-black text-slate-700 block mb-2">Endereço de Imagem Web (URL)</span>
+                            <form onSubmit={handleUrlSubmit} className="flex flex-col space-y-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="https://exemplo.com/imagem.jpg" 
+                                    value={customUrl} 
+                                    onChange={(e) => setCustomUrl((e.target.value || "").toUpperCase())}
+                                    className="w-full text-xs px-4 py-3.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 border border-slate-200 rounded-2xl outline-none font-medium transition-all"
+                                />
+                                <Button type="submit" variant="ghost" className="border border-slate-200 py-3 text-xs flex justify-center items-center gap-2 hover:bg-slate-50 font-bold">
+                                    <ImagePlus size={16}/> Configurar via Link URL
+                                </Button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Coluna da Direita: Estilos de Animação & Tema do Sistema */}
+                <div className="lg:col-span-12 xl:col-span-5 flex flex-col gap-8">
+                    {/* Quadrante 2: Efeito de Animação de Fundo */}
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                            <Sparkles className="text-indigo-600" size={24}/>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800">2. Estilos de Animação</h3>
+                                <p className="text-xs text-slate-550 font-medium">Decida quais efeitos visuais flutuarão sobre o fundo escolhido.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col space-y-3 max-h-[320px] overflow-y-auto pr-1.5 custom-scrollbar">
+                            {ANIMATION_OPTIONS.map((opt) => {
+                                const isSelected = selectedAnim === opt.id;
+                                return (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => {
+                                            setSelectedAnim(opt.id);
+                                            handleSaveConfig(selectedWall, opt.id, opacityFilter);
+                                        }}
+                                        className={`flex items-start gap-4 p-4 rounded-3xl border-2 text-left transition-all ${isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
+                                    >
+                                        <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                            <opt.icon size={20}/>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs sm:text-sm font-black text-slate-800 leading-none">{opt.name}</span>
+                                                {isSelected && <span className="text-[9px] font-black uppercase text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md leading-none tracking-wider">Ativo</span>}
+                                            </div>
+                                            <p className="text-[11px] text-slate-555 leading-relaxed mt-1.5 font-medium">{opt.desc}</p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Quadrante 3: Tema do Sistema (Claro / Escuro) */}
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                            {theme === 'dark' ? <Moon className="text-indigo-600" size={24}/> : <Sun className="text-indigo-600" size={24}/>}
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800">3. Tema do Sistema</h3>
+                                <p className="text-xs text-slate-550 font-medium">Selecione o estilo visual padrão para a sua navegação permanente.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTheme('light');
+                                    addToast("Modo Claro ativado permanente!", "success");
+                                }}
+                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 ${theme === 'light' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
+                            >
+                                <div className={`p-3 rounded-2xl ${theme === 'light' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    <Sun size={24}/>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-xs sm:text-sm font-black text-slate-800">Modo Claro</span>
+                                    <span className="text-[10px] text-slate-400 font-medium">Design nítido e limpo</span>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTheme('dark');
+                                    addToast("Modo Escuro ativado permanente!", "success");
+                                }}
+                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 ${theme === 'dark' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
+                            >
+                                <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    <Moon size={24}/>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-xs sm:text-sm font-black text-slate-800">Modo Escuro</span>
+                                    <span className="text-[10px] text-slate-400 font-medium">Atmosfera elegante e noturna</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+export default ModuleConfigVisual;
