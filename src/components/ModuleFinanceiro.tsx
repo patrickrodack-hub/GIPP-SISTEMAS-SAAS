@@ -310,7 +310,8 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         {id: 3, label: 'Saídas', icon: ArrowDownCircle}, 
         {id: 4, label: 'Gestão de Despesas', icon: CreditCard},
         {id: 5, label: 'Análise de Dizimistas', icon: Target},
-        {id: 6, label: 'Lembretes & Cobranças', icon: Bell}
+        {id: 6, label: 'Lembretes & Cobranças', icon: Bell},
+        {id: 7, label: 'Relatórios Gerenciais', icon: FileBarChart}
     ];
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
     const StatCard = ({ title, value, sub = undefined, icon: Icon, color, active = undefined }: { title: any; value: any; sub?: any; icon: any; color: any; active?: any }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
@@ -802,6 +803,352 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                         </div>
                     </div>
                 )}
+
+                {/* --- ABA DE RELATÓRIOS GERENCIAIS (BALANCETE MENSAL) --- */}
+                {tab === 7 && (() => {
+                    // Cáculo agrupado e sumário das Entradas por Categoria
+                    const entradasAgrupadas = {};
+                    let totalEntradas = 0;
+                    financeiroFiltrado.filter((item: any) => item.tipo === 'entrada').forEach((item: any) => {
+                        const cat = item.categoria || 'Geral/Outros';
+                        const val = parseFloat(item.valor) || 0;
+                        entradasAgrupadas[cat] = (entradasAgrupadas[cat] || 0) + val;
+                        totalEntradas += val;
+                    });
+
+                    // Cálculo agrupado e sumário das Saídas por Categoria
+                    const saidasAgrupadas = {};
+                    let totalSaidas = 0;
+                    financeiroFiltrado.filter((item: any) => item.tipo === 'saida').forEach((item: any) => {
+                        const cat = item.categoria || 'Geral/Outros';
+                        const val = parseFloat(item.valor) || 0;
+                        saidasAgrupadas[cat] = (saidasAgrupadas[cat] || 0) + val;
+                        totalSaidas += val;
+                    });
+
+                    const saldoFin = totalEntradas - totalSaidas;
+
+                    // Método para formatar o mês do relatório
+                    const formatarMesAno = (dateString: string) => {
+                        if (!dateString) return '';
+                        const [ano, mes] = dateString.split('-');
+                        const nomesMeses = [
+                            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                        ];
+                        return `${nomesMeses[parseInt(mes) - 1]} de ${ano}`;
+                    };
+
+                    // Handler profissional para exportação estruturada em PDF
+                    const exportarPDFBalancete = () => {
+                        const docPdf = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: 'a4'
+                        });
+
+                        const pageW = docPdf.internal.pageSize.getWidth();
+                        const pageH = docPdf.internal.pageSize.getHeight();
+
+                        // Moldura externa elegante
+                        docPdf.setDrawColor(226, 232, 240);
+                        docPdf.setLineWidth(0.5);
+                        docPdf.rect(10, 10, pageW - 20, pageH - 20);
+
+                        // Barra superior decorativa indigo
+                        docPdf.setFillColor(79, 70, 229);
+                        docPdf.rect(10, 10, pageW - 20, 5, 'F');
+
+                        // Cabeçalho da Igreja
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.setFontSize(16);
+                        docPdf.setTextColor(30, 41, 59);
+                        docPdf.text((db.igreja?.nome || 'DIRETORIA ADMINISTRATIVA GIPP').toUpperCase(), pageW / 2, 24, { align: 'center' });
+
+                        docPdf.setFont('Helvetica', 'normal');
+                        docPdf.setFontSize(10);
+                        docPdf.setTextColor(100, 116, 139);
+                        docPdf.text(`DEMONSTRATIVO FINANCEIRO UNIFICADO E PRESTAÇÃO DE CONTAS`, pageW / 2, 29, { align: 'center' });
+                        
+                        const congRef = congregacaoFilter === 'todas' ? 'Todas as Congregações e Filiais' : (db.congregacoes?.find((c: any) => c.id === congregacaoFilter)?.nome || 'Sede Principal');
+                        docPdf.text(`Congregação: ${congRef} | Competência: ${formatarMesAno(filterDate)}`, pageW / 2, 34, { align: 'center' });
+
+                        // Linha divisória fina
+                        docPdf.setDrawColor(203, 213, 225);
+                        docPdf.setLineWidth(0.3);
+                        docPdf.line(15, 38, pageW - 15, 38);
+
+                        // 1. SEÇÃO DE RECEITAS
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.setFontSize(11);
+                        docPdf.setTextColor(16, 185, 129);
+                        docPdf.text("1. RECEITAS / ENTRADAS", 15, 45);
+
+                        docPdf.setFontSize(9);
+                        docPdf.setTextColor(71, 85, 105);
+                        let posY = 52;
+                        
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.text("Categoria", 15, posY);
+                        docPdf.text("Valor", pageW - 45, posY, { align: 'right' });
+                        docPdf.text("Participação %", pageW - 15, posY, { align: 'right' });
+                        posY += 3;
+                        docPdf.line(15, posY, pageW - 15, posY);
+                        posY += 5;
+
+                        docPdf.setFont('Helvetica', 'normal');
+                        const entriesReceitas = Object.entries(entradasAgrupadas).sort((a: any, b: any) => b[1] - a[1]);
+                        if (entriesReceitas.length === 0) {
+                            docPdf.setFont('Helvetica', 'italic');
+                            docPdf.text("Nenhum lançamento de receita registrado neste período.", 15, posY);
+                            posY += 7;
+                        } else {
+                            entriesReceitas.forEach(([cat, val]: any) => {
+                                docPdf.text(String(cat), 15, posY);
+                                docPdf.text(`R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 45, posY, { align: 'right' });
+                                const percente = totalEntradas > 0 ? ((val / totalEntradas) * 100).toFixed(1) : '0';
+                                docPdf.text(`${percente}%`, pageW - 15, posY, { align: 'right' });
+                                posY += 6;
+                            });
+                        }
+
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.text("TOTAL RECEITAS ARRECADADAS (A)", 15, posY);
+                        docPdf.text(`R$ ${totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 45, posY, { align: 'right' });
+                        docPdf.text("100.0%", pageW - 15, posY, { align: 'right' });
+                        posY += 8;
+
+                        // 2. SEÇÃO DE DESPESAS
+                        docPdf.line(15, posY, pageW - 15, posY);
+                        posY += 7;
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.setTextColor(239, 68, 68);
+                        docPdf.text("2. DESPESAS / SAÍDAS", 15, posY);
+                        posY += 7;
+
+                        docPdf.setFontSize(9);
+                        docPdf.setTextColor(71, 85, 105);
+                        docPdf.text("Categoria", 15, posY);
+                        docPdf.text("Valor", pageW - 45, posY, { align: 'right' });
+                        docPdf.text("Participação %", pageW - 15, posY, { align: 'right' });
+                        posY += 3;
+                        docPdf.line(15, posY, pageW - 15, posY);
+                        posY += 5;
+
+                        docPdf.setFont('Helvetica', 'normal');
+                        const entriesDespesas = Object.entries(saidasAgrupadas).sort((a: any, b: any) => b[1] - a[1]);
+                        if (entriesDespesas.length === 0) {
+                            docPdf.setFont('Helvetica', 'italic');
+                            docPdf.text("Nenhum lançamento de saída pago registrado neste período.", 15, posY);
+                            posY += 7;
+                        } else {
+                            entriesDespesas.forEach(([cat, val]: any) => {
+                                docPdf.text(String(cat), 15, posY);
+                                docPdf.text(`R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 45, posY, { align: 'right' });
+                                const percente = totalSaidas > 0 ? ((val / totalSaidas) * 100).toFixed(1) : '0';
+                                docPdf.text(`${percente}%`, pageW - 15, posY, { align: 'right' });
+                                posY += 6;
+                            });
+                        }
+
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.text("TOTAL DESPESAS PAGAS (B)", 15, posY);
+                        docPdf.text(`R$ ${totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 45, posY, { align: 'right' });
+                        docPdf.text("100.0%", pageW - 15, posY, { align: 'right' });
+                        posY += 8;
+
+                        // 3. SEÇÃO DE DEMONSTRATIVO DE SALDO
+                        docPdf.line(15, posY, pageW - 15, posY);
+                        posY += 7;
+
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.setTextColor(79, 70, 229);
+                        docPdf.text("3. DEMONSTRATIVO DE CONCILIAÇÃO DE CAIXA", 15, posY);
+                        posY += 7;
+
+                        docPdf.setFont('Helvetica', 'normal');
+                        docPdf.setTextColor(71, 85, 105);
+                        docPdf.text("Total de Receitas no Período (A)", 15, posY);
+                        docPdf.text(`R$ ${totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 15, posY, { align: 'right' });
+                        posY += 6;
+
+                        docPdf.text("Total de Despesas no Período (B)", 15, posY);
+                        docPdf.text(`R$ ${totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 15, posY, { align: 'right' });
+                        posY += 6;
+
+                        const saldoLiq = totalEntradas - totalSaidas;
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.setTextColor(saldoLiq >= 0 ? 16 : 239, saldoLiq >= 0 ? 185 : 68, saldoLiq >= 0 ? 129 : 68);
+                        docPdf.text(`SALDO LÍQUIDO ACUMULADO (A - B)`, 15, posY);
+                        docPdf.text(`R$ ${saldoLiq.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageW - 15, posY, { align: 'right' });
+                        posY += 18;
+
+                        // Caso passe o limite da folha, quebre e desenhe na segunda página
+                        if (posY > pageH - 45) {
+                            docPdf.addPage();
+                            docPdf.setDrawColor(226, 232, 240);
+                            docPdf.setLineWidth(0.5);
+                            docPdf.rect(10, 10, pageW - 20, pageH - 20);
+                            posY = 35;
+                        }
+
+                        // Campos para assinaturas obrigatórias
+                        docPdf.setDrawColor(148, 163, 184);
+                        docPdf.setLineWidth(0.3);
+                        docPdf.line(15, posY, 90, posY);
+                        docPdf.line(pageW - 90, posY, pageW - 15, posY);
+                        posY += 5;
+
+                        docPdf.setFont('Helvetica', 'bold');
+                        docPdf.setFontSize(8);
+                        docPdf.setTextColor(71, 85, 105);
+                        docPdf.text("PRESIDENTE / DIRETOR GIPP", 52.5, posY, { align: 'center' });
+                        docPdf.text("TESOUREIRO RESPONSÁVEL", pageW - 52.5, posY, { align: 'center' });
+                        posY += 4;
+                        
+                        docPdf.setFont('Helvetica', 'normal');
+                        docPdf.text("Assinatura do Representante", 52.5, posY, { align: 'center' });
+                        docPdf.text("Assinatura do Tesoureiro", pageW - 52.5, posY, { align: 'center' });
+
+                        // Rodapé metadata
+                        docPdf.setFontSize(7);
+                        docPdf.setTextColor(160, 174, 192);
+                        docPdf.text(`Documento gerado através do Módulo de Inteligência de Negócios do GIPP em ${new Date().toLocaleString('pt-BR')}`, pageW / 2, pageH - 12, { align: 'center' });
+
+                        docPdf.save(`Balancete_Gerencial_${formatarMesAno(filterDate).replace(/\s+/g, '_')}.pdf`);
+                        addToast("Relatório (Balancete) em formato PDF exportado com sucesso!", "success");
+                    };
+
+                    return (
+                        <div className="space-y-6 h-full overflow-y-auto custom-scrollbar p-1 animate-entrance">
+                            {/* Dashboard Superior */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="glass-card p-6 rounded-3xl relative overflow-hidden group border border-emerald-110 shadow-sm bg-gradient-to-tr from-emerald-50/20 to-white">
+                                    <div className="absolute -right-4 -top-4 text-emerald-100 opacity-20 transform scale-150"><ArrowUpCircle size={100}/></div>
+                                    <div className="relative z-10">
+                                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4"><ArrowUpCircle size={24}/></div>
+                                        <h3 className="text-3xl font-black text-slate-800 mb-1">R$ {totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Total de Receitas</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="glass-card p-6 rounded-3xl relative overflow-hidden group border border-rose-110 shadow-sm bg-gradient-to-tr from-rose-50/20 to-white">
+                                    <div className="absolute -right-4 -top-4 text-rose-100 opacity-20 transform scale-150"><ArrowDownCircle size={100}/></div>
+                                    <div className="relative z-10">
+                                        <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4"><ArrowDownCircle size={24}/></div>
+                                        <h3 className="text-3xl font-black text-slate-800 mb-1">R$ {totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Total de Despesas</p>
+                                    </div>
+                                </div>
+
+                                <div className={`glass-card p-6 rounded-3xl relative overflow-hidden group border shadow-sm bg-gradient-to-tr from-indigo-50/20 to-white ${saldoFin >= 0 ? 'border-indigo-100' : 'border-amber-100'}`}>
+                                    <div className="absolute -right-4 -top-4 text-indigo-100 opacity-20 transform scale-150"><Wallet size={100}/></div>
+                                    <div className="relative z-10">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${saldoFin >= 0 ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}><Wallet size={24}/></div>
+                                        <h3 className="text-3xl font-black text-slate-800 mb-1">R$ {saldoFin.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Resultado do Exercício ({saldoFin >= 0 ? "Superavit" : "Deficit"})</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Painel Central com Tabelas do Balancete e Botões */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-8 glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">Balancete Mensal Unificado</h3>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">{formatarMesAno(filterDate)}</p>
+                                        </div>
+                                        <Button 
+                                            onClick={exportarPDFBalancete} 
+                                            variant="success" 
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5"
+                                        >
+                                            <Download size={15}/>
+                                            Exportar PDF
+                                        </Button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                                        {/* Coluna 1: Entradas */}
+                                        <div className="space-y-4">
+                                            <h4 className="text-sm font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-100 pb-2 flex items-center gap-2"><ArrowUpCircle size={16}/> Receitas / Entradas</h4>
+                                            <div className="space-y-4">
+                                                {Object.keys(entradasAgrupadas).length === 0 ? (
+                                                    <p className="text-xs text-slate-400 italic">Sem registros no período.</p>
+                                                ) : (
+                                                    Object.entries(entradasAgrupadas).map(([cat, val]: any) => {
+                                                        const p = totalEntradas > 0 ? ((val / totalEntradas) * 100) : 0;
+                                                        return (
+                                                            <div key={cat} className="space-y-1">
+                                                                <div className="flex justify-between items-center text-xs font-bold text-slate-705">
+                                                                    <span>{cat}</span>
+                                                                    <span>R$ {val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                </div>
+                                                                <div className="w-full bg-slate-100 rounded-full h-2">
+                                                                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${p}%` }} />
+                                                                </div>
+                                                                <p className="text-[10px] text-right text-slate-400 font-extrabold">{p.toFixed(1)}%</p>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-slate-800 font-black text-sm">
+                                                    <span>Total Recebido</span>
+                                                    <span className="text-emerald-600 font-bold">R$ {totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Coluna 2: Saídas */}
+                                        <div className="space-y-4">
+                                            <h4 className="text-sm font-black text-rose-600 uppercase tracking-widest border-b border-rose-100 pb-2 flex items-center gap-2"><ArrowDownCircle size={16}/> Despesas / Saídas</h4>
+                                            <div className="space-y-4">
+                                                {Object.keys(saidasAgrupadas).length === 0 ? (
+                                                    <p className="text-xs text-slate-400 italic">Sem registros no período.</p>
+                                                ) : (
+                                                    Object.entries(saidasAgrupadas).map(([cat, val]: any) => {
+                                                        const p = totalSaidas > 0 ? ((val / totalSaidas) * 100) : 0;
+                                                        return (
+                                                            <div key={cat} className="space-y-1">
+                                                                <div className="flex justify-between items-center text-xs font-bold text-slate-705">
+                                                                    <span>{cat}</span>
+                                                                    <span>R$ {val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                </div>
+                                                                <div className="w-full bg-slate-100 rounded-full h-2">
+                                                                    <div className="bg-rose-500 h-2 rounded-full" style={{ width: `${p}%` }} />
+                                                                </div>
+                                                                <p className="text-[10px] text-right text-slate-400 font-extrabold">{p.toFixed(1)}%</p>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-slate-800 font-black text-sm">
+                                                    <span>Total Pago</span>
+                                                    <span className="text-rose-600 font-bold">R$ {totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-4 space-y-6">
+                                    <div className="glass-modern p-6 rounded-[2rem] border border-white/50 space-y-4 bg-gradient-to-tr from-slate-50/50 to-white text-slate-800">
+                                        <h3 className="font-bold text-slate-800 flex items-center gap-2"><FileBarChart size={18} className="text-indigo-500" /> Prestação de Contas</h3>
+                                        <p className="text-xs text-slate-500 leading-relaxed font-semibold">Os demonstrativos mensais facilitam a transparência com os membros do ministério, reunindo todas as arrecadações e pagamentos quitados. Certifique-se de que todas as notas fiscais estejam correspondidas antes de publicar a prestação de contas no painel geral.</p>
+                                        <div className="p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><CheckCircle size={16}/></div>
+                                            <div>
+                                                <h4 className="text-xs font-extrabold text-slate-705">Auditoria Completa</h4>
+                                                <p className="text-[10px] text-slate-450 font-medium tracking-tight">Balanços e lançamentos protegidos</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Modal do Histórico de Alterações */}

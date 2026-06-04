@@ -125,9 +125,9 @@ const ModuleDesenvolvedor = () => {
     };
 
     const defaultPlanos = {
-        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual', 'config_sistema'],
-        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'config_visual', 'config_sistema'],
-        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual', 'config_sistema']
+        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual', 'config_sistema', 'manual'],
+        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'config_visual', 'config_sistema', 'manual'],
+        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual', 'config_sistema', 'manual']
     };
 
     const defaultValores = { basico: 97, standard: 147, avancado: 197 };
@@ -140,6 +140,7 @@ const ModuleDesenvolvedor = () => {
         {id: 'dashboard', label: 'Visão Geral'},
         {id: 'changelog', label: 'Atualizações'},
         {id: 'sobre', label: 'Sobre o Sistema'},
+        {id: 'manual', label: 'Manual do Usuário'},
         {id: 'cad_membro', label: 'Membros (Rol)'},
         {id: 'visitantes', label: 'Visitantes & CRM'},
         {id: 'cad_igreja', label: 'Igreja Sede & Filiais'},
@@ -163,6 +164,7 @@ const ModuleDesenvolvedor = () => {
         {id: 'carteirinha_studio', label: 'Estúdio Carteirinhas'},
         {id: 'credencial_lote', label: 'Credencial Lote'},
         {id: 'secretaria_ebd', label: 'Gestão EBD'},
+        {id: 'gestao_cursos', label: 'EAD Cursos de Capacitação'},
         {id: 'missoes_painel', label: 'Depto. de Missões'},
         {id: 'rede_social', label: 'Estúdio de Artes'},
         {id: 'relatorios', label: 'Relatórios PDF'},
@@ -688,6 +690,84 @@ const ModuleDesenvolvedor = () => {
                                                 </td>
                                             </tr>
                                         ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* === NOVA VISUALIZAÇÃO: MATRIZ DE MÓDULOS DOS PLANOS === */}
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-4">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2 font-black tracking-tight">
+                                        <Layers size={20} className="text-indigo-600"/>
+                                        Matriz de Ativação de Módulos (SaaS)
+                                    </h3>
+                                    <p className="text-slate-400 text-xs mt-1 font-semibold">Visão panorâmica da liberação de recursos de acordo com a categoria de plano assinada.</p>
+                                </div>
+                                <div className="text-xs font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+                                    Total de Módulos Cadastrados: <span className="text-indigo-600 font-extrabold">{allModulesList.length}</span>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                                        <tr>
+                                            <th className="p-3.5 rounded-tl-xl w-1/2">Funcionalidade / Módulo</th>
+                                            <th className="p-3.5 text-center">Plano BÁSICO</th>
+                                            <th className="p-3.5 text-center">Plano STANDARD</th>
+                                            <th className="p-3.5 text-center rounded-tr-xl">Plano AVANÇADO</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {allModulesList.map(mod => {
+                                            const hasBasico = planosConfig.basico?.includes(mod.id);
+                                            const hasStandard = planosConfig.standard?.includes(mod.id);
+                                            const hasAvancado = planosConfig.avancado?.includes(mod.id);
+
+                                            return (
+                                                <tr key={mod.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="p-3.5">
+                                                        <span className="font-extrabold text-slate-800 block">{mod.label}</span>
+                                                        <span className="text-[10px] text-slate-400 font-mono">id: {mod.id}</span>
+                                                    </td>
+                                                    <td className="p-3.5 text-center">
+                                                        {hasBasico ? (
+                                                            <span className="inline-flex items-center justify-center bg-emerald-50 text-emerald-600 p-1.5 rounded-full border border-emerald-200 shadow-xs">
+                                                                <Check size={14} strokeWidth={3}/>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center justify-center bg-slate-50 text-slate-300 p-1.5 rounded-full border border-slate-100">
+                                                                <X size={12} strokeWidth={3}/>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3.5 text-center">
+                                                        {hasStandard ? (
+                                                            <span className="inline-flex items-center justify-center bg-emerald-50 text-emerald-600 p-1.5 rounded-full border border-emerald-200 shadow-xs">
+                                                                <Check size={14} strokeWidth={3}/>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center justify-center bg-slate-50 text-slate-300 p-1.5 rounded-full border border-slate-100">
+                                                                <X size={12} strokeWidth={3}/>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3.5 text-center">
+                                                        {hasAvancado ? (
+                                                            <span className="inline-flex items-center justify-center bg-emerald-50 text-emerald-600 p-1.5 rounded-full border border-emerald-200 shadow-xs">
+                                                                <Check size={14} strokeWidth={3}/>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center justify-center bg-slate-50 text-slate-300 p-1.5 rounded-full border border-slate-100">
+                                                                <X size={12} strokeWidth={3}/>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

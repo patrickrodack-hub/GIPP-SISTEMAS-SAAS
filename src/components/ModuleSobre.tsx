@@ -95,6 +95,17 @@ const ModuleSobre = () => {
                             <h4 className="font-black text-3xl text-slate-900">PATRICK PESSOA</h4>
                             <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mt-2 bg-indigo-50 py-1.5 px-4 rounded-full inline-block">Software Creator & Engineer</p>
                             <p className="text-sm text-slate-500 mt-6 leading-relaxed max-w-sm mx-auto font-medium">Aplicativo idealizado, arquitetado e desenvolvido com excelência para modernizar a administração eclesiástica, aliando fé a tecnologia de ponta.</p>
+                            
+                            <a 
+                                href="https://gipp-site.vercel.app/" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
+                            >
+                                <Globe size={16} />
+                                Visitar Nosso Site
+                                <ExternalLink size={14} className="opacity-80" />
+                            </a>
                         </div>
                     </div>
                 </div>
