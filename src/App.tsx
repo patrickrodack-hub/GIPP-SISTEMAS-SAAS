@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
+import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { 
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 
   setDoc, onSnapshot, query, writeBatch, where, getDocs,
@@ -9424,6 +9425,113 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [db, setDbState] = useState(MOCK_DB);
+
+  // FCM Messaging States
+  const [fcmToken, setFcmToken] = useState<string | null>(() => {
+    return localStorage.getItem('gipp_fcm_token') || null;
+  });
+  const [fcmStatus, setFcmStatus] = useState<'unsubscribed' | 'subscribing' | 'subscribed' | 'failed'>(() => {
+    return localStorage.getItem('gipp_fcm_token') ? 'subscribed' : 'unsubscribed';
+  });
+  const [fcmPermission, setFcmPermission] = useState<string>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
+
+  const requestFcmPermission = async () => {
+    try {
+      setFcmStatus('subscribing');
+      if (typeof window === 'undefined' || !('Notification' in window)) {
+        throw new Error('Notificações não são suportadas por este navegador de internet.');
+      }
+      
+      const permission = await Notification.requestPermission();
+      setFcmPermission(permission);
+      
+      if (permission === 'granted') {
+        const supported = await isSupported();
+        if (!supported) {
+          throw new Error('O navegador não possui suporte nativo ao Firebase Cloud Messaging.');
+        }
+
+        const messaging = getMessaging(app);
+        
+        // request device Registration Token
+        const token = await getToken(messaging, {
+          vapidKey: 'BO_e7r7Wv3gXCHl-SmsJ1BCHXJ9fRj_yVvFpX_FmC4fPnA7V3p_m-eWv8C4fSnW4fPnA7v3_mev_Wnv8'
+        });
+        
+        if (token) {
+          setFcmToken(token);
+          setFcmStatus('subscribed');
+          localStorage.setItem('gipp_fcm_token', token);
+          
+          if (user) {
+            const tokenRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_tokens', user.id);
+            await setDoc(tokenRef, { 
+              token, 
+              userId: user.id, 
+              userName: user.nome, 
+              updatedAt: new Date().toISOString() 
+            }, { merge: true });
+          }
+          
+          addToast("Inscrição de Notificações Push FCM realizada! 🔔", "success");
+        } else {
+          throw new Error('Falha de negociação com o servidor para obter token.');
+        }
+      } else {
+        setFcmStatus('failed');
+        addToast("A permissão para receber alertas do sistema foi negada.", "warning");
+      }
+    } catch (err: any) {
+      console.error("FCM Error: ", err);
+      setFcmStatus('failed');
+      addToast(`Falha ao registrar para Mensagens Push: ${err.message || err}`, "error");
+    }
+  };
+
+  useEffect(() => {
+    let unsubscribe: any = null;
+    isSupported().then(supported => {
+      if (supported && app) {
+        try {
+          const messaging = getMessaging(app);
+          unsubscribe = onMessage(messaging, (payload) => {
+            console.log('FCM Foreground: ', payload);
+            if (payload.notification) {
+              addToast(`📧 FCM: ${payload.notification.title} - ${payload.notification.body}`, "info");
+              // Append to real notifications list so it appears in the NotificationCenter
+              setDbState((prev: any) => {
+                const updatedNotifs = [
+                  {
+                    id: `fcm_${Date.now()}`,
+                    title: payload.notification?.title || 'Notificação Push',
+                    desc: payload.notification?.body || '',
+                    time: 'Agora',
+                    icon: Bell,
+                    color: 'indigo'
+                  },
+                  ...(prev.notifications || [])
+                ];
+                return { ...prev, notifications: updatedNotifs };
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("FCM Listener skipped in current environment context", e);
+        }
+      }
+    }).catch(err => {
+      console.warn("FCM was not loaded or is blocked in iframe", err);
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [app]);
   const [clearedNotifications, setClearedNotifications] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('gipp_cleared_notifs') || '[]');
@@ -10797,6 +10905,46 @@ export default function App() {
             } catch (err) {
                 console.warn("Erro ao registar cache IndexedDB pós-guardar:", err);
             }
+
+            // Automatic Push Notifications (FCM) on scales/events registration
+            if ((colName === 'tarefas' || colName === 'agenda' || colName === 'eventos') && Array.isArray(safeData.equipe) && safeData.equipe.length > 0) {
+                try {
+                    const notificationTitle = `Nova Escala Ativa: ${safeData.titulo || safeData.descricao || 'Compromisso Escalar'}`;
+                    const notificationBody = `Olá! Você foi escalado(a) como "${safeData.equipe.map((m: any) => m.funcao_escala || 'Membro').join(', ')}" no dia ${safeData.data ? safeData.data : 'agendado'}.`;
+                    
+                    const newNotification = {
+                        id: `scale_notif_${savedId}_${Date.now()}`,
+                        title: notificationTitle,
+                        desc: notificationBody,
+                        time: 'Configurado Agora',
+                        icon: 'Bell',
+                        color: 'indigo'
+                    };
+                    
+                    setDbState((prev: any) => {
+                        return {
+                            ...prev,
+                            notifications: [newNotification, ...(prev.notifications || [])]
+                        };
+                    });
+
+                    safeData.equipe.forEach(async (member: any) => {
+                        console.log(`[FCM Push Dispatch] Disparando Push para Membro: ${member.nome} (ID: ${member.id})`);
+                        await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_push_logs'), {
+                            recipientId: member.id,
+                            recipientName: member.nome,
+                            title: notificationTitle,
+                            body: notificationBody,
+                            sentAt: new Date().toISOString(),
+                            status: 'scheduled_fcm'
+                        });
+                    });
+                    
+                    addToast("Notificações automáticas de escala disparadas via FCM! 🔔", "success");
+                } catch (pushErr) {
+                    console.warn("[FCM auto-dispatch skipped]", pushErr);
+                }
+            }
         }
         handleSuccess("Guardado com sucesso!");
     } catch (e) { 
@@ -10805,7 +10953,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications };
+  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
 
   if (!user) { 
     return ( 

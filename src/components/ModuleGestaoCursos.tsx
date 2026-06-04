@@ -7,6 +7,7 @@ import {
   AlertCircle, Phone, Mail, Calendar, HelpCircle, FileText, Download, Printer, X, Edit
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
+import { jsPDF } from 'jspdf';
 
 // Accessing main App's contexts and styling helpers
 import { 
@@ -216,6 +217,92 @@ export default function ModuleGestaoCursos() {
 
   const handleSendCertificateEmail = async (student: any, course: any) => {
     try {
+      // Generate a high-resolution, professional PDF certificate using jsPDF
+      const docPdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const width = docPdf.internal.pageSize.getWidth();
+      const height = docPdf.internal.pageSize.getHeight();
+
+      // Draw a classic double gold border
+      docPdf.setDrawColor(180, 140, 60); // Gold
+      docPdf.setLineWidth(1.5);
+      docPdf.rect(10, 10, width - 20, height - 20);
+      
+      docPdf.setDrawColor(120, 90, 40); // Darker Gold
+      docPdf.setLineWidth(0.5);
+      docPdf.rect(12, 12, width - 24, height - 24);
+
+      // Certificate Title Header
+      docPdf.setTextColor(120, 90, 40);
+      docPdf.setFont('Helvetica', 'bold');
+      docPdf.setFontSize(26);
+      docPdf.text('CERTIFICADO DE CONCLUSAO', width / 2, 35, { align: 'center' });
+
+      docPdf.setFontSize(10);
+      docPdf.setFont('Helvetica', 'normal');
+      docPdf.setTextColor(100, 100, 100);
+      const churchName = (db.igreja?.nome || 'MINISTERIO LOCAL').toUpperCase();
+      docPdf.text(churchName, width / 2, 44, { align: 'center' });
+
+      // Gold Separator line
+      docPdf.setDrawColor(180, 140, 60);
+      docPdf.setLineWidth(0.5);
+      docPdf.line(width / 2 - 30, 49, width / 2 + 30, 49);
+
+      // Middle certificate speech
+      docPdf.setTextColor(80, 80, 80);
+      docPdf.setFontSize(14);
+      docPdf.text('Certificamos para os devidos fins que o(a) aluno(a)', width / 2, 65, { align: 'center' });
+
+      docPdf.setTextColor(20, 20, 20);
+      docPdf.setFontSize(20);
+      docPdf.setFont('Helvetica', 'bold');
+      docPdf.text(student.nome.toUpperCase(), width / 2, 78, { align: 'center' });
+
+      docPdf.setTextColor(80, 80, 80);
+      docPdf.setFontSize(13);
+      docPdf.setFont('Helvetica', 'normal');
+      docPdf.text('concluiu com exito e eminente aproveitamento o Curso de Ensino a Distancia (EAD):', width / 2, 92, { align: 'center' });
+
+      docPdf.setTextColor(180, 120, 40);
+      docPdf.setFontSize(18);
+      docPdf.setFont('Helvetica', 'bold');
+      docPdf.text(course.title.toUpperCase(), width / 2, 106, { align: 'center' });
+
+      docPdf.setTextColor(100, 100, 100);
+      docPdf.setFontSize(11);
+      docPdf.setFont('Helvetica', 'normal');
+      docPdf.text('Cumprindo integralmente a carga horaria e as diretrizes programáticas do curso desenvolvidas nas dependencias do GIPP EAD.', width / 2, 118, { align: 'center' });
+
+      // Issuing Date
+      const todayString = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+      docPdf.text(`Emitido aos ${todayString}`, width / 2, 132, { align: 'center' });
+
+      // Signature line Design
+      docPdf.setDrawColor(180, 180, 180);
+      docPdf.setLineWidth(0.3);
+      docPdf.line(width / 2 - 40, 160, width / 2 + 40, 160);
+
+      docPdf.setFontSize(10);
+      docPdf.setFont('Helvetica', 'bold');
+      docPdf.setTextColor(40, 40, 40);
+      const pastorName = db.igreja?.pastor || 'Pastor Presidente';
+      docPdf.text(pastorName, width / 2, 166, { align: 'center' });
+      docPdf.setFontSize(8);
+      docPdf.setTextColor(120, 120, 120);
+      docPdf.text('DIRECAO DA IGREJA EM PARCEIRA ADMINISTRATIVA COM CONSELHO DE ENSINO', width / 2, 172, { align: 'center' });
+
+      // Generate base64 data URI string
+      const dataUriString = docPdf.output('datauristring');
+
       const emailDoc = {
         senderId: user.id,
         senderName: user.nome,
@@ -231,8 +318,8 @@ export default function ModuleGestaoCursos() {
         deletedByRecipient: false,
         attachments: [
           {
-            name: `CERTIFICADO_EAD_${course.title.toUpperCase().replace(/\s+/g, '_')}_${student.nome.toUpperCase().replace(/\s+/g, '_')}.pdf`,
-            data: "pdf_certificate_high_res_payload"
+            name: `CERTIFICADO_${course.title.toUpperCase().replace(/\s+/g, '_')}_${student.nome.toUpperCase().replace(/\s+/g, '_')}.pdf`,
+            data: dataUriString
           }
         ]
       };

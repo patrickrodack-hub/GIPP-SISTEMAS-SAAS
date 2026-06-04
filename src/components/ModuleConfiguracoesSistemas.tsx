@@ -50,10 +50,11 @@ const ModuleConfiguracoesSistemas = () => {
         printPalette, setPrintPalette, printMarginType, setPrintMarginType, 
         printOrientation, setPrintOrientation, printContentScale, setPrintContentScale,
         setPrintData, setPrintMode, setPreviewOpen, setDoc, doc,
-        notifications, clearAllNotifications
+        notifications, clearAllNotifications,
+        fcmToken, fcmStatus, fcmPermission, requestFcmPermission
     } = context;
 
-    const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte'>('performance');
+    const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte' | 'notificacoes'>('performance');
 
     // 1 - Performance states
     const [optRunning, setOptRunning] = useState(false);
@@ -329,6 +330,12 @@ const ModuleConfiguracoesSistemas = () => {
                     className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black tracking-wider uppercase transition-all ${activeTab === 'suporte' ? 'bg-indigo-600 text-white shadow' : 'text-slate-650 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
                 >
                     <Headset size={14}/> Solicitar Suporte
+                </button>
+                <button 
+                    onClick={() => { setActiveTab('notificacoes'); setSupportTicketId(null); }}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black tracking-wider uppercase transition-all ${activeTab === 'notificacoes' ? 'bg-indigo-600 text-white shadow' : 'text-slate-605 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
+                >
+                    <Bell size={14}/> Push (FCM)
                 </button>
             </div>
 
@@ -809,6 +816,110 @@ const ModuleConfiguracoesSistemas = () => {
                                 </div>
                             </>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'notificacoes' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Status Card */}
+                        <div className="md:col-span-1 bg-white border border-slate-205 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800 mb-2">Inscrição de Aparelho</h3>
+                                <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-6">Assine o canal de notificações deste dispositivo para receber alertas automáticos de escalas e dízimos via Google FCM.</p>
+
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Permissão</span>
+                                        <span className={`text-[10px] uppercase font-black px-2 py-1 rounded-lg ${fcmPermission === 'granted' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                                            {fcmPermission}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Canal FCM</span>
+                                        <span className={`text-[10px] uppercase font-black px-2 py-1 rounded-lg ${fcmStatus === 'subscribed' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-slate-100 text-slate-500'}`}>
+                                            {fcmStatus}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={requestFcmPermission}
+                                disabled={fcmStatus === 'subscribing'}
+                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-xs tracking-wider uppercase border border-transparent shadow ${fcmStatus === 'subscribed' ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                            >
+                                <Bell size={14}/>
+                                {fcmStatus === 'subscribed' ? 'Canal Ativo de Push ✅' : (fcmStatus === 'subscribing' ? 'Conectando...' : 'Ativar Notificações Push')}
+                            </button>
+                        </div>
+
+                        {/* Details and Diagnostics */}
+                        <div className="md:col-span-2 bg-white border border-slate-205 rounded-3xl p-6 shadow-sm space-y-6">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider mb-2">Token de Registro do Navegador</h3>
+                                <p className="text-slate-400 text-xs mb-4">Este é o identificador exclusivo gerado pelo Firebase para entregar notificações personalizadas a este browser.</p>
+                                {fcmToken ? (
+                                    <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-xs text-slate-600 overflow-hidden leading-snug">
+                                        <span className="truncate flex-1 select-all">{fcmToken}</span>
+                                        <button 
+                                            onClick={() => { navigator.clipboard.writeText(fcmToken); addToast("Token FCM copiado!", "success"); }}
+                                            className="p-2 border border-slate-250 hover:bg-slate-100 rounded-xl transition-all"
+                                            title="Copiar Token"
+                                        >
+                                            <Copy size={13} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 border border-dashed border-slate-200 rounded-2xl text-center text-slate-400 font-medium text-xs leading-relaxed">
+                                        Nenhum token ativado. Clique em "Ativar Notificações Push" para gerar o canal de integridade.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="border-t border-slate-100 pt-6">
+                                <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider mb-4">Testar Simulador de Push FCM</h3>
+                                <div className="space-y-4 max-w-lg">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-black uppercase text-slate-400">Título de Teste</label>
+                                            <input 
+                                                type="text"
+                                                id="test_push_title"
+                                                placeholder="Ex: Escala de Músicos Confirmada"
+                                                className="w-full border-2 border-slate-200 bg-slate-50/20 p-3 rounded-2xl text-xs font-bold outline-none text-slate-700"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-black uppercase text-slate-400">Mensagem do Alerta</label>
+                                            <input 
+                                                type="text"
+                                                id="test_push_body"
+                                                placeholder="Ex: Você foi escalado para Domingo à noite."
+                                                className="w-full border-2 border-slate-200 bg-slate-50/20 p-3 rounded-2xl text-xs font-bold outline-none text-slate-700"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => {
+                                            const titleVal = (document.getElementById('test_push_title') as HTMLInputElement)?.value || 'Notificação de Teste';
+                                            const bodyVal = (document.getElementById('test_push_body') as HTMLInputElement)?.value || 'Isso é um simulado do Firebase Cloud Messaging!';
+                                            
+                                            if ('Notification' in window && Notification.permission === 'granted') {
+                                                new Notification(titleVal, { body: bodyVal });
+                                                addToast("Notificação Push de teste disparada! 🔔", "success");
+                                            } else {
+                                                addToast(`Sem permissão. Título: ${titleVal}, Conteúdo: ${bodyVal}`, "info");
+                                            }
+                                        }}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs tracking-wider uppercase px-6 py-4 rounded-2xl shadow-sm flex items-center gap-2 active:scale-95 transition-all w-fit"
+                                    >
+                                        <Send size={13} /> Disparar Teste Push Manual
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

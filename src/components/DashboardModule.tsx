@@ -120,6 +120,35 @@ const DashboardModule = () => {
         { name: 'Outros', value: estadoCivilCount.Outros, fill: '#94a3b8' },
     ];
 
+    const dizimosAnoCorrente = useMemo(() => {
+        return (db.financeiro || []).filter(filterByCongregacao).filter((f: any) => {
+            const cat = (f.categoria || '').toLowerCase();
+            const matchCategory = cat.includes('dízimo') || cat.includes('dizimo');
+            const isEntrada = f.tipo === 'entrada';
+            const dateStr = f.data_pagamento || f.data_vencimento || f.data || '';
+            const matchYear = dateStr.startsWith(String(currentYear));
+            return matchCategory && isEntrada && matchYear;
+        });
+    }, [db.financeiro, currentYear, congregacaoFilter]);
+
+    const dataDizimosMensal = useMemo(() => {
+        const monthNamesAbbr = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        return monthNamesAbbr.map((label, idx) => {
+            const mNum = String(idx + 1).padStart(2, '0');
+            const total = dizimosAnoCorrente
+                .filter((f: any) => {
+                    const dateStr = f.data_pagamento || f.data_vencimento || f.data || '';
+                    return dateStr.includes(`-${mNum}-`) || dateStr.startsWith(`${currentYear}-${mNum}`);
+                })
+                .reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+            
+            return {
+                mes: label,
+                "Dízimos (R$)": parseFloat(total.toFixed(2))
+            };
+        });
+    }, [dizimosAnoCorrente, currentYear]);
+
     const aniversariantes = (db.membros || []).filter(filterByCongregacao).filter(m => {
         if (!m.data_nascimento) return false;
         const [y, month, d] = m.data_nascimento.split('-');
@@ -315,6 +344,42 @@ const DashboardModule = () => {
                                 <span className="text-2xl font-black text-slate-300 opacity-50">{totalMembros}</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Evolução de Dízimos */}
+                <div className="glass-modern p-6 rounded-[2.5rem]">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                        <div>
+                            <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                <TrendingUp size={20} className="text-emerald-500" /> Evolução Mensal de Entradas de Dízimos
+                            </h3>
+                            <p className="text-xs text-slate-500 font-medium">Histórico acumulado mês a mês do ano de {currentYear}</p>
+                        </div>
+                        <div className="bg-emerald-50 text-emerald-700 font-bold text-xs px-3 py-1.5 rounded-xl border border-emerald-100 flex items-center gap-1.5 shadow-sm">
+                            <DollarSign size={13} />
+                            Total Geral: R$ {dizimosAnoCorrente.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                    </div>
+                    <div className="h-72 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={dataDizimosMensal} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorDizimos" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="mes" tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} axisLine={false} />
+                                <YAxis tickLine={false} tickFormatter={(val) => `R$ ${val}`} tick={{ fontSize: 10, fontWeight: 'medium', fill: '#64748b' }} axisLine={false} />
+                                <RechartsTooltip 
+                                    formatter={(value: any) => [`R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Dízimos']}
+                                    contentStyle={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }} 
+                                />
+                                <Area type="monotone" dataKey="Dízimos (R$)" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorDizimos)" animationDuration={1600} />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
