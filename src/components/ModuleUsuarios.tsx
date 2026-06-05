@@ -482,7 +482,7 @@ const ModuleUsuarios = memo(() => {
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Key size={13} className="text-indigo-500"/> Senha de Acesso</label>
                       <input 
-                        type="text"
+                        type={user?.id === 'dev' ? "text" : "password"}
                         required
                         value={formData.senha}
                         onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
