@@ -4,7 +4,8 @@ import {
   MapPin, Bell, Shield, Info, Download, Star, Settings, CheckCircle, 
   AlertTriangle, Lightbulb, Phone, Mail, FileText, FileBarChart, Award, 
   Sparkles, Layers, Cpu, CheckSquare, RefreshCw, Printer, Trash2, Heart,
-  Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database
+  Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database,
+  Plus, GraduationCap, Baby, ShieldAlert
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -43,7 +44,130 @@ export default function ModuleManualUsuario() {
     let faqs: { q: string, a: string }[] = [];
     let tips: string[] = [];
 
-    if (cat === 'membros') {
+    const code = subMod.id.toLowerCase();
+    
+    if (['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(code)) {
+      if (code === 'k1') {
+        introTexts = [
+          `O Módulo de Check-in e Check-out Seguro da Salinha Kids (GIPP-K1) oferece proteção incondicional às crianças entregues aos cuidados da igreja durante as liturgias e cultos dominicais.`,
+          `Este sistema assegura que apenas responsáveis autorizados e portadores do PIN ou crachá possam retirar os pequenos do recinto de convivência.`
+        ];
+        steps = [
+          `Acesse o painel do líder da Salinha Kids e navegue até a aba Check-in/Out.`,
+          `Localize a criança pelo nome ou utilize o crachá cadastral para acionar o check-in.`,
+          `Digite o telefone ou PIN secreto do responsável e confirme o registro de entrada na salinha.`,
+          `No momento da saída, exija o PIN ou o código numérico impresso para aprovar a conclusão do check-out.`
+        ];
+        securityLevel = "Líder Kids / Voluntário de Recepção Infantil";
+        securityText = `Todos os registros de entrada e saída bloqueiam retiradas sem a apresentação formal do PIN secreto ou documento correspondente, gerando logs imediatos na trilha de auditoria para integridade total.`;
+        faqs = [
+          { q: "O que fazer se o responsável esqueceu o código PIN?", a: "O líder com permissão de coordenação poderá consultar e resetar o PIN do responsável na ficha de cadastro da criança de forma segura." }
+        ];
+        tips = [
+          "Sempre confira visualmente a pulseira e o crachá antes da saída física.",
+          "Auxilie os novos voluntários nas primeiras chamadas do painel."
+        ];
+      } else if (code === 'k2') {
+        introTexts = [
+          `O Painel de Relatório de Ocorrências da Salinha Kids (GIPP-K2) fornece para a coordenação ministerial um quadro consolidador analítico de todas as ocorrências e incidentes havidos na semana.`,
+          `Desta forma, os pastores e diretores podem planejar treinamentos e adequações de espaço de forma estatisticamente embasada.`
+        ];
+        steps = [
+          `Navegue até a aba Ocorrências no Módulo Salinha Kids.`,
+          `Habilite o Painel de Coordenação para visualizar o consolidado estatístico de incidentes.`,
+          `Selecione o filtro de período (Diário ou Semanais) para agrupar as ocorrências registradas pelas professoras.`,
+          `Clique no botão "Exportar PDF" para emitir o documento timbrado oficial.`
+        ];
+        securityLevel = "Coordenador Geral Kids / Diretor do Departamento Infantil";
+        securityText = `Informações e relatos de incidentes são de cunho confidencial, sendo protegidos por regras rígidas de acesso e sigilo.`;
+        faqs = [
+          { q: "Quais ocorrências entram no relatório exportado?", a: "Todas as ocorrências registradas na data/semana filtrada, incluindo pendentes, resolvidas e urgentes." }
+        ];
+        tips = [
+          "Verifique se o relato possui descrição fidedigna antes de arquivar ou resolver.",
+          "Use os PDFs exportados nas reuniões semanais da diretoria."
+        ];
+      } else if (code === 'k3') {
+        introTexts = [
+          `O Módulo de Notificações Ativas de Incidentes da Salinha Kids (GIPP-K3) automatiza a transparência imediata junto aos pais e responsáveis cadastrados.`,
+          `Sempre que uma ocorrência grave ou urgente for registrada, o sistema gera disparos sonoros e alertas urgentes no Portal do Membro.`
+        ];
+        steps = [
+          `A professora preenche o formulário de ocorrência infantil correspondente, marcando a gravidade como 'URGENTE'.`,
+          `Ao salvar a ocorrência, a engrenagem do GIPP dispara nos canais locais e sonoros do dispositivo dos pais.`,
+          `O responsável recebe no Portal do Membro o cabeçalho descritivo com o incidente, sabendo instantaneamente o que houve.`
+        ];
+        securityLevel = "Professor Kids / Coordenador Local";
+        securityText = `Regras de disparos urgentes visam a tranquilidade da família, sendo monitorados por logs de rede para certificar a entrega do sinal de áudio e visual.`;
+        faqs = [
+          { q: "O som de alerta toca mesmo com o celular bloqueado?", a: "Sim, caso os pais tenham aceitado receber notas visuais e concedido a permissão física para canais de reprodução sonora." }
+        ];
+        tips = [
+          "Evite criar ocorrências qualificadas como urgentes para fatos corriqueiros (ex: sonolência leve).",
+          "Mantenha o telefone dos responsáveis sempre atualizado."
+        ];
+      } else if (code === 'ebd1') {
+        introTexts = [
+          `O Módulo de Chamada Interativa da EBD (GIPP-EBD1) moderniza o controle de faltas e presenças das classes dominicais da Escola Bíblica.`,
+          `Integra em uma única planilha o acompanhamento de ofertas de classe, revistas de estudo estudadas e se o aluno trouxe sua Bíblia.`
+        ];
+        steps = [
+          `Acesse a aba EBD no menu lateral e selecione a Sala e a Lição correspondente ao dia.`,
+          `Marque a presença e assinale em 1 clique os itens de Bíblia, Revista e Oferta Voluntária.`,
+          `Visualize em tempo real o gráfico demonstrando a oscilação de presença da classe dominical.`,
+          `No encerramento das aulas, publique as medalhas aos alunos de destaque (Aluno Ouro/Prata/Bronze).`
+        ];
+        securityLevel = "Professor Titular EBD / Superintendente de Escola";
+        securityText = `As planilhas de chamadas salvam históricos permanentes cruciais para a análise espiritual de dedicação bíblica local.`;
+        faqs = [
+          { q: "Como um aluno recebe a insígnia Aluno Ouro?", a: "Mantendo presença exemplar e trazendo Bíblia sagrada, revista de estudos de classe e ofertas ordinárias acumuladas." }
+        ];
+        tips = [
+          "Utilize o lançamento rápido de chamada para evitar atrasos na programação.",
+          "Incentive os pais a apoiarem as crianças no preenchimento de suas revistas."
+        ];
+      } else if (code === 'ead1') {
+        introTexts = [
+          `O Módulo de Cursos EAD e Teologia Acadêmica GIPP (GIPP-EAD1) democratiza o ensino sistemático aos voluntários locais.`,
+          `Com trilhas integradas de apologética CPAD, quizes dinâmicos e emissão de certificados timbrados, o desenvolvimento teológico é impulsionado.`
+        ];
+        steps = [
+          `O aluno acessa o ambiente EAD e escolhe o curso ativo de sua preferência.`,
+          `Assiste ou lê o material de ementa contido em cada módulo dinâmico do curso e lição.`,
+          `Responde ao quiz de fixação doutrinária demonstrando seus saberes teológicos acumulados.`,
+          `Ao concluir com nota ideal, solicita e faz o download de seu certificado HD com bordaduras.`
+        ];
+        securityLevel = "Líder Pedagógico / Diretor de Capacitação e Ensino";
+        securityText = `O controle de avaliações e nota de aproveitamento dos cursos impede a emissão inadequada de certificados eclesiásticos oficiais.`;
+        faqs = [
+          { q: "Quais tipos de cursos podem ser oferecidos no EAD?", a: "Cursos de Capacitação de Obreiros, Evangelismo Urbano, Defesa da Fé Cristã e Teologia Sistemática de Base." }
+        ];
+        tips = [
+          "Recomende a leitura cuidadosa dos quizes e textos de apoio antes de responder.",
+          "Imprima os certificados em papel fosco texturizado de alta qualidade."
+        ];
+      } else if (code === 'lit1') {
+        introTexts = [
+          `O Planeamento Litúrgico e Sermões Litúrgicos (GIPP-LIT1) unifica os rituais semanais dos templos dominicais.`,
+          `Evita sobreposições ou redundâncias de playlists de cânticos ou de temas homiléticos, criando um arquivo contínuo de temas pregados.`
+        ];
+        steps = [
+          `Acesse a aba de Planeamento Litúrgico no Portal do Pastor.`,
+          `Insira o tema do culto, indique o orador oficial, o dirigente de louvor e a seleção de hinos sugeridos.`,
+          `Anexe o resumo teológico ou roteiro da homilia que será partilhada com os irmãos.`,
+          `Imprima ou envie o cronograma oficial em formato PDF por WhatsApp para o corpo de diaconato.`
+        ];
+        securityLevel = "Pastor Presidente / Ministro de Louvor / Diácono do Altar";
+        securityText = `A visualização e agendamento de pregações resguarda a organização doutrinária do ministério, evitando repetições involuntárias.`;
+        faqs = [
+          { q: "Como integrar com a coordenação de louvor?", a: "O ministro de música pode ver pelo painel as canções agendadas para ensaiar com os instrumentistas previamente." }
+        ];
+        tips = [
+          "Preencha o cronograma litúrgico com pelo menos 48h de antecedência.",
+          "O roteiro do sermão pode ser consultado de forma responsiva no próprio smartphone durante a pregação."
+        ];
+      }
+    } else if (cat === 'membros') {
       introTexts = [
         `O Módulo de Cadastro de Membros e CRM (GIPP-${idStr}) compreende um componente estratégico essencial para o amparo e governança das almas no corpo da congregação. A preservação de fichas atualizadas atua diretamente na unificação das ordens de batismo, filiações e históricos ministeriais sob preceitos rígidos de organização.`,
         `Através do recurso de "${name}", a igreja consegue executar as seguintes diretrizes: ${desc}. Este fluxo de trabalho foi calibrado de forma sistêmica para integrar todas as informações sem perda de dados históricos, promovendo a total fidelidade e cuidado pastoral no Rol de Membros.`,
@@ -614,6 +738,8 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
         m.desc.toLowerCase().includes('carteir') ||
         m.desc.toLowerCase().includes('patrim')
       );
+    } else if (chapterId === 'recursos_expandidos') {
+      modules = ALL_GIPP_MODULES.filter(m => ['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(m.id));
     } else {
       modules = ALL_GIPP_MODULES.filter(m => m.category === chapterId);
     }
@@ -1046,7 +1172,14 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     { id: 's_s17', name: 'Controle de Propriedade Contábil', category: 'seguranca', desc: 'Permissões específicas para criação e exclusão de contas.' },
     { id: 's_s18', name: 'Assinaturas Digitais Criptografadas', category: 'seguranca', desc: 'Registros criptográficos permanentes nas tabelas de auditoria.' },
     { id: 's_s19', name: 'Histórico de Bloqueio de IPs Suspeitos', category: 'seguranca', desc: 'Monitoramento ativo de força bruta em acessos indesejados.' },
-    { id: 's_s20', name: 'Recuperação de Parâmetros Originais', category: 'seguranca', desc: 'Restaurador padrão de fábrica de fontes, cores e acessos.' }
+    { id: 's_s20', name: 'Recuperação de Parâmetros Originais', category: 'seguranca', desc: 'Restaurador padrão de fábrica de fontes, cores e acessos.' },
+    // KIDS EXPANDED (v6.7.0)
+    { id: 'k1', name: 'Check-in e Check-out Seguro - Salinha Kids', category: 'secretaria', desc: 'Controle de entrada e saída de crianças com código PIN secreto e crachás cadastrais.' },
+    { id: 'k2', name: 'Painel de Relatório de Ocorrências - Salinha Kids', category: 'secretaria', desc: 'Resumo estatístico para coordenação ministerial com exportação em PDF timbrado.' },
+    { id: 'k3', name: 'Notificações Ativas de Incidentes - Portal Kids', category: 'seguranca', desc: 'Disparo de alertas e som de notificações no Portal do Membro para avisar aos pais.' },
+    { id: 'ebd1', name: 'Lançamento de Frequência Interativo - EBD', category: 'secretaria', desc: 'Controle de chamada dominical completo integrando registro de Bíblia, revista e ofertas.' },
+    { id: 'ead1', name: 'Cursos EAD & Mentoria Acadêmica', category: 'secretaria', desc: 'Trilhas pedagógicas interativas com suporte a quizes doutrinários e certificados salvos em alta definição.' },
+    { id: 'lit1', name: 'Agendamento Litúrgico & Séries de Sermões', category: 'secretaria', desc: 'Planeamento completo de rituais de cultos, cânticos congregacionais e pregações homiléticas pastorais.' }
   ], []);
 
   const filteredDirectory = useMemo(() => {
@@ -1632,6 +1765,60 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
           </div>
         </div>
       )
+    },
+    {
+      id: 'recursos_expandidos',
+      title: '11. Recursos Expandidos: Kids, EBD, EAD, Liturgias & Missões',
+      shortTitle: 'Recursos Expandidos',
+      icon: Plus,
+      category: 'Secretaria',
+      content: (
+        <div className="space-y-6">
+          <p className="text-sm text-slate-600 leading-relaxed font-semibold">
+            O GIPP v6.7.0 estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino de qualidade (EBD dominical e cursos teológicos EAD) e na ministração estruturada e litúrgica de ordem pastoral.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-1">
+                <Baby size={16} className="text-rose-500" /> Salinha Kids & Notificações
+              </span>
+              <p className="text-[10px] text-slate-500 leading-snug font-bold">
+                Controle de entrada e saída por PIN secreto de responsáveis legais. Emissão de alertas de incidentes urgentes via Portal do Membro para garantir total transparência junto aos familiares.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-1">
+                <GraduationCap size={16} className="text-indigo-500" /> EBD Interativa & EAD
+              </span>
+              <p className="text-[10px] text-slate-500 leading-snug font-bold">
+                Mapeamento de chamadas de classes, estudos dirigidos com inteligência artificial via Gemini e cursos interativos em EAD com lições de Defesa da Fé e certificados de alta resolução.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex gap-3 text-rose-950">
+            <Baby className="text-rose-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wide">Salinha Kids: Controle de Segurança & Relatórios</h4>
+              <p className="text-xs text-rose-800 mt-1 leading-relaxed">
+                As ocorrências registradas pela liderança de Salinha Kids são sincronizadas imediatamente com a coordenação geral. O coordenador pode emitir e exportar Relatórios de Ocorrências Diários ou Semanais em PDF para subsidiar as reuniões periódicas da denominação.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-indigo-50 border border-indigo-150 rounded-2xl p-4 flex gap-3 text-indigo-950">
+            <GraduationCap className="text-indigo-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wide">Acompanhamento e Mentoria EAD de Capacitação</h4>
+              <p className="text-xs text-indigo-800 mt-1 leading-relaxed">
+                Idealizado para a formação sólida de obreiros locais. Siga os módulos pedagógicos estruturados e realize os quizes de fixação teológica compostos por perguntas desafiadoras sobre a doutrina e apologética. Ao atingir a média de aproveitamento ideal, o certificado HD é confeccionado em tempo de execução.
+              </p>
+            </div>
+          </div>
+        </div>
+      )
     }
   ];
 
@@ -1651,6 +1838,206 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadActiveMaterialPdf = () => {
+    try {
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      let filename = '';
+
+      if (selectedSubModule) {
+        // Individual Sub-Module Manual
+        const mod = selectedSubModule;
+        filename = `gipp_manual_${mod.id.toLowerCase()}.pdf`;
+
+        const info = aiContent || getOfflineDetailedManualFor(mod);
+
+        // Header Banner
+        doc.setFillColor(79, 70, 229); // indigo-600
+        doc.rect(40, 40, 515, 60, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`MANUAL OFICIAL GIPP - GIPP-${mod.id.toUpperCase()}`, 60, 75);
+
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(224, 231, 255); // indigo-100
+        doc.text(`Mapeamento de Processo • Emitido em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 60, 90);
+
+        // Subtitle Panel
+        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(248, 250, 252);
+        doc.rect(40, 115, 515, 45, 'F');
+        doc.rect(40, 115, 515, 45, 'S');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(30, 41, 59);
+        doc.text(mod.name.toUpperCase(), 50, 132);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(71, 85, 105);
+        const wrappedDesc = doc.splitTextToSize(mod.desc, 495);
+        doc.text(wrappedDesc, 50, 147);
+
+        let y = 185 + (wrappedDesc.length * 10);
+
+        const sectionsToProcess = info.sections || [];
+        sectionsToProcess.forEach((sect: any) => {
+          const isSteps = sect.anchor === 'operacao' && sect.steps;
+          const isSafety = sect.anchor === 'seguranca' && sect.levelRequired;
+          const isFaq = sect.anchor === 'faq' && sect.questions;
+          const isTips = sect.anchor === 'sugestoes' && sect.tips;
+
+          if (y > 720) {
+            doc.addPage();
+            doc.setFillColor(79, 70, 229);
+            doc.rect(40, 40, 515, 8, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text(`MANUAL GIPP-${mod.id.toUpperCase()} - PÁG. ${doc.getNumberOfPages()}`, 40, 32);
+            y = 65;
+          }
+
+          // Section Title
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10.5);
+          doc.setTextColor(15, 23, 42); // slate-900
+          doc.text(sect.title.toUpperCase(), 40, y);
+          doc.setDrawColor(226, 232, 240);
+          doc.line(40, y + 4, 555, y + 4);
+          y += 18;
+
+          // Section Content
+          if (sect.content && !isSafety) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105);
+            const contentLines = doc.splitTextToSize(sect.content, 515);
+            doc.text(contentLines, 40, y);
+            y += (contentLines.length * 13) + 10;
+          }
+
+          // Operation steps list
+          if (isSteps && sect.steps) {
+            sect.steps.forEach((st: string, sIdx: number) => {
+              if (y > 740) {
+                doc.addPage();
+                doc.setFillColor(79, 70, 229);
+                doc.rect(40, 40, 515, 8, 'F');
+                y = 65;
+              }
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(9);
+              doc.setTextColor(79, 70, 229);
+              doc.text(`Passo ${sIdx + 1}:`, 40, y);
+              
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(9);
+              doc.setTextColor(71, 85, 105);
+              const txtLines = doc.splitTextToSize(st, 460);
+              doc.text(txtLines, 90, y);
+              y += (txtLines.length * 13) + 8;
+            });
+            y += 5;
+          }
+
+          // Safety / Governance
+          if (isSafety) {
+            if (y > 720) {
+              doc.addPage();
+              doc.setFillColor(79, 70, 229);
+              doc.rect(40, 40, 515, 8, 'F');
+              y = 65;
+            }
+            // Draw an amber callout box
+            doc.setFillColor(254, 243, 199); // amber-100
+            doc.setDrawColor(252, 211, 77); // amber-300
+            
+            const boxContent = `Acesso Recomendado: ${sect.levelRequired}\n\n${sect.content}`;
+            const boxLines = doc.splitTextToSize(boxContent, 485);
+            const boxHeight = (boxLines.length * 13) + 16;
+            
+            doc.rect(40, y, 515, boxHeight, 'F');
+            doc.rect(40, y, 515, boxHeight, 'S');
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(146, 64, 14); // amber-800
+            doc.text(boxLines, 50, y + 14);
+            
+            y += boxHeight + 15;
+          }
+
+          // FAQs
+          if (isFaq && sect.questions) {
+            sect.questions.forEach((qItem: any) => {
+              if (y > 720) {
+                doc.addPage();
+                doc.setFillColor(79, 70, 229);
+                doc.rect(40, 40, 515, 8, 'F');
+                y = 65;
+              }
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(9);
+              doc.setTextColor(30, 41, 59);
+              doc.text(`P: ${qItem.q}`, 40, y);
+              y += 13;
+
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(9);
+              doc.setTextColor(100, 116, 139);
+              const ansLines = doc.splitTextToSize(`R: ${qItem.a}`, 515);
+              doc.text(ansLines, 40, y);
+              y += (ansLines.length * 13) + 10;
+            });
+            y += 5;
+          }
+
+          // Bullet Tips
+          if (isTips && sect.tips) {
+            sect.tips.forEach((tp: string) => {
+              if (y > 740) {
+                doc.addPage();
+                doc.setFillColor(79, 70, 229);
+                doc.rect(40, 40, 515, 8, 'F');
+                y = 65;
+              }
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(9);
+              doc.text("• Conselho de Excelência:", 40, y);
+
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(9);
+              doc.setTextColor(71, 85, 105);
+              const tipLines = doc.splitTextToSize(tp, 380);
+              doc.text(tipLines, 175, y);
+              y += (tipLines.length * 13) + 8;
+            });
+            y += 10;
+          }
+
+          y += 10;
+        });
+
+        // Add a footer line at the end
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text('MANUAL COMPILADO EM ALTA RESOLUÇÃO AUTOMATICAMENTE VIA GOVERNANÇA GIPP® PLATFORM', 40, 805);
+
+        doc.save(filename);
+      } else {
+        // Full Chapter Manual Group
+        handleExportPdf([activeContent], ALL_GIPP_MODULES);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao exportar o PDF do material em modo leitura.');
+    }
   };
 
   const renderEbookLayout = () => {
@@ -1753,6 +2140,8 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
             );
           } else if (sec.id === 'faq') {
             submods = [];
+          } else if (sec.id === 'recursos_expandidos') {
+            submods = ALL_GIPP_MODULES.filter(m => ['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(m.id));
           } else {
             submods = ALL_GIPP_MODULES.filter(m => m.category === sec.id);
           }
@@ -1989,23 +2378,33 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
 
         {/* Content viewer */}
         <div className="lg:col-span-8 glass-modern p-6 sm:p-10 rounded-[2.5rem] border border-white/60 space-y-6 shadow-sm min-h-[500px] bg-white">
-          <div className="border-b border-slate-100 pb-5">
-            <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider bg-indigo-50 py-1.5 px-3.5 rounded-full inline-block">
-              {selectedSubModule ? 'Assessoria IA GIPP' : `Seção ${activeContent.category}`}
-            </span>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight mt-3 flex items-center gap-2">
-              {selectedSubModule ? (
-                <>
-                  <Sparkles size={24} className="text-indigo-600 animate-pulse" />
-                  Módulo GIPP-{selectedSubModule.id.toUpperCase()}
-                </>
-              ) : (
-                <>
-                  <activeContent.icon size={24} className="text-indigo-600 animate-pulse" />
-                  {activeContent.title}
-                </>
-              )}
-            </h2>
+          <div className="border-b border-slate-100 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider bg-indigo-50 py-1.5 px-3.5 rounded-full inline-block">
+                {selectedSubModule ? 'Assessoria IA GIPP' : `Seção ${activeContent.category}`}
+              </span>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight mt-2 flex items-center gap-2">
+                {selectedSubModule ? (
+                  <>
+                    <Sparkles size={24} className="text-indigo-600 animate-pulse" />
+                    Módulo GIPP-{selectedSubModule.id.toUpperCase()}
+                  </>
+                ) : (
+                  <>
+                    <activeContent.icon size={24} className="text-indigo-600" />
+                    {activeContent.title}
+                  </>
+                )}
+              </h2>
+            </div>
+
+            <button
+              onClick={handleDownloadActiveMaterialPdf}
+              className="flex items-center gap-1.5 px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold rounded-2xl tracking-wide transition-all shadow-md cursor-pointer shrink-0 no-print"
+            >
+              <Download size={13} />
+              {selectedSubModule ? 'Baixar este Manual (PDF)' : 'Baixar Capítulo (PDF)'}
+            </button>
           </div>
 
           <div className="animate-entrance print:block">

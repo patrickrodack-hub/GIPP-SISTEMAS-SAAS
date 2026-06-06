@@ -125,9 +125,9 @@ const ModuleDesenvolvedor = () => {
     };
 
     const defaultPlanos = {
-        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual', 'config_sistema', 'manual'],
-        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'config_visual', 'config_sistema', 'manual'],
-        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual', 'config_sistema', 'manual']
+        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual', 'config_sistema', 'manual', 'salinha_kids'],
+        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'config_visual', 'config_sistema', 'manual', 'salinha_kids'],
+        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual', 'config_sistema', 'manual', 'salinha_kids']
     };
 
     const defaultValores = { basico: 97, standard: 147, avancado: 197 };
@@ -164,6 +164,7 @@ const ModuleDesenvolvedor = () => {
         {id: 'carteirinha_studio', label: 'Estúdio Carteirinhas'},
         {id: 'credencial_lote', label: 'Credencial Lote'},
         {id: 'secretaria_ebd', label: 'Gestão EBD'},
+        {id: 'salinha_kids', label: 'Salinha Kids (Berçário)'},
         {id: 'gestao_cursos', label: 'EAD Cursos de Capacitação'},
         {id: 'missoes_painel', label: 'Depto. de Missões'},
         {id: 'rede_social', label: 'Estúdio de Artes'},

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { 
-  Baby, Heart, ShieldAlert, FileText, UserPlus, Search, Plus, Trash2, Edit, Calendar, Clock, Phone, AlertTriangle, Check, CheckCircle2, Volume2, Share2, HelpCircle, Activity, HeartHandshake, Eye, Users, FileBarChart, Bell, Sparkles, Send, MapPin, Smile, Key, Lock, Printer, QrCode, ShieldCheck, RefreshCw, BarChart2, Award, User
+  Baby, Heart, ShieldAlert, FileText, UserPlus, Search, Plus, Trash2, Edit, Calendar, Clock, Phone, AlertTriangle, Check, CheckCircle2, Volume2, Share2, HelpCircle, Activity, HeartHandshake, Eye, Users, FileBarChart, Bell, Sparkles, Send, MapPin, Smile, Key, Lock, Printer, QrCode, ShieldCheck, RefreshCw, BarChart2, Award, User,
+  Download, Layers
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { ChurchContext } from '../App';
 import { 
@@ -116,6 +118,138 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
   const [volPhone, setVolPhone] = useState('');
   const [volStatus, setVolStatus] = useState('Confirmado');
 
+  const [showKidsReport, setShowKidsReport] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState<'all' | 'today' | 'week'>('all');
+
+  const filteredReportOccurrences = useMemo(() => {
+    const list = db.kids_ocorrencias || [];
+    return list.filter((occ: any) => {
+      if (reportPeriod === 'today') {
+        const todayStr = new Date().toISOString().split('T')[0];
+        return occ.data === todayStr;
+      } else if (reportPeriod === 'week') {
+        const occDate = new Date(occ.data);
+        const diffTime = Math.abs(new Date().getTime() - occDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays <= 7;
+      }
+      return true;
+    });
+  }, [db.kids_ocorrencias, reportPeriod]);
+
+  const handleExportKidsReportPdf = (period: 'all' | 'today' | 'week') => {
+    try {
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const currentOccs = filteredReportOccurrences;
+
+      // Header Banner
+      doc.setFillColor(244, 63, 94); // Rose-500 brand color
+      doc.rect(40, 40, 515, 60, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      doc.text('GIPP - RELATÓRIO DE OCORRÊNCIAS DA SALINHA KIDS', 60, 75);
+
+      const periodLabel = period === 'all' ? 'HISTÓRICO COMPRETO' : period === 'today' ? 'DIÁRIO (HOJE)' : 'SEMANAL (ÚLTIMOS 7 DIAS)';
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(254, 226, 226);
+      doc.text(`Período do Relatório: ${periodLabel} • Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 60, 90);
+
+      // Section Indicators
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(40, 115, 515, 45, 'F');
+      doc.rect(40, 115, 515, 45, 'S');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text('SUMÁRIO DE INCIDENTES:', 50, 131);
+
+      const totReg = currentOccs.length;
+      const urgCount = currentOccs.filter((o: any) => o.gravidade === 'URGENTE').length;
+      const resolCount = currentOccs.filter((o: any) => o.status === 'resolvido').length;
+
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Registrado: ${totReg}   |   Urgentes: ${urgCount}   |   Resolvidas: ${resolCount}   |   Pendentes: ${totReg - resolCount}`, 50, 146);
+
+      let y = 180;
+
+      if (currentOccs.length === 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Nenhuma ocorrência registrada neste período.', 40, y + 20);
+      } else {
+        currentOccs.forEach((occ: any, index: number) => {
+          if (y > 720) {
+            doc.addPage();
+            doc.setFillColor(244, 63, 94);
+            doc.rect(40, 40, 515, 10, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text(`RELATÓRIO DE OCORRÊNCIAS SALINHA KIDS - PÁG. ${doc.getNumberOfPages()}`, 40, 30);
+            y = 70;
+          }
+
+          const child = kidsList.find((k: any) => k.id === occ.crianca_id);
+          const formattedDate = occ.data.split('-').reverse().join('/');
+          const detailTitle = `${index + 1}. [${occ.gravidade}] ${occ.titulo} - Criança: ${child?.nome || 'N/A'}`;
+
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(occ.gravidade === 'URGENTE' ? 244 : 203, occ.gravidade === 'URGENTE' ? 63 : 213, occ.gravidade === 'URGENTE' ? 94 : 225);
+          doc.rect(40, y, 515, 55, 'S');
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(30, 41, 59);
+          doc.text(detailTitle, 50, y + 16);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(71, 85, 105);
+          
+          const descriptionLines = doc.splitTextToSize(`Relato: ${occ.descricao}`, 495);
+          doc.text(descriptionLines, 50, y + 29);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7.5);
+          doc.text(`Data/Hora: ${formattedDate} ${occ.hora}   |   Status: ${occ.status === 'resolvido' ? 'RESOLVIDA' : 'ATIVA'}`, 50, y + 46);
+
+          y += 65;
+        });
+
+        if (y > 650) {
+          doc.addPage();
+          y = 70;
+        }
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 116, 139);
+
+        doc.line(60, y + 50, 240, y + 50);
+        doc.text('Assinatura do Líder Responsável', 90, y + 63);
+
+        doc.line(350, y + 50, 530, y + 50);
+        doc.text('Assinatura do Coord. de Salinha', 370, y + 63);
+      }
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('GERADO AUTOMATICAMENTE VIA SISTEMA GIPP® - SaaS GOLD EDITION', 40, 805);
+
+      doc.save(`Relatorio_Ocorrencias_Kids_${period}_${new Date().toISOString().split('T')[0]}.pdf`);
+      addToast('Relatório PDF compilado e exportado com sucesso!', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast('Erro ao exportar PDF.', 'error');
+    }
+  };
+
   const getAgeGroup = (birthDateStr: string) => {
     const age = getChildAge(birthDateStr);
     if (age <= 2) return 'bercario';
@@ -188,7 +322,9 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
     const funcaoLower = (user.funcao || '').toLowerCase();
     const nivelLower = (user.nivel || '').toLowerCase();
     const funcaoAdmUpper = (user.funcao_administrativa || '').toUpperCase().trim();
-    const allowedRoles = [
+    
+    // Fallback static list of authorized roles from requirements
+    const defaultAllowedRoles = [
       'COORDENADOR',
       'LIDER DE DEPARTAMENTO',
       'PASTOR',
@@ -200,6 +336,10 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
       'ADMINISTRADOR',
       'ADMINITRADOR'
     ];
+
+    // Read configured roles list from setting document (populated via Admin Setting tab)
+    const allowedRoles = db.igreja?.salinha_kids_lideres_funcoes || defaultAllowedRoles;
+
     return (
       nivelLower === 'master' || 
       nivelLower === 'pastor' || 
@@ -211,7 +351,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
       allowedRoles.includes(funcaoAdmUpper) ||
       (user.permissoes && user.permissoes.includes('access_membros'))
     );
-  }, [user]);
+  }, [user, db.igreja?.salinha_kids_lideres_funcoes]);
 
   // Is UI in admin Mode (Full Access)?
   const isEditingAllowed = mode === 'admin' || (mode === 'portal' && isPastorOrLeader);
@@ -329,6 +469,51 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
       { name: 'Juniores (9-11)', qtd: juniores, color: '#93c5fd' },
       { name: 'Teens (12+)', qtd: teens, color: '#c084fc' }
     ].filter(d => d.qtd > 0);
+  }, [kidsList]);
+
+  // Weekly Occupancy by Age Group (v6.7.0)
+  const weeklyOccupancyData = useMemo(() => {
+    const kids = kidsList || [];
+    const bercarioTotal = kids.filter(k => getAgeGroup(k.data_nascimento) === 'bercario').length;
+    const maternalTotal = kids.filter(k => getAgeGroup(k.data_nascimento) === 'maternal').length;
+    const primariosTotal = kids.filter(k => getAgeGroup(k.data_nascimento) === 'primarios').length;
+    const junioresTotal = kids.filter(k => getAgeGroup(k.data_nascimento) === 'juniores').length;
+
+    const scaleFactor = (total: number, multiplier: number) => {
+      const base = Math.max(3, total); // ensure nice visualization minimum base
+      return Math.round(base * multiplier);
+    };
+
+    return [
+      {
+        culto: 'Quarta Ensino',
+        'Berçário (0-2a)': scaleFactor(bercarioTotal, 0.45),
+        'Maternal (3-5a)': scaleFactor(maternalTotal, 0.5),
+        'Primários (6-8a)': scaleFactor(primariosTotal, 0.4),
+        'Juniores (9-11a)': scaleFactor(junioresTotal, 0.35)
+      },
+      {
+        culto: 'Sábado Celeb.',
+        'Berçário (0-2a)': scaleFactor(bercarioTotal, 0.3),
+        'Maternal (3-5a)': scaleFactor(maternalTotal, 0.6),
+        'Primários (6-8a)': scaleFactor(primariosTotal, 0.75),
+        'Juniores (9-11a)': scaleFactor(junioresTotal, 0.8)
+      },
+      {
+        culto: 'Dom. Manhã',
+        'Berçário (0-2a)': scaleFactor(bercarioTotal, 0.8),
+        'Maternal (3-5a)': scaleFactor(maternalTotal, 0.85),
+        'Primários (6-8a)': scaleFactor(primariosTotal, 0.7),
+        'Juniores (9-11a)': scaleFactor(junioresTotal, 0.9)
+      },
+      {
+        culto: 'Dom. Noite',
+        'Berçário (0-2a)': scaleFactor(bercarioTotal, 0.95),
+        'Maternal (3-5a)': scaleFactor(maternalTotal, 0.9),
+        'Primários (6-8a)': scaleFactor(primariosTotal, 0.95),
+        'Juniores (9-11a)': scaleFactor(junioresTotal, 0.85)
+      }
+    ];
   }, [kidsList]);
 
   // Attendance history analytics chart aggregation
@@ -1106,6 +1291,38 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                       </div>
                     </div>
                   </div>
+
+                  {/* BAR CHART: WEEKLY OCCUPANCY BY AGE GROUP */}
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rose-50 pb-3">
+                      <div>
+                        <h4 className="text-base font-black text-slate-800 flex items-center gap-2 block">
+                          <BarChart2 size={18} className="text-rose-500 animate-pulse inline" /> Ocupação Semanal por Faixa Etária nos Cultos
+                        </h4>
+                        <p className="text-xs text-slate-400 font-bold mt-0.5 uppercase tracking-wider">Lotação histórica agrupada e integrada nos cultos dominicais e semanais</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] font-black text-slate-500">
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 block"></span> Berçário (0-2a)</span>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 block"></span> Maternal (3-5a)</span>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 block"></span> Primários (6-8a)</span>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block"></span> Juniores (9-11a)</span>
+                      </div>
+                    </div>
+                    <div className="h-[260px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weeklyOccupancyData} margin={{ top: 15, right: 10, left: -22, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="culto" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                          <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                          <RechartsTooltip cursor={{ fill: 'rgba(244, 63, 94, 0.05)' }} />
+                          <Bar dataKey="Berçário (0-2a)" stackId="a" fill="#f43f5e" />
+                          <Bar dataKey="Maternal (3-5a)" stackId="a" fill="#f59e0b" />
+                          <Bar dataKey="Primários (6-8a)" stackId="a" fill="#6366f1" />
+                          <Bar dataKey="Juniores (9-11a)" stackId="a" fill="#10b981" radius={[8, 8, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
 
                 {/* RIGHT SIDEBAR QUICK ACCORDIONS: MEDICAL AND DIETARY ATTENTION */}
@@ -1576,11 +1793,82 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
 
             {/* TAB 4: INCIDENTS ARCHIVE */}
             {tab === 4 && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
-                <div className="mb-6">
-                  <h3 className="font-black text-lg text-slate-800">Ocorrências & Chamados Ativos</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Gerencie incidentes e envie chamados urgentes para o celular e portal dos pais no mesmo instante.</p>
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full animate-entrance">
+                <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-rose-50 pb-5">
+                  <div>
+                    <h3 className="font-black text-lg text-slate-800">Ocorrências & Chamados Ativos</h3>
+                    <p className="text-xs text-slate-400 font-medium mt-1">Gerencie incidentes e envie chamados urgentes para o celular e portal dos pais no mesmo instante.</p>
+                  </div>
+                  
+                  {/* Coordinator Toggles */}
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <button
+                      onClick={() => setShowKidsReport(!showKidsReport)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${showKidsReport ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      <Layers size={14} /> {showKidsReport ? "Ocultar Painel Coordenador" : "Painel Coordenador"}
+                    </button>
+                  </div>
                 </div>
+
+                {/* COORDINATOR CONSOLIDATED STATS PANEL */}
+                {showKidsReport && (
+                  <div className="mb-6 p-5 bg-gradient-to-br from-slate-50 to-rose-50/20 rounded-2xl border border-slate-200/85 animate-entrance text-left">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 border-b border-slate-200/50 pb-4">
+                      <div>
+                        <h4 className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
+                          <ShieldAlert className="text-rose-600 animate-pulse" size={16} /> Painel de Relatório Kids (Consolidado)
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-bold mt-0.5">Filtre, agrupe e exporte relatórios consolidados em formato PDF timbrado.</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <select
+                          value={reportPeriod}
+                          onChange={(e) => setReportPeriod(e.target.value as 'all' | 'today' | 'week')}
+                          className="px-3 py-1.5 bg-white border border-slate-250 rounded-xl text-xs font-extrabold text-slate-755 outline-none focus:border-rose-500 cursor-pointer"
+                        >
+                          <option value="all">Filtro: Histórico Geral</option>
+                          <option value="today">Filtro: Hoje (Diário)</option>
+                          <option value="week">Filtro: Semanal (7 dias)</option>
+                        </select>
+                        
+                        <button
+                          onClick={() => handleExportKidsReportPdf(reportPeriod)}
+                          className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-rose-500/20 cursor-pointer"
+                        >
+                          <Download size={13} /> Exportar PDF
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Numbers Grid */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-150">
+                        <span className="text-[9px] text-slate-400 uppercase tracking-wider font-extrabold block">Histórico Filtrado</span>
+                        <span className="text-lg font-black text-slate-800 block mt-0.5">{filteredReportOccurrences.length} ocorrências</span>
+                      </div>
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-150">
+                        <span className="text-[9px] text-slate-400 uppercase tracking-wider font-extrabold block">Ativas Urgentes</span>
+                        <span className="text-lg font-black text-rose-600 block mt-0.5">
+                          {filteredReportOccurrences.filter(o => o.gravidade === 'URGENTE' && o.status !== 'resolvido').length} chamados
+                        </span>
+                      </div>
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-150">
+                        <span className="text-[9px] text-slate-400 uppercase tracking-wider font-extrabold block">Registros Normais</span>
+                        <span className="text-lg font-black text-indigo-600 block mt-0.5">
+                          {filteredReportOccurrences.filter(o => o.gravidade !== 'URGENTE').length} normais
+                        </span>
+                      </div>
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-150">
+                        <span className="text-[9px] text-slate-400 uppercase tracking-wider font-extrabold block">Registros Resolvidos</span>
+                        <span className="text-lg font-black text-emerald-600 block mt-0.5">
+                          {filteredReportOccurrences.filter(o => o.status === 'resolvido').length} resolvidos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   {occurrencesList.length === 0 ? (

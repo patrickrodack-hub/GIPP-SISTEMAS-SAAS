@@ -59,7 +59,7 @@ import ModuleCertificados from './components/ModuleCertificados';
 import ModuleEBD from './components/ModuleEBD';
 import ModuleGestaoCursos from './components/ModuleGestaoCursos';
 import ModuleRedeSocial from './components/ModuleRedeSocial';
-import ModuleConfiguracoesSistemas from './components/ModuleConfiguracoesSistemas';
+import ModuleConfiguracoesSistemas, { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
 import ModuleConfigVisual from './components/ModuleConfigVisual';
 import ModuleBackup from './components/ModuleBackup';
 import ModuleUtilitarios from './components/ModuleUtilitarios';
@@ -6511,7 +6511,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial Lote" />}
                     {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
-                    {checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
+                    {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
                     {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
@@ -9097,35 +9097,23 @@ const MemberPortalLayout = () => {
         }
     };
 
+    const portalPastorRolesStr = db.igreja?.portal_pastor_lideres_funcoes || ['PASTOR PRESIDENTE', 'PASTOR AUXILIAR'];
+    const portalTesoureiroRolesStr = db.igreja?.portal_tesoureiro_lideres_funcoes || ['TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR'];
+
     const isPastor = user?.cargo?.toLowerCase().includes('pastor') || 
                      user?.funcao?.toLowerCase().includes('pastor') || 
                      user?.nivel === 'master' || 
                      user?.nivel === 'pastor' ||
-                     (user?.funcao_administrativa && ['PASTOR PRESIDENTE', 'PASTOR AUXILIAR'].includes(user.funcao_administrativa.toUpperCase()));
+                     (user?.funcao_administrativa && portalPastorRolesStr.includes(user.funcao_administrativa.toUpperCase()));
 
     const isTesoureiro = user?.cargo?.toLowerCase().includes('tesour') || 
                           user?.funcao?.toLowerCase().includes('tesour') || 
                           user?.nivel === 'master' || 
                           user?.nivel === 'tesour' || 
-                          (user?.funcao_administrativa && ['TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR'].includes(user.funcao_administrativa.toUpperCase())) ||
+                          (user?.funcao_administrativa && portalTesoureiroRolesStr.includes(user.funcao_administrativa.toUpperCase())) ||
                           (user?.permissoes && (user.permissoes.includes('access_fin_entradas') || user.permissoes.includes('access_fin_analise') || user.permissoes.includes('access_fin_cadastros'))) ||
                           (db.igreja?.tesoureiro1 && user?.nome && db.igreja.tesoureiro1.toLowerCase().trim() === user.nome.toLowerCase().trim()) || 
                           (db.igreja?.tesoureiro2 && user?.nome && db.igreja.tesoureiro2.toLowerCase().trim() === user.nome.toLowerCase().trim());
-
-    const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
-        'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_frequencia', 'portal_carteirinha'],
-        'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
-        'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
-        'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
-        'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
-        'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_carteirinha'],
-        'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
-        'CONTADOR': ['portal_home', 'portal_mural', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
-        'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
-        'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_carteirinha'],
-        'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha'],
-        'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_carteirinha']
-    };
 
     const userFuncaoAdm = (user?.funcao_administrativa || 'NENHUMA').toUpperCase();
     const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
@@ -9436,7 +9424,7 @@ const AppLayout = () => {
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },
         'credencial_lote': { component: ModuleCredencial, access: 'access_sec_certificados' },
         'secretaria_ebd': { component: ModuleEBD, access: 'access_ebd' },
-        'salinha_kids': { component: ModuleSalinhaKids, access: 'public' },
+        'salinha_kids': { component: ModuleSalinhaKids, access: 'access_salinha_kids' },
         'gestao_cursos': { component: ModuleGestaoCursos, access: 'access_gestao_cursos' },
         'missoes_painel': { component: ModuleMissoes, access: 'access_missoes' },
         'rede_social': { component: ModuleRedeSocial, access: 'access_midia' },
@@ -9632,7 +9620,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.6.0</span>
+                        <span>Versão 6.7.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>SaaS Gold Edition</span>
                     </div>
@@ -9959,6 +9947,28 @@ export default function App() {
                  });
              }
          });
+    }
+
+    if (db.kids_criancas && db.kids_ocorrencias && user) {
+        const myKids = db.kids_criancas.filter((k: any) => k.responsavel_membro_id === user.id);
+        const myKidsIds = myKids.map((k: any) => k.id);
+        const myActiveKidsOccurrences = db.kids_ocorrencias.filter((o: any) => 
+            myKidsIds.includes(o.crianca_id) && 
+            o.gravidade === 'URGENTE' && 
+            o.status !== 'resolvido'
+        );
+        myActiveKidsOccurrences.forEach((occ: any) => {
+            const childNode = myKids.find((c: any) => c.id === occ.crianca_id);
+            notifs.push({
+                id: `kids_occ_${occ.id}`,
+                type: 'danger',
+                icon: AlertCircle,
+                title: '🚨 Incidente Salinha Kids',
+                desc: `${childNode?.nome || 'Criança'}: ${occ.titulo} - ${occ.descricao}`,
+                time: 'Urgente',
+                color: 'rose'
+            });
+        });
     }
 
     const isPastoral = user?.cargo?.toLowerCase().includes('pastor') || 
@@ -10729,7 +10739,14 @@ export default function App() {
               }
               
               if (foundMember.senha_portal === passDigitada) {
-                  setUser({ ...foundMember, tipo: 'membro' });
+                  const userFuncaoAdm = (foundMember.funcao_administrativa || 'NENHUMA').toUpperCase();
+                  const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+                  const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+                  setUser({ 
+                      ...foundMember, 
+                      tipo: 'membro',
+                      portal_permissoes: allowedModules
+                  });
                   setView('portal_home');
                   addToast(`A Paz do Senhor, ${foundMember.nome.split(' ')[0]}!`, 'success');
                   logAction('LOGIN', 'Membro acedeu ao portal de autoatendimento', 'membros', foundMember.id);
@@ -10995,7 +11012,14 @@ export default function App() {
 
   const confirmFirstAccess = () => {
       if (!firstAccessSuccessData) return;
-      setUser({ ...firstAccessSuccessData, tipo: 'membro' });
+      const userFuncaoAdm = (firstAccessSuccessData.funcao_administrativa || 'NENHUMA').toUpperCase();
+      const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+      const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+      setUser({ 
+          ...firstAccessSuccessData, 
+          tipo: 'membro',
+          portal_permissoes: allowedModules
+      });
       setView('portal_home');
       logAction('LOGIN', 'Membro realizou o Primeiro Acesso ao portal', 'membros', firstAccessSuccessData.id);
       setIsFirstAccess(false);
@@ -11439,7 +11463,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.6.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.7.0</p>
                         </div>
                     </div>
                     <div>

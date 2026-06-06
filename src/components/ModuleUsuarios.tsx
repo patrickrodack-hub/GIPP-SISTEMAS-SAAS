@@ -43,6 +43,7 @@ const CATEGORIAS_PERMISSOES = [
       { id: 'access_sec_certificados', label: 'Certificados & Credenciais' },
       { id: 'access_sec_relatorios', label: 'Emissão de Relatórios' },
       { id: 'access_ebd', label: 'Escola Bíblica (EBD)' },
+      { id: 'access_salinha_kids', label: 'Salinha Kids (Check-In)' },
       { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos)' },
       { id: 'access_missoes', label: 'Departamento de Missões' }
     ]

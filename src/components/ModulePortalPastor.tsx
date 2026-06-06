@@ -44,7 +44,10 @@ import {
 // Exporting component
 const ModulePortalPastor = () => {
     const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
-    const isPastorPresidente = user?.funcao_administrativa?.toUpperCase() === 'PASTOR PRESIDENTE' || user?.nivel === 'master';
+    
+    const allowedPastorPresRoles = db.igreja?.portal_pastor_pres_funcoes || ['PASTOR PRESIDENTE'];
+    const isPastorPresidente = (user?.funcao_administrativa && allowedPastorPresRoles.includes(user.funcao_administrativa.toUpperCase())) || user?.nivel === 'master';
+    
     const [activeTab, setActiveTab ] = useState('agenda'); // agenda, liturgias, mensagens, cofre
     
     // States for Budget Planning

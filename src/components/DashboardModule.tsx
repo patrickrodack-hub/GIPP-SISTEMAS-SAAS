@@ -53,16 +53,19 @@ const DashboardModule = () => {
         
         const isMaster = user?.nivel === 'master';
         
+        const portalPastorRolesStr = db.igreja?.portal_pastor_lideres_funcoes || ['PASTOR PRESIDENTE', 'PASTOR AUXILIAR'];
+        const portalTesoureiroRolesStr = db.igreja?.portal_tesoureiro_lideres_funcoes || ['TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR'];
+
         const isPastor = user?.cargo?.toLowerCase().includes('pastor') || 
                          user?.funcao?.toLowerCase().includes('pastor') || 
                          user?.nivel === 'pastor' ||
-                         (user?.funcao_administrativa && ['PASTOR PRESIDENTE', 'PASTOR AUXILIAR'].includes(user.funcao_administrativa.toUpperCase())) ||
+                         (user?.funcao_administrativa && portalPastorRolesStr.includes(user.funcao_administrativa.toUpperCase())) ||
                          (db.igreja?.pastor && user?.nome && db.igreja.pastor.toLowerCase().trim() === user.nome.toLowerCase().trim());
                          
         const isTesoureiro = user?.cargo?.toLowerCase().includes('tesour') || 
                              user?.funcao?.toLowerCase().includes('tesour') || 
                              user?.nivel === 'tesour' || 
-                             (user?.funcao_administrativa && ['TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR'].includes(user.funcao_administrativa.toUpperCase())) ||
+                             (user?.funcao_administrativa && portalTesoureiroRolesStr.includes(user.funcao_administrativa.toUpperCase())) ||
                              (db.igreja?.tesoureiro1 && user?.nome && db.igreja.tesoureiro1.toLowerCase().trim() === user.nome.toLowerCase().trim()) || 
                              (db.igreja?.tesoureiro2 && user?.nome && db.igreja.tesoureiro2.toLowerCase().trim() === user.nome.toLowerCase().trim());
                              

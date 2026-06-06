@@ -46,16 +46,43 @@ export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
     'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_frequencia', 'portal_carteirinha'],
     'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
     'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
-    'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
-    'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
-    'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_carteirinha'],
-    'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
+    'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],
+    'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],
+    'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_salinha_kids', 'portal_carteirinha'],
+    'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_salinha_kids', 'portal_carteirinha', 'portal_tesoureiro'],
     'CONTADOR': ['portal_home', 'portal_mural', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
     'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
     'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_carteirinha'],
     'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha'],
-    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_carteirinha']
+    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_salinha_kids', 'portal_carteirinha']
 };
+
+export const DEFAULT_SALINHA_KIDS_LEADERSHIP_ROLES = [
+    'COORDENADOR',
+    'SUPERINTENDENTE',
+    'PASTOR',
+    'PASTOR PRESIDENTE',
+    'PASTOR AUXILIAR',
+    'TESOUREIRO',
+    'SECRETARIO',
+    'ADMINISTRADOR',
+    'LIDER DE DEPARTAMENTO'
+];
+
+export const DEFAULT_PORTAL_PASTOR_ROLES = [
+    'PASTOR PRESIDENTE',
+    'PASTOR AUXILIAR'
+];
+
+export const DEFAULT_PORTAL_PASTOR_PRES_ROLES = [
+    'PASTOR PRESIDENTE'
+];
+
+export const DEFAULT_PORTAL_TESOUREIRO_ROLES = [
+    'TESOUREIRO',
+    'CONTADOR',
+    'ADMINISTRADOR'
+];
 
 export const PORTAL_MODULES = [
     { id: 'portal_mural', label: 'Mural de Avisos', desc: 'Permite visualizar informações, recados e avisos oficiais da secretaria.', iconId: 'MessageSquare' },
@@ -93,6 +120,16 @@ const ModuleConfiguracoesSistemas = () => {
     const [selectedRoleForPortal, setSelectedRoleForPortal] = useState('SUPERINTENDENTE');
     const [selectedPortalFeatures, setSelectedPortalFeatures] = useState<string[]>([]);
     const [isSavingPortalConfig, setIsSavingPortalConfig] = useState(false);
+    
+    // Salinha Kids lideranças
+    const [salinhaKidsLideresCargos, setSalinhaKidsLideresCargos] = useState<string[]>([]);
+    const [isSavingSalinhaConfig, setIsSavingSalinhaConfig] = useState(false);
+
+    // Portal do Pastor & Tesoureiro lideranças
+    const [portalPastorLideresCargos, setPortalPastorLideresCargos] = useState<string[]>([]);
+    const [portalPastorPresCargos, setPortalPastorPresCargos] = useState<string[]>([]);
+    const [portalTesoureiroLideresCargos, setPortalTesoureiroLideresCargos] = useState<string[]>([]);
+    const [isSavingExtraModulesConfig, setIsSavingExtraModulesConfig] = useState(false);
 
     // 1 - Performance states
     const [optRunning, setOptRunning] = useState(false);
@@ -363,6 +400,120 @@ const ModuleConfiguracoesSistemas = () => {
                 return prev.filter(id => id !== featureId);
             } else {
                 return [...prev, featureId];
+            }
+        });
+    };
+
+    useEffect(() => {
+        if (db.igreja?.salinha_kids_lideres_funcoes) {
+            setSalinhaKidsLideresCargos(db.igreja.salinha_kids_lideres_funcoes);
+        } else {
+            setSalinhaKidsLideresCargos(DEFAULT_SALINHA_KIDS_LEADERSHIP_ROLES);
+        }
+    }, [db.igreja?.salinha_kids_lideres_funcoes]);
+
+    useEffect(() => {
+        if (db.igreja?.portal_pastor_lideres_funcoes) {
+            setPortalPastorLideresCargos(db.igreja.portal_pastor_lideres_funcoes);
+        } else {
+            setPortalPastorLideresCargos(DEFAULT_PORTAL_PASTOR_ROLES);
+        }
+
+        if (db.igreja?.portal_pastor_pres_funcoes) {
+            setPortalPastorPresCargos(db.igreja.portal_pastor_pres_funcoes);
+        } else {
+            setPortalPastorPresCargos(DEFAULT_PORTAL_PASTOR_PRES_ROLES);
+        }
+
+        if (db.igreja?.portal_tesoureiro_lideres_funcoes) {
+            setPortalTesoureiroLideresCargos(db.igreja.portal_tesoureiro_lideres_funcoes);
+        } else {
+            setPortalTesoureiroLideresCargos(DEFAULT_PORTAL_TESOUREIRO_ROLES);
+        }
+    }, [db.igreja?.portal_pastor_lideres_funcoes, db.igreja?.portal_pastor_pres_funcoes, db.igreja?.portal_tesoureiro_lideres_funcoes]);
+
+    const handleSaveSalinhaConfig = async () => {
+        setIsSavingSalinhaConfig(true);
+        try {
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            await updateDoc(configRef, {
+                salinha_kids_lideres_funcoes: salinhaKidsLideresCargos
+            });
+            addToast("Permissões do painel de controle da Salinha Kids atualizadas com sucesso!", "success");
+        } catch (err: any) {
+            console.error(err);
+            addToast(`Erro ao gravar permissões da Salinha Kids: ${err.message}`, "error");
+        } finally {
+            setIsSavingSalinhaConfig(false);
+        }
+    };
+
+    const handleSaveExtraModulesConfig = async () => {
+        setIsSavingExtraModulesConfig(true);
+        try {
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            await updateDoc(configRef, {
+                portal_pastor_lideres_funcoes: portalPastorLideresCargos,
+                portal_pastor_pres_funcoes: portalPastorPresCargos,
+                portal_tesoureiro_lideres_funcoes: portalTesoureiroLideresCargos
+            });
+            addToast("Permissões do Portal do Pastor e do Tesoureiro atualizadas com sucesso!", "success");
+        } catch (err: any) {
+            console.error(err);
+            addToast(`Erro ao gravar permissões extras do portal: ${err.message}`, "error");
+        } finally {
+            setIsSavingExtraModulesConfig(false);
+        }
+    };
+
+    const handleRestoreSalinhaDefaults = () => {
+        setSalinhaKidsLideresCargos(DEFAULT_SALINHA_KIDS_LEADERSHIP_ROLES);
+        addToast("Restaurado padrão de cargos eclesiásticos da Salinha Kids! Salve para garantir.", "info");
+    };
+
+    const handleRestoreExtraDefaults = () => {
+        setPortalPastorLideresCargos(DEFAULT_PORTAL_PASTOR_ROLES);
+        setPortalPastorPresCargos(DEFAULT_PORTAL_PASTOR_PRES_ROLES);
+        setPortalTesoureiroLideresCargos(DEFAULT_PORTAL_TESOUREIRO_ROLES);
+        addToast("Restaurado padrão de cargos do Pastor e Tesoureiro! Salve para garantir.", "info");
+    };
+
+    const handleToggleSalinhaRole = (roleSec: string) => {
+        setSalinhaKidsLideresCargos(prev => {
+            if (prev.includes(roleSec)) {
+                return prev.filter(c => c !== roleSec);
+            } else {
+                return [...prev, roleSec];
+            }
+        });
+    };
+
+    const handleTogglePastorRole = (roleSec: string) => {
+        setPortalPastorLideresCargos(prev => {
+            if (prev.includes(roleSec)) {
+                return prev.filter(c => c !== roleSec);
+            } else {
+                return [...prev, roleSec];
+            }
+        });
+    };
+
+    const handleTogglePastorPresRole = (roleSec: string) => {
+        setPortalPastorPresCargos(prev => {
+            if (prev.includes(roleSec)) {
+                return prev.filter(c => c !== roleSec);
+            } else {
+                return [...prev, roleSec];
+            }
+        });
+    };
+
+    const handleToggleTesoureiroRole = (roleSec: string) => {
+        setPortalTesoureiroLideresCargos(prev => {
+            if (prev.includes(roleSec)) {
+                return prev.filter(c => c !== roleSec);
+            } else {
+                return [...prev, roleSec];
             }
         });
     };
@@ -1017,121 +1168,374 @@ const ModuleConfiguracoesSistemas = () => {
                 )}
 
                 {activeTab === 'portal_membros' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Selector and explanation card */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <ShieldCheck size={20} className="text-indigo-600" />
-                                    <h3 className="text-lg font-black text-slate-800">Classificação Administrativa</h3>
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Selector and explanation card */}
+                            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <ShieldCheck size={20} className="text-indigo-600" />
+                                        <h3 className="text-lg font-black text-slate-800">Classificação Administrativa</h3>
+                                    </div>
+                                    <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-6">
+                                        Defina quais módulos e recursos do Portal de Membros estarão disponíveis e visíveis para cada papel ou classificação administrativa selecionada.
+                                    </p>
+
+                                    <div className="space-y-4 mb-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-black uppercase text-slate-400">Selecione a Classificação</label>
+                                            <select 
+                                                value={selectedRoleForPortal}
+                                                onChange={(e) => setSelectedRoleForPortal(e.target.value)}
+                                                className="w-full border-2 border-slate-200 bg-slate-50/20 p-3.5 rounded-2xl text-xs font-black outline-none text-slate-700"
+                                            >
+                                                <option value="SUPERINTENDENTE">SUPERINTENDENTE</option>
+                                                <option value="COORDENADOR">COORDENADOR</option>
+                                                <option value="SECRETARIO">SECRETÁRIO</option>
+                                                <option value="PASTOR PRESIDENTE">PASTOR PRESIDENTE</option>
+                                                <option value="PASTOR AUXILIAR">PASTOR AUXILIAR</option>
+                                                <option value="TESOUREIRO">TESOUREIRO</option>
+                                                <option value="CONTADOR">CONTADOR</option>
+                                                <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+                                                <option value="LIDER DE DEPARTAMENTO">LÍDER DE DEPARTAMENTO</option>
+                                                <option value="AUXILIAR">AUXILIAR</option>
+                                                <option value="ADVOGADO">ADVOGADO</option>
+                                                <option value="NENHUMA">MEMBRO COMUM (Nenhuma Função)</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="bg-indigo-50/30 border border-indigo-100 rounded-2xl p-4 space-y-2">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 block">Pré-definição Automática</span>
+                                            <p className="text-[11px] text-slate-500 leading-normal font-medium">
+                                                As permissões são atualizadas em tempo real para os membros correspondentes ao salvarem as modificações de acesso administrativo.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-6">
-                                    Defina quais módulos e recursos do Portal de Membros estarão disponíveis e visíveis para cada papel ou classificação administrativa selecionada.
-                                </p>
 
-                                <div className="space-y-4 mb-6">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-black uppercase text-slate-400">Selecione a Classificação</label>
-                                        <select 
-                                            value={selectedRoleForPortal}
-                                            onChange={(e) => setSelectedRoleForPortal(e.target.value)}
-                                            className="w-full border-2 border-slate-200 bg-slate-50/20 p-3.5 rounded-2xl text-xs font-black outline-none text-slate-700"
-                                        >
-                                            <option value="SUPERINTENDENTE">SUPERINTENDENTE</option>
-                                            <option value="COORDENADOR">COORDENADOR</option>
-                                            <option value="SECRETARIO">SECRETÁRIO</option>
-                                            <option value="PASTOR PRESIDENTE">PASTOR PRESIDENTE</option>
-                                            <option value="PASTOR AUXILIAR">PASTOR AUXILIAR</option>
-                                            <option value="TESOUREIRO">TESOUREIRO</option>
-                                            <option value="CONTADOR">CONTADOR</option>
-                                            <option value="ADMINISTRADOR">ADMINISTRADOR</option>
-                                            <option value="LIDER DE DEPARTAMENTO">LÍDER DE DEPARTAMENTO</option>
-                                            <option value="AUXILIAR">AUXILIAR</option>
-                                            <option value="ADVOGADO">ADVOGADO</option>
-                                            <option value="NENHUMA">MEMBRO COMUM (Nenhuma Função)</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="bg-indigo-50/30 border border-indigo-100 rounded-2xl p-4 space-y-2">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 block">Pré-definição Automática</span>
-                                        <p className="text-[11px] text-slate-500 leading-normal font-medium">
-                                            As permissões são atualizadas em tempo real para os membros correspondentes ao salvarem as modificações de acesso administrativo.
-                                        </p>
-                                    </div>
+                                <div className="space-y-3">
+                                    <button 
+                                        onClick={handleSavePortalConfig}
+                                        disabled={isSavingPortalConfig}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs tracking-wider uppercase py-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {isSavingPortalConfig ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                        {isSavingPortalConfig ? 'Gravando Alterações...' : 'Salvar Alterações'}
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={handleRestorePortalDefaults}
+                                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs tracking-wider uppercase py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <RotateCcw size={14} />
+                                        Restaurar Padrão
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <button 
-                                    onClick={handleSavePortalConfig}
-                                    disabled={isSavingPortalConfig}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs tracking-wider uppercase py-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {isSavingPortalConfig ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                                    {isSavingPortalConfig ? 'Gravando Alterações...' : 'Salvar Alterações'}
-                                </button>
-                                
-                                <button 
-                                    onClick={handleRestorePortalDefaults}
-                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs tracking-wider uppercase py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <RotateCcw size={14} />
-                                    Restaurar Padrão
-                                </button>
+                            {/* Módulos do portal grid */}
+                            <div className="md:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                                <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
+                                    <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider">Módulos Ativos para {selectedRoleForPortal}</h3>
+                                    <span className="text-[10px] uppercase font-black px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg">
+                                        {selectedPortalFeatures.length} Ativos
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {PORTAL_MODULES.map(mod => {
+                                        const isChecked = selectedPortalFeatures.includes(mod.id);
+                                        let IconComponent = BookOpen;
+                                        
+                                        if (mod.iconId === 'MessageSquare') IconComponent = MessageSquare;
+                                        else if (mod.iconId === 'Newspaper') IconComponent = Newspaper;
+                                        else if (mod.iconId === 'BookOpen') IconComponent = BookOpen;
+                                        else if (mod.iconId === 'Mail') IconComponent = Mail;
+                                        else if (mod.iconId === 'Calendar') IconComponent = Calendar;
+                                        else if (mod.iconId === 'CheckSquare') IconComponent = CheckSquare;
+                                        else if (mod.iconId === 'DollarSign') IconComponent = DollarSign;
+                                        else if (mod.iconId === 'BookOpenText') IconComponent = BookOpenText;
+                                        else if (mod.iconId === 'GraduationCap') IconComponent = GraduationCap;
+                                        else if (mod.iconId === 'UserCheck') IconComponent = UserCheck;
+                                        else if (mod.iconId === 'Baby') IconComponent = Baby;
+                                        else if (mod.iconId === 'IdCard') IconComponent = IdCard;
+                                        else if (mod.iconId === 'Shield') IconComponent = Shield;
+                                        else if (mod.iconId === 'ShieldCheck') IconComponent = ShieldCheck;
+
+                                        return (
+                                            <div 
+                                                key={mod.id}
+                                                onClick={() => handleTogglePortalFeature(mod.id)}
+                                                className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isChecked ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
+                                            >
+                                                <div className={`p-2.5 rounded-xl ${isChecked ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                    <IconComponent size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-black text-slate-800 block truncate">{mod.label}</span>
+                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                            {isChecked && <Check size={10} strokeWidth={4} />}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 leading-normal font-semibold mt-1">
+                                                        {mod.desc}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Módulos do portal grid */}
-                        <div className="md:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
-                                <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider">Módulos Ativos para {selectedRoleForPortal}</h3>
-                                <span className="text-[10px] uppercase font-black px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg">
-                                    {selectedPortalFeatures.length} Ativos
-                                </span>
+                        {/* CONFIGURAÇÃO SALINHA KIDS - LEADERS/PASTORS PERMISSIONS */}
+                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                        <Baby className="text-indigo-600" size={18} />
+                                        Cargos Autorizados - Painel Salinha Kids
+                                    </h3>
+                                    <p className="text-xs text-slate-400 font-semibold leading-relaxed">
+                                        Selecione quais cargos administrativos e eclesiásticos terão acesso de Liderança/Pastor à Salinha Kids (todas as telas e funções administrativas).
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3 mt-4 md:mt-0">
+                                    <button 
+                                        onClick={handleRestoreSalinhaDefaults}
+                                        type="button"
+                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs tracking-wider uppercase transition-colors flex items-center gap-2"
+                                    >
+                                        <RotateCcw size={13} strokeWidth={2.5} />
+                                        Restaurar Padrão
+                                    </button>
+                                    <button 
+                                        onClick={handleSaveSalinhaConfig}
+                                        type="button"
+                                        disabled={isSavingSalinhaConfig}
+                                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs tracking-wider uppercase shadow-md shadow-indigo-100 dark:shadow-none flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    >
+                                        {isSavingSalinhaConfig ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                                        {isSavingSalinhaConfig ? 'Gravando...' : 'Salvar Permissões'}
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                {PORTAL_MODULES.map(mod => {
-                                    const isChecked = selectedPortalFeatures.includes(mod.id);
-                                    let IconComponent = BookOpen;
-                                    
-                                    if (mod.iconId === 'MessageSquare') IconComponent = MessageSquare;
-                                    else if (mod.iconId === 'Newspaper') IconComponent = Newspaper;
-                                    else if (mod.iconId === 'BookOpen') IconComponent = BookOpen;
-                                    else if (mod.iconId === 'Mail') IconComponent = Mail;
-                                    else if (mod.iconId === 'Calendar') IconComponent = Calendar;
-                                    else if (mod.iconId === 'CheckSquare') IconComponent = CheckSquare;
-                                    else if (mod.iconId === 'DollarSign') IconComponent = DollarSign;
-                                    else if (mod.iconId === 'BookOpenText') IconComponent = BookOpenText;
-                                    else if (mod.iconId === 'GraduationCap') IconComponent = GraduationCap;
-                                    else if (mod.iconId === 'UserCheck') IconComponent = UserCheck;
-                                    else if (mod.iconId === 'Baby') IconComponent = Baby;
-                                    else if (mod.iconId === 'IdCard') IconComponent = IdCard;
-                                    else if (mod.iconId === 'Shield') IconComponent = Shield;
-                                    else if (mod.iconId === 'ShieldCheck') IconComponent = ShieldCheck;
-
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[
+                                    { role: 'COORDENADOR', label: 'Coordenador', desc: 'Permite gerenciar frequências, ocorrências e cadastro de crianças.' },
+                                    { role: 'SUPERINTENDENTE', label: 'Superintendente', desc: 'Permite gerenciar escalas, acompanhar check-in/out e acionar pânicos.' },
+                                    { role: 'LIDER DE DEPARTAMENTO', label: 'Líder de Departamento', desc: 'Acesso completo de coordenação da faixa etária infantil.' },
+                                    { role: 'PASTOR PRESIDENTE', label: 'Pastor Presidente', desc: 'Supervisão pastoral suprema de todas as atividades e pânicos da igreja.' },
+                                    { role: 'PASTOR AUXILIAR', label: 'Pastor Auxiliar', desc: 'Acesso pastoral para acompanhamento de escalas e ocorrências.' },
+                                    { role: 'PASTOR', label: 'Pastor', desc: 'Acesso pastoral ativo de atendimento a chamados.' },
+                                    { role: 'TESOUREIRO', label: 'Tesoureiro', desc: 'Gerenciamento de recursos, escalas e emergências da Salinha.' },
+                                    { role: 'SECRETARIO', label: 'Secretário / Secretária', desc: 'Controle de cadastros, controle de pânico e termos de responsabilidade.' },
+                                    { role: 'ADMINISTRADOR', label: 'Administrador', desc: 'Permissão global completa para gerenciar todas as funcionalidades.' },
+                                    { role: 'AUXILIAR', label: 'Auxiliar / Professor', desc: 'Acesso de suporte para controle de presença e salas de aula.' }
+                                ].map(item => {
+                                    const isAuthorized = salinhaKidsLideresCargos.includes(item.role);
                                     return (
                                         <div 
-                                            key={mod.id}
-                                            onClick={() => handleTogglePortalFeature(mod.id)}
-                                            className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isChecked ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
+                                            key={item.role}
+                                            onClick={() => handleToggleSalinhaRole(item.role)}
+                                            className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isAuthorized ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
                                         >
-                                            <div className={`p-2.5 rounded-xl ${isChecked ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                                <IconComponent size={16} />
+                                            <div className={`p-2.5 rounded-xl ${isAuthorized ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                <Baby size={16} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-black text-slate-800 block truncate">{mod.label}</span>
-                                                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
-                                                        {isChecked && <Check size={10} strokeWidth={4} />}
+                                                    <span className="text-xs font-black text-slate-800 block truncate">{item.label}</span>
+                                                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isAuthorized ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                        {isAuthorized && <Check size={10} strokeWidth={4} />}
                                                     </div>
                                                 </div>
                                                 <p className="text-[10px] text-slate-400 leading-normal font-semibold mt-1">
-                                                    {mod.desc}
+                                                    {item.desc}
                                                 </p>
                                             </div>
                                         </div>
-                                    );
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* CONFIGURAÇÃO PORTAL DO PASTOR - ROLES PERMISSIONS */}
+                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                        <Shield className="text-indigo-600" size={18} />
+                                        Cargos Autorizados - Portal do Pastor
+                                    </h3>
+                                    <p className="text-xs text-slate-400 font-semibold leading-relaxed">
+                                        Selecione quais cargos terão acesso ao Portal do Pastor (menu exclusivo, dízimos consolidados e relatórios eclesiásticos gerais).
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3 mt-4 md:mt-0">
+                                    <button 
+                                        onClick={handleRestoreExtraDefaults}
+                                        type="button"
+                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs tracking-wider uppercase transition-colors flex items-center gap-2"
+                                    >
+                                        <RotateCcw size={13} strokeWidth={2.5} />
+                                        Restaurar Padrão
+                                    </button>
+                                    <button 
+                                        onClick={handleSaveExtraModulesConfig}
+                                        type="button"
+                                        disabled={isSavingExtraModulesConfig}
+                                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs tracking-wider uppercase shadow-md shadow-indigo-100 dark:shadow-none flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    >
+                                        {isSavingExtraModulesConfig ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                                        {isSavingExtraModulesConfig ? 'Gravando...' : 'Salvar Permissões'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div>
+                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">1. Acesso Geral ao Portal do Pastor</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {[
+                                            { role: 'PASTOR PRESIDENTE', label: 'Pastor Presidente', desc: 'Acesso total de supervisão do rebanho e estatísticas financeiras.' },
+                                            { role: 'PASTOR AUXILIAR', label: 'Pastor Auxiliar', desc: 'Acesso às áreas delegadas ao pastorado local ou congregações.' },
+                                            { role: 'PASTOR', label: 'Pastor / Missionário', desc: 'Acesso de cunho puramente pastoral e aconselhamento do portal.' },
+                                            { role: 'COORDENADOR', label: 'Coordenador / Coordenadora', desc: 'Supervisão de dados ministeriais e escalas de liderança.' },
+                                            { role: 'SUPERINTENDENTE', label: 'Superintendente', desc: 'Acompanhamento direto de cultos e escalas integradas de departamentos.' },
+                                            { role: 'ADMINISTRADOR', label: 'Administrador', desc: 'Permissão para configurar e auditar os relatórios do pastorado.' }
+                                        ].map(item => {
+                                            const isAuthorized = portalPastorLideresCargos.includes(item.role);
+                                            return (
+                                                <div 
+                                                    key={item.role}
+                                                    onClick={() => handleTogglePastorRole(item.role)}
+                                                    className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isAuthorized ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
+                                                >
+                                                    <div className={`p-2.5 rounded-xl ${isAuthorized ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                        <Shield size={16} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-black text-slate-800 block truncate">{item.label}</span>
+                                                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isAuthorized ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                                {isAuthorized && <Check size={10} strokeWidth={4} />}
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-400 leading-normal font-semibold mt-1">
+                                                            {item.desc}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">2. Acesso a Áreas Confidenciais do Pastor (Orçamentos e Cofre)</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {[
+                                            { role: 'PASTOR PRESIDENTE', label: 'Pastor Presidente', desc: 'Direito supremo para configurar orçamentos, centros de custo e ler atas confidenciais.' },
+                                            { role: 'PASTOR AUXILIAR', label: 'Pastor Auxiliar', desc: 'Permite acompanhar planejamento orçamentário do cofre.' },
+                                            { role: 'ADMINISTRADOR', label: 'Administrador', desc: 'Auxilia na montagem de fluxos confidenciais e cadastros base.' }
+                                        ].map(item => {
+                                            const isAuthorized = portalPastorPresCargos.includes(item.role);
+                                            return (
+                                                <div 
+                                                    key={item.role}
+                                                    onClick={() => handleTogglePastorPresRole(item.role)}
+                                                    className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isAuthorized ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
+                                                >
+                                                    <div className={`p-2.5 rounded-xl ${isAuthorized ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                        <Lock size={16} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-black text-slate-800 block truncate">{item.label}</span>
+                                                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isAuthorized ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                                {isAuthorized && <Check size={10} strokeWidth={4} />}
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-400 leading-normal font-semibold mt-1">
+                                                            {item.desc}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CONFIGURAÇÃO PORTAL DO TESOUREIRO - ROLES PERMISSIONS */}
+                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                        <ShieldCheck className="text-indigo-600" size={18} />
+                                        Cargos Autorizados - Portal do Tesoureiro
+                                    </h3>
+                                    <p className="text-xs text-slate-400 font-semibold leading-relaxed">
+                                        Selecione quais cargos terão acesso ao Portal do Tesoureiro (lançamentos de envelopes, conferências de dízimos/ofertas e conciliação de depósitos).
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3 mt-4 md:mt-0">
+                                    <button 
+                                        onClick={handleRestoreExtraDefaults}
+                                        type="button"
+                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs tracking-wider uppercase transition-colors flex items-center gap-2"
+                                    >
+                                        <RotateCcw size={13} strokeWidth={2.5} />
+                                        Restaurar Padrão
+                                    </button>
+                                    <button 
+                                        onClick={handleSaveExtraModulesConfig}
+                                        type="button"
+                                        disabled={isSavingExtraModulesConfig}
+                                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs tracking-wider uppercase shadow-md shadow-indigo-100 dark:shadow-none flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    >
+                                        {isSavingExtraModulesConfig ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                                        {isSavingExtraModulesConfig ? 'Gravando...' : 'Salvar Permissões'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[
+                                    { role: 'TESOUREIRO', label: 'Tesoureiro / Tesoureira', desc: 'Lançamentos de dízimos/ofertas, cofre, pagamentos e relatórios financeiros.' },
+                                    { role: 'CONTADOR', label: 'Contador / Contadora', desc: 'Fiscaliza lançamentos, extratos e gera fechamentos contábeis.' },
+                                    { role: 'ADMINISTRADOR', label: 'Administrador', desc: 'Acesso sistêmico operacional total à tesouraria.' },
+                                    { role: 'PASTOR PRESIDENTE', label: 'Pastor Presidente', desc: 'Acompanha toda a movimentação financeira diretamente na tesouraria.' },
+                                    { role: 'PASTOR AUXILIAR', label: 'Pastor Auxiliar', desc: 'Acompanhamento financeiro secundário delegado a sua área.' },
+                                    { role: 'SECRETARIO', label: 'Secretário / Secretária', desc: 'Auxilia na conferência física e preenchimento estatístico.' }
+                                ].map(item => {
+                                    const isAuthorized = portalTesoureiroLideresCargos.includes(item.role);
+                                    return (
+                                        <div 
+                                            key={item.role}
+                                            onClick={() => handleToggleTesoureiroRole(item.role)}
+                                            className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isAuthorized ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
+                                        >
+                                            <div className={`p-2.5 rounded-xl ${isAuthorized ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                <ShieldCheck size={16} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-black text-slate-800 block truncate">{item.label}</span>
+                                                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isAuthorized ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                        {isAuthorized && <Check size={10} strokeWidth={4} />}
+                                                    </div>
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 leading-normal font-semibold mt-1">
+                                                    {item.desc}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )
                                 })}
                             </div>
                         </div>

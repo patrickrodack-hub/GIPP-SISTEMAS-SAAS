@@ -47,11 +47,24 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.7.0 */}
+            <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-emerald-750 font-[Outfit]">v6.7.0 - Painel de Relatório Kids, Notificações Ativas, Gráficos de Ocupação & Manual E-Book Expandido</h3>
+                <p className="text-xs text-emerald-500 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans">Painel de Relatório Salinha Kids:</strong> Novo portal consolidado estatístico de ocorrências para coordenadores com agrupamentos Diários/Semanais e exportação instantânea em PDF timbrado para amparo contábil ou fiscal.</li>
+                    <li><strong className="text-slate-700">Notificações Push / Alertas Ativos:</strong> Engrenagem síncrona integrada à navegação que sinaliza incidentes urgentes imediatamente aos pais via sino e som e alarmes de síntese de voz.</li>
+                    <li><strong className="text-slate-700">Mapeamento de Ocupação Semanal:</strong> Gráfico de barras bidimensional acumulado baseado em Recharts que exibe a oscilação de classes por faixas etárias de menores nas reuniões em painéis master.</li>
+                    <li><strong className="text-slate-700">E-Book unificado de Governança Estendida:</strong> Manual completo atualizado offline do usuário cobrindo Salinha Kids, EBD, Cursos de Capacitação EAD com quiz, Missões em Kanban e Liturgias Pastorais, pronto para visualização responsiva e exportações em e-books PDF com capas.</li>
+                </ul>
+            </div>
+
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.6.0 */}
-            <div className="relative pl-8 border-l-2 border-rose-500 animate-entrance">
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
+            <div className="relative pl-8 border-l-2 border-rose-500">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]"></div>
                 <h3 className="font-extrabold text-lg text-rose-700 font-[Outfit]">v6.6.0 - Escola Bíblica Dominical (EBD) Interativa, Dashboard de Desempenho & Inteligência Teológica</h3>
-                <p className="text-xs text-rose-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <p className="text-xs text-rose-500 font-black uppercase mb-3 tracking-wider">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Controle de Chamada Interativo (Presença):</strong> Novo console interativo para preenchimento de frequência de aulas, integrando o controle de Bíblia, revista e oferta, além do comportamento autocompensador de engajamento do aluno.</li>
                     <li><strong className="text-slate-700">Gráfico Analítico de Frequência:</strong> Gráfico de área moderno baseado em Recharts, demonstrando a oscilação de presença de alunos ao longo das últimas lições dominicais na barra de métricas.</li>
