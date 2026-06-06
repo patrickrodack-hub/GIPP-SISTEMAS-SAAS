@@ -9112,6 +9112,25 @@ const MemberPortalLayout = () => {
                           (db.igreja?.tesoureiro1 && user?.nome && db.igreja.tesoureiro1.toLowerCase().trim() === user.nome.toLowerCase().trim()) || 
                           (db.igreja?.tesoureiro2 && user?.nome && db.igreja.tesoureiro2.toLowerCase().trim() === user.nome.toLowerCase().trim());
 
+    const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
+        'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_frequencia', 'portal_carteirinha'],
+        'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
+        'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
+        'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
+        'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
+        'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_carteirinha'],
+        'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
+        'CONTADOR': ['portal_home', 'portal_mural', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
+        'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
+        'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_carteirinha'],
+        'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha'],
+        'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_carteirinha']
+    };
+
+    const userFuncaoAdm = (user?.funcao_administrativa || 'NENHUMA').toUpperCase();
+    const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+    const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+
     const baseNavItems = [
         { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
         { id: 'portal_mural', icon: MessageSquare, label: 'Mural', hoverColor: 'group-hover:text-rose-500' },
@@ -9128,25 +9147,38 @@ const MemberPortalLayout = () => {
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
     ];
 
-    const navItems = [...baseNavItems];
-    if (isPastor) {
+    const filteredBaseNavItems = baseNavItems.filter(item => {
+        if (item.id === 'portal_home') return true;
+        return allowedModules.includes(item.id);
+    });
+
+    const navItems = [...filteredBaseNavItems];
+    if (isPastor && allowedModules.includes('portal_pastor')) {
         navItems.push({ id: 'portal_pastor', icon: BookOpenText, label: 'Portal Pastor', hoverColor: 'group-hover:text-amber-500' });
     }
-    if (isTesoureiro) {
+    if (isTesoureiro && allowedModules.includes('portal_tesoureiro')) {
         navItems.push({ id: 'portal_tesoureiro', icon: ShieldCheck, label: 'Portal Tesoureiro', hoverColor: 'group-hover:text-emerald-500' });
     }
 
-    const mobileBottomItems = [
+    const mobileBottomItems: Array<{ id: string, icon: any, label: string, hoverColor: string }> = [
         { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
-        { id: 'portal_financas', icon: DollarSign, label: 'Dízimos', hoverColor: 'group-hover:text-emerald-600' },
     ];
 
-    if (isPastor) {
+    if (allowedModules.includes('portal_financas')) {
+        mobileBottomItems.push({ id: 'portal_financas', icon: DollarSign, label: 'Dízimos', hoverColor: 'group-hover:text-emerald-600' });
+    }
+
+    if (isPastor && allowedModules.includes('portal_pastor')) {
         mobileBottomItems.push({ id: 'portal_pastor', icon: BookOpenText, label: 'Pastor', hoverColor: 'group-hover:text-amber-500' });
-    } else if (isTesoureiro) {
+    } else if (isTesoureiro && allowedModules.includes('portal_tesoureiro')) {
         mobileBottomItems.push({ id: 'portal_tesoureiro', icon: ShieldCheck, label: 'Tesoureiro', hoverColor: 'group-hover:text-emerald-500' });
-    } else {
+    } else if (allowedModules.includes('portal_tarefas')) {
         mobileBottomItems.push({ id: 'portal_tarefas', icon: CheckSquare, label: 'Escalas', hoverColor: 'group-hover:text-rose-500' });
+    } else if (filteredBaseNavItems.length > 1) {
+        const fallbackItem = filteredBaseNavItems.find(x => x.id !== 'portal_home');
+        if (fallbackItem) {
+            mobileBottomItems.push({ id: fallbackItem.id, icon: fallbackItem.icon, label: fallbackItem.label.split(' ')[0], hoverColor: fallbackItem.hoverColor });
+        }
     }
 
     mobileBottomItems.push({ id: 'portal_more', icon: Menu, label: 'Mais', hoverColor: 'group-hover:text-slate-500' });

@@ -41,6 +41,39 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+// Constantes de Mapeamento do Portal de Membros por Função Administrativa
+export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
+    'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_frequencia', 'portal_carteirinha'],
+    'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
+    'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
+    'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
+    'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_carteirinha'],
+    'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_carteirinha'],
+    'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
+    'CONTADOR': ['portal_home', 'portal_mural', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
+    'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
+    'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_carteirinha'],
+    'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha'],
+    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_carteirinha']
+};
+
+export const PORTAL_MODULES = [
+    { id: 'portal_mural', label: 'Mural de Avisos', desc: 'Permite visualizar informações, recados e avisos oficiais da secretaria.', iconId: 'MessageSquare' },
+    { id: 'portal_informativo', label: 'Informativo Semanal', desc: 'Permite realizar a leitura direta dos boletins litúrgicos e pastorais do GIPP.', iconId: 'Newspaper' },
+    { id: 'portal_biblia', label: 'Bíblia Sagrada', desc: 'Disponibiliza ferramenta de consulta textual da Bíblia online integrada.', iconId: 'BookOpen' },
+    { id: 'portal_email', label: 'Mensagens Internas', desc: 'Permite a troca de e-mails internos e comunicados entre a igreja e membros.', iconId: 'Mail' },
+    { id: 'portal_agenda', label: 'Agenda & Eventos', desc: 'Dá visibilidade ao calendário litúrgico completo de programações e cultos.', iconId: 'Calendar' },
+    { id: 'portal_tarefas', label: 'Escalas de Atividades', desc: 'Permite que o membro consulte em qual data foi escalado (líder, apoio, louvor).', iconId: 'CheckSquare' },
+    { id: 'portal_financas', label: 'Dízimos & Ofertas', desc: 'Canal de autoatendimento para devoluções via PIX e consulta de comprovantes.', iconId: 'DollarSign' },
+    { id: 'portal_ebd', label: 'EBD (Escola Dominical)', desc: 'Espaço interativo para chamada, relatório, dinâmicas e controle de classe.', iconId: 'BookOpenText' },
+    { id: 'portal_cursos', label: 'Cursos de Formação', desc: 'Acompanhamento de apostilas, módulos cursados e notas sob supervisão.', iconId: 'GraduationCap' },
+    { id: 'portal_frequencia', label: 'Minhas Presenças', desc: 'Ficha detalhada com o histórico estatístico de faltas e presenças.', iconId: 'UserCheck' },
+    { id: 'portal_salinha_kids', label: 'Salinha Kids', desc: 'Controle de segurança integrado com QrCode para entrega de crianças.', iconId: 'Baby' },
+    { id: 'portal_carteirinha', label: 'Cartão de Membro', desc: 'Gera a credencial digital de identificação com dados oficiais e QrCode.', iconId: 'IdCard' },
+    { id: 'portal_pastor', label: 'Portal do Pastor', desc: 'Canal de supervisão exclusivo de dízimos detalhados e controle eclesiástico geral.', iconId: 'Shield' },
+    { id: 'portal_tesoureiro', label: 'Portal do Tesoureiro', desc: 'Faculdade para tesoureiros oficiais lançarem envelopes diretamente do portal.', iconId: 'ShieldCheck' }
+];
+
 // Exporting component
 const ModuleConfiguracoesSistemas = () => {
     const context = useContext(ChurchContext);
@@ -54,7 +87,12 @@ const ModuleConfiguracoesSistemas = () => {
         fcmToken, fcmStatus, fcmPermission, requestFcmPermission
     } = context;
 
-    const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte' | 'notificacoes'>('performance');
+    const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte' | 'notificacoes' | 'portal_membros'>('performance');
+
+    // Portal de Membros configurações
+    const [selectedRoleForPortal, setSelectedRoleForPortal] = useState('SUPERINTENDENTE');
+    const [selectedPortalFeatures, setSelectedPortalFeatures] = useState<string[]>([]);
+    const [isSavingPortalConfig, setIsSavingPortalConfig] = useState(false);
 
     // 1 - Performance states
     const [optRunning, setOptRunning] = useState(false);
@@ -281,6 +319,55 @@ const ModuleConfiguracoesSistemas = () => {
     };
 
     useEffect(() => {
+        const savedPerms = db.igreja?.portal_acessos_funcao?.[selectedRoleForPortal];
+        if (savedPerms) {
+            setSelectedPortalFeatures(savedPerms);
+        } else {
+            setSelectedPortalFeatures(DEFAULT_PORTAL_PERMISSIONS[selectedRoleForPortal] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA']);
+        }
+    }, [selectedRoleForPortal, db.igreja?.portal_acessos_funcao]);
+
+    const handleSavePortalConfig = async () => {
+        setIsSavingPortalConfig(true);
+        try {
+            const currentAcessos = db.igreja?.portal_acessos_funcao || {};
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            
+            const novasConfiguracoes = {
+                ...currentAcessos,
+                [selectedRoleForPortal]: selectedPortalFeatures
+            };
+
+            await updateDoc(configRef, {
+                portal_acessos_funcao: novasConfiguracoes
+            });
+
+            addToast(`Permissões do portal para ${selectedRoleForPortal} salvos com sucesso!`, "success");
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao gravar permissões de acesso do portal.", "error");
+        } finally {
+            setIsSavingPortalConfig(false);
+        }
+    };
+
+    const handleRestorePortalDefaults = () => {
+        const defaultPerms = DEFAULT_PORTAL_PERMISSIONS[selectedRoleForPortal] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+        setSelectedPortalFeatures(defaultPerms);
+        addToast(`Restaurado padrão para ${selectedRoleForPortal}! Clique em Salvar para persistir.`, "info");
+    };
+
+    const handleTogglePortalFeature = (featureId: string) => {
+        setSelectedPortalFeatures(prev => {
+            if (prev.includes(featureId)) {
+                return prev.filter(id => id !== featureId);
+            } else {
+                return [...prev, featureId];
+            }
+        });
+    };
+
+    useEffect(() => {
         if (printMarginType) setLocalMargin(printMarginType);
         if (printOrientation) setLocalOrientation(printOrientation);
         if (printContentScale) setLocalScale(printContentScale);
@@ -336,6 +423,12 @@ const ModuleConfiguracoesSistemas = () => {
                     className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black tracking-wider uppercase transition-all ${activeTab === 'notificacoes' ? 'bg-indigo-600 text-white shadow' : 'text-slate-605 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
                 >
                     <Bell size={14}/> Push (FCM)
+                </button>
+                <button 
+                    onClick={() => { setActiveTab('portal_membros'); setSupportTicketId(null); }}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black tracking-wider uppercase transition-all ${activeTab === 'portal_membros' ? 'bg-indigo-600 text-white shadow' : 'text-slate-605 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
+                >
+                    <ShieldCheck size={14}/> Portal de Membros
                 </button>
             </div>
 
@@ -918,6 +1011,128 @@ const ModuleConfiguracoesSistemas = () => {
                                         <Send size={13} /> Disparar Teste Push Manual
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'portal_membros' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Selector and explanation card */}
+                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <ShieldCheck size={20} className="text-indigo-600" />
+                                    <h3 className="text-lg font-black text-slate-800">Classificação Administrativa</h3>
+                                </div>
+                                <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-6">
+                                    Defina quais módulos e recursos do Portal de Membros estarão disponíveis e visíveis para cada papel ou classificação administrativa selecionada.
+                                </p>
+
+                                <div className="space-y-4 mb-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-black uppercase text-slate-400">Selecione a Classificação</label>
+                                        <select 
+                                            value={selectedRoleForPortal}
+                                            onChange={(e) => setSelectedRoleForPortal(e.target.value)}
+                                            className="w-full border-2 border-slate-200 bg-slate-50/20 p-3.5 rounded-2xl text-xs font-black outline-none text-slate-700"
+                                        >
+                                            <option value="SUPERINTENDENTE">SUPERINTENDENTE</option>
+                                            <option value="COORDENADOR">COORDENADOR</option>
+                                            <option value="SECRETARIO">SECRETÁRIO</option>
+                                            <option value="PASTOR PRESIDENTE">PASTOR PRESIDENTE</option>
+                                            <option value="PASTOR AUXILIAR">PASTOR AUXILIAR</option>
+                                            <option value="TESOUREIRO">TESOUREIRO</option>
+                                            <option value="CONTADOR">CONTADOR</option>
+                                            <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+                                            <option value="LIDER DE DEPARTAMENTO">LÍDER DE DEPARTAMENTO</option>
+                                            <option value="AUXILIAR">AUXILIAR</option>
+                                            <option value="ADVOGADO">ADVOGADO</option>
+                                            <option value="NENHUMA">MEMBRO COMUM (Nenhuma Função)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="bg-indigo-50/30 border border-indigo-100 rounded-2xl p-4 space-y-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 block">Pré-definição Automática</span>
+                                        <p className="text-[11px] text-slate-500 leading-normal font-medium">
+                                            As permissões são atualizadas em tempo real para os membros correspondentes ao salvarem as modificações de acesso administrativo.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={handleSavePortalConfig}
+                                    disabled={isSavingPortalConfig}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs tracking-wider uppercase py-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {isSavingPortalConfig ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                    {isSavingPortalConfig ? 'Gravando Alterações...' : 'Salvar Alterações'}
+                                </button>
+                                
+                                <button 
+                                    onClick={handleRestorePortalDefaults}
+                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs tracking-wider uppercase py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <RotateCcw size={14} />
+                                    Restaurar Padrão
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Módulos do portal grid */}
+                        <div className="md:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
+                                <h3 className="text-sm font-black text-slate-500 uppercase tracking-wider">Módulos Ativos para {selectedRoleForPortal}</h3>
+                                <span className="text-[10px] uppercase font-black px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg">
+                                    {selectedPortalFeatures.length} Ativos
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                {PORTAL_MODULES.map(mod => {
+                                    const isChecked = selectedPortalFeatures.includes(mod.id);
+                                    let IconComponent = BookOpen;
+                                    
+                                    if (mod.iconId === 'MessageSquare') IconComponent = MessageSquare;
+                                    else if (mod.iconId === 'Newspaper') IconComponent = Newspaper;
+                                    else if (mod.iconId === 'BookOpen') IconComponent = BookOpen;
+                                    else if (mod.iconId === 'Mail') IconComponent = Mail;
+                                    else if (mod.iconId === 'Calendar') IconComponent = Calendar;
+                                    else if (mod.iconId === 'CheckSquare') IconComponent = CheckSquare;
+                                    else if (mod.iconId === 'DollarSign') IconComponent = DollarSign;
+                                    else if (mod.iconId === 'BookOpenText') IconComponent = BookOpenText;
+                                    else if (mod.iconId === 'GraduationCap') IconComponent = GraduationCap;
+                                    else if (mod.iconId === 'UserCheck') IconComponent = UserCheck;
+                                    else if (mod.iconId === 'Baby') IconComponent = Baby;
+                                    else if (mod.iconId === 'IdCard') IconComponent = IdCard;
+                                    else if (mod.iconId === 'Shield') IconComponent = Shield;
+                                    else if (mod.iconId === 'ShieldCheck') IconComponent = ShieldCheck;
+
+                                    return (
+                                        <div 
+                                            key={mod.id}
+                                            onClick={() => handleTogglePortalFeature(mod.id)}
+                                            className={`p-4 border-2 rounded-2xl flex items-start gap-3 cursor-pointer select-none transition-all ${isChecked ? 'bg-indigo-50/15 border-indigo-600' : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'}`}
+                                        >
+                                            <div className={`p-2.5 rounded-xl ${isChecked ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                <IconComponent size={16} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-black text-slate-800 block truncate">{mod.label}</span>
+                                                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                                        {isChecked && <Check size={10} strokeWidth={4} />}
+                                                    </div>
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 leading-normal font-semibold mt-1">
+                                                    {mod.desc}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
