@@ -8930,6 +8930,63 @@ const PortalMural = ({ user, db }) => {
     );
 };
 
+const WebPushNotificationTrigger = () => {
+    const [permissionStatus, setPermissionStatus] = useState('default');
+    const { addToast } = useContext(ChurchContext);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            setPermissionStatus(Notification.permission);
+        }
+    }, []);
+
+    const requestPermission = async () => {
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            addToast("Notificações de sistema não são suportadas neste navegador.", "warning");
+            return;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            setPermissionStatus(permission);
+            if (permission === 'granted') {
+                addToast("🔔 Notificações ativadas com sucesso! Você receberá avisos na barra do seu celular/sistema.", "success");
+                playNotificationSound();
+                new Notification("GIPP Conectado!", {
+                    body: "Você ativou com sucesso as notificações do Portal de Membros no seu dispositivo.",
+                    icon: "https://cdn-icons-png.flaticon.com/512/3223/3223605.png"
+                });
+            } else if (permission === 'denied') {
+                addToast("Permissão negada. Ative as notificações manualmente nas configurações do seu navegador.", "error");
+            }
+        } catch (error) {
+            console.error("Erro ao solicitar permissão de notificações: ", error);
+            addToast("Erro ao configurar notificações de sistema.", "error");
+        }
+    };
+
+    if (permissionStatus === 'granted') {
+        return (
+            <div className="hidden sm:flex items-center gap-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-100">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Notificações Ativas
+            </div>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={requestPermission}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/60 dark:hover:bg-indigo-950/80 border border-indigo-100 text-indigo-700 hover:text-indigo-800 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-xs"
+            title="Receber alertas no celular/computador"
+        >
+            <Bell size={12} className="animate-bounce" />
+            Ativar Alertas no Celular
+        </button>
+    );
+};
+
 const MemberPortalLayout = () => {
     const { view, setView, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
@@ -9232,6 +9289,7 @@ const MemberPortalLayout = () => {
                     <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    <NotificationCenter />
                     <OsThemeToggle variant="mobile" />
                     <AnimBgToggle variant="mobile" />
                     <ThemeToggle variant="mobile" />
@@ -9243,6 +9301,27 @@ const MemberPortalLayout = () => {
             {/* Main Content (Área Rolável) */}
             <main className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative z-10 pb-24 md:pb-16" style={{ height: 'calc(100vh - 4rem)' }}>
                 <div className="max-w-[1800px] mx-auto">
+                    {/* Desktop Header Panel */}
+                    <header className="hidden md:flex justify-between items-center pb-6 border-b border-slate-200/40 mb-8 shrink-0 relative z-20">
+                        <div>
+                            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
+                                Olá, {user.nome.split(' ')[0]}! 👋
+                            </h1>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1.5">
+                                Seja bem-vindo de volta ao portal da sua congregação.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <WebPushNotificationTrigger />
+                            <NotificationCenter />
+                            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-1" />
+                            <OsThemeToggle />
+                            <AnimBgToggle />
+                            <ThemeToggle />
+                            <FullScreenToggle />
+                        </div>
+                    </header>
+
                     {renderView()}
                 </div>
             </main>
@@ -9866,6 +9945,81 @@ export default function App() {
     const today = new Date();
     const currentMonth = today.getMonth();
     today.setHours(0,0,0,0);
+
+    if (user) {
+        // 1. Mensagens / E-mails não lidos direcionados ao membro logado
+        if (db.emails) {
+            const unreadEmails = db.emails.filter((e: any) => 
+                e.recipientId === user.id && 
+                !e.deletedByRecipient && 
+                !e.readByRecipient
+            );
+            unreadEmails.forEach((e: any) => {
+                notifs.push({
+                    id: `email_unread_${e.id}`,
+                    type: 'info',
+                    icon: Mail,
+                    title: 'Nova Mensagem Recebida',
+                    desc: `${e.senderName}: "${e.subject}"`,
+                    time: 'Não lida',
+                    color: 'emerald',
+                    actionUrl: 'portal_email'
+                });
+            });
+        }
+
+        // 2. Confirmação de recebimento/lançamento de Dízimo ou Oferta pela tesouraria (últimos 7 dias)
+        if (db.financeiro) {
+            const memberLaunches = db.financeiro.filter((f: any) => 
+                f.membro_id === user.id &&
+                f.tipo === 'entrada'
+            );
+            memberLaunches.forEach((f: any) => {
+                const fDateStr = f.data_competencia || f.data_pagamento;
+                if (!fDateStr) return;
+                const fDate = new Date(fDateStr.split('T')[0] + 'T00:00:00');
+                const diffTime = today.getTime() - fDate.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0 && diffDays <= 7) {
+                    notifs.push({
+                        id: `member_launch_${f.id}`,
+                        type: 'success',
+                        icon: DollarSign,
+                        title: 'Dízimo/Oferta Confirmado',
+                        desc: `Sua contribuição de R$ ${parseFloat(f.valor).toFixed(2)} foi processada e lançada com sucesso no sistema.`,
+                        time: diffDays === 0 ? 'Hoje' : `Há ${diffDays} d`,
+                        color: 'emerald',
+                        actionUrl: 'portal_financas'
+                    });
+                }
+            });
+        }
+
+        // 3. Novas postagens no Mural da Igreja (últimos 3 dias)
+        if (db.mural) {
+            db.mural.forEach((m: any) => {
+                const postDateStr = m.data_postagem || m.data;
+                if (!postDateStr) return;
+                const mDateStr = postDateStr.split('T')[0];
+                const mDate = new Date(mDateStr + 'T00:00:00');
+                const diffTime = today.getTime() - mDate.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0 && diffDays <= 3) {
+                    if (m.autor_id === user.id) return; // ignora a própria postagem no mural
+                    notifs.push({
+                        id: `mural_post_${m.id}`,
+                        type: 'info',
+                        icon: MessageSquare,
+                        title: 'Novo Aviso no Mural',
+                        desc: `${m.autor_nome || 'Membro da Igreja'}: "${m.texto?.substring(0, 45)}..."`,
+                        time: diffDays === 0 ? 'Hoje' : `Há ${diffDays} d`,
+                        color: 'blue',
+                        actionUrl: 'portal_mural'
+                    });
+                }
+            });
+        }
+    }
     
     if (db.financeiro) {
         const despesas = db.financeiro.filter((f: any) => f.tipo === 'saida' && f.status === 'pendente');
@@ -10030,14 +10184,40 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       notifications.forEach((notif: any) => {
-        if ((notif.id.startsWith('my_escala_') || notif.id.startsWith('evt_') || notif.id.startsWith('tar_')) && !notifiedIdsRef.current.includes(notif.id)) {
+        if (!notifiedIdsRef.current.includes(notif.id)) {
           try {
-            new Notification(notif.title, {
-              body: notif.desc,
-              icon: '/favicon.ico',
-              badge: '/favicon.ico'
-            });
+            // Tenta enviar via Service Worker (ideal para mobile, Android, iOS em homescreen, Windows PWA)
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(notif.title, {
+                  body: notif.desc,
+                  icon: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
+                  badge: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
+                  vibrate: [150, 80, 150],
+                  tag: notif.id,
+                  data: {
+                    url: notif.actionUrl ? `/${notif.actionUrl}` : '/'
+                  }
+                } as any);
+              }).catch(() => {
+                // Fallback standard se o SW não estiver totalmente pronto
+                new Notification(notif.title, {
+                  body: notif.desc,
+                  icon: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
+                  badge: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png'
+                });
+              });
+            } else {
+              // Fallback se SW não for suportado no browser
+              new Notification(notif.title, {
+                body: notif.desc,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
+                badge: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png'
+              });
+            }
+
             notifiedIdsRef.current.push(notif.id);
+            playNotificationSound();
           } catch (err) {
             console.warn("Could not display native browser notification: ", err);
           }
