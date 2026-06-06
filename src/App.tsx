@@ -9289,10 +9289,10 @@ const MemberPortalLayout = () => {
                     <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <NotificationCenter />
                     <OsThemeToggle variant="mobile" />
                     <AnimBgToggle variant="mobile" />
                     <ThemeToggle variant="mobile" />
+                    <NotificationCenter />
                     <FullScreenToggle variant="mobile" />
                     <button onClick={logout} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"><LogOut size={18}/></button>
                 </div>
@@ -9313,11 +9313,11 @@ const MemberPortalLayout = () => {
                         </div>
                         <div className="flex items-center gap-3">
                             <WebPushNotificationTrigger />
-                            <NotificationCenter />
                             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-1" />
                             <OsThemeToggle />
                             <AnimBgToggle />
                             <ThemeToggle />
+                            <NotificationCenter />
                             <FullScreenToggle />
                         </div>
                     </header>
