@@ -47,11 +47,26 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.5.0 */}
-            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-indigo-700 font-[Outfit]">v6.5.0 - Manual de Bordo Integrado, Matriz de Recursos SaaS & Segurança de Acessos Orbital</h3>
-                <p className="text-xs text-indigo-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.6.0 */}
+            <div className="relative pl-8 border-l-2 border-rose-500 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-rose-700 font-[Outfit]">v6.6.0 - Escola Bíblica Dominical (EBD) Interativa, Dashboard de Desempenho & Inteligência Teológica</h3>
+                <p className="text-xs text-rose-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700">Controle de Chamada Interativo (Presença):</strong> Novo console interativo para preenchimento de frequência de aulas, integrando o controle de Bíblia, revista e oferta, além do comportamento autocompensador de engajamento do aluno.</li>
+                    <li><strong className="text-slate-700">Gráfico Analítico de Frequência:</strong> Gráfico de área moderno baseado em Recharts, demonstrando a oscilação de presença de alunos ao longo das últimas lições dominicais na barra de métricas.</li>
+                    <li><strong className="text-slate-700">Campanha de Integração de Membros:</strong> Algoritmo de cruzamento inteligente que aponta em tempo real alunos e oficiais da igreja que estão ativos, mas sem matrícula ou chamada registradas na EBD, oferecendo atalho de matrícula fácil.</li>
+                    <li><strong className="text-slate-700">Fichas e Status Dominical de Aproveitamento:</strong> Cartões didáticos individuais informando taxa de presença, assiduidade de Bíblias, materiais e ofertas, classificando-os sob distinções honorárias como "Aluno Ouro", "Aluno Prata" e "Aluno Bronze".</li>
+                    <li><strong className="text-slate-700">Inteligência Teológica & Gerador de Dinâmicas:</strong> Módulo cognitivo impulsionado por IA (Gemini) para elaborar dinâmicas de 10 minutos, perguntas do professor e quebra-gelos para as lições em estudo, salvando o roteiro em PDF estilizado ou formatado para envio direto via WhatsApp.</li>
+                    <li><strong className="text-slate-700">Filtros Avançados e Caixa Financeiro de Missões:</strong> Painel de consulta cronológica para o livro caixa de missões, com badges consolidados de entradas, saídas, repasses e saldos residuais por período selecionado.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO ADICIONADO PARA VERSÃO 6.5.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-455"></div>
+                <h3 className="font-bold text-lg text-slate-700 font-[Outfit]">v6.5.0 - Manual de Bordo Integrado, Matriz de Recursos SaaS & Segurança de Acessos Orbital</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase mb-3 tracking-wider">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700">Manual Interativo GIPP:</strong> Desenvolvimento e acoplamento do Manual do Usuário oficial, composto por 26 tópicos dedicados que explicam as capacidades, regras e fluxos de cada módulo operacional do software de forma fluida.</li>
                     <li><strong className="text-slate-700 font-sans">Segurança & Usuários com Design Orbital:</strong> Redesenho integral da ficha cadastral de "Usuários & Níveis". Implementação de layout Glassmorphism com elementos em órbita holográfica, brasão de segurança em rotação, campos de atalho rápido e isolamento absoluto de z-index via Portrais do React (`createPortal`) no escopo do body.</li>

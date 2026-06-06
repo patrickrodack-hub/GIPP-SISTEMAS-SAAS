@@ -2291,7 +2291,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 <FormSelect label="Cargo Eclesiástico" value={data.cargo} onChange={v=>setData({...data, cargo:v})} options={['Membro', 'Auxiliar', 'Diácono', 'Presbítero', 'Evangelista', 'Missionário', 'Pastor']} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <FormSelect label="Função Administrativa" value={data.funcao_administrativa || 'NENHUMA'} onChange={v=>setData({...data, funcao_administrativa:v})} options={['NENHUMA', 'PASTOR PRESIDENTE', 'PASTOR AUXILIAR', 'SECRETARIO', 'TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR', 'ADVOGADO', 'AUXILIAR', 'LIDER DE DEPARTAMENTO']} />
+                                <FormSelect label="Função Administrativa" value={data.funcao_administrativa || 'NENHUMA'} onChange={v=>setData({...data, funcao_administrativa:v})} options={['NENHUMA', 'PASTOR PRESIDENTE', 'PASTOR AUXILIAR', 'COORDENADOR', 'SUPERINTENDENTE', 'SECRETARIO', 'TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR', 'ADVOGADO', 'AUXILIAR', 'LIDER DE DEPARTAMENTO']} />
                                 <FormInput label="Nº Carteirinha" value={data.numero_registro} onChange={v=>setData({...data, numero_registro:v})} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -9600,7 +9600,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.5.0</span>
+                        <span>Versão 6.6.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>SaaS Gold Edition</span>
                     </div>
@@ -10780,6 +10780,14 @@ export default function App() {
               const deptPerms = ['access_ministerios', 'access_sec_agenda', 'access_manual'];
               if (deptPerms.includes(perm)) return true;
           }
+          if (role === 'COORDENADOR') {
+              const coordPerms = ['access_ministerios', 'access_celulas', 'access_sec_agenda', 'access_manual'];
+              if (coordPerms.includes(perm)) return true;
+          }
+          if (role === 'SUPERINTENDENTE') {
+              const superPerms = ['access_ebd', 'access_sec_agenda', 'access_manual'];
+              if (superPerms.includes(perm)) return true;
+          }
           if (role === 'AUXILIAR') {
               const auxPerms = ['access_sec_agenda', 'access_ebd', 'access_gestao_cursos', 'access_manual'];
               if (auxPerms.includes(perm)) return true;
@@ -11399,7 +11407,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.5.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.6.0</p>
                         </div>
                     </div>
                     <div>
