@@ -187,6 +187,19 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
     const cargoLower = (user.cargo || '').toLowerCase();
     const funcaoLower = (user.funcao || '').toLowerCase();
     const nivelLower = (user.nivel || '').toLowerCase();
+    const funcaoAdmUpper = (user.funcao_administrativa || '').toUpperCase().trim();
+    const allowedRoles = [
+      'COORDENADOR',
+      'LIDER DE DEPARTAMENTO',
+      'PASTOR',
+      'PASTOR PRESIDENTE',
+      'PASTOR AUXILIAR',
+      'SUPERINTENDENTE',
+      'TESOUREIRO',
+      'SECRETARIO',
+      'ADMINISTRADOR',
+      'ADMINITRADOR'
+    ];
     return (
       nivelLower === 'master' || 
       nivelLower === 'pastor' || 
@@ -195,6 +208,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
       cargoLower.includes('lider') || 
       funcaoLower.includes('lider') ||
       cargoLower.includes('diretor') ||
+      allowedRoles.includes(funcaoAdmUpper) ||
       (user.permissoes && user.permissoes.includes('access_membros'))
     );
   }, [user]);
