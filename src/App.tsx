@@ -51,6 +51,8 @@ import ModuleDevSuporte from './components/ModuleDevSuporte';
 import ModuleBiblia from './components/ModuleBiblia';
 import ModuleMembros from './components/ModuleMembros';
 import ModuleUsuarios from './components/ModuleUsuarios';
+import ModuleSalinhaKids from './components/ModuleSalinhaKids';
+import PortalFrequencia from './components/PortalFrequencia';
 import ModuleFinanceiro from './components/ModuleFinanceiro';
 import ModuleSecretariaIntegrada from './components/ModuleSecretariaIntegrada';
 import ModuleCertificados from './components/ModuleCertificados';
@@ -1489,7 +1491,7 @@ export const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [] };
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
@@ -6338,9 +6340,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'config_visual', 'config_sistema', 'manual'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'config_visual', 'config_sistema', 'manual'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'config_visual', 'config_sistema', 'manual']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -6393,6 +6395,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         carteirinha_studio: 'group-hover:text-pink-500',
         credencial_lote: 'group-hover:text-purple-500',
         secretaria_ebd: 'group-hover:text-emerald-600',
+        salinha_kids: 'group-hover:text-rose-450',
         missoes_painel: 'group-hover:text-rose-500',
         rede_social: 'group-hover:text-pink-500',
         relatorios: 'group-hover:text-indigo-500',
@@ -6508,6 +6511,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial Lote" />}
                     {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
+                    {checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
                     {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
@@ -6739,7 +6743,10 @@ const PortalPerfil = ({ user, db, setView }) => {
         email: user.email || '',
         telefone: user.telefone || '',
         dataNascimento: user.dataNascimento || '',
-        senha_portal: user.senha_portal || user.senha || '123'
+        senha_portal: user.senha_portal || user.senha || '123',
+        notify_escala: user.notify_escala !== false,
+        notify_agenda: user.notify_agenda !== false,
+        notify_eventos: user.notify_eventos !== false
     });
     const [saving, setSaving] = useState(false);
 
@@ -6752,8 +6759,8 @@ const PortalPerfil = ({ user, db, setView }) => {
                 ...formData
             }, { merge: true });
             
-            logAction('EDIÇÃO', `Membro atualizou seus dados cadastrais no perfil`, 'membros', user.id);
-            addToast("Perfil atualizado com sucesso!", "success");
+            logAction('EDIÇÃO', `Membro atualizou seus dados cadastrais e preferências de notificação push`, 'membros', user.id);
+            addToast("Perfil e preferências de notificação atualizados com sucesso!", "success");
             setView('portal_home');
         } catch (error) {
             console.error(error);
@@ -6905,6 +6912,53 @@ const PortalPerfil = ({ user, db, setView }) => {
                                         />
                                         <Lock size={16} className="absolute left-4 top-4 text-slate-400" />
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 border-t border-slate-100 pt-6">
+                                <div>
+                                    <h4 className="text-sm font-extrabold text-slate-800">Preferências de Notificações Push (FCM)</h4>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Selecione quais alertas instantâneos deseja que cheguem a seu smartphone</p>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <label className="p-4 rounded-2xl border border-slate-150 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between cursor-pointer select-none">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 block">Minhas Escalas</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Escalas de voluntariado</span>
+                                        </div>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.notify_escala} 
+                                            onChange={e => setFormData({ ...formData, notify_escala: e.target.checked })}
+                                            className="w-5 h-5 accent-emerald-500 rounded"
+                                        />
+                                    </label>
+
+                                    <label className="p-4 rounded-2xl border border-slate-150 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between cursor-pointer select-none">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 block">Agenda Oficial</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Estudos & cultos</span>
+                                        </div>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.notify_agenda} 
+                                            onChange={e => setFormData({ ...formData, notify_agenda: e.target.checked })}
+                                            className="w-5 h-5 accent-emerald-500 rounded"
+                                        />
+                                    </label>
+
+                                    <label className="p-4 rounded-2xl border border-slate-150 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between cursor-pointer select-none">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 block">Eventos da Igreja</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Festas e conferências</span>
+                                        </div>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.notify_eventos} 
+                                            onChange={e => setFormData({ ...formData, notify_eventos: e.target.checked })}
+                                            className="w-5 h-5 accent-emerald-500 rounded"
+                                        />
+                                    </label>
                                 </div>
                             </div>
 
@@ -9069,6 +9123,8 @@ const MemberPortalLayout = () => {
         { id: 'portal_financas', icon: DollarSign, label: 'Dízimos', hoverColor: 'group-hover:text-emerald-600' },
         { id: 'portal_ebd', icon: BookOpen, label: 'EBD', hoverColor: 'group-hover:text-blue-600' },
         { id: 'portal_cursos', icon: GraduationCap, label: 'Cursos', hoverColor: 'group-hover:text-purple-500' },
+        { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
+        { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
     ];
 
@@ -9106,6 +9162,8 @@ const MemberPortalLayout = () => {
             case 'portal_tesoureiro': return <ModulePortalTesoureiro />;
             case 'portal_financas': return <PortalFinanceiro user={user} db={db} isTesoureiro={isTesoureiro} />;
             case 'portal_ebd': return <PortalEBD user={user} db={db} />;
+            case 'portal_frequencia': return <PortalFrequencia user={user} db={db} />;
+            case 'portal_salinha_kids': return <ModuleSalinhaKids mode="portal" />;
             case 'portal_agenda': return <PortalAgenda user={user} db={db} />;
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_cursos': return <PortalCursos user={user} />;
@@ -9346,6 +9404,7 @@ const AppLayout = () => {
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },
         'credencial_lote': { component: ModuleCredencial, access: 'access_sec_certificados' },
         'secretaria_ebd': { component: ModuleEBD, access: 'access_ebd' },
+        'salinha_kids': { component: ModuleSalinhaKids, access: 'public' },
         'gestao_cursos': { component: ModuleGestaoCursos, access: 'access_gestao_cursos' },
         'missoes_painel': { component: ModuleMissoes, access: 'access_missoes' },
         'rede_social': { component: ModuleRedeSocial, access: 'access_midia' },
@@ -10285,7 +10344,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -10310,7 +10369,7 @@ export default function App() {
           // O Portal do Membro bypassa este filtro para poder recuperar o histórico legado sem congregacao_id.
           if (user && user.nivel !== 'master' && user.tipo !== 'membro') {
               const myBranch = user.congregacao_id || 'sede';
-              const tenantTables = ['membros', 'financeiro', 'carnes', 'celulas', 'agenda', 'tarefas', 'visitantes', 'patrimonio', 'ebd_turmas'];
+              const tenantTables = ['membros', 'financeiro', 'carnes', 'celulas', 'agenda', 'tarefas', 'visitantes', 'patrimonio', 'ebd_turmas', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias'];
               
               if (tenantTables.includes(key)) {
                   q = query(colRef, where('congregacao_id', '==', myBranch));
