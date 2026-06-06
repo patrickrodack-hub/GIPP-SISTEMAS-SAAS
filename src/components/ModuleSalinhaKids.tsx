@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { 
   Baby, Heart, ShieldAlert, FileText, UserPlus, Search, Plus, Trash2, Edit, Calendar, Clock, Phone, AlertTriangle, Check, CheckCircle2, Volume2, Share2, HelpCircle, Activity, HeartHandshake, Eye, Users, FileBarChart, Bell, Sparkles, Send, MapPin, Smile, Key, Lock, Printer, QrCode, ShieldCheck, RefreshCw, BarChart2, Award, User
 } from 'lucide-react';
-import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { ChurchContext } from '../App';
 import { 
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie
@@ -27,6 +27,7 @@ export interface Crianca {
   responsavel_checkin?: string;
   parentesco_checkin?: string;
   hora_checkin?: string;
+  checkin_observacao?: string;
 }
 
 export interface KidsPresence {
@@ -89,6 +90,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
   // Check-In Station States
   const [checkinRelative, setCheckinRelative] = useState('Pai');
   const [checkinCustomRelative, setCheckinCustomRelative] = useState('');
+  const [checkinNotes, setCheckinNotes] = useState('');
   
   // Checkout verification modal
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -100,6 +102,85 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
   // Badge/Tag Modal Visualizer
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [badgeChild, setBadgeChild] = useState<Crianca | null>(null);
+
+  // New enhancements states (Age filters, Attendance history, Team volunteer schedules)
+  const [filterTurma, setFilterTurma] = useState('todas');
+  const [attendanceHistoryModalOpen, setAttendanceHistoryModalOpen] = useState(false);
+  const [historyChild, setHistoryChild] = useState<Crianca | null>(null);
+
+  const [volunteers, setVolunteers] = useState<any[]>([]);
+  const [volModalOpen, setVolModalOpen] = useState(false);
+  const [volName, setVolName] = useState('');
+  const [volRole, setVolRole] = useState('Professor Principal');
+  const [volDate, setVolDate] = useState(new Date().toISOString().split('T')[0]);
+  const [volPhone, setVolPhone] = useState('');
+  const [volStatus, setVolStatus] = useState('Confirmado');
+
+  const getAgeGroup = (birthDateStr: string) => {
+    const age = getChildAge(birthDateStr);
+    if (age <= 2) return 'bercario';
+    if (age <= 5) return 'maternal';
+    if (age <= 8) return 'primarios';
+    if (age <= 11) return 'juniores';
+    return 'teens';
+  };
+
+  const fetchVolunteers = async () => {
+    if (!dbFirestore || !appId) return;
+    try {
+      const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_voluntarios');
+      const snapshots = await getDocs(colRef);
+      const data = snapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setVolunteers(data);
+    } catch (err) {
+      console.error("Erro ao carregar voluntários:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchVolunteers();
+  }, [dbFirestore, appId]);
+
+  const handleSaveVolunteer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!volName || !volDate) {
+      addToast('Por favor, preencha o Nome e Data do voluntário.', 'error');
+      return;
+    }
+
+    const payload = {
+      nome: volName,
+      funcao: volRole,
+      data: volDate,
+      celular: volPhone,
+      status: volStatus,
+      congregacao_id: user?.congregacao_id || 'sede'
+    };
+
+    try {
+      const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_voluntarios');
+      await addDoc(colRef, payload);
+      addToast('Voluntário escalado com sucesso!', 'success');
+      setVolModalOpen(false);
+      setVolName('');
+      setVolPhone('');
+      fetchVolunteers(); // reload
+    } catch (err: any) {
+      addToast(`Erro ao salvar voluntário: ${err.message}`, 'error');
+    }
+  };
+
+  const handleDeleteVolunteer = async (id: string) => {
+    if (!window.confirm('Remover voluntário da escala?')) return;
+    try {
+      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_voluntarios', id);
+      await deleteDoc(docRef);
+      addToast('Voluntário removido da escala.', 'success');
+      fetchVolunteers(); // reload
+    } catch (err: any) {
+      addToast(`Erro ao remover: ${err.message}`, 'error');
+    }
+  };
 
   const isPastorOrLeader = useMemo(() => {
     if (!user) return false;
@@ -136,18 +217,24 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
     return [...kidsList].sort((a, b) => a.nome.localeCompare(b.nome));
   }, [kidsList]);
 
-  // Filters current instances based on searchTerm
+  // Filters current instances based on searchTerm and filterTurma
   const filteredKids = useMemo(() => {
     return sortedKidsList.filter((k: any) => {
       const respName = db.membros?.find((m: any) => m.id === k.responsavel_membro_id)?.nome || '';
+      
+      if (filterTurma !== 'todas') {
+        const group = getAgeGroup(k.data_nascimento);
+        if (group !== filterTurma) return false;
+      }
+
       return (
         k.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         k.alergias?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         k.tipo_sanguineo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        respName.toLowerCase().includes(searchTerm.toLowerCase())
+         respName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
-  }, [sortedKidsList, searchTerm, db.membros]);
+  }, [sortedKidsList, searchTerm, db.membros, filterTurma]);
 
   const presencesList = useMemo(() => {
     return db.kids_presencas || [];
@@ -352,7 +439,8 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
         status_checkin: 'na_salinha',
         pin_retirada: secureToken,
         responsavel_checkin: `${parentName} (${relativeRelation})`,
-        hora_checkin: timeNow
+        hora_checkin: timeNow,
+        checkin_observacao: checkinNotes.trim()
       });
 
       // Automatically register present in Kids Frequencia sheet for today as well
@@ -367,6 +455,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
 
       addToast(`Check-In realizado com sucesso! O código secreto de retirada de ${kid.nome} é: ${secureToken}`, 'success');
       setCheckinCustomRelative('');
+      setCheckinNotes('');
     } catch (error: any) {
       addToast(`Erro ao dar entrada: ${error.message}`, 'error');
     }
@@ -852,6 +941,12 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               >
                 <ShieldAlert size={14} /> Ocorrências & WhatsApp
               </button>
+              <button 
+                onClick={() => setTab(6)} 
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase transition-all whitespace-nowrap ${tab === 6 ? 'bg-white text-rose-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                <Users size={14} /> Equipe & Escala Voluntários
+              </button>
             </div>
 
             {tab === 2 && (
@@ -1092,25 +1187,69 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                   </div>
                 )}
 
+                {/* ENHANCED INPUTS BAR: INSTANT CLASSROOM FILTERS AND parent DROP-OFF INSTRUCTIONS NOTE */}
+                <div className="flex flex-col sm:flex-row gap-4 items-end mb-6 bg-slate-55 p-4 rounded-2xl border border-slate-200 shadow-inner">
+                  <div className="flex-1 w-full">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Instruções ou Recomendações para Hoje (ex: mamadeira na bolsa, remédio 11h, soneca):</label>
+                    <input 
+                      type="text"
+                      placeholder="Deixe em branco ou digite avisos específicos para os voluntários da sala..."
+                      value={checkinNotes}
+                      onChange={e => setCheckinNotes(e.target.value)}
+                      className="w-full mt-1.5 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder-slate-400"
+                    />
+                  </div>
+                  
+                  <div className="w-full sm:w-auto shrink-0 min-w-[220px]">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Filtrar por Turma / Faixa Etária</label>
+                    <select
+                      value={filterTurma}
+                      onChange={e => setFilterTurma(e.target.value)}
+                      className="w-full mt-1.5 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    >
+                      <option value="todas">👥 Todas as Salas</option>
+                      <option value="bercario">👶 Berçário (0-2 anos)</option>
+                      <option value="maternal">🌸 Maternal (3-5 anos)</option>
+                      <option value="primarios">🎨 Primários (6-8 anos)</option>
+                      <option value="juniores">📘 Juniores (9-11 anos)</option>
+                      <option value="teens">🚀 Teens (12+ anos)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   {/* GRID 1: AVAILABLE FOR CHECK-IN (EM CASA) */}
                   <div className="space-y-4">
                     <h4 className="font-black text-sm text-slate-700 uppercase tracking-wider flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-150">
-                      🏡 Fora da Salina / Em Casa ({kidsList.filter(k => k.status_checkin !== 'na_salinha').length})
+                      🏡 Fora da Salina / Em Casa ({kidsList.filter(k => {
+                        if (k.status_checkin === 'na_salinha') return false;
+                        if (filterTurma !== 'todas' && getAgeGroup(k.data_nascimento) !== filterTurma) return false;
+                        return true;
+                      }).length})
                     </h4>
                     
                     <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
-                      {kidsList.filter(k => k.status_checkin !== 'na_salinha').length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center italic py-20">Nenhuma criança em casa. Todas estão dentro da salinha!</p>
+                      {kidsList.filter(k => {
+                        if (k.status_checkin === 'na_salinha') return false;
+                        if (filterTurma !== 'todas' && getAgeGroup(k.data_nascimento) !== filterTurma) return false;
+                        return true;
+                      }).length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center italic py-20">Nenhuma criança listada fora da salinha.</p>
                       ) : (
-                        kidsList.filter(k => k.status_checkin !== 'na_salinha').map((kid: any) => {
+                        kidsList.filter(k => {
+                          if (k.status_checkin === 'na_salinha') return false;
+                          if (filterTurma !== 'todas' && getAgeGroup(k.data_nascimento) !== filterTurma) return false;
+                          return true;
+                        }).map((kid: any) => {
                           const age = getChildAge(kid.data_nascimento);
                           const parent = db.membros?.find((m: any) => m.id === kid.responsavel_membro_id);
                           return (
-                            <div key={kid.id} className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all flex justify-between items-center gap-4">
+                            <div key={kid.id} className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all flex justify-between items-center gap-4 animate-entrance">
                               <div>
                                 <h5 className="font-extrabold text-slate-800 text-sm">{kid.nome}</h5>
-                                <p className="text-[10px] text-slate-400 font-bold mt-0.5">Idade: {age} anos • Resp: {parent?.nome || 'N/A'}</p>
+                                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                                  Idade: {age} anos • Resp: {parent?.nome || 'N/A'} • Turma: <span className="text-rose-500 capitalize">{getAgeGroup(kid.data_nascimento)}</span>
+                                </p>
                                 {kid.alergias && (
                                   <span className="inline-block bg-amber-50 rounded text-[9px] font-bold text-amber-700 border border-amber-200 px-1.5 py-0.5 mt-1">⚠️ Alergia: {kid.alergias}</span>
                                 )}
@@ -1131,23 +1270,46 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                   {/* GRID 2: PRESENT INSIDE THE ROOM (NA SALINHA) */}
                   <div className="space-y-4">
                     <h4 className="font-black text-sm text-amber-800 uppercase tracking-wider flex items-center gap-2 bg-amber-50 p-3 rounded-xl border border-amber-100/50">
-                      🧸 Dentro da Salinha Agora ({kidsList.filter(k => k.status_checkin === 'na_salinha').length})
+                      🧸 Dentro da Salinha Agora ({kidsList.filter(k => {
+                        if (k.status_checkin !== 'na_salinha') return false;
+                        if (filterTurma !== 'todas' && getAgeGroup(k.data_nascimento) !== filterTurma) return false;
+                        return true;
+                      }).length})
                     </h4>
 
                     <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
-                      {kidsList.filter(k => k.status_checkin === 'na_salinha').length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center italic py-20">Nenhuma criança recebida na salinha no momento.</p>
+                      {kidsList.filter(k => {
+                        if (k.status_checkin !== 'na_salinha') return false;
+                        if (filterTurma !== 'todas' && getAgeGroup(k.data_nascimento) !== filterTurma) return false;
+                        return true;
+                      }).length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center italic py-20">Nenhuma criança na salinha para os critérios selecionados.</p>
                       ) : (
-                        kidsList.filter(k => k.status_checkin === 'na_salinha').map((kid: any) => {
+                        kidsList.filter(k => {
+                          if (k.status_checkin !== 'na_salinha') return false;
+                          if (filterTurma !== 'todas' && getAgeGroup(k.data_nascimento) !== filterTurma) return false;
+                          return true;
+                        }).map((kid: any) => {
                           const parent = db.membros?.find((m: any) => m.id === kid.responsavel_membro_id);
                           return (
-                            <div key={kid.id} className="p-4 rounded-2xl border border-amber-100 bg-amber-50/20 hover:shadow-sm transition-all flex flex-col justify-between gap-3">
+                            <div key={kid.id} className="p-4 rounded-2xl border border-amber-100 bg-amber-50/20 hover:shadow-sm transition-all flex flex-col justify-between gap-3 animate-entrance">
                               <div className="flex justify-between items-start gap-4">
                                 <div>
                                   <h5 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
                                     {kid.nome} <span className="bg-amber-100 text-amber-800 text-[8px] font-black px-1.5 py-0.5 rounded leading-none">{kid.hora_checkin}</span>
                                   </h5>
                                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Resp: {parent?.nome || 'N/A'} • Entregue por: {kid.responsavel_checkin || 'Pai'}</p>
+                                  
+                                  {/* LIVE NOTES POST-IT FROM PARENT FOR TODAY */}
+                                  {kid.checkin_observacao && (
+                                    <div className="bg-amber-100/60 border border-amber-250/50 rounded-xl p-2.5 text-[10px] text-amber-900 font-bold flex items-start gap-1.5 mt-2 shadow-sm">
+                                      <span className="text-xs select-none">📌</span>
+                                      <div>
+                                        <span className="text-[7px] font-black uppercase text-amber-800 tracking-wider block leading-none mb-0.5">Recomendações e Instruções</span>
+                                        {kid.checkin_observacao}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 <div className="bg-amber-600 text-white px-3 py-1 rounded-lg font-mono text-center shadow-inner">
@@ -1184,7 +1346,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
             {/* TAB 2: CHILDREN DIRECTORY */}
             {tab === 2 && (
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
-                <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6 border-b border-slate-100 pb-4">
                   <div className="relative max-w-sm w-full">
                     <Search size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
                     <input 
@@ -1192,8 +1354,25 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                       placeholder="Pesquisar por nome, sangue ou alergia..." 
                       value={searchTerm} 
                       onChange={e => setSearchTerm(e.target.value)} 
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500 flex-1 shadow-inner placeholder-slate-400"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-inner placeholder-slate-400"
                     />
+                  </div>
+                  
+                  {/* Classroom category filter */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Filtrar Turma:</span>
+                    <select
+                      value={filterTurma}
+                      onChange={e => setFilterTurma(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    >
+                      <option value="todas">👥 Todas as Turmas</option>
+                      <option value="bercario">👶 Berçário (0-2 anos)</option>
+                      <option value="maternal">🌸 Maternal (3-5 anos)</option>
+                      <option value="primarios">🎨 Primários (6-8 anos)</option>
+                      <option value="juniores">📘 Juniores (9-11 anos)</option>
+                      <option value="teens">🚀 Teens (12+ anos)</option>
+                    </select>
                   </div>
                 </div>
 
@@ -1214,7 +1393,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                             <div>
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-full bg-rose-50 border border-rose-100 text-rose-500 text-sm font-black flex items-center justify-center">
+                                  <div className="w-10 h-10 rounded-full bg-rose-50 border border-rose-100 text-rose-500 text-sm font-black flex items-center justify-center animate-pulse">
                                     {kid.nome.charAt(0)}
                                   </div>
                                   <div>
@@ -1244,6 +1423,10 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                                 )}
                               </div>
 
+                              <div className="mt-2 text-[10px] font-semibold text-rose-600 uppercase tracking-wider block">
+                                Turma atual: <span className="font-bold underline capitalize">{getAgeGroup(kid.data_nascimento)}</span>
+                              </div>
+
                               {(kid.is_especial || kid.alergias) && (
                                 <div className="mt-4 bg-orange-50/50 rounded-xl p-3 border border-orange-100/50 space-y-1 text-[11px] text-slate-600">
                                   {kid.is_especial && (
@@ -1256,27 +1439,34 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                               )}
                             </div>
 
-                            <div className="flex justify-between gap-2 mt-5 pt-3 border-t border-slate-100">
+                            <div className="flex justify-between gap-1 mt-5 pt-3 border-t border-slate-100">
                               <button 
                                 onClick={() => { setBadgeChild(kid); setBadgeModalOpen(true); }}
-                                className="text-slate-600 hover:text-slate-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-205 mr-auto"
+                                className="text-slate-650 hover:text-slate-800 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200"
                               >
-                                <Printer size={11} /> Crachá
+                                <Printer size={10} /> Crachá
+                              </button>
+
+                              <button 
+                                onClick={() => { setHistoryChild(kid); setAttendanceHistoryModalOpen(true); }}
+                                className="text-emerald-700 hover:text-emerald-900 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 mr-auto ml-1.5"
+                              >
+                                <FileText size={10} /> Frequência
                               </button>
                               
                               <button 
                                 onClick={() => openEditChildModal(kid)} 
-                                className="p-2 text-indigo-600 hover:bg-slate-100 text-indigo-800 rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                                className="p-2 text-indigo-600 hover:bg-slate-105 text-indigo-805 rounded-lg transition-colors border border-transparent hover:border-slate-200"
                                 title="Editar Cadastro"
                               >
-                                <Edit size={16} />
+                                <Edit size={15} />
                               </button>
                               <button 
                                 onClick={() => handleDeleteChild(kid.id)} 
                                 className="p-2 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors border border-transparent hover:border-slate-200"
                                 title="Remover Cadastro"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
                           </div>
@@ -1442,6 +1632,82 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                                 </span>
                               )}
                             </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 6: VOLUNTEER LIST & SCALE ROSTER */}
+            {tab === 6 && (
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full animate-entrance">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="font-black text-lg text-slate-800 flex items-center gap-2">
+                      <Users className="text-rose-600" /> Escala e Equipe de Voluntários
+                    </h3>
+                    <p className="text-xs text-slate-400 font-medium mt-1">Gerencie a escala de professores, berçaristas e ajudantes por data de culto.</p>
+                  </div>
+                  
+                  <button 
+                    onClick={() => setVolModalOpen(true)}
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-rose-500/20"
+                  >
+                    <Plus size={15} /> Escalar Voluntário
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  {volunteers.length === 0 ? (
+                    <div className="text-center py-16 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-250 p-12">
+                      <Users size={48} className="mx-auto text-slate-300 mb-4 animate-bounce" />
+                      <p className="font-bold text-lg text-slate-700">Escala vazia para os próximos cultos.</p>
+                      <p className="text-sm mt-1">Clique em "Escalar Voluntário" acima para compor a equipe.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {volunteers.map((vol: any) => {
+                        return (
+                          <div key={vol.id} className="p-5 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between hover:shadow-sm transition-all animate-entrance">
+                            <div>
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full bg-rose-50 text-rose-600 text-sm font-black flex items-center justify-center">
+                                    {vol.nome.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-extrabold text-slate-800 text-sm leading-tight text-left">{vol.nome}</h4>
+                                    <p className="text-[10px] text-slate-400 font-bold mt-1 text-left">
+                                      Função: <span className="text-indigo-600 font-black">{vol.funcao}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border ${vol.status === 'Confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-205'}`}>
+                                  {vol.status}
+                                </span>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t border-slate-200/60 grid grid-cols-2 gap-2 text-[10px] text-left">
+                                <div>
+                                  <span className="font-semibold text-slate-400 block uppercase">Data de Escala</span>
+                                  <span className="font-extrabold text-slate-700">{vol.data.split('-').reverse().join('/')}</span>
+                                </div>
+                                <div>
+                                  <span className="font-semibold text-slate-400 block uppercase">Contato</span>
+                                  <span className="font-extrabold text-slate-700">{vol.celular || 'Não cadastrado'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleDeleteVolunteer(vol.id)}
+                              className="mt-5 w-full py-2 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-xl border border-slate-200 hover:border-rose-200 text-[10px] font-black uppercase transition-colors flex items-center justify-center gap-1.5"
+                            >
+                              <Trash2 size={11} /> Dispensar Escala
+                            </button>
                           </div>
                         );
                       })}
@@ -1697,6 +1963,185 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* NEW MASTER MODAL A: VOLUNTEER ROSTER SCALE SCHEDULER */}
+      {volModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-entrance">
+            <div className="p-6 border-b border-slate-100 bg-rose-50/50 flex justify-between items-center bg-rose-50/30">
+              <div>
+                <h3 className="font-black text-rose-800 text-sm uppercase tracking-wider flex items-center gap-2">
+                  <Plus className="text-rose-650" /> Escalar Voluntário
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Adicione presbíteros, professores ou cooperadores ao culto designado.</p>
+              </div>
+              <button 
+                onClick={() => setVolModalOpen(false)} 
+                className="w-8 h-8 rounded-full border border-slate-200 hover:bg-slate-105 text-slate-500 transition-colors flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveVolunteer} className="p-6 space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Nome Completo</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ex: Diácono Gabriel"
+                  value={volName}
+                  onChange={e => setVolName(e.target.value)}
+                  className="w-full mt-1.5 px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Número de Celular</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: 11999999999"
+                  value={volPhone}
+                  onChange={e => setVolPhone(e.target.value)}
+                  className="w-full mt-1.5 px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Função na Sala</label>
+                  <select 
+                    value={volRole}
+                    onChange={e => setVolRole(e.target.value)}
+                    className="w-full mt-1.5 px-3 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-xs font-black text-slate-705"
+                  >
+                    <option value="Professor Principal">Professor Principal</option>
+                    <option value="Professor Auxiliar">Professor Auxiliar</option>
+                    <option value="Berçarista">Berçarista VIP</option>
+                    <option value="Recepção e Cuidados">Recepção/Portaria</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Status Inicial</label>
+                  <select 
+                    value={volStatus}
+                    onChange={e => setVolStatus(e.target.value)}
+                    className="w-full mt-1.5 px-3 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-xs font-black text-slate-705"
+                  >
+                    <option value="Confirmado">Confirmado</option>
+                    <option value="Pendente">Pendente</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Data do Culto / Escala</label>
+                <input 
+                  type="date" 
+                  required
+                  value={volDate}
+                  onChange={e => setVolDate(e.target.value)}
+                  className="w-full mt-1.5 px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setVolModalOpen(false)} 
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase rounded-xl transition shadow-md shadow-rose-500/25"
+                >
+                  Salvar na Escala
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* NEW MASTER MODAL B: INDIVIDUAL PRESENCES RATE LEDGER */}
+      {attendanceHistoryModalOpen && historyChild && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-entrance">
+            <div className="p-6 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+              <div>
+                <h3 className="font-black text-sm uppercase tracking-wider flex items-center gap-2 text-emerald-400">
+                  <Calendar size={18} /> Livro de Frequência Individual
+                </h3>
+                <p className="text-[10px] text-slate-300 font-medium mt-0.5">Histórico completo de comparecimento de {historyChild.nome}</p>
+              </div>
+              <button 
+                onClick={() => { setAttendanceHistoryModalOpen(false); setHistoryChild(null); }}
+                className="text-slate-400 hover:text-white font-extrabold text-sm border border-slate-800 p-1.5 rounded-lg hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar space-y-5">
+              {/* Visual statistics badge */}
+              <div className="bg-slate-55 p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left">
+                <div>
+                  <span className="text-slate-400 font-black text-[9px] uppercase tracking-wider block">Turma Designada</span>
+                  <span className="text-slate-800 font-black text-xs capitalize">{getAgeGroup(historyChild.data_nascimento)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-400 font-black text-[9px] uppercase tracking-wider block">Presenças Registradas</span>
+                  <span className="text-emerald-600 font-black text-sm font-black">
+                    {presencesList.filter((p: any) => p.crianca_id === historyChild.id).length} aulas
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-left">
+                <h4 className="font-black text-xs text-slate-500 uppercase tracking-wider">Linha do Tempo de Cultos e Chamadas</h4>
+                
+                {presencesList.filter((p: any) => p.crianca_id === historyChild.id).length === 0 ? (
+                  <p className="text-xs text-slate-400 italic text-center py-8">Nenhuma presença recente computada nos registros unificados.</p>
+                ) : (
+                  <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                    {presencesList.filter((p: any) => p.crianca_id === historyChild.id)
+                      .sort((a: any, b: any) => b.data.localeCompare(a.data))
+                      .map((registry: any, idx: number) => {
+                        return (
+                          <div key={registry.id || idx} className="p-3.5 rounded-xl border border-slate-150 bg-white shadow-inner flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-emerald-500 bg-emerald-50 border border-emerald-110 p-1 rounded-full"><CheckCircle2 size={13} /></span>
+                              <div>
+                                <span className="font-extrabold text-slate-800">{registry.data.split('-').reverse().join('/')}</span>
+                                <span className="text-[9px] font-bold text-slate-400 block whitespace-nowrap">Status: Presente</span>
+                              </div>
+                            </div>
+                            
+                            <div className="text-right text-[10px] text-slate-500">
+                              <span>Sessão dominical confirmada</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-6 bg-slate-50 border-t border-slate-155 flex justify-end">
+              <button
+                onClick={() => { setAttendanceHistoryModalOpen(false); setHistoryChild(null); }}
+                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all"
+              >
+                Fechar Livro
+              </button>
+            </div>
           </div>
         </div>
       )}

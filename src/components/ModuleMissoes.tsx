@@ -73,7 +73,100 @@ const ModuleMissoes = () => {
 
     const filterByCong = (item) => congregacaoFilter === 'todas' || item.congregacao_id === congregacaoFilter || (!item.congregacao_id && congregacaoFilter === 'sede');
 
+    // --- CAIXA MISSÕES FILTRO DE DATA E PERÍODO ---
+    const [finStartDate, setFinStartDate] = useState('');
+    const [finEndDate, setFinEndDate] = useState('');
+    const [finPeriod, setFinPeriod] = useState('todos');
+
+    const handlePeriodChange = (val: string) => {
+        setFinPeriod(val);
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        if (val === 'todos') {
+            setFinStartDate('');
+            setFinEndDate('');
+        } else if (val === 'hoje') {
+            setFinStartDate(todayStr);
+            setFinEndDate(todayStr);
+        } else if (val === '7dias') {
+            const past = new Date();
+            past.setDate(today.getDate() - 7);
+            setFinStartDate(past.toISOString().split('T')[0]);
+            setFinEndDate(todayStr);
+        } else if (val === '30dias') {
+            const past = new Date();
+            past.setDate(today.getDate() - 30);
+            setFinStartDate(past.toISOString().split('T')[0]);
+            setFinEndDate(todayStr);
+        } else if (val === 'este_mes') {
+            const first = new Date(today.getFullYear(), today.getMonth(), 1);
+            const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            setFinStartDate(first.toISOString().split('T')[0]);
+            setFinEndDate(last.toISOString().split('T')[0]);
+        } else if (val === 'este_ano') {
+            const first = new Date(today.getFullYear(), 0, 1);
+            const last = new Date(today.getFullYear(), 11, 31);
+            setFinStartDate(first.toISOString().split('T')[0]);
+            setFinEndDate(last.toISOString().split('T')[0]);
+        }
+    };
+
+    const handleStartDateChange = (val: string) => {
+        setFinStartDate(val);
+        setFinPeriod('personalizado');
+    };
+
+    const handleEndDateChange = (val: string) => {
+        setFinEndDate(val);
+        setFinPeriod('personalizado');
+    };
+
     const financeiroMissoes = db.financeiro.filter(f => f.categoria === 'Missões').filter(filterByCong);
+
+    const filteredFinanceiroMissoes = useMemo(() => {
+        let list = [...financeiroMissoes];
+        
+        const parseDate = (dStr: string) => {
+            if (!dStr) return null;
+            return new Date(dStr + 'T00:00:00');
+        };
+        
+        const start = finStartDate ? parseDate(finStartDate) : null;
+        const end = finEndDate ? parseDate(finEndDate) : null;
+        
+        if (start || end) {
+            list = list.filter(item => {
+                if (!item.data_competencia) return false;
+                const itemDate = parseDate(item.data_competencia);
+                if (!itemDate) return false;
+                if (start && itemDate < start) return false;
+                if (end && itemDate > end) return false;
+                return true;
+            });
+        }
+        
+        return list;
+    }, [financeiroMissoes, finStartDate, finEndDate]);
+
+    const filteredStats = useMemo(() => {
+        let entradas = 0;
+        let saidas = 0;
+        filteredFinanceiroMissoes.forEach(item => {
+            const val = parseFloat(item.valor) || 0;
+            const t = (item.tipo || '').toLowerCase();
+            if (t === 'entrada' || t === 'receita') {
+                entradas += val;
+            } else if (t === 'saída' || t === 'saida' || t === 'despesa') {
+                saidas += val;
+            }
+        });
+        return {
+            entradas,
+            saidas,
+            saldo: entradas - saidas
+        };
+    }, [filteredFinanceiroMissoes]);
+
     const missionariosList = (db.missoes.missionarios || []).filter(filterByCong);
     const agenciasList = (db.missoes.agencias || []).filter(filterByCong);
     const colaboradoresList = (db.missoes.colaboradores || []).filter(filterByCong);
@@ -436,7 +529,105 @@ const ModuleMissoes = () => {
                 {tab === 2 && <GenericTable title="Missionários" type="missionario" data={missionariosList} columns={[{header:'Nome', key:'nome'}, {header:'Campo', key:'campo'}, {header:'Agência', key:'agencia'}]} />}
                 {tab === 3 && <GenericTable title="Agências" type="agencia_missoes" data={agenciasList} columns={[{header:'Agência', key:'nome'}, {header:'Responsável', key:'responsavel'}]} />}
                 {tab === 4 && <GenericTable title="Colaboradores" type="missoes_colaborador" data={colaboradoresList} columns={[{header:'Nome', key:'nome'}, {header:'Tipo Apoio', key:'tipo'}]} />}
-                {tab === 5 && <GenericTable title="Caixa Missões" type="missoes_financeiro" data={financeiroMissoes} columns={[{header:'Data', key:'data_competencia', render: d=>formatDateLocal(d.data_competencia)}, {header:'Descrição', key:'descricao'}, {header:'Valor', key:'valor', render: v=>`R$ ${parseFloat(v.valor).toFixed(2)}`}, {header:'Tipo', key:'tipo'}]} />}
+                {tab === 5 && (
+                    <div className="h-full flex flex-col space-y-6 overflow-y-auto custom-scrollbar p-2 pb-16">
+                        {/* Painel de Filtros */}
+                        <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-end justify-between bg-white/70">
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                                <div className="text-left">
+                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Período / Atalhos</label>
+                                    <select
+                                        value={finPeriod}
+                                        onChange={e => handlePeriodChange(e.target.value)}
+                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                    >
+                                        <option value="todos">📅 Todo o Período</option>
+                                        <option value="hoje">☀️ Hoje</option>
+                                        <option value="7dias">🔄 Últimos 7 dias</option>
+                                        <option value="30dias">🗓️ Últimos 30 dias</option>
+                                        <option value="este_mes">🌸 Este Mês</option>
+                                        <option value="este_ano">✨ Este Ano</option>
+                                        <option value="personalizado">🛠️ Personalizado</option>
+                                    </select>
+                                </div>
+                                <div className={`text-left ${finPeriod === 'personalizado' ? "opacity-100" : "opacity-70"}`}>
+                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Inicial</label>
+                                    <input
+                                        type="date"
+                                        value={finStartDate}
+                                        onChange={e => handleStartDateChange(e.target.value)}
+                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                    />
+                                </div>
+                                <div className={`text-left ${finPeriod === 'personalizado' ? "opacity-100" : "opacity-70"}`}>
+                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Final</label>
+                                    <input
+                                        type="date"
+                                        value={finEndDate}
+                                        onChange={e => handleEndDateChange(e.target.value)}
+                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                    />
+                                </div>
+                            </div>
+                            
+                            {(finPeriod !== 'todos' || finStartDate || finEndDate) && (
+                                <button
+                                    onClick={() => handlePeriodChange('todos')}
+                                    className="px-4 py-2.5 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl text-[10px] font-black uppercase text-slate-600 hover:text-rose-600 tracking-wider transition duration-200 flex items-center gap-1.5 self-center md:self-end"
+                                >
+                                    <RotateCcw size={12} /> Limpar
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Badges de Métricas Financeiras Filtradas */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 shrink-0">
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                <div className="text-left">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Entradas</p>
+                                    <h3 className="text-2xl font-black text-emerald-600 tracking-tight mt-1.5">R$ {filteredStats.entradas.toFixed(2)}</h3>
+                                    <span className="text-[9px] text-slate-400 font-bold block mt-0.5">no período selecionado</span>
+                                </div>
+                                <div className="p-3 bg-emerald-50 text-emerald-500 rounded-2xl"><TrendingUp size={24} /></div>
+                            </div>
+
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                <div className="text-left">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Saídas</p>
+                                    <h3 className="text-2xl font-black text-rose-600 tracking-tight mt-1.5">R$ {filteredStats.saidas.toFixed(2)}</h3>
+                                    <span className="text-[9px] text-slate-400 font-bold block mt-0.5">no período selecionado</span>
+                                </div>
+                                <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl"><TrendingDown size={24} /></div>
+                            </div>
+
+                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                <div className="text-left">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Saldo Líquido</p>
+                                    <h3 className={`text-2xl font-black tracking-tight mt-1.5 ${filteredStats.saldo >= 0 ? "text-indigo-600" : "text-rose-650"}`}>
+                                        R$ {filteredStats.saldo.toFixed(2)}
+                                    </h3>
+                                    <span className="text-[9px] text-slate-400 font-bold block mt-0.5">sobra em caixa</span>
+                                </div>
+                                <div className={`p-3 rounded-2xl ${filteredStats.saldo >= 0 ? "bg-indigo-50 text-indigo-500" : "bg-rose-50 text-rose-500"}`}><Landmark size={24} /></div>
+                            </div>
+                        </div>
+
+                        {/* Tabela do Caixa de Missões */}
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                            <GenericTable 
+                                title="Caixa Missões" 
+                                type="missoes_financeiro" 
+                                data={filteredFinanceiroMissoes} 
+                                columns={[
+                                    {header:'Data', key:'data_competencia', render: d=>formatDateLocal(d.data_competencia)}, 
+                                    {header:'Descrição', key:'descricao'}, 
+                                    {header:'Valor', key:'valor', render: v=>`R$ ${parseFloat(v.valor).toFixed(2)}`}, 
+                                    {header:'Tipo', key:'tipo'}
+                                ]} 
+                            />
+                        </div>
+                    </div>
+                )}
                 
                 {/* --- NOVO: ABA CARNÊ DE MISSÕES --- */}
                 {tab === 6 && (
