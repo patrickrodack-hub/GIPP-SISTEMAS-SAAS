@@ -9845,9 +9845,60 @@ export default function App() {
         addToast("A permissão para receber alertas do sistema foi negada.", "warning");
       }
     } catch (err: any) {
-      console.error("FCM Error: ", err);
-      setFcmStatus('failed');
-      addToast(`Falha ao registrar para Mensagens Push: ${err.message || err}`, "error");
+      console.warn("FCM registration failed, testing standard Web Push native fallback...", err);
+      try {
+        // Fallback to standard web-push subscription using local server-generated public key
+        const keyRes = await fetch('/api/push/public-key');
+        if (!keyRes.ok) throw new Error("Não foi possível carregar a chave de identificação do servidor.");
+        const { publicKey } = await keyRes.json();
+        
+        if (!publicKey) {
+          throw new Error("O servidor ainda não inicializou as chaves criptográficas de Push.");
+        }
+
+        const reg = await navigator.serviceWorker.ready;
+        
+        const urlBase64ToUint8Array = (base64String: string) => {
+          const padding = '='.repeat((4 - base64String.length % 4) % 4);
+          const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        };
+
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        // Save subscription directly under Firestore collection sync
+        const subId = user?.id || 'anonymous_' + Math.random().toString(36).substring(2, 9);
+        const subJson = sub.toJSON();
+
+        const subRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions', subId);
+        await setDoc(subRef, {
+          id: subId,
+          userId: user?.id || 'anonymous',
+          userNome: user?.nome || 'Operador anônimo',
+          userTipo: user?.tipo || 'membro',
+          subscription: subJson,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        setFcmStatus('subscribed');
+        setFcmToken(`LocalWebPush:${subId}`);
+        localStorage.setItem('gipp_fcm_token', `LocalWebPush:${subId}`);
+        addToast("🔔 Notificações por Web Push nativo ativadas com sucesso localmente!", "success");
+      } catch (fallbackErr: any) {
+        console.error("FALHA TOTAL DE REGISTRO PUSH (FCM & NATIVE):", fallbackErr);
+        setFcmStatus('failed');
+        addToast(`Falha ao registrar para Mensagens Push: ${fallbackErr.message || fallbackErr}`, "error");
+      }
     }
   };
 
