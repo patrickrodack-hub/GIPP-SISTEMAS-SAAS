@@ -10137,463 +10137,8 @@ const clearBrowserAppCache = () => {
     }
 };
 
-// --- COMPONENTE DE SUCESSO E CELEBRAÇÃO PROFISSIONAL DE INSTALAÇÃO PWA ---
-const PWAInstallSuccessOverlay = ({ db, onClose }) => {
-    const [secondsLeft, setSecondsLeft] = useState(4);
-
-    useEffect(() => {
-        if (navigator.vibrate) {
-            navigator.vibrate([100, 50, 100, 50, 200]);
-        }
-        
-        try {
-            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = context.createOscillator();
-            const gain = context.createGain();
-            osc.connect(gain);
-            gain.connect(context.destination);
-            
-            osc.type = 'sine';
-            const now = context.currentTime;
-            osc.frequency.setValueAtTime(523.25, now); // C5
-            osc.frequency.setValueAtTime(659.25, now + 0.15); // E5
-            osc.frequency.setValueAtTime(783.99, now + 0.3); // G5
-            osc.frequency.setValueAtTime(1046.50, now + 0.45); // C6
-            
-            gain.gain.setValueAtTime(0.15, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-            
-            osc.start(now);
-            osc.stop(now + 0.8);
-        } catch (e) {}
-
-        const timer = setInterval(() => {
-            setSecondsLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    onClose();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [onClose]);
-
-    return (
-        <AnimatePresence>
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-[#040814]/98 backdrop-blur-3xl z-[30000] flex flex-col items-center justify-center p-6 text-white font-sans text-center overflow-hidden"
-            >
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/15 rounded-full filter blur-[100px] animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/15 rounded-full filter blur-[100px] animate-pulse delay-1000" />
-
-                <div className="relative z-10 max-w-md w-full space-y-8 px-4 flex flex-col items-center">
-                    <div className="relative">
-                        <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                            className="absolute -inset-4 rounded-full border border-dashed border-emerald-500/40"
-                        />
-                        <motion.div
-                            animate={{ scale: [1, 1.05, 1] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                            className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 opacity-20 blur-md"
-                        />
-                        
-                        <motion.div
-                            initial={{ scale: 0, rotate: -30 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                            className="relative w-28 h-28 bg-emerald-500/10 border border-emerald-500/30 rounded-[2.5rem] p-5 flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.15)]"
-                        >
-                            <img 
-                                src={db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} 
-                                className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(16,185,129,0.4)]" 
-                                alt="Installed App" 
-                                referrerPolicy="no-referrer"
-                            />
-                            
-                            <motion.div 
-                                initial={{ scale: 0, y: 10 }}
-                                animate={{ scale: 1, y: 0 }}
-                                transition={{ delay: 0.4, type: "spring" }}
-                                className="absolute -bottom-1 -right-1 w-10 h-10 bg-emerald-500 rounded-full border-[3px] border-[#040814] flex items-center justify-center text-white shadow-lg shadow-emerald-500/50"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </motion.div>
-                        </motion.div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <motion.span 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-xs font-black tracking-[0.25em] text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full uppercase border border-emerald-500/20"
-                        >
-                            Instalação Bem-sucedida!
-                        </motion.span>
-                        
-                        <motion.h1 
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="text-3xl font-black tracking-tight mt-3 text-white leading-tight"
-                        >
-                            Aplicativo Integrado <br />ao Dispositivo
-                        </motion.h1>
-                        
-                        <motion.p 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.7 }}
-                            transition={{ delay: 0.4 }}
-                            className="text-[13px] text-slate-300 font-medium leading-relaxed max-w-sm"
-                        >
-                            O portal oficial SaaS foi adicionado ao seu sistema operacional com sucesso. O ecrã será atualizado para o modo de autenticação segura nativa.
-                        </motion.p>
-                    </div>
-
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5 }}
-                        className="bg-white/[0.02] p-5 rounded-3xl border border-white/5 w-full space-y-4"
-                    >
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-slate-400 font-bold uppercase tracking-wider">Reiniciando Sandbox Dedicado</span>
-                            <span className="font-mono text-emerald-400 font-black">{secondsLeft}s...</span>
-                        </div>
-                        
-                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                            <motion.div 
-                                className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 rounded-full"
-                                initial={{ width: "100%" }}
-                                animate={{ width: "0%" }}
-                                transition={{ duration: 4, ease: "linear" }}
-                            />
-                        </div>
-                    </motion.div>
-
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.4 }}
-                        transition={{ delay: 0.6 }}
-                        className="text-[10px] uppercase font-bold tracking-widest text-slate-400 font-mono"
-                    >
-                        PWA Workspace Container Activo
-                    </motion.p>
-                </div>
-            </motion.div>
-        </AnimatePresence>
-    );
-};
-
-// --- MODAL IMPERATIVO E PROFISSIONAL PARA INSTALAÇÃO PWA E SEGURANÇA DE NOTIFICAÇÕES ---
-const ForcedPWAInstallationPrompt = ({ db, addToast, installPrompt, setInstallPrompt, requestFcmPermission, fcmPermission, onClose, setIsStandalone, setShowInstallSuccessOverlay, setUser, setView }) => {
-    const [copied, setCopied] = useState(false);
-    
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    
-    const saasUrl = window.location.origin + window.location.pathname + window.location.search;
-    
-    const handleCopyLink = () => {
-        try {
-            navigator.clipboard.writeText(saasUrl);
-            setCopied(true);
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-            addToast("Link do sistema SaaS copiado com sucesso!", "success");
-            setTimeout(() => setCopied(false), 2500);
-        } catch (err) {
-            addToast("Falha ao copiar link automaticamente.", "error");
-        }
-    };
-    
-    const notificationGranted = fcmPermission === 'granted';
-    const progressPercent = notificationGranted ? 100 : 50;
-
-    return (
-        <AnimatePresence>
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-[#090d16]/95 backdrop-blur-2xl z-[20000] flex flex-col justify-between p-6 md:p-8 overflow-y-auto text-white font-sans selection:bg-indigo-500 selection:text-white"
-            >
-                <div className="flex flex-col items-center text-center mt-4 max-w-md mx-auto w-full">
-                    <motion.div 
-                        initial={{ scale: 0.8, y: -20 }}
-                        animate={{ scale: 1, y: 0 }}
-                        className="relative w-24 h-24 bg-white/5 rounded-[2rem] p-4 border border-white/10 shadow-[0_0_50px_rgba(99,102,241,0.15)] mb-5 flex items-center justify-center overflow-hidden"
-                    >
-                        <img 
-                            src={db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} 
-                            className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" 
-                            alt="Logo oficial" 
-                            referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent pointer-events-none"></div>
-                    </motion.div>
-                    
-                    <motion.h2 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-2xl md:text-3xl font-black tracking-tight"
-                    >
-                        {db.igreja?.nome || "PORTAL GIPP"}
-                    </motion.h2>
-                    
-                    <motion.span 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.7 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-[10px] md:text-xs font-black text-indigo-400 mt-1.5 uppercase tracking-[0.3em] flex items-center gap-1.5"
-                    >
-                        <span className="w-2 h-2 rounded-full bg-indigo-505 animate-ping"></span>
-                        Espaço de Trabalho SaaS Ativo
-                    </motion.span>
-                </div>
-
-                <div className="my-8 max-w-md mx-auto w-full space-y-6">
-                    <div className="bg-white/5 p-4 rounded-3xl border border-white/10 shadow-inner">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Etapa de Inicialização</span>
-                            <span className="text-xs font-black font-mono text-indigo-400">{progressPercent}% Concluído</span>
-                        </div>
-                        <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
-                            <motion.div 
-                                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 rounded-full"
-                                animate={{ width: `${progressPercent}%` }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-950/75 p-5 rounded-3xl border border-white/5 relative overflow-hidden group">
-                        <div className="flex justify-between items-center mb-1.5">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                <Cpu size={12} className="text-indigo-400" /> URL do seu Portal SaaS
-                            </span>
-                            <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-bold">Único</span>
-                        </div>
-                        <p className="text-xs font-mono text-slate-500 break-all select-all font-medium leading-relaxed pr-8">
-                            {saasUrl}
-                        </p>
-                        <button 
-                            onClick={handleCopyLink}
-                            className="absolute right-4 bottom-4 w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/20 border border-white/10 flex items-center justify-center transition-all cursor-pointer shadow-md"
-                            title="Copiar link oficial"
-                        >
-                            {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-indigo-400" />}
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest block pl-1">Passo 1: Receber Alertas no Celular</span>
-                        
-                        {notificationGranted ? (
-                            <motion.div 
-                                initial={{ scale: 0.95 }}
-                                animate={{ scale: 1 }}
-                                className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-5 flex items-center justify-between gap-4"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/10 shrink-0">
-                                        <Bell size={22} className="text-emerald-400 animate-pulse" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-extrabold text-sm text-emerald-300">Notificações Conectadas!</h4>
-                                        <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-0.5">As escalas, tarefas de última hora e comunicados estão ativos no seu ecrã.</p>
-                                    </div>
-                                </div>
-                                <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400">
-                                    <Check size={14} strokeWidth={3} />
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div 
-                                initial={{ scale: 0.95 }}
-                                animate={{ scale: 1 }}
-                                className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-5 space-y-4"
-                            >
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/10 shrink-0 animate-bounce">
-                                        <Bell size={22} className="text-indigo-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-extrabold text-sm text-indigo-300">Permissão de Notificações Exigida</h4>
-                                        <p className="text-[11px] text-slate-300 font-medium leading-relaxed mt-0.5">Fique por dentro de alterações em escalas, horários e decisões emergenciais da igreja.</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={async () => {
-                                        await requestFcmPermission();
-                                    }}
-                                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm rounded-2xl transition-all shadow-lg active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                                >
-                                    <Bell size={16} className="animate-wiggle" />
-                                    Autorizar Notificações do Portal
-                                </button>
-                            </motion.div>
-                        )}
-                    </div>
-
-                    <div className="space-y-3">
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest block pl-1">Passo 2: Instalar no Ambiente de Trabalho</span>
-                        
-                        {isIOS ? (
-                            <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-4">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center shrink-0">
-                                        <Smartphone size={22} className="text-indigo-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-extrabold text-sm">Acesso Nativo no iPhone / iPad</h4>
-                                        <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-0.5">Siga estas instruções passo-a-passo do Safari para adicionar à tela inicial:</p>
-                                    </div>
-                                </div>
-                                
-                                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 space-y-4 text-xs font-medium text-slate-300">
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">1</div>
-                                        <p className="leading-relaxed">Toque no botão de <b>Partilha</b> ( <Share2 size={13} className="inline text-indigo-400 mx-0.5" /> ) na barra de navegação inferior do seu dispositivo.</p>
-                                    </div>
-                                    <div className="h-px bg-white/5"></div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">2</div>
-                                        <p className="leading-relaxed">Role pelas opções para baixo e clique em <b>"Adicionar ao Ecrã Principal"</b> ( <Plus size={13} className="inline text-indigo-400 mx-0.5" /> ).</p>
-                                    </div>
-                                    <div className="h-px bg-white/5"></div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">3</div>
-                                        <p className="leading-relaxed">Clique em <b>"Concluir"</b> ou <b>"Adicionar"</b> no canto superior direito para liberar o funcionamento de alta velocidade.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : isAndroid ? (
-                            <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-4">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center shrink-0">
-                                        <Smartphone size={22} className="text-emerald-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-extrabold text-sm">Acesso Nativo no Android (Chrome/Edge)</h4>
-                                        <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-0.5">Abaixo está o instalador assistido para o seu sistema Android.</p>
-                                    </div>
-                                </div>
-                                
-                                {installPrompt ? (
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                installPrompt.prompt();
-                                                const { outcome } = await installPrompt.userChoice;
-                                                if (outcome === 'accepted') {
-                                                    setInstallPrompt(null);
-                                                    if (setIsStandalone) setIsStandalone(true);
-                                                    if (setShowInstallSuccessOverlay) setShowInstallSuccessOverlay(true);
-                                                    if (setUser) setUser(null);
-                                                    if (setView) setView('login');
-                                                }
-                                            } catch (e) {
-                                                addToast("Disparando assistente de instalação manual...", "info");
-                                            }
-                                        }}
-                                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm rounded-2xl transition-all shadow-lg active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                                    >
-                                        <DownloadCloud size={16} className="animate-bounce" />
-                                        Instalar Aplicativo Oficial
-                                    </button>
-                                ) : (
-                                    <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 space-y-4 text-xs font-medium text-slate-300">
-                                        <p className="text-[11px] text-amber-300 font-bold mb-1 flex items-center gap-1.5">
-                                            <Info size={12} /> Instalador Automático Aguardando
-                                        </p>
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">1</div>
-                                            <p className="leading-relaxed">Toque na barra do menu do browser (<b>três pontos verticais</b> <MoreVertical size={13} className="inline text-emerald-400 mx-0.5" /> ) no canto superior direito.</p>
-                                        </div>
-                                        <div className="h-px bg-white/5"></div>
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">2</div>
-                                            <p className="leading-relaxed">Clique em <b>"Instalar Aplicação"</b> ou <b>"Adicionar ao Ecrã Principal"</b>.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                             <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-4">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center shrink-0">
-                                        <Cpu size={22} className="text-slate-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-extrabold text-sm">Instalação no Computador / PC / Mac</h4>
-                                        <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-0.5">Clique no botão abaixo ou use a barra de endereços para criar um atalho nativo:</p>
-                                    </div>
-                                </div>
-                                
-                                {installPrompt ? (
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                installPrompt.prompt();
-                                                const { outcome } = await installPrompt.userChoice;
-                                                if (outcome === 'accepted') {
-                                                    setInstallPrompt(null);
-                                                    if (setIsStandalone) setIsStandalone(true);
-                                                    if (setShowInstallSuccessOverlay) setShowInstallSuccessOverlay(true);
-                                                    if (setUser) setUser(null);
-                                                    if (setView) setView('login');
-                                                }
-                                            } catch (e) {
-                                                console.error(e);
-                                            }
-                                        }}
-                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm rounded-2xl transition-all shadow-lg active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                                    >
-                                        <DownloadCloud size={16} />
-                                        Instalar Aplicativo GIPP
-                                    </button>
-                                ) : (
-                                    <p className="text-xs text-slate-400 bg-slate-950/40 p-3.5 rounded-xl border border-white/5 text-center font-medium leading-relaxed">
-                                        Abra o menu do seu navegador e clique em <b>"Instalar Aplicação"</b>, ou toque no atalho de download localizado no lado direito da sua barra de navegação/links.
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="mt-auto pt-6 text-center max-w-sm mx-auto w-full border-t border-white/5">
-                    <button 
-                        onClick={onClose}
-                        className="text-xs text-slate-500 hover:text-indigo-400 font-bold transition-all uppercase tracking-widest block mx-auto py-2.5 px-6 rounded-xl border border-white/5 hover:border-indigo-500/20 cursor-pointer"
-                    >
-                        Continuar temporariamente no navegador
-                    </button>
-                    <span className="text-[10px] text-slate-600 font-medium tracking-wide mt-2 block">
-                        Atenção: A falta de instalação impede avisos push persistentes e downloads offline.
-                    </span>
-                </div>
-            </motion.div>
-        </AnimatePresence>
-    );
-};
-
 // --- TELA DE CARREGAMENTO (SPLASH SCREEN) PÓS-LOGIN ---
 const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false, isMaryMode = false }) => {
-
     const [progress, setProgress] = useState(0);
     const [step, setStep] = useState(-1);
 
@@ -11033,15 +10578,6 @@ export default function App() {
       return saved !== 'false';
   });
   const [isMobileDevice, setIsMobileDevice] = useState(false); // NOVO: Identifica acesso por telemóvel
-  const [isStandalone, setIsStandalone] = useState(false); // NOVO: Identifica se corre como PWA instalado
-  const [showInstallSuccessOverlay, setShowInstallSuccessOverlay] = useState(false); // NOVO: Controla exibição de celebridade de instalação PWA
-  const [forcePwaClosed, setForcePwaClosed] = useState(() => {
-      try {
-          return localStorage.getItem('gipp_force_pwa_closed') === 'true';
-      } catch (e) {
-          return false;
-      }
-  });
 
   const notifications = useMemo(() => {
     const notifs = [];
@@ -11330,19 +10866,12 @@ export default function App() {
     }
   }, [notifications, db.igreja?.icone_sistema]);
 
-  // NOVO: Detetar telemóvel e forçar Portal do Membro e funcionamento autônomo (PWA)
+  // NOVO: Detetar telemóvel e forçar Portal do Membro
   useEffect(() => {
       const mobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobileDevice(mobileCheck);
       if (mobileCheck) {
           setLoginMode('membro');
-      }
-      const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
-      setIsStandalone(checkStandalone);
-      if (checkStandalone) {
-          // Se o sistema detectar que está instalado como PWA, força a abertura direta no ecrã de login
-          setUser(null);
-          setView('login');
       }
   }, []);
 
@@ -11563,26 +11092,14 @@ export default function App() {
       }
   }, [view, verses]);
 
-  // NOVO: Capturar o evento de instalação do navegador e sucesso de instalação PWA
+  // NOVO: Capturar o evento de instalação do navegador
   useEffect(() => {
       const handleBeforeInstallPrompt = (e) => {
           e.preventDefault();
           setInstallPrompt(e);
       };
-      const handleAppInstalled = () => {
-          console.log('GIPP OS Info: Aplicativo instalado com sucesso!');
-          setInstallPrompt(null);
-          setIsStandalone(true);
-          setShowInstallSuccessOverlay(true);
-          setUser(null);
-          setView('login');
-      };
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.addEventListener('appinstalled', handleAppInstalled);
-      return () => {
-          window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-          window.removeEventListener('appinstalled', handleAppInstalled);
-      };
+      return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
   const addToast = (message, type = 'info') => { 
@@ -13010,13 +12527,7 @@ export default function App() {
                             try {
                                 installPrompt.prompt();
                                 const { outcome } = await installPrompt.userChoice;
-                                if (outcome === 'accepted') {
-                                    setInstallPrompt(null);
-                                    setIsStandalone(true);
-                                    setShowInstallSuccessOverlay(true);
-                                    setUser(null);
-                                    setView('login');
-                                }
+                                if (outcome === 'accepted') setInstallPrompt(null);
                             } catch (e) {
                                 console.error("Erro no prompt de instalação", e);
                                 setShowInstallGuide(true);
@@ -13095,27 +12606,6 @@ export default function App() {
             </div>
         )}
 
-        {isMobileDevice && !isStandalone && !forcePwaClosed && (
-            <ForcedPWAInstallationPrompt 
-                db={db}
-                addToast={addToast}
-                installPrompt={installPrompt}
-                setInstallPrompt={setInstallPrompt}
-                requestFcmPermission={requestFcmPermission}
-                fcmPermission={fcmPermission}
-                onClose={() => {
-                    localStorage.setItem('gipp_force_pwa_closed', 'true');
-                    setForcePwaClosed(true);
-                }}
-                setIsStandalone={setIsStandalone}
-                setShowInstallSuccessOverlay={setShowInstallSuccessOverlay}
-                setUser={setUser}
-                setView={setView}
-            />
-        )}
-
-        {showInstallSuccessOverlay && <PWAInstallSuccessOverlay db={db} onClose={() => setShowInstallSuccessOverlay(false)} />}
-
         </div> 
       </ChurchContext.Provider>
     ); 
@@ -13156,27 +12646,6 @@ export default function App() {
         <div className="screen-content">
             {user.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />}
         </div>
-
-        {isMobileDevice && !isStandalone && !forcePwaClosed && (
-            <ForcedPWAInstallationPrompt 
-                db={db}
-                addToast={addToast}
-                installPrompt={installPrompt}
-                setInstallPrompt={setInstallPrompt}
-                requestFcmPermission={requestFcmPermission}
-                fcmPermission={fcmPermission}
-                onClose={() => {
-                    localStorage.setItem('gipp_force_pwa_closed', 'true');
-                    setForcePwaClosed(true);
-                }}
-                setIsStandalone={setIsStandalone}
-                setShowInstallSuccessOverlay={setShowInstallSuccessOverlay}
-                setUser={setUser}
-                setView={setView}
-            />
-        )}
-
-        {showInstallSuccessOverlay && <PWAInstallSuccessOverlay db={db} onClose={() => setShowInstallSuccessOverlay(false)} />}
     </ChurchContext.Provider>
   );
 }
