@@ -15,13 +15,18 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        const registerSW = () => {
           navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registado com sucesso: ', registration.scope);
+            console.log('SW registrado com sucesso: ', registration.scope);
           }).catch(err => {
-            console.log('O registo do SW falhou: ', err);
+            console.log('O registro do SW falhou: ', err);
           });
-        });
+        };
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          registerSW();
+        } else {
+          window.addEventListener('load', registerSW);
+        }
       }
     </script>
   </body>

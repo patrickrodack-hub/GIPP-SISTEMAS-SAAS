@@ -9972,6 +9972,7 @@ export default function App() {
   });
 
   const requestFcmPermission = async () => {
+    let activePublicKey = 'BKSGpAtTNnSHclTe4jk9TTOz4_RvpFBFIqJC-e-FvP5HsUaydyCHQqu2HNLjFnPrZ825u4ojE6j9K0Li9GzPj0s';
     try {
       setFcmStatus('subscribing');
       if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -9983,15 +9984,36 @@ export default function App() {
       
       if (permission === 'granted') {
         // Enforce standard native web-push registration directly using server's stable public-key
-        const keyRes = await fetch('/api/push/public-key');
-        if (!keyRes.ok) throw new Error("Não foi possível carregar a chave de identificação do servidor.");
-        const { publicKey } = await keyRes.json();
-        
-        if (!publicKey) {
-          throw new Error("O servidor ainda não inicializou as chaves de Push.");
+        let fetchPublicKey = '';
+        try {
+          const keyRes = await fetch('/api/push/public-key');
+          if (keyRes.ok) {
+            const data = await keyRes.json();
+            if (data && data.publicKey) {
+              fetchPublicKey = data.publicKey;
+              activePublicKey = data.publicKey;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn("Could not fetch push public-key from server endpoints, fallback to local VAPID keys", fetchErr);
         }
 
-        const reg = await navigator.serviceWorker.ready;
+        // Avoid hanging indefinitely on serviceWorker.ready via a Promise race
+        let reg: ServiceWorkerRegistration;
+        if ('serviceWorker' in navigator) {
+          try {
+            await navigator.serviceWorker.register('/sw.js');
+          } catch (registerError) {
+            console.warn("Inline register failed, using default registration", registerError);
+          }
+          const readyPromise = navigator.serviceWorker.ready;
+          const timeoutPromise = new Promise<ServiceWorkerRegistration>((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout de 3s esgotado ao aguardar o Service Worker.")), 3000)
+          );
+          reg = await Promise.race([readyPromise, timeoutPromise]);
+        } else {
+          throw new Error("Service Worker não está disponível.");
+        }
         
         const urlBase64ToUint8Array = (base64String: string) => {
           const cleanString = base64String.trim().replace(/\"/g, '');
@@ -10012,7 +10034,7 @@ export default function App() {
 
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
+          applicationServerKey: urlBase64ToUint8Array(activePublicKey)
         });
 
         const subId = user?.id || 'anonymous_' + Math.random().toString(36).substring(2, 9);
@@ -10040,10 +10062,11 @@ export default function App() {
       console.warn("Standard Web Push failed, trying FCM fallback...", err);
       try {
         const supported = await isSupported();
-        if (supported && fcmPermission === 'granted') {
+        const freshPermission = typeof window !== 'undefined' ? Notification.permission : 'default';
+        if (supported && (freshPermission === 'granted' || fcmPermission === 'granted')) {
           const messaging = getMessaging(app);
           const token = await getToken(messaging, {
-            vapidKey: 'BO_e7r7Wv3gXCHl-SmsJ1BCHXJ9fRj_yVvFpX_FmC4fPnA7V3p_m-eWv8C4fSnW4fPnA7v3_mev_Wnv8'
+            vapidKey: activePublicKey
           });
           if (token) {
             setFcmToken(token);
@@ -10062,7 +10085,7 @@ export default function App() {
             return;
           }
         }
-      } catch (fcmErr) {
+      } catch (fcmErr: any) {
         console.warn("FCM Fallback failed as well:", fcmErr);
       }
       
