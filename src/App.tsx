@@ -12549,7 +12549,7 @@ export default function App() {
                     className="w-full mt-4 bg-gradient-to-r from-slate-100 to-indigo-50/50 hover:from-indigo-100 hover:to-indigo-50/50 text-slate-700 hover:text-indigo-800 font-bold py-4 rounded-2xl transition-all shadow-sm border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <DownloadCloud size={20} className="text-indigo-600 animate-pulse"/> 
-                    Instalar App (Computador / Smartphone / Tablet)
+                    Instalar Sistema GIPP
                 </button>
                 
                 {loginMode === 'admin' ? (
