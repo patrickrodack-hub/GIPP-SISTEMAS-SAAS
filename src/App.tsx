@@ -9809,59 +9809,25 @@ export default function App() {
       setFcmPermission(permission);
       
       if (permission === 'granted') {
-        const supported = await isSupported();
-        if (!supported) {
-          throw new Error('O navegador não possui suporte nativo ao Firebase Cloud Messaging.');
-        }
-
-        const messaging = getMessaging(app);
-        
-        // request device Registration Token
-        const token = await getToken(messaging, {
-          vapidKey: 'BO_e7r7Wv3gXCHl-SmsJ1BCHXJ9fRj_yVvFpX_FmC4fPnA7V3p_m-eWv8C4fSnW4fPnA7v3_mev_Wnv8'
-        });
-        
-        if (token) {
-          setFcmToken(token);
-          setFcmStatus('subscribed');
-          localStorage.setItem('gipp_fcm_token', token);
-          
-          if (user) {
-            const tokenRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_tokens', user.id);
-            await setDoc(tokenRef, { 
-              token, 
-              userId: user.id, 
-              userName: user.nome, 
-              updatedAt: new Date().toISOString() 
-            }, { merge: true });
-          }
-          
-          addToast("Inscrição de Notificações Push FCM realizada! 🔔", "success");
-        } else {
-          throw new Error('Falha de negociação com o servidor para obter token.');
-        }
-      } else {
-        setFcmStatus('failed');
-        addToast("A permissão para receber alertas do sistema foi negada.", "warning");
-      }
-    } catch (err: any) {
-      console.warn("FCM registration failed, testing standard Web Push native fallback...", err);
-      try {
-        // Fallback to standard web-push subscription using local server-generated public key
+        // Enforce standard native web-push registration directly using server's stable public-key
         const keyRes = await fetch('/api/push/public-key');
         if (!keyRes.ok) throw new Error("Não foi possível carregar a chave de identificação do servidor.");
         const { publicKey } = await keyRes.json();
         
         if (!publicKey) {
-          throw new Error("O servidor ainda não inicializou as chaves criptográficas de Push.");
+          throw new Error("O servidor ainda não inicializou as chaves de Push.");
         }
 
         const reg = await navigator.serviceWorker.ready;
         
         const urlBase64ToUint8Array = (base64String: string) => {
-          const padding = '='.repeat((4 - base64String.length % 4) % 4);
-          const base64 = (base64String + padding)
-            .replace(/\-/g, '+')
+          const cleanString = base64String.trim().replace(/\"/g, '');
+          if (cleanString.length < 50) {
+            throw new Error(`Chave VAPID muito curta (${cleanString.length} chars).`);
+          }
+          const padding = '='.repeat((4 - (cleanString.length % 4)) % 4);
+          const base64 = (cleanString + padding)
+            .replace(/-/g, '+')
             .replace(/_/g, '/');
           const rawData = window.atob(base64);
           const outputArray = new Uint8Array(rawData.length);
@@ -9876,7 +9842,6 @@ export default function App() {
           applicationServerKey: urlBase64ToUint8Array(publicKey)
         });
 
-        // Save subscription directly under Firestore collection sync
         const subId = user?.id || 'anonymous_' + Math.random().toString(36).substring(2, 9);
         const subJson = sub.toJSON();
 
@@ -9893,12 +9858,43 @@ export default function App() {
         setFcmStatus('subscribed');
         setFcmToken(`LocalWebPush:${subId}`);
         localStorage.setItem('gipp_fcm_token', `LocalWebPush:${subId}`);
-        addToast("🔔 Notificações por Web Push nativo ativadas com sucesso localmente!", "success");
-      } catch (fallbackErr: any) {
-        console.error("FALHA TOTAL DE REGISTRO PUSH (FCM & NATIVE):", fallbackErr);
+        addToast("🔔 Notificações por Web Push nativo ativas com sucesso!", "success");
+      } else {
         setFcmStatus('failed');
-        addToast(`Falha ao registrar para Mensagens Push: ${fallbackErr.message || fallbackErr}`, "error");
+        addToast("A permissão para receber alertas do sistema foi negada.", "warning");
       }
+    } catch (err: any) {
+      console.warn("Standard Web Push failed, trying FCM fallback...", err);
+      try {
+        const supported = await isSupported();
+        if (supported && fcmPermission === 'granted') {
+          const messaging = getMessaging(app);
+          const token = await getToken(messaging, {
+            vapidKey: 'BO_e7r7Wv3gXCHl-SmsJ1BCHXJ9fRj_yVvFpX_FmC4fPnA7V3p_m-eWv8C4fSnW4fPnA7v3_mev_Wnv8'
+          });
+          if (token) {
+            setFcmToken(token);
+            setFcmStatus('subscribed');
+            localStorage.setItem('gipp_fcm_token', token);
+            if (user) {
+              const tokenRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_tokens', user.id);
+              await setDoc(tokenRef, { 
+                token, 
+                userId: user.id, 
+                userName: user.nome, 
+                updatedAt: new Date().toISOString() 
+              }, { merge: true });
+            }
+            addToast("Inscrição de Notificações Push FCM realizada! 🔔", "success");
+            return;
+          }
+        }
+      } catch (fcmErr) {
+        console.warn("FCM Fallback failed as well:", fcmErr);
+      }
+      
+      setFcmStatus('failed');
+      addToast(`Falha ao registrar para Mensagens Push: ${err.message || err}`, "error");
     }
   };
 

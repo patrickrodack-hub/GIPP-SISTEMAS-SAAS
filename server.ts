@@ -30,34 +30,17 @@ const PORT = 3000;
 app.use(express.json());
 
 // Load or generate VAPID keys
-let vapidPublicKey = "";
-let vapidPrivateKey = "";
+let vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "BKSGpAtTNnSHclTe4jk9TTOz4_RvpFBFIqJC-e-FvP5HsUaydyCHQqu2HNLjFnPrZ825u4ojE6j9K0Li9GzPj0s";
+let vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "pWOXuAW_xGaFyFX-sI6s_j3bibSmNPRLJ1dzNHipI58";
 
 const vapidPath = path.join(process.cwd(), "vapid-keys.json");
 if (fs.existsSync(vapidPath)) {
     try {
         const vapidJSON = JSON.parse(fs.readFileSync(vapidPath, "utf8"));
-        vapidPublicKey = vapidJSON.publicKey;
-        vapidPrivateKey = vapidJSON.privateKey;
+        if (vapidJSON.publicKey) vapidPublicKey = vapidJSON.publicKey;
+        if (vapidJSON.privateKey) vapidPrivateKey = vapidJSON.privateKey;
     } catch (e) {
         console.error("Error reading vapid-keys.json:", e);
-    }
-}
-
-// Generate new VAPID keys if none existed
-if (!vapidPublicKey || !vapidPrivateKey) {
-    try {
-        console.log("Generating new VAPID keys for Web Push...");
-        const newKeys = webpush.generateVAPIDKeys();
-        vapidPublicKey = newKeys.publicKey;
-        vapidPrivateKey = newKeys.privateKey;
-        fs.writeFileSync(vapidPath, JSON.stringify({
-            publicKey: vapidPublicKey,
-            privateKey: vapidPrivateKey
-        }, null, 4), "utf8");
-        console.log("VAPID keys generated and stored successfully.");
-    } catch (e) {
-        console.error("Failed to generate VAPID keys:", e);
     }
 }
 
