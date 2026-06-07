@@ -41,6 +41,11 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+import { validateEmail, validateWhatsApp, formatWhatsApp } from '../utils/validation';
+import { GlobalFooter } from './GlobalFooter';
+import { useGlobalSettings } from '../hooks/useGlobalSettings';
+
+
 // Constantes de Mapeamento do Portal de Membros por Função Administrativa
 export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
     'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_frequencia', 'portal_carteirinha'],
@@ -114,10 +119,93 @@ const ModuleConfiguracoesSistemas = () => {
         fcmToken, fcmStatus, fcmPermission, requestFcmPermission
     } = context;
 
-    const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte' | 'notificacoes' | 'portal_membros'>('performance');
+    const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte' | 'notificacoes' | 'portal_membros' | 'global_configs'>('performance');
+
+    // Global Configs States
+    const [globalSite, setGlobalSite] = useState(db.igreja?.site || db.igreja?.saas_site || '');
+    const [globalEmail, setGlobalEmail] = useState(db.igreja?.email || db.igreja?.saas_email || '');
+    const [globalWhatsApp, setGlobalWhatsApp] = useState(db.igreja?.whatsapp || db.igreja?.saas_whatsapp || '');
+    const [globalInstagram, setGlobalInstagram] = useState(db.igreja?.instagram || '');
+    const [globalFacebook, setGlobalFacebook] = useState(db.igreja?.facebook || '');
+    const [globalYoutube, setGlobalYoutube] = useState(db.igreja?.youtube || '');
+    const [globalChavePix, setGlobalChavePix] = useState(db.igreja?.chave_pix || db.igreja?.saas_chave_pix || '');
+    const [globalAvisoLegal, setGlobalAvisoLegal] = useState(db.igreja?.aviso_legal || '© 2026 GIPP. Ministério Integrado de Comunicação e Gestão Coletiva. Informativo oficial de circulação interna.');
+    const [footerShowSocials, setFooterShowSocials] = useState(db.igreja?.footer_show_socials !== false);
+    const [footerShowLegalNotice, setFooterShowLegalNotice] = useState(db.igreja?.footer_show_legal_notice !== false);
+    const [footerShowAddress, setFooterShowAddress] = useState(db.igreja?.footer_show_address !== false);
+    const [footerShowPix, setFooterShowPix] = useState(db.igreja?.footer_show_pix !== false);
+    const [footerVariant, setFooterVariant] = useState<'glass' | 'dark' | 'light'>(db.igreja?.footer_variant || 'glass');
+    const [isSavingGlobalConfigs, setIsSavingGlobalConfigs] = useState(false);
+
+    useEffect(() => {
+        if (db.igreja) {
+            setGlobalSite(db.igreja.site || db.igreja.saas_site || '');
+            setGlobalEmail(db.igreja.email || db.igreja.saas_email || '');
+            setGlobalWhatsApp(db.igreja.whatsapp || db.igreja.saas_whatsapp || '');
+            setGlobalInstagram(db.igreja.instagram || '');
+            setGlobalFacebook(db.igreja.facebook || '');
+            setGlobalYoutube(db.igreja.youtube || '');
+            setGlobalChavePix(db.igreja.chave_pix || db.igreja.saas_chave_pix || '');
+            setGlobalAvisoLegal(db.igreja.aviso_legal || '© 2026 GIPP. Ministério Integrado de Comunicação e Gestão Coletiva. Informativo oficial de circulação interna.');
+            setFooterShowSocials(db.igreja.footer_show_socials !== false);
+            setFooterShowLegalNotice(db.igreja.footer_show_legal_notice !== false);
+            setFooterShowAddress(db.igreja.footer_show_address !== false);
+            setFooterShowPix(db.igreja.footer_show_pix !== false);
+            setFooterVariant(db.igreja.footer_variant || 'glass');
+        }
+    }, [db.igreja]);
+
+    const handleSaveGlobalConfigs = async () => {
+        setIsSavingGlobalConfigs(true);
+        try {
+            const isEmailValid = validateEmail(globalEmail);
+            const isWhatsAppValid = validateWhatsApp(globalWhatsApp);
+
+            if (!isEmailValid) {
+                addToast("E-mail inválido! Por favor corrija o formato antes de prosseguir.", "error");
+                setIsSavingGlobalConfigs(false);
+                return;
+            }
+
+            if (!isWhatsAppValid) {
+                addToast("WhatsApp inválido! Forneça um número com DDD (mínimo 10 dígitos).", "error");
+                setIsSavingGlobalConfigs(false);
+                return;
+            }
+
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            await setDoc(configRef, {
+                site: globalSite,
+                saas_site: globalSite,
+                email: globalEmail,
+                saas_email: globalEmail,
+                whatsapp: globalWhatsApp,
+                saas_whatsapp: globalWhatsApp,
+                instagram: globalInstagram,
+                facebook: globalFacebook,
+                youtube: globalYoutube,
+                chave_pix: globalChavePix,
+                saas_chave_pix: globalChavePix,
+                aviso_legal: globalAvisoLegal,
+                footer_show_socials: footerShowSocials,
+                footer_show_legal_notice: footerShowLegalNotice,
+                footer_show_address: footerShowAddress,
+                footer_show_pix: footerShowPix,
+                footer_variant: footerVariant
+            }, { merge: true });
+
+            addToast("Configurações globais salvas e replicadas com sucesso!", "success");
+        } catch (err: any) {
+            console.error("Erro ao salvar config globais:", err);
+            addToast(`Falha ao gravar configurações: ${err.message}`, "error");
+        } finally {
+            setIsSavingGlobalConfigs(false);
+        }
+    };
 
     // Portal de Membros configurações
     const [selectedRoleForPortal, setSelectedRoleForPortal] = useState('SUPERINTENDENTE');
+
     const [selectedPortalFeatures, setSelectedPortalFeatures] = useState<string[]>([]);
     const [isSavingPortalConfig, setIsSavingPortalConfig] = useState(false);
     
@@ -580,6 +668,12 @@ const ModuleConfiguracoesSistemas = () => {
                     className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black tracking-wider uppercase transition-all ${activeTab === 'portal_membros' ? 'bg-indigo-600 text-white shadow' : 'text-slate-605 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
                 >
                     <ShieldCheck size={14}/> Portal de Membros
+                </button>
+                <button 
+                    onClick={() => { setActiveTab('global_configs'); setSupportTicketId(null); }}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black tracking-wider uppercase transition-all ${activeTab === 'global_configs' ? 'bg-indigo-600 text-white shadow' : 'text-slate-605 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
+                >
+                    <Globe size={14}/> Configurações Globais
                 </button>
             </div>
 
@@ -1621,6 +1715,322 @@ const ModuleConfiguracoesSistemas = () => {
                                         </div>
                                     )
                                 })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'global_configs' && (
+                    <div className="space-y-8 animate-entrance text-slate-800">
+                        {/* Summary / Tip Banner */}
+                        <div className="bg-indigo-50/45 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 p-6 rounded-3xl flex items-start gap-4">
+                            <div className="p-3 bg-indigo-600 rounded-2xl text-white font-bold shrink-0">
+                                <Sparkles size={20}/>
+                            </div>
+                            <div>
+                                <h4 className="font-extrabold text-sm uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Motor de Configurações Globais unificadas</h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed mt-1">
+                                    Os dados abaixo alimentam todos os canais de comunicação, boletins, notificações de e-mail e os rodapés institucionais para garantir consistência visual e dados atualizados em qualquer tela do GIPP.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Formulário de Configuração */}
+                            <div className="bg-white dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
+                                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                                    <div>
+                                        <h3 className="font-bold text-lg text-slate-850 dark:text-slate-100">Cadastro de Identidade Digital</h3>
+                                        <p className="text-xs text-slate-500 font-medium">Forneça os links e contatos que estarão disponíveis aos fiéis e visitantes.</p>
+                                    </div>
+                                    <Globe size={24} className="text-indigo-600 shrink-0" />
+                                </div>
+
+                                <div className="space-y-5">
+                                    {/* E-mail e Validação */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black uppercase text-slate-400">E-mail Institucional</label>
+                                            <div className="flex items-center">
+                                                {validateEmail(globalEmail) && globalEmail ? (
+                                                    <span className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1 border border-emerald-100 dark:border-emerald-900/50">
+                                                        <Check size={10} strokeWidth={4} /> Ativo e Válido
+                                                    </span>
+                                                ) : globalEmail ? (
+                                                    <span className="text-[10px] bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1 border border-rose-100 dark:border-rose-900/50 animate-pulse">
+                                                        <AlertTriangle size={10} /> Formato Inválido
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] bg-slate-50 text-slate-400 dark:bg-slate-800 dark:text-slate-500 px-2 py-0.5 rounded-full font-black uppercase border border-slate-100 dark:border-slate-800/80">
+                                                        Vazio (Opcional)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <input 
+                                            type="email"
+                                            value={globalEmail}
+                                            onChange={(e) => setGlobalEmail(e.target.value)}
+                                            placeholder="Ex: secretaria@suaigreja.org"
+                                            className="w-full border-2 border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-900/10 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-indigo-600 dark:focus:border-indigo-900 transition-colors text-slate-700 dark:text-slate-300"
+                                        />
+                                    </div>
+
+                                    {/* Whatsapp e Validação */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black uppercase text-slate-400 font-sans">WhatsApp Oficial (DDD + Número)</label>
+                                            <div className="flex items-center">
+                                                {validateWhatsApp(globalWhatsApp) && globalWhatsApp ? (
+                                                    <span className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1 border border-emerald-100 dark:border-emerald-900/50">
+                                                        <Check size={10} strokeWidth={4} /> WhatsApp Válido
+                                                    </span>
+                                                ) : globalWhatsApp ? (
+                                                    <span className="text-[10px] bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1 border border-rose-100 dark:border-rose-900/50 animate-pulse">
+                                                        <AlertTriangle size={10} /> Digite DDD + Número
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] bg-slate-50 text-slate-400 dark:bg-slate-800 dark:text-slate-500 px-2 py-0.5 rounded-full font-black uppercase border border-slate-100 dark:border-slate-800/80">
+                                                        Vazio (Opcional)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <input 
+                                                type="text"
+                                                value={globalWhatsApp}
+                                                onChange={(e) => setGlobalWhatsApp(e.target.value)}
+                                                onBlur={() => setGlobalWhatsApp(formatWhatsApp(globalWhatsApp))}
+                                                placeholder="Ex: 11999999999"
+                                                className="w-full border-2 border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-900/10 p-3.5 pl-10 rounded-2xl text-xs font-black outline-none focus:border-indigo-600 dark:focus:border-indigo-900 transition-colors text-slate-700 dark:text-slate-300"
+                                            />
+                                            <Phone size={14} className="absolute left-3.5 top-4 text-slate-400" />
+                                        </div>
+                                    </div>
+
+                                    {/* Link Site */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-black uppercase text-slate-400">Site Institucional (URL)</label>
+                                        <div className="relative">
+                                            <input 
+                                                type="text"
+                                                value={globalSite}
+                                                onChange={(e) => setGlobalSite(e.target.value)}
+                                                placeholder="Ex: www.suaigreja.org"
+                                                className="w-full border-2 border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-900/10 p-3.5 pl-10 rounded-2xl text-xs font-semibold outline-none focus:border-indigo-600 dark:focus:border-indigo-900 transition-colors text-slate-700 dark:text-slate-300"
+                                            />
+                                            <Globe size={14} className="absolute left-3.5 top-4 text-slate-400" />
+                                        </div>
+                                    </div>
+
+                                    {/* Redes Sociais */}
+                                    <div className="bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+                                        <h4 className="text-xs font-black tracking-widest text-indigo-750 uppercase flex items-center gap-1.5 border-b border-indigo-100/50 dark:border-indigo-900/30 pb-2">
+                                            <Share2 size={12}/> Redes Sociais Integradas
+                                        </h4>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-purple-600">Instagram</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={globalInstagram}
+                                                    onChange={e=>setGlobalInstagram(e.target.value)}
+                                                    placeholder="@usuario" 
+                                                    className="w-full border-2 border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 rounded-xl text-xs font-semibold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-rose-600">YouTube</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={globalYoutube}
+                                                    onChange={e=>setGlobalYoutube(e.target.value)}
+                                                    placeholder="Canal URL" 
+                                                    className="w-full border-2 border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 rounded-xl text-xs font-semibold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-blue-600">Facebook</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={globalFacebook}
+                                                    onChange={e=>setGlobalFacebook(e.target.value)}
+                                                    placeholder="Página URL" 
+                                                    className="w-full border-2 border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 rounded-xl text-xs font-semibold"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Chave Pix */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-black uppercase text-slate-400">Chave Pix de Contribuições</label>
+                                        <div className="relative">
+                                            <input 
+                                                type="text"
+                                                value={globalChavePix}
+                                                onChange={(e) => setGlobalChavePix(e.target.value)}
+                                                placeholder="CNPJ, Celular, E-mail ou Chave Aleatória"
+                                                className="w-full border-2 border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-900/10 p-3.5 pl-10 rounded-2xl text-xs font-semibold outline-none focus:border-indigo-600 dark:focus:border-indigo-900 transition-colors text-slate-700 dark:text-slate-300"
+                                            />
+                                            <Wallet size={14} className="absolute left-3.5 top-4 text-slate-400" />
+                                        </div>
+                                    </div>
+
+                                    {/* Aviso Legal */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-black uppercase text-slate-400 font-sans">Aviso de Isenção Legal do Rodapé</label>
+                                        <textarea 
+                                            value={globalAvisoLegal}
+                                            onChange={(e) => setGlobalAvisoLegal(e.target.value)}
+                                            rows={2}
+                                            placeholder="Ex: Todos os direitos reservados. Informativo oficial de circulação interna..."
+                                            className="w-full border-2 border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-900/10 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-indigo-600 dark:focus:border-indigo-900 transition-colors text-slate-700 dark:text-slate-300 h-20"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                                    <button 
+                                        onClick={handleSaveGlobalConfigs}
+                                        disabled={isSavingGlobalConfigs}
+                                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-55 flex items-center gap-2 shadow"
+                                    >
+                                        {isSavingGlobalConfigs ? (
+                                            <><Loader2 size={16} className="animate-spin" /> Salvando...</>
+                                        ) : (
+                                            <><Save size={16} /> Salvar Configurações Globais</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Visual Preview Container */}
+                            <div className="space-y-8">
+                                {/* Preview 1: Informativo Digital */}
+                                <div className="bg-slate-50 border border-slate-150 rounded-3xl p-6 shadow-sm space-y-4">
+                                     <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+                                         <Megaphone size={18} className="text-indigo-650" />
+                                         <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-650">Pré-visualização: Informativo Digital</h3>
+                                     </div>
+
+                                     <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden space-y-4">
+                                         {/* Informativo digital header mockup with custom settings */}
+                                         <div className="flex justify-between items-start gap-4">
+                                             <div className="space-y-1">
+                                                 <div className="flex items-center gap-2">
+                                                     {db.igreja?.logo ? (
+                                                         <img src={db.igreja.logo} className="w-8 h-8 object-contain rounded-md" />
+                                                     ) : (
+                                                         <div className="w-8 h-8 bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center rounded-md">
+                                                             Igreja
+                                                         </div>
+                                                     )}
+                                                     <h4 className="font-black text-xs uppercase text-slate-800">{db.igreja?.nome || 'Minha Congregação'}</h4>
+                                                 </div>
+                                                 <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Informativo Digital e Apostilas EBD</p>
+                                             </div>
+                                             <span className="text-[9px] bg-indigo-50 text-indigo-600 font-extrabold px-2 py-0.5 rounded-full uppercase">Estudo Bíblico</span>
+                                         </div>
+
+                                         <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 informativo-digital-content space-y-2 text-slate-705 leading-relaxed text-xs">
+                                             <p className="font-bold underline decoration-indigo-300">Tema da Aula: O Sabor da Comunhão</p>
+                                             <p>
+                                                 Este é um vislumbre real das informações registradas no sistema. Os dados cadastrados acima mudam o rodapé e campos de suporte automaticamente em tempo real para todos os membros que acessarem as aulas da escola dominical.
+                                             </p>
+                                         </div>
+
+                                         {/* Inline footer snippet demonstrating correct layout */}
+                                         <div className="pt-3 border-t border-slate-100 flex flex-wrap justify-between items-center text-[10px] text-slate-400 font-bold">
+                                             <div className="flex gap-2">
+                                                 {globalEmail && <span className="flex items-center gap-1"><Mail size={10}/> {globalEmail}</span>}
+                                                 {globalWhatsApp && <span className="flex items-center gap-1"><Phone size={10}/> {globalWhatsApp}</span>}
+                                             </div>
+                                             {globalSite && <span className="text-indigo-600">{globalSite}</span>}
+                                         </div>
+                                     </div>
+                                </div>
+
+                                {/* Preview 2: Rodapé Configurator and Preview */}
+                                <div className="bg-slate-50 border border-slate-150 rounded-3xl p-6 shadow-sm space-y-6">
+                                     <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                                         <div className="flex items-center gap-2">
+                                             <LayoutTemplate size={18} className="text-purple-650" />
+                                             <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-650">Configuração de Rodapé Dinâmico</h3>
+                                         </div>
+                                         <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-black uppercase">Visual</span>
+                                     </div>
+
+                                     {/* Toggles for showing elements */}
+                                     <div className="grid grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-150 shadow-sm text-xs font-semibold text-slate-600">
+                                         <div className="flex items-center justify-between">
+                                             <span>Mostrar Redes Sociais</span>
+                                             <input 
+                                                 type="checkbox" 
+                                                 checked={footerShowSocials} 
+                                                 onChange={e=>setFooterShowSocials(e.target.checked)}
+                                                 className="w-4 h-4 text-indigo-650 rounded cursor-pointer"
+                                             />
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                             <span>Mostrar Aviso Legal</span>
+                                             <input 
+                                                 type="checkbox" 
+                                                 checked={footerShowLegalNotice} 
+                                                 onChange={e=>setFooterShowLegalNotice(e.target.checked)}
+                                                 className="w-4 h-4 text-indigo-650 rounded cursor-pointer"
+                                             />
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                             <span>Mostrar Endereço Sede</span>
+                                             <input 
+                                                 type="checkbox" 
+                                                 checked={footerShowAddress} 
+                                                 onChange={e=>setFooterShowAddress(e.target.checked)}
+                                                 className="w-4 h-4 text-indigo-650 rounded cursor-pointer"
+                                             />
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                             <span>Mostrar Chave Pix</span>
+                                             <input 
+                                                 type="checkbox" 
+                                                 checked={footerShowPix} 
+                                                 onChange={e=>setFooterShowPix(e.target.checked)}
+                                                 className="w-4 h-4 text-indigo-650 rounded cursor-pointer"
+                                             />
+                                         </div>
+                                         <div className="col-span-2 flex items-center justify-between border-t border-slate-100 pt-3">
+                                             <span>Variante do Rodapé</span>
+                                             <div className="flex gap-1">
+                                                 {(['glass', 'dark', 'light'] as const).map(style => (
+                                                     <button
+                                                         key={style}
+                                                         onClick={() => setFooterVariant(style)}
+                                                         className={`px-3 py-1 text-[10px] uppercase font-black rounded-lg transition-colors border ${footerVariant === style ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-slate-50 text-slate-500 border-slate-200/50 hover:bg-slate-100'}`}
+                                                     >
+                                                         {style}
+                                                     </button>
+                                                 ))}
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     {/* live rendered footer using the newly designed GlobalFooter.tsx */}
+                                     <div className="space-y-2">
+                                         <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase block">Resultado Visual em Tempo Real</span>
+                                         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-200/30 p-2">
+                                             <GlobalFooter 
+                                                 showSocials={footerShowSocials} 
+                                                 showLegalNotice={footerShowLegalNotice} 
+                                                 showAddress={footerShowAddress} 
+                                                 showPix={footerShowPix} 
+                                                 variant={footerVariant} 
+                                             />
+                                         </div>
+                                     </div>
+                                </div>
                             </div>
                         </div>
                     </div>

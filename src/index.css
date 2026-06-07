@@ -1,3 +1,17 @@
 @import "tailwindcss";
 
+/* Readability Enhancement for Digital Informativo Content */
+.informativo-digital-content {
+  line-height: 1.85 !important;
+  letter-spacing: 0.025em !important;
+  font-size: 0.875rem !important; /* 14px for improved reading dimension on larger screens */
+  font-weight: 500 !important;
+}
 
+@media (min-width: 768px) {
+  .informativo-digital-content {
+    line-height: 2.0 !important;
+    letter-spacing: 0.03em !important;
+    font-size: 1rem !important; /* 16px on desktop for superb readability */
+  }
+}
