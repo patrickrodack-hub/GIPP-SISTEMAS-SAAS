@@ -1326,7 +1326,7 @@ const ModuleDesenvolvedor = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <FormInput label="Nome do Sistema" value={data.saas_nome_sistema || ''} onChange={v => setData({...data, saas_nome_sistema: v})} placeholder="Ex: GIPP - GESTÃO DE IGREJA" className="!mb-0" />
-                                    <FormInput label="Versão do Sistema / Licenciamento" value={data.saas_versao_sistema || ''} onChange={v => setData({...data, saas_versao_sistema: v})} placeholder="Ex: Versão 6.9.0 (SaaS Gold Edition)" className="!mb-0" />
+                                    <FormInput label="Versão do Sistema / Licenciamento" value={data.saas_versao_sistema || ''} onChange={v => setData({...data, saas_versao_sistema: v})} placeholder="Ex: Versão 7.0.0 (SaaS Platinum Edition)" className="!mb-0" />
                                     <FormInput label="Site Oficial" value={data.saas_site || ''} onChange={v => setData({...data, saas_site: v})} placeholder="Ex: https://gipp-site.vercel.app/" className="!mb-0" />
                                 </div>
 

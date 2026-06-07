@@ -382,35 +382,30 @@ const ModuleBoletim = () => {
     // --- VISUALIZAÇÃO DO EDITOR DE BOLETIM ---
     if (isEditing) {
         return (
-            <div className="max-w-[1400px] mx-auto bg-slate-50 min-h-[80vh] shadow-2xl animate-entrance font-sans text-slate-900 border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
-               <div className="flex justify-between items-center p-8 border-b border-slate-200 bg-white shadow-sm shrink-0">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2"><Settings size={24} className="text-indigo-600"/> Configuração do Boletim</h2>
-                        <p className="text-sm text-slate-500 font-medium mt-1">Personalize os Eventos Especiais e a Programação Semanal visíveis para toda a igreja.</p>
+            <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-entrance backdrop-blur-lg text-slate-900">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
+                    <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-white shrink-0">
+                         <div>
+                             <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Settings size={20} className="text-indigo-600"/> Configuração do Boletim</h2>
+                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Eventos Especiais e Programação Semanal</p>
+                         </div>
+                         <button onClick={() => { setEditEventos(eventosList); setEditProg(progList); setIsEditing(false); }} className="bg-slate-100 p-2 rounded-xl text-slate-500 hover:text-rose-500 transition-all cursor-pointer"><X size={16}/></button>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="ghost" onClick={() => { setEditEventos(eventosList); setEditProg(progList); setIsEditing(false); }} className="bg-white border border-slate-300">Cancelar</Button>
-                        <Button onClick={handleSaveConfig} disabled={saving} variant="primary" className="shadow-lg flex items-center gap-2">
-                            {saving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>} Salvar Alterações
-                        </Button>
-                    </div>
-               </div>
 
-               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                        {/* Coluna 1: Eventos Especiais */}
-                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                            <h3 className="font-black text-lg text-amber-600 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-100 pb-3"><Star size={20}/> Eventos Especiais</h3>
+                    <div className="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/50">
+                        {/* Seção 1: Eventos Especiais */}
+                        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="font-black text-sm text-amber-600 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-2"><Star size={16}/> Eventos Especiais</h3>
                             <div className="space-y-4">
                                 {editEventos.map((evt, idx) => (
-                                    <div key={idx} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 relative group transition-colors hover:border-amber-300">
-                                        <button onClick={() => { const n = [...editEventos]; n.splice(idx,1); setEditEventos(n); }} className="absolute top-3 right-3 text-slate-400 hover:text-rose-500 bg-white p-1.5 rounded-lg shadow-sm"><X size={16}/></button>
+                                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 relative group transition-colors hover:border-amber-300">
+                                        <button onClick={() => { const n = [...editEventos]; n.splice(idx,1); setEditEventos(n); }} className="absolute top-2 right-2 text-slate-400 hover:text-rose-500 bg-white p-1 rounded-md shadow-sm"><X size={14}/></button>
                                         
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                             <FormInput label="Título do Evento" value={evt.titulo} onChange={v => { const n = [...editEventos]; n[idx].titulo = v; setEditEventos(n); }} className="!mb-0" />
                                             <FormSelect label="Regra / Data" value={evt.regra} options={REGRA_DOMINGOS} onChange={v => { const n = [...editEventos]; n[idx].regra = v; setEditEventos(n); }} className="!mb-0" />
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                             <FormInput label="Horário" type="time" value={evt.hora} onChange={v => { const n = [...editEventos]; n[idx].hora = v; setEditEventos(n); }} className="!mb-0" />
                                             <FormSelect label="Ícone" value={evt.icon} options={Object.keys(ICON_MAP)} onChange={v => { const n = [...editEventos]; n[idx].icon = v; setEditEventos(n); }} className="!mb-0" />
                                             <FormSelect label="Cor Tema" value={evt.color} options={THEME_COLORS} onChange={v => { const n = [...editEventos]; n[idx].color = v; setEditEventos(n); }} className="!mb-0" />
@@ -418,34 +413,41 @@ const ModuleBoletim = () => {
                                         <FormInput label="Descrição Curta" value={evt.desc} onChange={v => { const n = [...editEventos]; n[idx].desc = v; setEditEventos(n); }} className="!mb-0" placeholder="Máx 2 linhas" />
                                     </div>
                                 ))}
-                                <Button onClick={() => setEditEventos([...editEventos, { titulo: 'Novo Evento', regra: '1º Domingo', desc: 'Breve descrição...', hora: '19:00', icon: 'Star', color: 'amber' }])} variant="ghost" className="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-amber-600 hover:border-amber-400 py-4"><Plus size={18}/> Adicionar Evento Especial</Button>
+                                <Button onClick={() => setEditEventos([...editEventos, { titulo: 'Novo Evento', regra: '1º Domingo', desc: 'Breve descrição...', hora: '19:00', icon: 'Star', color: 'amber' }])} variant="ghost" className="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-amber-600 hover:border-amber-400 py-3 text-xs"><Plus size={16}/> Adicionar Evento Especial</Button>
                             </div>
                         </div>
 
-                        {/* Coluna 2: Programação Semanal */}
-                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                            <h3 className="font-black text-lg text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-100 pb-3"><Clock size={20}/> Programação Semanal</h3>
+                        {/* Seção 2: Programação Semanal */}
+                        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="font-black text-sm text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-2"><Clock size={16}/> Programação Semanal</h3>
                             <div className="space-y-4">
                                 {editProg.map((prog, idx) => (
-                                    <div key={idx} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 relative group transition-colors hover:border-indigo-300">
-                                        <button onClick={() => { const n = [...editProg]; n.splice(idx,1); setEditProg(n); }} className="absolute top-3 right-3 text-slate-400 hover:text-rose-500 bg-white p-1.5 rounded-lg shadow-sm"><X size={16}/></button>
+                                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 relative group transition-colors hover:border-indigo-300">
+                                        <button onClick={() => { const n = [...editProg]; n.splice(idx,1); setEditProg(n); }} className="absolute top-2 right-2 text-slate-400 hover:text-rose-500 bg-white p-1 rounded-md shadow-sm"><X size={14}/></button>
                                         
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                             <FormInput label="Nome do Culto/Reunião" value={prog.titulo} onChange={v => { const n = [...editProg]; n[idx].titulo = v; setEditProg(n); }} className="!mb-0" />
                                             <FormInput label="Dia(s) da Semana" value={prog.dia} onChange={v => { const n = [...editProg]; n[idx].dia = v; setEditProg(n); }} className="!mb-0" placeholder="Ex: Toda Terça-feira" />
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                             <FormInput label="Horário" type="time" value={prog.hora} onChange={v => { const n = [...editProg]; n[idx].hora = v; setEditProg(n); }} className="!mb-0" />
                                             <FormSelect label="Ícone" value={prog.icon} options={Object.keys(ICON_MAP)} onChange={v => { const n = [...editProg]; n[idx].icon = v; setEditProg(n); }} className="!mb-0" />
                                             <FormSelect label="Cor Tema" value={prog.color} options={THEME_COLORS} onChange={v => { const n = [...editProg]; n[idx].color = v; setEditProg(n); }} className="!mb-0" />
                                         </div>
                                     </div>
                                 ))}
-                                <Button onClick={() => setEditProg([...editProg, { titulo: 'Novo Culto', dia: 'Selecione o Dia', hora: '19:00', icon: 'Book', color: 'indigo' }])} variant="ghost" className="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 py-4"><Plus size={18}/> Adicionar Programação</Button>
+                                <Button onClick={() => setEditProg([...editProg, { titulo: 'Novo Culto', dia: 'Selecione o Dia', hora: '19:00', icon: 'Book', color: 'indigo' }])} variant="ghost" className="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 py-3 text-xs"><Plus size={16}/> Adicionar Programação</Button>
                             </div>
                         </div>
                     </div>
-               </div>
+
+                    <div className="p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+                        <Button variant="ghost" onClick={() => { setEditEventos(eventosList); setEditProg(progList); setIsEditing(false); }} className="bg-white border border-slate-300">Cancelar</Button>
+                        <Button onClick={handleSaveConfig} disabled={saving} variant="primary" className="shadow-lg flex items-center gap-2">
+                            {saving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>} Salvar Alterações
+                        </Button>
+                    </div>
+                </div>
             </div>
         );
     }

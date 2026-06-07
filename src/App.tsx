@@ -8841,7 +8841,7 @@ const PortalEBD = ({ user, db }) => {
             {/* AI Lesson Modal - Estudo Interativo Portal Membro */}
             {aiLesson && (
                 <div className={`fixed inset-0 z-[11000] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-entrance ${isEbdFullscreen ? 'p-0' : 'p-4'}`}>
-                    <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 relative ${isEbdFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-5xl max-h-[95vh] rounded-[2.5rem]'}`}>
+                    <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 relative ${isEbdFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-2xl max-h-[90vh] rounded-[2.5rem]'}`}>
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-emerald-50/80 backdrop-blur-sm sticky top-0 z-20">
                             <h3 className="font-black text-xl text-emerald-900 flex items-center gap-2">
                                 <BookOpen size={24} className="text-emerald-600"/> {aiLesson.title}
@@ -10225,7 +10225,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
                         <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>{saasSettings?.saas_versao_sistema || "Versão 6.9.0"}</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 7.0.0"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -12403,7 +12403,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.9.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v7.0.0</p>
                         </div>
                     </div>
                     <div>

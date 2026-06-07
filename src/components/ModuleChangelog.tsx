@@ -47,11 +47,23 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.9.0 */}
-            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 7.0.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-650 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-indigo-750 font-[Outfit]">v6.9.0 - Agendamento Automático de Push Reminders para Eventos & Modo Leitura do Boletim em Glassmorphism</h3>
+                <h3 className="font-extrabold text-lg text-indigo-750 font-[Outfit]">v7.0.0 - Motor de Configurações Globais, Rodapés Dinâmicos Unificados & Redimensionamento de Modais</h3>
                 <p className="text-xs text-indigo-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans">Configurações Globais Unificadas:</strong> Novo painel central para controle de identidade institucional (E-mail com verificação sintática, WhatsApp formatado, link do site oficial, redes sociais e chave Pix) replicado automaticamente para toda a plataforma e fluxos dos fiéis.</li>
+                    <li><strong className="text-slate-700">Rodapés Inteligentes Customizáveis:</strong> Rodapé padrão de visualização responsivo, incluindo gerenciador de visibilidade de módulos (redes sociais, chave Pix, aviso de isenção legal e endereço) com 3 presets visuais de variantes (Glass, Light e Dark).</li>
+                    <li><strong className="text-slate-700 font-sans">Redimensionamento e Unidade de Telas:</strong> Nova calibração das dimensões de exibição e edição dos módulos de Boletins Informativos Semanais e lições interativas EBD, adotando as mesmas dimensões ideais do formulário principal de Agenda de Eventos (max-w-2xl e limite 90vh) para coesão estética e ergonomia.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO ADICIONADO PARA VERSÃO 6.9.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-400">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-extrabold text-lg text-slate-600 font-[Outfit]">v6.9.0 - Agendamento Automático de Push Reminders para Eventos & Modo Leitura do Boletim em Glassmorphism</h3>
+                <p className="text-xs text-slate-500 font-black uppercase mb-3 tracking-wider">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans">Lembretes Push Automatizados:</strong> Disparo automático e inteligente de notificações push para membros confirmados/inscritos em eventos da agenda 24 horas antes do início da atividade.</li>
                     <li><strong className="text-slate-700">Modo Leitura Glassmorphism:</strong> Nova experiência de leitura fluida no Boletim Digital, permitindo expandir detalhes, informativos e cultos através de um modal com efeito vidro fosco de alta fidelidade sem sair do feed.</li>
