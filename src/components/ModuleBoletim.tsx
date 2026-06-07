@@ -43,7 +43,7 @@ import {
 
 // Exporting component
 const ModuleBoletim = () => {
-    const { db, user, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
+    const { db, user, setDoc, doc, dbFirestore, appId, addToast, isOnline } = useContext(ChurchContext);
     const isAdmin = user?.tipo !== 'membro';
     const [isEditing, setIsEditing] = useState(false);
     const [readerItem, setReaderItem] = useState<any | null>(null);
@@ -474,7 +474,19 @@ const ModuleBoletim = () => {
                         <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
                             <MapPin size={14} className="text-blue-600"/> {db.igreja?.cidade || 'Sede'} • {monthNames[currentMonth]} de {currentYear}
                         </p>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Atualizado hoje</p>
+                        <div className="flex items-center gap-1.5 justify-center md:justify-end mt-1">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Alt • Atualizado hoje</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                            {isOnline ? (
+                                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-0.5">
+                                    <Wifi size={10} /> Online
+                                </span>
+                            ) : (
+                                <span className="text-[10px] text-amber-600 font-bold uppercase tracking-wider flex items-center gap-0.5 animate-pulse">
+                                    <WifiOff size={10} /> Local Cache
+                                </span>
+                            )}
+                        </div>
                     </div>
                     {isAdmin && (
                         <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors shadow-sm">

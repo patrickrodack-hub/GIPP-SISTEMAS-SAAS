@@ -8329,6 +8329,16 @@ const PortalAgenda = ({ user, db }) => {
 const PortalTarefas = ({ user, db }) => {
     const { setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
     
+    const [activeAlarms, setActiveAlarms] = useState<any[]>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gipp_local_alarms') || '[]');
+        } catch (e) {
+            return [];
+        }
+    });
+    
+    const [reminderMenuOpen, setReminderMenuOpen] = useState<string | null>(null);
+
     const minhasTarefas = (db.tarefas || []).filter(t => 
         (t.equipe || []).some(m => m.id === user.id || m.nome === user.nome)
     ).sort((a, b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
@@ -8346,6 +8356,99 @@ const PortalTarefas = ({ user, db }) => {
             addToast(status === 'confirmado' ? "Presença confirmada na escala!" : "Ausência na escala informada.", "success");
         } catch (e) {
             addToast("Erro ao atualizar a confirmation.", "error");
+        }
+    };
+
+    const handleCreateICSFile = (task: any) => {
+        try {
+            const title = `Escala GIPP: ${task.categoria} - ${task.descricao}`;
+            const dateStr = task.data ? task.data.replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const startTime = `${dateStr}T090000`; // Default to 9:00 AM
+            const endTime = `${dateStr}T100000`; // Default to 10:00 AM
+            
+            const desc = `Compromisso na igreja. Tema/Escala: ${task.descricao}. Categoria: ${task.categoria}. Status de Aceite: Confirmado.`;
+            
+            const icsContent = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//GIPP//ChurchManagement//PT',
+                'BEGIN:VEVENT',
+                `UID:gipp_task_${task.id}@gipp.app`,
+                'SEQUENCE:0',
+                `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+                `DTSTART:${startTime}`,
+                `DTEND:${endTime}`,
+                `SUMMARY:${title}`,
+                `DESCRIPTION:${desc}`,
+                'STATUS:CONFIRMED',
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ].join('\n');
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `escala_${task.id || 'compromisso'}.ics`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            addToast("Dispositivo: Convite de Calendário (.ics) descarregado! Abra para salvar no telemóvel.", "success");
+        } catch (err) {
+            addToast("Erro ao gerar arquivo de convite.", "error");
+        }
+    };
+
+    const handleAddAlarm = async (task: any, option: string) => {
+        try {
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                await Notification.requestPermission();
+            }
+            
+            const parts = task.data ? task.data.split('-') : [];
+            let taskDate: Date;
+            if (parts.length === 3) {
+                taskDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 8, 0, 0); // Default to 8 AM on day
+            } else {
+                taskDate = new Date();
+            }
+            
+            let offset = 0;
+            let optionLabel = 'No Dia do Compromisso';
+            
+            if (option === '1day') {
+                offset = 24 * 60 * 60 * 1000;
+                optionLabel = '1 dia antes';
+            } else if (option === '1hour') {
+                offset = 60 * 60 * 1000;
+                optionLabel = '1 hora antes';
+            } else {
+                optionLabel = 'No dia (08h)';
+            }
+            
+            const targetTime = taskDate.getTime() - offset;
+            
+            const alarmId = `${task.id}_${option}`;
+            const newAlarm = {
+                id: alarmId,
+                taskId: task.id,
+                title: `${task.categoria || 'Escala'} : GIPP`,
+                body: `${task.descricao || 'Atividade na escala'} agendada para ${formatDateLocal(task.data)}!`,
+                targetTime: targetTime,
+                triggered: false,
+                optionLabel: optionLabel
+            };
+            
+            const updated = activeAlarms.filter(a => a.id !== alarmId);
+            updated.push(newAlarm);
+            
+            localStorage.setItem('gipp_local_alarms', JSON.stringify(updated));
+            setActiveAlarms(updated);
+            addToast(`Lembrete local programado: ${optionLabel}!`, "success");
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao programar alarme.", "error");
         }
     };
 
@@ -8408,8 +8511,79 @@ const PortalTarefas = ({ user, db }) => {
                                     
                                     {/* Seção de Confirmação de Presença (Tarefas) */}
                                     <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><CheckSquare size={14}/> Confirma a sua presença?</p>
-                                        <div className="flex gap-2 w-full sm:w-auto">
+                                        <div className="flex flex-col gap-0.5">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><CheckSquare size={14}/> Confirma a sua presença?</p>
+                                            
+                                            {/* Alarm Status Badges */}
+                                            {activeAlarms.filter(a => a.taskId === t.id && !a.triggered).length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {activeAlarms.filter(a => a.taskId === t.id && !a.triggered).map(alarm => (
+                                                        <span key={alarm.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-indigo-50 border border-indigo-200 text-indigo-600 shadow-2xs">
+                                                            <Bell size={9} className="animate-pulse" />
+                                                            {alarm.optionLabel}
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const updated = activeAlarms.filter(a => a.id !== alarm.id);
+                                                                    localStorage.setItem('gipp_local_alarms', JSON.stringify(updated));
+                                                                    setActiveAlarms(updated);
+                                                                    addToast("Lembrete local cancelado.", "info");
+                                                                }}
+                                                                className="text-indigo-400 hover:text-indigo-600 ml-1 font-bold cursor-pointer"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                            {/* Botão de Lembrete Local com Dropdown */}
+                                            <div className="relative inline-block text-left w-full sm:w-auto">
+                                                <button 
+                                                    onClick={() => setReminderMenuOpen(reminderMenuOpen === t.id ? null : t.id)}
+                                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                                                >
+                                                    <Bell size={13} className="text-indigo-500" /> Lembrar-me
+                                                </button>
+                                                
+                                                {reminderMenuOpen === t.id && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-30" onClick={() => setReminderMenuOpen(null)} />
+                                                        <div className="absolute right-0 bottom-full sm:bottom-auto sm:top-full mb-2 sm:mb-0 sm:mt-2 w-56 rounded-2xl bg-white border border-slate-200 shadow-xl z-40 p-2 text-left">
+                                                            <p className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 border-b border-slate-100 tracking-wider">Calendário Aparelho</p>
+                                                            <button 
+                                                                onClick={() => { handleCreateICSFile(t); setReminderMenuOpen(null); }}
+                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                                                            >
+                                                                <Calendar size={14} className="text-blue-500" /> Baixar Convite (.ics)
+                                                            </button>
+                                                            
+                                                            <p className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 border-t border-slate-100 border-b border-slate-100 tracking-wider mt-1">Alarme Local Browser</p>
+                                                            <button 
+                                                                onClick={() => { handleAddAlarm(t, 'on_hour'); setReminderMenuOpen(null); }}
+                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                                                            >
+                                                                <Bell size={14} className="text-amber-500" /> Alarme No Dia (08h)
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => { handleAddAlarm(t, '1hour'); setReminderMenuOpen(null); }}
+                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                                                            >
+                                                                <Clock size={14} className="text-amber-500" /> Alarme 1 hora antes
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => { handleAddAlarm(t, '1day'); setReminderMenuOpen(null); }}
+                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                                                            >
+                                                                <Calendar size={14} className="text-amber-500" /> Alarme 1 dia antes
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+
                                             <button 
                                                 onClick={() => handleRSVP(t.id, 'confirmado')}
                                                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-400 hover:text-emerald-600'}`}
@@ -8442,8 +8616,10 @@ const PortalTarefas = ({ user, db }) => {
 };
 
 const PortalEBD = ({ user, db }) => {
-    const { addToast, setDoc, doc, dbFirestore, appId } = useContext(ChurchContext);
-    const [aiLesson, setAiLesson] = useState(null);
+    const { addToast, setDoc, doc, dbFirestore, appId, isOnline, callGeminiAI } = useContext(ChurchContext);
+    const [aiLesson, setAiLesson] = useState<any>(null);
+    const [downloadedLessons, setDownloadedLessons] = useState<string[]>([]);
+    const [downloadingIds, setDownloadingIds] = useState<string[]>([]);
 
     const minhaMatricula = db.ebd?.alunos?.find(a => a.membro_id === user.id || a.nome === user.nome);
     const minhaTurma = minhaMatricula ? db.ebd?.turmas?.find(t => t.id === minhaMatricula.turma_id) : null;
@@ -8453,39 +8629,122 @@ const PortalEBD = ({ user, db }) => {
         ? (db.ebd?.licoes || []).filter(l => l.turma_id === minhaTurma.id).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()) 
         : (db.ebd?.licoes || []).sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 15);
 
-    const handleGenerateLessonPlan = async (licao) => {
-        setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: licao.capa || null });
-        
-        const prompt = `Atue como um teólogo especialista no material oficial da CPAD. 
-        Pesquise e use obrigatoriamente como base de conteúdo e imagens as seguintes fontes: o currículo e portal oficial da CPAD (Casa Publicadora das Assembleias de Deus), Google Books API e Sistema EBD.
-        O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", especificamente a Lição número ${licao.licao_numero || '1'}. 
-        
-        ${!licao.capa ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
+    // Check which lessons are currently cached on mount and updates
+    useEffect(() => {
+        const cachedKeys: string[] = [];
+        (db.ebd?.licoes || []).forEach(l => {
+            const key = `gipp_cached_ebd_lesson_${l.id || l.licao_numero || '1'}_${l.revista}`;
+            if (localStorage.getItem(key)) {
+                cachedKeys.push(l.id || l.licao_numero);
+            }
+        });
+        setDownloadedLessons(cachedKeys);
+    }, [db.ebd?.licoes]);
 
-        Gere um conteúdo fiel, interativo e completo contendo:
-        1. Título da Lição
-        2. Texto Áureo e Verdade Prática
-        3. Leitura Bíblica em Classe
-        4. Introdução
-        5. Tópicos e Subtópicos explicados
-        6. Conclusão.
-        
-        Utilize formatação Markdown bem estruturada e rica.`;
-        
-        const result = await callGeminiAI(prompt, 5);
-        
-        let texto = result;
-        let capaUrl = licao.capa || null;
-        
-        if (!licao.capa) {
-            const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
-            if (match && match[1] && match[1] !== 'null') {
-                capaUrl = match[1].trim();
-                texto = result.replace(match[0], '');
+    const handleDownloadForOffline = async (licao, e) => {
+        e.stopPropagation();
+        if (!isOnline) {
+            addToast("Apenas disponível online para pré-carregamento.", "warning");
+            return;
+        }
+        setDownloadingIds(prev => [...prev, licao.id || licao.licao_numero]);
+        addToast(`Pré-carregando Lição ${licao.licao_numero || ''} para leitura offline...`, "info");
+        await handleGenerateLessonPlan(licao, true); // silent = true, just save to cache
+        setDownloadingIds(prev => prev.filter(id => id !== (licao.id || licao.licao_numero)));
+    };
+
+    const handleGenerateLessonPlan = async (licao, silent = false) => {
+        const cacheKey = `gipp_cached_ebd_lesson_${licao.id || licao.licao_numero || '1'}_${licao.revista}`;
+        const cachedData = localStorage.getItem(cacheKey);
+
+        if (cachedData && !silent) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                setAiLesson({
+                    loading: false,
+                    text: parsed.text,
+                    title: parsed.title,
+                    revista: parsed.revista,
+                    licao: parsed.licao,
+                    capa: parsed.capa,
+                    fromCache: true
+                });
+                addToast("Lição carregada do Cache Local (Offline-ready)!", "success");
+                return;
+            } catch (e) {
+                console.warn("Could not read EBD lesson from local storage:", e);
             }
         }
+
+        if (!isOnline && !cachedData) {
+            addToast("Você está offline e esta lição não está na memória do aparelho. Conecte-se à internet para estudar.", "warning");
+            return;
+        }
+
+        if (!silent) {
+            setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: licao.capa || null });
+        }
         
-        setAiLesson({ loading: false, text: texto, title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: capaUrl });
+        try {
+            const prompt = `Atue como um teólogo especialista no material oficial da CPAD. 
+            Pesquise e use obrigatoriamente como base de conteúdo e imagens as seguintes fontes: o currículo e portal oficial da CPAD (Casa Publicadora das Assembleias de Deus), Google Books API e Sistema EBD.
+            O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", especificamente a Lição número ${licao.licao_numero || '1'}. 
+            
+            ${!licao.capa ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
+
+            Gere um conteúdo fiel, interativo e completo contendo:
+            1. Título da Lição
+            2. Texto Áureo e Verdade Prática
+            3. Leitura Bíblica em Classe
+            4. Introdução
+            5. Tópicos e Subtópicos explicados
+            6. Conclusão.
+            
+            Utilize formatação Markdown bem estruturada e rica.`;
+            
+            const result = await callGeminiAI(prompt, 5);
+            
+            let texto = result;
+            let capaUrl = licao.capa || null;
+            
+            if (!licao.capa) {
+                const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
+                if (match && match[1] && match[1] !== 'null') {
+                    capaUrl = match[1].trim();
+                    texto = result.replace(match[0], '');
+                }
+            }
+            
+            const lessonObj = {
+                text: texto,
+                title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                revista: licao.revista,
+                licao: licao.licao_numero || '1',
+                capa: capaUrl
+            };
+            
+            localStorage.setItem(cacheKey, JSON.stringify(lessonObj));
+            
+            // Update downloaded list
+            setDownloadedLessons(prev => {
+                const keyId = licao.id || licao.licao_numero;
+                if (!prev.includes(keyId)) return [...prev, keyId];
+                return prev;
+            });
+            
+            if (!silent) {
+                setAiLesson({ loading: false, text: texto, title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: capaUrl });
+                addToast("Lição salva no armazenamento offline do dispositivo!", "success");
+            } else {
+                addToast(`Lição ${licao.licao_numero} pré-carregada e disponível offline!`, "success");
+            }
+        } catch (err) {
+            console.error(err);
+            if (!silent) {
+                setAiLesson(null);
+                addToast("Não foi possível gerar a lição.", "error");
+            }
+        }
     };
 
     return (
@@ -8521,25 +8780,57 @@ const PortalEBD = ({ user, db }) => {
                 <h4 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><List size={18} className="text-emerald-500"/> {minhaTurma ? 'Últimas Lições Ministradas' : 'Biblioteca de Lições (Estudo Livre)'}</h4>
                 {licoesDisponiveis.length > 0 ? (
                     <div className="space-y-4">
-                        {licoesDisponiveis.map((l, i) => (
-                            <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all group">
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className="w-12 h-12 bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-600 rounded-xl flex items-center justify-center transition-colors shrink-0 border border-slate-200 group-hover:border-emerald-200 shadow-sm">
-                                        <BookOpen size={20} />
+                        {licoesDisponiveis.map((l, i) => {
+                            const isCached = downloadedLessons.includes(l.id || l.licao_numero);
+                            const isDownloading = downloadingIds.includes(l.id || l.licao_numero);
+                            
+                            return (
+                                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all group">
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="w-12 h-12 bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-600 rounded-xl flex items-center justify-center transition-colors shrink-0 border border-slate-200 group-hover:border-emerald-200 shadow-sm">
+                                            <BookOpen size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-emerald-200 truncate max-w-full">
+                                                    Lição: {l.licao_numero || '#'}
+                                                </span>
+                                                {isCached && (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black bg-emerald-50 border border-emerald-200 text-emerald-600 rounded">
+                                                        <Check size={8} /> DISPONÍVEL OFFLINE
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h5 className="font-bold text-slate-800 truncate" title={l.revista}>{l.revista}</h5>
+                                            <p className="text-xs text-slate-500 mt-0.5 font-medium"><Calendar size={12} className="inline mr-1"/> {formatDateLocal(l.data)}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-emerald-200 mb-1 inline-block truncate max-w-full">
-                                            Lição: {l.licao_numero || '#'}
-                                        </span>
-                                        <h5 className="font-bold text-slate-800 truncate" title={l.revista}>{l.revista}</h5>
-                                        <p className="text-xs text-slate-500 mt-0.5 font-medium"><Calendar size={12} className="inline mr-1"/> {formatDateLocal(l.data)}</p>
+                                    <div className="flex items-center gap-2 self-end sm:self-center">
+                                        {!isCached && isOnline && (
+                                            <button 
+                                                onClick={(e) => handleDownloadForOffline(l, e)}
+                                                disabled={isDownloading}
+                                                className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 bg-white hover:bg-indigo-50/30 cursor-pointer transition-colors shadow-2xs"
+                                                title="Pré-carregar lição para leitura sem internet"
+                                            >
+                                                {isDownloading ? (
+                                                    <>
+                                                        <Loader2 size={13} className="animate-spin" /> Baixando...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Download size={13} /> Pré-carregar
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                        <button onClick={() => handleGenerateLessonPlan(l)} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl transition-all shadow-sm font-bold text-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer">
+                                            <BookOpenText size={16}/> Estudar
+                                        </button>
                                     </div>
                                 </div>
-                                <button onClick={() => handleGenerateLessonPlan(l)} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl transition-all shadow-sm font-bold text-xs flex items-center justify-center gap-2 shrink-0">
-                                    <BookOpenText size={16}/> Estudar
-                                </button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <p className="text-sm text-slate-500 italic">Nenhuma lição registada no sistema ainda.</p>
@@ -8551,7 +8842,12 @@ const PortalEBD = ({ user, db }) => {
                 <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-entrance">
                     <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh] relative">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-emerald-50/80 backdrop-blur-sm sticky top-0 z-20">
-                            <h3 className="font-black text-xl text-emerald-900 flex items-center gap-2"><BookOpen size={24} className="text-emerald-600"/> {aiLesson.title}</h3>
+                            <h3 className="font-black text-xl text-emerald-900 flex items-center gap-2">
+                                <BookOpen size={24} className="text-emerald-600"/> {aiLesson.title}
+                                {aiLesson.fromCache && (
+                                    <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse ml-2">Leitura Offline</span>
+                                )}
+                            </h3>
                             <button onClick={() => setAiLesson(null)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"><X size={24}/></button>
                         </div>
                         
@@ -8560,7 +8856,7 @@ const PortalEBD = ({ user, db }) => {
                             <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
                                 {aiLesson.capa && aiLesson.capa !== 'null' && !aiLesson.capa.includes('URL_CAPA') ? (
                                     <div className="w-full max-w-[250px] aspect-[2/3] rounded-lg shadow-xl border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6 bg-slate-100">
-                                        <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
+                                        <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
                                         <div className="hidden absolute inset-0 flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
                                             <BookOpen size={40} className="mb-2 opacity-50"/>
                                             <span className="text-xs font-bold">Capa não disponível</span>
@@ -8584,7 +8880,7 @@ const PortalEBD = ({ user, db }) => {
                                     <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Conteúdo interativo gerado com base no currículo e portal da CPAD.</p>
                                 </div>
                             </div>
-
+ 
                             {/* Coluna Direita: Conteúdo da Lição */}
                             <div className="flex-1 p-8 md:p-12 bg-white relative">
                                 {aiLesson.loading ? (
@@ -9997,7 +10293,30 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
-  const [db, setDbState] = useState(MOCK_DB);
+  const [db, setDbState] = useState(() => {
+      try {
+          const cached = localStorage.getItem('gipp_portal_db_cache');
+          if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === 'object' && parsed.igreja) {
+                  return parsed;
+              }
+          }
+      } catch (err) {
+          console.warn("Could not read local DB cache from localStorage:", err);
+      }
+      return MOCK_DB;
+  });
+
+  useEffect(() => {
+      try {
+          if (db && db !== MOCK_DB && db.igreja && db.igreja.nome !== "GIPP - GESTÃO DE IGREJA") {
+              localStorage.setItem('gipp_portal_db_cache', JSON.stringify(db));
+          }
+      } catch (err) {
+          console.warn("Could not sync DB state to localStorage cache:", err);
+      }
+  }, [db]);
 
   // FCM Messaging States
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
@@ -10812,6 +11131,58 @@ export default function App() {
           window.removeEventListener('offline', handleOffline);
       };
   }, []);
+
+  // --- MOTOR DE LEMBRETES LOCAIS DE TAREFAS/ESCALAS ---
+  useEffect(() => {
+      const checkLocalReminders = () => {
+          try {
+              const activeRemindersStr = localStorage.getItem('gipp_local_alarms');
+              if (!activeRemindersStr) return;
+              
+              const activeReminders = JSON.parse(activeRemindersStr);
+              let changed = false;
+              const now = Date.now();
+              
+              const updatedReminders = activeReminders.map((alarm: any) => {
+                  if (!alarm.triggered && alarm.targetTime <= now) {
+                      // Disparar notificação nativa do browser em background
+                      if (typeof window !== 'undefined' && 'Notification' in window) {
+                          if (Notification.permission === 'granted') {
+                              try {
+                                  new Notification(`Lembrete GIPP: ${alarm.title}`, {
+                                      body: alarm.body || 'Sua tarefa ou escala está programada para breve.',
+                                      icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                                  });
+                              } catch (e) {
+                                  console.warn("Could not display native notification constructor:", e);
+                              }
+                          }
+                      }
+                      
+                      // Adicionar aos Toasts visuais no GIPP
+                      addToast(`Lembrete Ativo: ${alarm.title} - ${alarm.body || ''}`, 'info');
+                      playNotificationSound();
+                      
+                      alarm.triggered = true;
+                      changed = true;
+                  }
+                  return alarm;
+              });
+              
+              if (changed) {
+                  // Salva apenas os não-desparados ou com tag de status atualizado
+                  localStorage.setItem('gipp_local_alarms', JSON.stringify(updatedReminders));
+              }
+          } catch (err) {
+              console.warn("Local Alarms check error:", err);
+          }
+      };
+
+      // Executa inicialmente e a cada 20 segundos
+      checkLocalReminders();
+      const interval = setInterval(checkLocalReminders, 20000);
+      return () => clearInterval(interval);
+  }, [db.igreja?.icone_sistema, db.igreja?.nome]);
 
   // NOVO: Auto Full-Screen no primeiro clique/toque do utilizador (Gatilho Silencioso)
   useEffect(() => {
