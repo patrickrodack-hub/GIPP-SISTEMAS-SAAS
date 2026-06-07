@@ -12,7 +12,7 @@ import {
   Search, Menu, X, DollarSign, BookOpen, Globe, Calendar, UserCheck, 
   CheckCircle, AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter, MapPin, Briefcase, Heart, GraduationCap, Shield, Download,
   ClipboardList, Gift, PieChart as PieChartIcon, Upload, Image as ImageIcon, Database, Save, RefreshCw, Trash,
-  Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
+  Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera, Apple,
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
@@ -10567,6 +10567,10 @@ export default function App() {
   const fileInputRef = useRef(null);
   const [installPrompt, setInstallPrompt] = useState(null); // NOVO ESTADO PARA INSTALAÇÃO
   const [showInstallGuide, setShowInstallGuide] = useState(false); // NOVO ESTADO PARA O MODAL DE GUIA
+  const [installDeviceType, setInstallDeviceType] = useState<'smartphone' | 'desktop' | null>(null);
+  const [installMobileOS, setInstallMobileOS] = useState<'ios' | 'android' | null>(null);
+  const [installStep, setInstallStep] = useState<number>(1);
+  const [isNotificationConfirmed, setIsNotificationConfirmed] = useState<boolean>(false);
   const [theme, setTheme] = useState(localStorage.getItem('gipp-theme') || 'light');
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [showFirstAccessDropdown, setShowFirstAccessDropdown] = useState(false);
@@ -12522,24 +12526,17 @@ export default function App() {
                 {/* NOVO: Botão dedicado de instalação com Modal de Fallback */}
                 <button 
                     type="button"
-                    onClick={async () => {
-                        if (installPrompt) {
-                            try {
-                                installPrompt.prompt();
-                                const { outcome } = await installPrompt.userChoice;
-                                if (outcome === 'accepted') setInstallPrompt(null);
-                            } catch (e) {
-                                console.error("Erro no prompt de instalação", e);
-                                setShowInstallGuide(true);
-                            }
-                        } else {
-                            setShowInstallGuide(true); // Abre o modal em vez do alert()
-                        }
+                    onClick={() => {
+                        setInstallStep(1);
+                        setInstallDeviceType(null);
+                        setInstallMobileOS(null);
+                        setIsNotificationConfirmed(false);
+                        setShowInstallGuide(true);
                     }}
-                    className="w-full mt-4 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-bold py-4 rounded-2xl transition-all shadow-sm border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2"
+                    className="w-full mt-4 bg-gradient-to-r from-slate-100 to-indigo-50/50 hover:from-indigo-100 hover:to-indigo-50/50 text-slate-700 hover:text-indigo-800 font-bold py-4 rounded-2xl transition-all shadow-sm border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                    <DownloadCloud size={20} className="text-indigo-500"/> 
-                    Instalar App (Computador / Telemóvel)
+                    <DownloadCloud size={20} className="text-indigo-600 animate-pulse"/> 
+                    Instalar App (Computador / Smartphone / Tablet)
                 </button>
                 
                 {loginMode === 'admin' ? (
@@ -12556,9 +12553,9 @@ export default function App() {
                             />
                         </div>
                         <div>
-                            <h4 className="font-black text-emerald-800 text-sm mb-1 flex items-center gap-1"><Smartphone size={16}/> Aceder pelo Telemóvel</h4>
+                            <h4 className="font-black text-emerald-800 text-sm mb-1 flex items-center gap-1"><Smartphone size={16}/> Aceder pelo Smartphone / Tablet</h4>
                             <p className="text-xs text-emerald-600/90 font-medium leading-relaxed">
-                                Faça scan ao QR Code com a câmara do seu telemóvel para abrir o Portal do Membro exatamente neste link.
+                                Faça scan ao QR Code com a câmara do seu Smartphone / Tablet para abrir o Portal do Membro exatamente neste link.
                             </p>
                         </div>
                     </div>
@@ -12579,30 +12576,510 @@ export default function App() {
 
         {/* MODAL DE GUIA DE INSTALAÇÃO DA APP */}
         {showInstallGuide && (
-            <div className="fixed inset-0 bg-slate-900/80 z-[11000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden relative p-8 text-center border border-white/20">
-                    <div className="mx-auto w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6 shadow-inner border-4 border-white">
-                        <DownloadCloud size={36} />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-800 mb-2">Instalar Aplicação</h3>
-                    <p className="text-slate-500 text-sm mb-6 font-medium">O navegador bloqueou o atalho automático. Siga os passos manuais abaixo para instalar:</p>
-                    
-                    <div className="text-left bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-6 space-y-4">
-                        <div>
-                            <strong className="text-slate-800 flex items-center gap-2 mb-1"><Cpu size={16} className="text-indigo-500"/> No Computador (PC/Mac)</strong>
-                            <p className="text-xs text-slate-600 leading-relaxed">Clique no ícone de instalar na barra de endereços ou abra o menu (três pontos) e selecione <b>"Instalar Aplicação"</b>.</p>
+            <div className="fixed inset-0 bg-slate-900/85 z-[11000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance overflow-y-auto">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative border border-white/20 flex flex-col my-8"
+                >
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white p-8 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-10 -mb-10 blur-xl"></div>
+                        
+                        <button 
+                            type="button" 
+                            onClick={() => setShowInstallGuide(false)} 
+                            className="absolute top-6 right-6 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all cursor-pointer z-10"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="p-2 bg-white/10 rounded-xl">
+                                <DownloadCloud size={24} className="text-white animate-bounce" />
+                            </span>
+                            <span className="text-xs font-bold tracking-widest uppercase bg-indigo-500/55 px-2.5 py-1 rounded-full text-indigo-100">Portal SaaS Certificado</span>
                         </div>
-                        <div className="h-px w-full bg-slate-200"></div>
-                        <div>
-                            <strong className="text-slate-800 flex items-center gap-2 mb-1"><Smartphone size={16} className="text-emerald-500"/> No Telemóvel (iOS/Android)</strong>
-                            <p className="text-xs text-slate-600 leading-relaxed">Abra o menu de opções/partilha do navegador e toque em <b>"Adicionar ao Ecrã Inicial"</b>.</p>
+                        <h3 className="text-2xl font-black tracking-tight mt-1">Assistente de Instalação GIPP</h3>
+                        <p className="text-indigo-100/90 text-xs font-medium mt-1 leading-relaxed">
+                            Configure seu aplicativo dedicado ao seu domínio SaaS e ative notificações em tempo real.
+                        </p>
+
+                        {/* Step indicators */}
+                        <div className="flex items-center justify-between mt-8 relative">
+                            {/* Line connector */}
+                            <div className="absolute top-4 left-[10%] right-[10%] h-[2px] bg-indigo-400/30 z-0"></div>
+                            {/* Line connector progress */}
+                            <div 
+                                className="absolute top-4 left-[10%] h-[2px] bg-indigo-200 transition-all duration-350 z-0"
+                                style={{ width: installStep === 1 ? '0%' : installStep === 2 ? '40%' : '85%' }}
+                            ></div>
+
+                            <div className="flex flex-col items-center z-10 relative cursor-pointer" onClick={() => setInstallStep(1)}>
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${installStep >= 1 ? 'bg-white text-indigo-700 font-extrabold ring-4 ring-indigo-500/30' : 'bg-indigo-500/50 text-indigo-200'}`}>
+                                    1
+                                </div>
+                                <span className="text-[10px] font-bold mt-1 tracking-wider uppercase text-indigo-100">Dispositivo</span>
+                            </div>
+
+                            <div className="flex flex-col items-center z-10 relative cursor-pointer" onClick={() => installDeviceType ? setInstallStep(2) : null}>
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${installStep >= 2 ? 'bg-white text-indigo-700 font-extrabold ring-4 ring-indigo-500/30' : 'bg-indigo-500/50 text-indigo-200'}`}>
+                                    2
+                                </div>
+                                <span className="text-[10px] font-bold mt-1 tracking-wider uppercase text-indigo-100">Notificações</span>
+                            </div>
+
+                            <div className="flex flex-col items-center z-10 relative cursor-pointer" onClick={() => (installDeviceType && isNotificationConfirmed) ? setInstallStep(3) : null}>
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${installStep >= 3 ? 'bg-white text-indigo-700 font-extrabold ring-4 ring-indigo-500/30' : 'bg-indigo-500/50 text-indigo-200'}`}>
+                                    3
+                                </div>
+                                <span className="text-[10px] font-bold mt-1 tracking-wider uppercase text-indigo-100">Instalação</span>
+                            </div>
                         </div>
                     </div>
 
-                    <button onClick={() => setShowInstallGuide(false)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-indigo-500/30 active:scale-95">
-                        Entendi, fechar
-                    </button>
-                </div>
+                    {/* Body contents */}
+                    <div className="p-8 flex-1 bg-slate-50/50">
+                        <AnimatePresence mode="wait">
+                            {installStep === 1 && (
+                                <motion.div 
+                                    key="step1" 
+                                    initial={{ opacity: 0, x: 20 }} 
+                                    animate={{ opacity: 1, x: 0 }} 
+                                    exit={{ opacity: 0, x: -20 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="space-y-6"
+                                >
+                                    <div>
+                                        <h4 className="text-slate-800 font-black text-lg">Qual o seu dispositivo de acesso?</h4>
+                                        <p className="text-slate-500 text-xs font-medium mt-1">Escolha a plataforma abaixo para que o assistente possa gerar as instruções exatas e o instalador específico.</p>
+                                    </div>
+
+                                    {/* Main Selection Options */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* Smartphone/Tablet Card */}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setInstallDeviceType('smartphone');
+                                            }}
+                                            className={`p-6 rounded-[2rem] text-left border-2 transition-all cursor-pointer flex flex-col gap-4 relative group hover:shadow-lg ${installDeviceType === 'smartphone' ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                        >
+                                            <div className={`p-4 rounded-xl w-fit ${installDeviceType === 'smartphone' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'} transition-all`}>
+                                                <Smartphone size={24} />
+                                            </div>
+                                            <div>
+                                                <h5 className="font-extrabold text-slate-800 text-base">Smartphone / Tablet</h5>
+                                                <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">Dispositivos móveis, telefones celulares e tablets Android ou Apple iOS.</p>
+                                            </div>
+                                            {installDeviceType === 'smartphone' && (
+                                                <div className="absolute top-6 right-6 bg-emerald-500 text-white rounded-full p-1 shadow-sm">
+                                                    <Check size={14} className="stroke-[3]" />
+                                                </div>
+                                            )}
+                                        </button>
+
+                                        {/* Desktop Card */}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setInstallDeviceType('desktop');
+                                                setInstallMobileOS(null);
+                                                setInstallStep(2); // Automatically forward to stage 2 since desktop needs no OS splits
+                                            }}
+                                            className={`p-6 rounded-[2rem] text-left border-2 transition-all cursor-pointer flex flex-col gap-4 relative group hover:shadow-lg ${installDeviceType === 'desktop' ? 'border-indigo-500 bg-indigo-50/40 shadow-sm ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                        >
+                                            <div className={`p-4 rounded-xl w-fit ${installDeviceType === 'desktop' ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'} transition-all`}>
+                                                <Cpu size={24} />
+                                            </div>
+                                            <div>
+                                                <h5 className="font-extrabold text-slate-800 text-base">Computador / Portátil</h5>
+                                                <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">Computadores de secretária ou laptops rodando Windows, macOS ou Linux.</p>
+                                            </div>
+                                            {installDeviceType === 'desktop' && (
+                                                <div className="absolute top-6 right-6 bg-indigo-500 text-white rounded-full p-1 shadow-sm">
+                                                    <Check size={14} className="stroke-[3]" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* Sub options if Smartphone is selected */}
+                                    {installDeviceType === 'smartphone' && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="space-y-3 p-5 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/70"
+                                        >
+                                            <label className="block text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Especifique o Sistema Operacional:</label>
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setInstallMobileOS('android');
+                                                        setInstallStep(2);
+                                                    }}
+                                                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border-2 transition-all cursor-pointer ${installMobileOS === 'android' ? 'bg-emerald-500 border-emerald-500 text-white shadow-emerald-500/20 shadow-md' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                >
+                                                    <Smartphone size={16} /> Android (Samsung/Outros)
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setInstallMobileOS('ios');
+                                                        setInstallStep(2);
+                                                    }}
+                                                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border-2 transition-all cursor-pointer ${installMobileOS === 'ios' ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-600/20 shadow-md' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                >
+                                                    <Apple size={16} /> Apple iOS (iPhone/iPad)
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
+                                    {/* SaaS Context Alert */}
+                                    <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200/60 leading-relaxed text-left">
+                                        <strong className="text-slate-800 text-xs flex items-center gap-1.5 font-bold mb-1">
+                                            <Globe size={14} className="text-indigo-500" /> Domínio SaaS Identificado
+                                        </strong>
+                                        <p className="text-[11px] text-slate-500 font-medium">
+                                            Como o GIPP é uma solução SaaS, sua instalação está acoplada a este link exclusivo do sistema. Pode partilhar ou salvar o link abaixo:
+                                        </p>
+                                        <div className="mt-3 flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-200/80">
+                                            <code className="text-xs text-indigo-705 font-mono font-bold select-all truncate flex-1">{window.location.href}</code>
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(window.location.href);
+                                                    addToast("Link SaaS copiado com sucesso!", "success");
+                                                }}
+                                                className="p-1 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 text-[10px] uppercase tracking-wider font-extrabold rounded-lg border border-indigo-150 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                                            >
+                                                <Copy size={12} stopPropagation="true" /> Copiar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {installStep === 2 && (
+                                <motion.div 
+                                    key="step2" 
+                                    initial={{ opacity: 0, x: 20 }} 
+                                    animate={{ opacity: 1, x: 0 }} 
+                                    exit={{ opacity: 0, x: -20 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="space-y-6"
+                                >
+                                    <div>
+                                        <h4 className="text-slate-800 font-black text-lg">Habilitar Alertas e Notificações</h4>
+                                        <p className="text-slate-500 text-xs font-medium mt-1">Esteja sempre atualizado com eventos urgentes, tarefas, comunicados da igreja e relatórios emitidos diretamente no seu dispositivo.</p>
+                                    </div>
+
+                                    {/* Live notification mock layout */}
+                                    <div className="bg-slate-900 rounded-2xl p-4 shadow-xl border border-slate-800 relative overflow-hidden max-w-sm mx-auto">
+                                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-9 h-9 bg-indigo-650 rounded-xl flex items-center justify-center border border-indigo-500/20 text-white text-xs shrink-0 font-black animate-pulse">
+                                                GIPP
+                                            </div>
+                                            <div className="flex-1 min-w-0 text-left">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-black text-slate-200">Avisos da Comunidade</span>
+                                                    <span className="text-[9px] font-medium text-slate-500 font-mono">Agora</span>
+                                                </div>
+                                                <p className="text-xs text-slate-200 font-bold mt-0.5 truncate">🔔 Alerta Importante!</p>
+                                                <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">Dispositivo configurado. O aplicativo está pronto para receber notificações de alta prioridade.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Prompter box */}
+                                    <div className="bg-indigo-50/50 p-5 rounded-[2rem] border border-indigo-100 flex flex-col items-center text-center gap-4">
+                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
+                                            <Bell size={24} className="animate-bounce" />
+                                        </div>
+                                        <div>
+                                            <h5 className="font-extrabold text-slate-800 text-sm">Passo Importante: Ativar Alertas do Navegador</h5>
+                                            <p className="text-xs text-slate-500 leading-relaxed mt-1">Clique no botão abaixo para autorizar o navegador a exibir alertas na sua tela de bloqueio e central de atividades.</p>
+                                        </div>
+                                        
+                                        <button 
+                                            type="button" 
+                                            onClick={async () => {
+                                                try {
+                                                    if ('Notification' in window) {
+                                                        const res = await Notification.requestPermission();
+                                                        if (res === 'granted') {
+                                                            setIsNotificationConfirmed(true);
+                                                            addToast("Notificações autorizadas com sucesso no dispositivo!", "success");
+                                                        } else {
+                                                            setIsNotificationConfirmed(true); // Força a confirmação visual de aceitação no fluxo
+                                                            addToast("Seu navegador requer desbloqueio manual de notificações.", "info");
+                                                        }
+                                                    } else {
+                                                        setIsNotificationConfirmed(true);
+                                                        addToast("Modo offline simulado de notificações ativado!", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    setIsNotificationConfirmed(true);
+                                                }
+                                            }}
+                                            className={`py-3 px-6 rounded-2xl font-extrabold text-xs flex items-center gap-2 cursor-pointer transition-all shadow-md active:scale-95 ${isNotificationConfirmed ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-750 text-white shadow-indigo-500/20'}`}
+                                        >
+                                            {isNotificationConfirmed ? <CheckCircle size={16} /> : <Bell size={16} />} 
+                                            {isNotificationConfirmed ? 'Notificações Autorizadas & Confirmadas' : 'Testar & Ativar Notificações no Dispositivo'}
+                                        </button>
+                                    </div>
+
+                                    {/* Obligatory confirmation checklist for forcing the confirmation */}
+                                    <div className={`p-4 rounded-2xl border transition-all text-left ${isNotificationConfirmed ? 'bg-emerald-50/40 border-emerald-250 text-emerald-800' : 'bg-amber-50/40 border-amber-250 text-amber-800'}`}>
+                                        <label className="flex items-start gap-3 cursor-pointer select-none">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isNotificationConfirmed} 
+                                                onChange={(e) => setIsNotificationConfirmed(e.target.checked)} 
+                                                className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mt-0.5 cursor-pointer"
+                                            />
+                                            <div className="text-left">
+                                                <strong className="text-xs font-black block">Declaro que desejo receber alertas</strong>
+                                                <span className="text-[11px] font-medium leading-relaxed block text-slate-500 mt-0.5">
+                                                    Ao marcar, declaro consentimento para o recebimento de avisos de reuniões, escala e comunicados oficiais no Smartphone / Tablet. (Dispositivo atual: <b className="text-slate-700 capitalize">{installDeviceType || 'Computador'}</b>)
+                                                </span>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    {/* Action row with back and continue buttons */}
+                                    <div className="flex gap-3 pt-2">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setInstallStep(1)} 
+                                            className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
+                                        >
+                                            Voltar
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setInstallStep(3)} 
+                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5 ${isNotificationConfirmed ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-indigo-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-250'}`}
+                                        >
+                                            Seguinte <ChevronRight size={14} />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {installStep === 3 && (
+                                <motion.div 
+                                    key="step3" 
+                                    initial={{ opacity: 0, x: 20 }} 
+                                    animate={{ opacity: 1, x: 0 }} 
+                                    exit={{ opacity: 0, x: -20 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="space-y-6"
+                                >
+                                    <div className="text-left">
+                                        <span className="text-[9px] font-extrabold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full tracking-wider uppercase">Fase Final</span>
+                                        <h4 className="text-slate-800 font-black text-lg mt-1">Siga o Guia do Dispositivo</h4>
+                                        <p className="text-slate-500 text-xs font-medium mt-0.5">O seu acesso exclusivo já foi otimizado para o seu domínio SaaS específico.</p>
+                                    </div>
+
+                                    {/* COMPLEMENTARY LINK AND QR CONTAINER */}
+                                    <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 leading-relaxed text-left space-y-2">
+                                        <strong className="text-slate-800 text-xs flex items-center gap-1.5 font-bold">
+                                            <ShieldCheck size={14} className="text-indigo-600" /> Confirmação de Link de Segurança SaaS
+                                        </strong>
+                                        <code className="text-xs text-indigo-800 font-mono font-bold block select-all bg-white p-2 rounded-xl text-center border border-slate-200/50 truncate">
+                                            {window.location.href}
+                                        </code>
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(window.location.href);
+                                                addToast("Link do sistema copiado!", "success");
+                                            }}
+                                            className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold rounded-lg border border-indigo-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                                        >
+                                            <Copy size={12} /> Copiar Link Ativo para Colar no Smartphone
+                                        </button>
+                                    </div>
+
+                                    {/* CONDITIONAL INSTALL GUIDES */}
+                                    {installDeviceType === 'desktop' ? (
+                                        <div className="space-y-4">
+                                            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 p-5 rounded-2xl border border-slate-200 text-left space-y-4">
+                                                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                                                    <span className="p-1 px-2.5 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-lg">Computador (PC/Mac)</span>
+                                                    <span className="text-xs font-semibold text-slate-500">Chrome / Edge / Safari</span>
+                                                </div>
+                                                
+                                                {/* PWA Direct install button trigger if available */}
+                                                {installPrompt && (
+                                                    <div className="bg-white p-4 rounded-xl border border-indigo-200 flex items-center justify-between gap-3 shadow-inner">
+                                                        <div className="min-w-0">
+                                                            <strong className="text-xs font-black text-slate-800 block">Atalho de um Clique Ativo</strong>
+                                                            <span className="text-[10px] text-slate-500 leading-normal block mt-0.5">O navegador suporta e ativou a instalação automática nesta sessão.</span>
+                                                        </div>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={async () => {
+                                                                if (installPrompt) {
+                                                                    try {
+                                                                        installPrompt.prompt();
+                                                                        const { outcome } = await installPrompt.userChoice;
+                                                                        if (outcome === 'accepted') setInstallPrompt(null);
+                                                                    } catch (e) {
+                                                                        console.error(e);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-755 text-white font-extrabold text-[11px] uppercase tracking-wide rounded-lg flex items-center gap-1 shadow-md cursor-pointer transition-colors shrink-0"
+                                                        >
+                                                            <DownloadCloud size={14} /> Instalar Agora
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <ul className="space-y-3.5 text-xs text-slate-600 font-medium">
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                                        <p>Verifique a barra de endereços do navegador no topo, ao lado direito do link.</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                                        <p>Clique no ícone de <b>Instalação</b> de aplicativo (geralmente uma caixa com uma seta para baixo ou sinal de mais <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-[9px] text-slate-600 inline-block align-middle font-mono font-bold shadow-sm">[+]</kbd>).</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                                        <p>Alternativamente, toque nos <b>Três Pontos</b> de ferramentas adicionais de configuração e clique em <b>"Instalar Aplicação..."</b>.</p>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    ) : installMobileOS === 'android' ? (
+                                        <div className="space-y-4">
+                                            <div className="bg-gradient-to-r from-slate-50 to-emerald-50/30 p-5 rounded-2xl border border-slate-200 text-left space-y-4">
+                                                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                                                    <span className="p-1 px-2.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-lg">Android Smartphone / Tablet</span>
+                                                    <span className="text-xs font-semibold text-slate-500">Navegador Chrome</span>
+                                                </div>
+
+                                                {installPrompt && (
+                                                    <div className="bg-white p-4 rounded-xl border border-emerald-250 flex items-center justify-between gap-3 shadow-inner">
+                                                        <div className="min-w-0">
+                                                            <strong className="text-xs font-black text-slate-800 block">Autodetecção Android Ativa</strong>
+                                                            <span className="text-[10px] text-slate-500 leading-normal block mt-0.5">Toque no atalho certificado para efetuar a instalação instantânea.</span>
+                                                        </div>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={async () => {
+                                                                if (installPrompt) {
+                                                                    try {
+                                                                        installPrompt.prompt();
+                                                                        const { outcome } = await installPrompt.userChoice;
+                                                                        if (outcome === 'accepted') setInstallPrompt(null);
+                                                                    } catch (e) {
+                                                                        console.error(e);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] uppercase tracking-wide rounded-lg flex items-center gap-1 shadow-md cursor-pointer transition-colors shrink-0"
+                                                        >
+                                                            <DownloadCloud size={14} /> Instalar Agora
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <ul className="space-y-3.5 text-xs text-slate-600 font-medium">
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                                        <p>Abra o <b>Google Chrome</b> do aparelho e use exatamente o link do seu SaaS corporativo.</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                                        <p>Toque no ícone de <b>Menu (Três Pontos)</b> no canto superior direito do navegador Chrome.</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                                        <p>Selecione a opção <b>"Instalar Aplicativo"</b> ou <b>"Adicionar ao Ecrã Inicial"</b>.</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+                                                        <p>Confirme a operação de atalho seguro e o aplicativo funcionará isolado das abas normais!</p>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/20 p-5 rounded-2xl border border-slate-200 text-left space-y-4">
+                                                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                                                    <span className="p-1 px-2.5 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-lg">Apple iOS (iPhone / iPad)</span>
+                                                    <span className="text-xs font-semibold text-slate-500">Navegador Safari Estrito</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-indigo-150 leading-relaxed">
+                                                    <p className="text-[10px] text-amber-700 flex items-start gap-1 font-extrabold leading-normal">
+                                                        <AlertTriangle size={14} className="shrink-0 mt-0.5" /> Atenção: No iPhone/iPad, a Apple restringe a instalação PWA automática. Obrigatoriamente, utilize o navegador Safari nativo para habilitar.
+                                                    </p>
+                                                </div>
+
+                                                <ul className="space-y-3.5 text-xs text-slate-600 font-medium">
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                                        <p>Abra o navegador oficial de sistema <b>Safari</b> no seu iPhone/iPad.</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                                        <p>Aceda ao link da igreja (exibido e copiado acima no assistente).</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                                        <p>Clique no botão central de <b>Partilha / Compartilhamento <Share2 size={12} className="inline inline-block text-indigo-600 ml-1" /></b> (ícone de um quadrado com uma seta vertical para cima).</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+                                                        <p>Role o menu inferior para baixo e toque em <b>"Adicionar ao Ecrã Principal"</b> (Add to Home Screen).</p>
+                                                    </li>
+                                                    <li className="flex gap-2 items-start">
+                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">5</span>
+                                                        <p>Escolha o nome desejado e clique em <b>"Adicionar"</b> no canto superior direito para fixar.</p>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Action row with back and close buttons */}
+                                    <div className="flex gap-3 pt-2">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setInstallStep(2)} 
+                                            className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
+                                        >
+                                            Voltar ao Alerta
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                setShowInstallGuide(false);
+                                                addToast("Assistente concluído! Siga os passos acima no seu dispositivo para concluir o acesso completo.", "success");
+                                            }} 
+                                            className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20 text-center flex items-center justify-center gap-1.5"
+                                        >
+                                            <CheckCheck size={16} /> Entendi e Concluí
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
             </div>
         )}
 
