@@ -8,7 +8,7 @@ import webpush from "web-push";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collectionGroup, getDocs } from "firebase/firestore";
+import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore";
 
 const app = express();
 
@@ -305,6 +305,116 @@ app.post("/api/admin/trigger-financial-check", async (req, res) => {
     }
 });
 
+// ==================== SERVIÇO DE SEGUNDO PLANO DE LEMBRETES DE EVENTOS ====================
+
+// Serviço de verificação de lembretes automáticos de eventos de agenda (24h antes)
+async function checkScheduledEventRemindersAndNotify() {
+    console.log("[Serviço de Segundo Plano] Verificando lembretes de eventos da agenda (24h antes)...");
+    try {
+        const now = new Date();
+        const agendaSnapshot = await getDocs(collectionGroup(dbFirestore, 'agenda'));
+        
+        // Buscar todas as assinaturas push registradas para realizar correspondência de membro ID
+        const subsSnapshot = await getDocs(collectionGroup(dbFirestore, 'push_subscriptions'));
+        const allSubscriptions: any[] = [];
+        subsSnapshot.forEach(docSnap => {
+            const subData = docSnap.data();
+            if (subData && !subData.deleted && subData.subscription && subData.userId) {
+                allSubscriptions.push(subData);
+            }
+        });
+
+        console.log(`[Serviço de Segundo Plano] Encontradas ${allSubscriptions.length} assinaturas de push no total.`);
+
+        for (const docSnap of agendaSnapshot.docs) {
+            const item = docSnap.data();
+            const eventId = docSnap.id;
+            
+            if (item && item.lembrete_push_ativo && !item.push_lembrete_disparado && !item.deleted) {
+                const eventData = item.data; // YYYY-MM-DD
+                const eventHora = item.hora || "00:00"; // HH:MM
+                
+                if (eventData) {
+                    try {
+                        const eventDateTime = new Date(`${eventData}T${eventHora}:00`);
+                        const timeDiffMs = eventDateTime.getTime() - now.getTime();
+                        
+                        // 24 horas = 86400000 ms.
+                        // Dispara se estiver na janela de antecedência de até 24 horas (e margem de carência de até 1 hora no passado por segurança)
+                        const limit24h = 24 * 60 * 60 * 1000;
+                        const safetyPastRange = -1 * 60 * 60 * 1000; // -1h
+                        
+                        if (timeDiffMs >= safetyPastRange && timeDiffMs <= limit24h) {
+                            console.log(`[Serviço de Segundo Plano] Disparando lembrete 24h para o evento: "${item.titulo}"`);
+                            
+                            // Obter membros inscritos que confirmaram (rsvpStatus === 'confirmado')
+                            const presencas = item.presencas || {};
+                            const inscritosIds = Object.keys(presencas).filter(mId => presencas[mId] === 'confirmado');
+                            
+                            if (inscritosIds.length > 0) {
+                                // Filtrar assinaturas dos confirmados
+                                const targetSubs = allSubscriptions.filter(sub => inscritosIds.includes(sub.userId));
+                                
+                                if (targetSubs.length > 0) {
+                                    const eventDateFormatted = eventData.split('-').reverse().join('/');
+                                    const customMsg = item.lembrete_push_mensagem || "{evento} será amanhã às {hora} no {local}. Esperamos por você!";
+                                    const bodyText = customMsg
+                                        .replace(/{evento}/gi, item.titulo)
+                                        .replace(/{hora}/gi, eventHora)
+                                        .replace(/{data}/gi, eventDateFormatted)
+                                        .replace(/{local}/gi, item.local || "Templo Sede");
+
+                                    const payload = JSON.stringify({
+                                        notification: {
+                                            title: `⏰ Lembrete: ${item.titulo}`,
+                                            body: bodyText,
+                                            icon: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                                            badge: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                                            data: { url: "/#portal_agenda" }
+                                        }
+                                    });
+
+                                    let sentCount = 0;
+                                    for (const r of targetSubs) {
+                                        try {
+                                            await webpush.sendNotification(r.subscription, payload);
+                                            sentCount++;
+                                        } catch (subErr: any) {
+                                            console.error(`[Serviço de Segundo Plano] Falha ao enviar notificação push:`, subErr.message);
+                                        }
+                                    }
+                                    console.log(`[Serviço de Segundo Plano] Lembretes enviados: ${sentCount} membros notificados.`);
+                                } else {
+                                    console.log(`[Serviço de Segundo Plano] Nenhum membro confirmado com inscrição ativa de push para "${item.titulo}".`);
+                                }
+                            } else {
+                                console.log(`[Serviço de Segundo Plano] Nenhuma presença confirmada para o evento "${item.titulo}".`);
+                            }
+                            
+                            // Marcar como disparado para evitar reenvio
+                            await setDoc(docSnap.ref, { push_lembrete_disparado: true }, { merge: true });
+                        }
+                    } catch (timeErr) {
+                        console.error(`Erro ao analisar data/hora do evento ${item.titulo}:`, timeErr);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error("[Serviço de Segundo Plano] Erro na verificação de lembretes agenda:", err);
+    }
+}
+
+// Rota para administradores forçarem a verificação manualmente para fins de teste/gestão direta
+app.post("/api/admin/trigger-agenda-reminders", async (req, res) => {
+    try {
+        await checkScheduledEventRemindersAndNotify();
+        res.json({ success: true, message: "Varredura de lembretes de agenda ativada e disparada com sucesso." });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message || String(error) });
+    }
+});
+
 async function start() {
     if (process.env.NODE_ENV !== "production") {
         const vite = await createViteServer({
@@ -333,6 +443,15 @@ async function start() {
             }
         }, 5000);
 
+        // Executa uma checagem inicial de lembretes da agenda após 8 segundos do boot do servidor
+        setTimeout(async () => {
+            try {
+                await checkScheduledEventRemindersAndNotify();
+            } catch (err) {
+                console.error("[Serviço de Segundo Plano] Falha na verificação de agenda inicial:", err);
+            }
+        }, 8000);
+
         // Agenda a checagem diária para rodar a cada 24 horas (86400000 ms)
         setInterval(async () => {
             try {
@@ -341,6 +460,15 @@ async function start() {
                 console.error("[Serviço de Segundo Plano] Falha na verificação financeira diária programada:", err);
             }
         }, 1000 * 60 * 60 * 24);
+
+        // Agenda a checagem da agenda para rodar a cada 30 minutos (1800000 ms)
+        setInterval(async () => {
+            try {
+                await checkScheduledEventRemindersAndNotify();
+            } catch (err) {
+                console.error("[Serviço de Segundo Plano] Falha na verificação programada da agenda:", err);
+            }
+        }, 1000 * 60 * 30);
     });
 }
 

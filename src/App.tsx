@@ -2069,6 +2069,42 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 </div>
                             </div>
                         </div>
+
+                        <div className="mt-2 p-5 bg-gradient-to-br from-indigo-50 to-purple-50/50 border border-indigo-150 rounded-2xl animate-entrance space-y-4 shadow-xs">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md">
+                                        <Bell size={18} className="animate-bounce" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Lembrete Push Automático (24h)</h4>
+                                        <p className="text-[10px] text-slate-500 font-medium leading-tight">Disparar lembrete push automatizado aos membros inscritos 24h antes</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked={data.lembrete_push_ativo || false} onChange={e => setData({...data, lembrete_push_ativo: e.target.checked})} className="sr-only peer" />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                            
+                            {data.lembrete_push_ativo && (
+                                <div className="space-y-3 pt-3 border-t border-indigo-150 animate-entrance">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider mb-2 ml-1">Template de Mensagem Customizado</label>
+                                        <textarea 
+                                            value={data.lembrete_push_mensagem || ""} 
+                                            onChange={e => setData({...data, lembrete_push_mensagem: e.target.value})}
+                                            placeholder="Ex: Amanhã às {hora} teremos nosso {evento} no {local}! Não falte."
+                                            rows={2} 
+                                            className="w-full p-3 rounded-xl border border-indigo-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none" 
+                                        />
+                                        <p className="text-[9px] text-indigo-500/80 font-bold mt-1.5 ml-1">
+                                            Sugestão de variáveis: <code className="bg-indigo-150/60 px-1 py-0.5 rounded text-indigo-700">{`{evento}`}</code>, <code className="bg-indigo-150/60 px-1.5 py-0.5 rounded text-indigo-700">{`{hora}`}</code>, <code className="bg-indigo-150/60 px-1.5 py-0.5 rounded text-indigo-700">{`{local}`}</code>, <code className="bg-indigo-150/60 px-1.5 py-0.5 rounded text-indigo-700">{`{data}`}</code>
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                  );
              case 'fin_entrada_novo':
@@ -8250,6 +8286,12 @@ const PortalAgenda = ({ user, db }) => {
                                         <span className="flex items-center gap-1"><Clock size={14}/> {evt.hora}</span>
                                         <span className="flex items-center gap-1"><MapPin size={14}/> {evt.local || 'Templo Sede'}</span>
                                     </p>
+                                    {evt.lembrete_push_ativo && (
+                                        <div className="flex items-center gap-1.5 mt-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider w-fit">
+                                            <Bell size={11} className="text-indigo-400 animate-bounce" /> 
+                                            Notificação Push 24h Disponível
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -9872,7 +9914,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.8.0</span>
+                        <span>Versão 6.9.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>SaaS Gold Edition</span>
                     </div>
@@ -11973,7 +12015,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.8.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.9.0</p>
                         </div>
                     </div>
                     <div>

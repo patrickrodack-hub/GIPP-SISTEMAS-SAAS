@@ -46,6 +46,7 @@ const ModuleBoletim = () => {
     const { db, user, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
     const isAdmin = user?.tipo !== 'membro';
     const [isEditing, setIsEditing] = useState(false);
+    const [readerItem, setReaderItem] = useState<any | null>(null);
     
     // --- ESTADOS E AÇÕES DE PUSH NOTIFICATIONS ---
     const [permissionState, setPermissionState] = useState(
@@ -667,7 +668,7 @@ const ModuleBoletim = () => {
                         {eventosList.map((evt, idx) => {
                             const IconComponent = getIcon(evt.icon);
                             return (
-                                <div key={idx} className="bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all group flex flex-col h-full rounded-[1.5rem] overflow-hidden hover:-translate-y-1">
+                                <div key={idx} className="bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all group flex flex-col h-full rounded-[1.5rem] overflow-hidden hover:-translate-y-1 cursor-pointer" onClick={() => setReaderItem({...evt, desc: evt.desc || '', tipo: 'Destaque Oficial'})}>
                                     <div className={`h-32 bg-${evt.color || 'blue'}-600 relative overflow-hidden flex items-center justify-center`}>
                                         <IconComponent size={80} className="text-white/20 absolute transform group-hover:scale-125 transition-transform duration-500"/>
                                         <h3 className="font-black text-white text-3xl relative z-10 uppercase tracking-widest drop-shadow-md text-center px-4">{evt.titulo}</h3>
@@ -697,7 +698,7 @@ const ModuleBoletim = () => {
                             {progList.map((culto, idx) => {
                                 const IconComponent = getIcon(culto.icon);
                                 return (
-                                <div key={idx} className={`flex justify-between items-center ${idx !== progList.length - 1 ? 'border-b border-slate-100 pb-4' : ''} group hover:bg-slate-50 p-2 rounded-xl transition-colors`}>
+                                <div key={idx} className={`flex justify-between items-center ${idx !== progList.length - 1 ? 'border-b border-slate-100 pb-4' : ''} group hover:bg-slate-50 p-2 rounded-xl transition-all cursor-pointer`} onClick={() => setReaderItem({ titulo: culto.titulo, desc: `Programação Semanal de culto e reuniões às ${culto.dia}. Esperamos por você e sua família para adorarmos a Deus juntos às ${culto.hora}!`, hora: culto.hora, local: 'Templo Principal', tipo: 'Culto Semanal', color: culto.color, icon: culto.icon })}>
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 bg-${culto.color || 'blue'}-50 rounded-xl text-${culto.color || 'blue'}-600 border border-${culto.color || 'blue'}-100 group-hover:scale-110 transition-transform shadow-sm`}>
                                             <IconComponent size={20}/>
@@ -721,7 +722,7 @@ const ModuleBoletim = () => {
                         <SectionTitle icon={Bell} color="amber">Mural de Avisos & Convocatórias</SectionTitle>
                         <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm flex-1 flex flex-col gap-4">
                             {tarefasMes.length > 0 ? tarefasMes.slice(0, 5).map((task, i) => (
-                                <div key={i} className="flex gap-4 p-4 rounded-xl border border-amber-200 bg-amber-50/30 hover:bg-amber-50 transition-colors">
+                                <div key={i} className="flex gap-4 p-4 rounded-xl border border-amber-200 bg-amber-50/30 hover:bg-amber-100 transition-all cursor-pointer" onClick={() => setReaderItem({ titulo: task.categoria, desc: task.descricao, data: task.data, tipo: 'Aviso Importante', color: 'amber' })}>
                                     <div className="text-amber-500 mt-1 shrink-0"><AlertCircle size={20}/></div>
                                     <div>
                                         <span className="text-[9px] font-black uppercase text-amber-700 tracking-widest mb-1 block bg-amber-100 w-fit px-2 py-0.5 rounded">{task.categoria}</span>
@@ -791,7 +792,7 @@ const ModuleBoletim = () => {
                     <SectionTitle icon={Calendar} color="indigo">Agenda Extraordinária do Mês</SectionTitle>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {agendaMes.length > 0 ? agendaMes.map((evt, i) => (
-                            <div key={i} className={`rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all flex flex-col items-center text-center relative group overflow-hidden min-h-[280px] ${evt.imagem ? '' : 'bg-white'}`}>
+                            <div key={i} className={`rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all flex flex-col items-center text-center relative group overflow-hidden min-h-[280px] cursor-pointer ${evt.imagem ? '' : 'bg-white'}`} onClick={() => setReaderItem({...evt, desc: evt.desc || `Participe conosco do evento especial "${evt.titulo}" marcado para o dia ${evt.data.split('-').reverse().join('/')} às ${evt.hora}. Esperamos sua valorosa companhia!`, tipo: evt.tipo || 'Agenda Especial'})}>
                                 {evt.imagem && (
                                     <div className="absolute inset-0 w-full h-full z-0">
                                         <img src={evt.imagem} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={evt.titulo} />
@@ -1003,6 +1004,103 @@ const ModuleBoletim = () => {
                 <p className="font-black uppercase tracking-widest text-slate-500 mb-2">GIPP - Portal de Informações Eclesiásticas</p>
                 <p>© {currentYear} {db.igreja?.nome}. Todos os direitos reservados.</p>
             </footer>
+
+            {/* MODAL MODERN GLASSMORPHISM - MODO LEITURA */}
+            {readerItem && (
+                <div 
+                    id="reading-mode-modal"
+                    className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-entrance"
+                    onClick={() => setReaderItem(null)}
+                >
+                    <div 
+                        className="relative w-full max-w-2xl bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all animate-scale-up"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header/Banner do Modal de Leitura */}
+                        <div className={`h-40 md:h-48 relative overflow-hidden flex items-center justify-center p-6 ${readerItem.imagem ? '' : (readerItem.color ? `bg-${readerItem.color}-600/50` : 'bg-indigo-600/50')}`}>
+                            {readerItem.imagem ? (
+                                <div className="absolute inset-0 w-full h-full">
+                                    <img src={readerItem.imagem} className="w-full h-full object-cover" alt={readerItem.titulo} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                                </div>
+                            ) : (
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-800/40 to-purple-800/40"></div>
+                            )}
+                            
+                            <div className="relative z-10 text-center text-white p-4">
+                                <span className="text-[10px] uppercase font-black tracking-widest bg-white/25 border border-white/25 px-3 py-1 rounded-full backdrop-blur-md mb-2 inline-block">
+                                    {readerItem.tipo || 'Boletim'}
+                                </span>
+                                <h3 className="text-xl md:text-3xl font-black tracking-tight drop-shadow-md leading-tight">{readerItem.titulo}</h3>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setReaderItem(null)}
+                                className="absolute top-6 right-6 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors border border-white/10 cursor-pointer"
+                            >
+                                <X size={18}/>
+                            </button>
+                        </div>
+                        
+                        {/* Conteúdo do Modal de Leitura */}
+                        <div className="p-8 text-white space-y-6 max-h-[50vh] overflow-y-auto">
+                            <div className="space-y-4">
+                                <p className="text-sm md:text-base leading-relaxed text-slate-100 font-medium whitespace-pre-line">
+                                    {readerItem.desc || readerItem.descricao || "Sem detalhes descritivos cadastrados."}
+                                </p>
+                            </div>
+                            
+                            {/* Metadados do Evento no Modo Leitura */}
+                            {(readerItem.data || readerItem.hora || readerItem.local) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/15 text-xs font-bold text-slate-200">
+                                    {readerItem.data && (
+                                        <div className="flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
+                                            <Calendar size={16} className="text-indigo-300"/>
+                                            <span>Data: {formatDateLocal(readerItem.data)}</span>
+                                        </div>
+                                    )}
+                                    {readerItem.hora && (
+                                        <div className="flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
+                                            <Clock size={16} className="text-indigo-300"/>
+                                            <span>Horário: {readerItem.hora}</span>
+                                        </div>
+                                    )}
+                                    {readerItem.local && (
+                                        <div className="sm:col-span-2 flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
+                                            <MapPin size={16} className="text-indigo-300"/>
+                                            <span className="truncate">Local: {readerItem.local}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Rodapé do Modal com Compartilhamento e Fechar */}
+                        <div className="p-6 bg-black/40 border-t border-white/10 flex flex-wrap gap-4 items-center justify-between">
+                            <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">
+                                GIPP • Modo Leitura Glassmorphism
+                            </span>
+                            <div className="flex gap-2.5">
+                                <button 
+                                    onClick={() => {
+                                        const shareText = `*${readerItem.titulo}*\n📌 *${readerItem.tipo || 'Boletim'}*\n\n📅 *Data:* ${readerItem.data ? formatDateLocal(readerItem.data) : 'Programação Fixa'}\n⏰ *Horário:* ${readerItem.hora || ''}\n📍 *Local:* ${readerItem.local || ''}\n\n_${readerItem.desc || readerItem.descricao || ''}_`;
+                                        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+                                    }}
+                                    className="px-4.5 py-2.5 bg-emerald-500 hover:bg-emerald-600 font-bold text-xs text-white rounded-xl transition-all flex items-center gap-2 border border-emerald-400/20 active:scale-95 cursor-pointer shadow-sm shadow-emerald-500/10 animate-pulse"
+                                >
+                                    <Share2 size={14}/> Compartilhar WhatsApp
+                                </button>
+                                <button 
+                                    onClick={() => setReaderItem(null)}
+                                    className="px-4.5 py-2.5 bg-white/10 hover:bg-white/20 font-bold text-xs text-slate-300 rounded-xl transition-all border border-white/20 cursor-pointer active:scale-95"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

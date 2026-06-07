@@ -244,7 +244,20 @@ const ModuleSecretariaIntegrada = () => {
                 {tab === 'agenda' && (
                     <div className="h-full flex flex-col">
                         <div className="flex justify-end mb-4"><Button onClick={seedAgendaAD} variant="secondary" className="text-xs"><Calendar size={16}/> Gerar Calendário Padrão AD</Button></div>
-                        <GenericTable title="Agenda da Igreja" type="agenda" data={agendaFiltrada} columns={[{header:'Evento', key:'titulo'}, {header:'Data', key:'data', render: d=>formatDateLocal(d.data)}, {header:'Hora', key:'hora'}, {header:'Local', key:'local'}]} customActions={(item) => (
+                        <GenericTable title="Agenda da Igreja" type="agenda" data={agendaFiltrada} columns={[
+                            {header:'Evento', key:'titulo'}, 
+                            {header:'Data', key:'data', render: d=>formatDateLocal(d.data)}, 
+                            {header:'Hora', key:'hora'}, 
+                            {header:'Local', key:'local'},
+                            {header:'Lembrete Push 24h', key:'lembrete_push_ativo', render: d => d.lembrete_push_ativo ? (
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border inline-flex items-center gap-1 ${d.push_lembrete_disparado ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-xs'}`}>
+                                    <Bell size={10} className={d.push_lembrete_disparado ? "" : "animate-bounce"} />
+                                    {d.push_lembrete_disparado ? 'Enviado' : 'Agendado'}
+                                </span>
+                            ) : (
+                                <span className="text-[9px] font-black uppercase bg-slate-50 text-slate-400 px-2 py-0.5 rounded border border-slate-150">Inativo</span>
+                            )}
+                        ]} customActions={(item) => (
                             <div className="flex gap-2">
                                 <button onClick={() => handlePrintEvent(item)} className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all shadow-sm border border-slate-200 bg-white" title="Imprimir"><Printer size={18}/></button>
                                 <button onClick={() => handleSendWhatsApp(item)} className="p-2.5 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all shadow-sm border border-emerald-100 bg-white" title="Enviar via WhatsApp"><MessageCircle size={18}/></button>

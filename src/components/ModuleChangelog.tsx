@@ -47,15 +47,27 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.8.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.9.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-indigo-750 font-[Outfit]">v6.8.0 - Chaves VAPID Customizadas, Sincronização Nativa de Notificações & Estabilização Geral do Push</h3>
+                <h3 className="font-extrabold text-lg text-indigo-750 font-[Outfit]">v6.9.0 - Agendamento Automático de Push Reminders para Eventos & Modo Leitura do Boletim em Glassmorphism</h3>
                 <p className="text-xs text-indigo-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
-                    <li><strong className="text-slate-700 font-sans">Chaves VAPID Customizadas:</strong> Integração flexível com chaves de criptografia sob medida nas configurações do servidor.</li>
-                    <li><strong className="text-slate-700">Sincronização Nativa de Dispositivos:</strong> Mapeamento transparente de inscrições de push integradas com a persistência em tempo real para recebimento imediato de escalas e avisos.</li>
-                    <li><strong className="text-slate-700">Compatibilidade Ampliada:</strong> Comunicação otimizada direto com os celulares de obreiros e membros sem a dependência exclusiva do FCM.</li>
+                    <li><strong className="text-slate-700 font-sans">Lembretes Push Automatizados:</strong> Disparo automático e inteligente de notificações push para membros confirmados/inscritos em eventos da agenda 24 horas antes do início da atividade.</li>
+                    <li><strong className="text-slate-700">Modo Leitura Glassmorphism:</strong> Nova experiência de leitura fluida no Boletim Digital, permitindo expandir detalhes, informativos e cultos através de um modal com efeito vidro fosco de alta fidelidade sem sair do feed.</li>
+                    <li><strong className="text-slate-700 font-sans">Verificação Periódica Robusta:</strong> Monitoramento de segundo plano contínuo e programável no servidor Express que audita agendamentos a cada 30 minutos e despacha as mensagens de forma resiliente.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO ADICIONADO PARA VERSÃO 6.8.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-400">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-extrabold text-lg text-slate-600 font-[Outfit]">v6.8.0 - Chaves VAPID Customizadas, Sincronização Nativa de Notificações & Estabilização Geral do Push</h3>
+                <p className="text-xs text-slate-400 font-black uppercase mb-3 tracking-wider">Junho 2026</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-500 text-sm">
+                    <li><strong className="text-slate-600 font-sans">Chaves VAPID Customizadas:</strong> Integração flexível com chaves de criptografia sob medida nas configurações do servidor.</li>
+                    <li><strong className="text-slate-600">Sincronização Nativa de Dispositivos:</strong> Mapeamento transparente de inscrições de push integradas com a persistência em tempo real para recebimento imediato de escalas e avisos.</li>
+                    <li><strong className="text-slate-600">Compatibilidade Ampliada:</strong> Comunicação otimizada direto com os celulares de obreiros e membros sem a dependência exclusiva do FCM.</li>
                 </ul>
             </div>
 
