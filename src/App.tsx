@@ -10137,8 +10137,166 @@ const clearBrowserAppCache = () => {
     }
 };
 
+// --- COMPONENTE DE SUCESSO E CELEBRAÇÃO PROFISSIONAL DE INSTALAÇÃO PWA ---
+const PWAInstallSuccessOverlay = ({ db, onClose }) => {
+    const [secondsLeft, setSecondsLeft] = useState(4);
+
+    useEffect(() => {
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100, 50, 200]);
+        }
+        
+        try {
+            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+            osc.connect(gain);
+            gain.connect(context.destination);
+            
+            osc.type = 'sine';
+            const now = context.currentTime;
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.setValueAtTime(659.25, now + 0.15); // E5
+            osc.frequency.setValueAtTime(783.99, now + 0.3); // G5
+            osc.frequency.setValueAtTime(1046.50, now + 0.45); // C6
+            
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+            
+            osc.start(now);
+            osc.stop(now + 0.8);
+        } catch (e) {}
+
+        const timer = setInterval(() => {
+            setSecondsLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    onClose();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [onClose]);
+
+    return (
+        <AnimatePresence>
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-[#040814]/98 backdrop-blur-3xl z-[30000] flex flex-col items-center justify-center p-6 text-white font-sans text-center overflow-hidden"
+            >
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/15 rounded-full filter blur-[100px] animate-pulse" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/15 rounded-full filter blur-[100px] animate-pulse delay-1000" />
+
+                <div className="relative z-10 max-w-md w-full space-y-8 px-4 flex flex-col items-center">
+                    <div className="relative">
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                            className="absolute -inset-4 rounded-full border border-dashed border-emerald-500/40"
+                        />
+                        <motion.div
+                            animate={{ scale: [1, 1.05, 1] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                            className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 opacity-20 blur-md"
+                        />
+                        
+                        <motion.div
+                            initial={{ scale: 0, rotate: -30 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                            className="relative w-28 h-28 bg-emerald-500/10 border border-emerald-500/30 rounded-[2.5rem] p-5 flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.15)]"
+                        >
+                            <img 
+                                src={db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} 
+                                className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(16,185,129,0.4)]" 
+                                alt="Installed App" 
+                                referrerPolicy="no-referrer"
+                            />
+                            
+                            <motion.div 
+                                initial={{ scale: 0, y: 10 }}
+                                animate={{ scale: 1, y: 0 }}
+                                transition={{ delay: 0.4, type: "spring" }}
+                                className="absolute -bottom-1 -right-1 w-10 h-10 bg-emerald-500 rounded-full border-[3px] border-[#040814] flex items-center justify-center text-white shadow-lg shadow-emerald-500/50"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </motion.div>
+                        </motion.div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <motion.span 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-xs font-black tracking-[0.25em] text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full uppercase border border-emerald-500/20"
+                        >
+                            Instalação Bem-sucedida!
+                        </motion.span>
+                        
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-3xl font-black tracking-tight mt-3 text-white leading-tight"
+                        >
+                            Aplicativo Integrado <br />ao Dispositivo
+                        </motion.h1>
+                        
+                        <motion.p 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.7 }}
+                            transition={{ delay: 0.4 }}
+                            className="text-[13px] text-slate-300 font-medium leading-relaxed max-w-sm"
+                        >
+                            O portal oficial SaaS foi adicionado ao seu sistema operacional com sucesso. O ecrã será atualizado para o modo de autenticação segura nativa.
+                        </motion.p>
+                    </div>
+
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.5 }}
+                        className="bg-white/[0.02] p-5 rounded-3xl border border-white/5 w-full space-y-4"
+                    >
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider">Reiniciando Sandbox Dedicado</span>
+                            <span className="font-mono text-emerald-400 font-black">{secondsLeft}s...</span>
+                        </div>
+                        
+                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                            <motion.div 
+                                className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 rounded-full"
+                                initial={{ width: "100%" }}
+                                animate={{ width: "0%" }}
+                                transition={{ duration: 4, ease: "linear" }}
+                            />
+                        </div>
+                    </motion.div>
+
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.4 }}
+                        transition={{ delay: 0.6 }}
+                        className="text-[10px] uppercase font-bold tracking-widest text-slate-400 font-mono"
+                    >
+                        PWA Workspace Container Activo
+                    </motion.p>
+                </div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
 // --- MODAL IMPERATIVO E PROFISSIONAL PARA INSTALAÇÃO PWA E SEGURANÇA DE NOTIFICAÇÕES ---
-const ForcedPWAInstallationPrompt = ({ db, addToast, installPrompt, setInstallPrompt, requestFcmPermission, fcmPermission, onClose }) => {
+const ForcedPWAInstallationPrompt = ({ db, addToast, installPrompt, setInstallPrompt, requestFcmPermission, fcmPermission, onClose, setIsStandalone, setShowInstallSuccessOverlay, setUser, setView }) => {
     const [copied, setCopied] = useState(false);
     
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -10342,6 +10500,10 @@ const ForcedPWAInstallationPrompt = ({ db, addToast, installPrompt, setInstallPr
                                                 const { outcome } = await installPrompt.userChoice;
                                                 if (outcome === 'accepted') {
                                                     setInstallPrompt(null);
+                                                    if (setIsStandalone) setIsStandalone(true);
+                                                    if (setShowInstallSuccessOverlay) setShowInstallSuccessOverlay(true);
+                                                    if (setUser) setUser(null);
+                                                    if (setView) setView('login');
                                                 }
                                             } catch (e) {
                                                 addToast("Disparando assistente de instalação manual...", "info");
@@ -10370,7 +10532,7 @@ const ForcedPWAInstallationPrompt = ({ db, addToast, installPrompt, setInstallPr
                                 )}
                             </div>
                         ) : (
-                            <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-4">
+                             <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-4">
                                 <div className="flex gap-4">
                                     <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center shrink-0">
                                         <Cpu size={22} className="text-slate-400" />
@@ -10389,6 +10551,10 @@ const ForcedPWAInstallationPrompt = ({ db, addToast, installPrompt, setInstallPr
                                                 const { outcome } = await installPrompt.userChoice;
                                                 if (outcome === 'accepted') {
                                                     setInstallPrompt(null);
+                                                    if (setIsStandalone) setIsStandalone(true);
+                                                    if (setShowInstallSuccessOverlay) setShowInstallSuccessOverlay(true);
+                                                    if (setUser) setUser(null);
+                                                    if (setView) setView('login');
                                                 }
                                             } catch (e) {
                                                 console.error(e);
@@ -10868,6 +11034,7 @@ export default function App() {
   });
   const [isMobileDevice, setIsMobileDevice] = useState(false); // NOVO: Identifica acesso por telemóvel
   const [isStandalone, setIsStandalone] = useState(false); // NOVO: Identifica se corre como PWA instalado
+  const [showInstallSuccessOverlay, setShowInstallSuccessOverlay] = useState(false); // NOVO: Controla exibição de celebridade de instalação PWA
   const [forcePwaClosed, setForcePwaClosed] = useState(() => {
       try {
           return localStorage.getItem('gipp_force_pwa_closed') === 'true';
@@ -11163,7 +11330,7 @@ export default function App() {
     }
   }, [notifications, db.igreja?.icone_sistema]);
 
-  // NOVO: Detetar telemóvel e forçar Portal do Membro
+  // NOVO: Detetar telemóvel e forçar Portal do Membro e funcionamento autônomo (PWA)
   useEffect(() => {
       const mobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobileDevice(mobileCheck);
@@ -11172,6 +11339,11 @@ export default function App() {
       }
       const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
       setIsStandalone(checkStandalone);
+      if (checkStandalone) {
+          // Se o sistema detectar que está instalado como PWA, força a abertura direta no ecrã de login
+          setUser(null);
+          setView('login');
+      }
   }, []);
 
   // NOVO: Limpar cache ao inicializar o sistema para manter sempre atualizado
@@ -11391,14 +11563,26 @@ export default function App() {
       }
   }, [view, verses]);
 
-  // NOVO: Capturar o evento de instalação do navegador
+  // NOVO: Capturar o evento de instalação do navegador e sucesso de instalação PWA
   useEffect(() => {
       const handleBeforeInstallPrompt = (e) => {
           e.preventDefault();
           setInstallPrompt(e);
       };
+      const handleAppInstalled = () => {
+          console.log('GIPP OS Info: Aplicativo instalado com sucesso!');
+          setInstallPrompt(null);
+          setIsStandalone(true);
+          setShowInstallSuccessOverlay(true);
+          setUser(null);
+          setView('login');
+      };
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+      return () => {
+          window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+          window.removeEventListener('appinstalled', handleAppInstalled);
+      };
   }, []);
 
   const addToast = (message, type = 'info') => { 
@@ -12826,7 +13010,13 @@ export default function App() {
                             try {
                                 installPrompt.prompt();
                                 const { outcome } = await installPrompt.userChoice;
-                                if (outcome === 'accepted') setInstallPrompt(null);
+                                if (outcome === 'accepted') {
+                                    setInstallPrompt(null);
+                                    setIsStandalone(true);
+                                    setShowInstallSuccessOverlay(true);
+                                    setUser(null);
+                                    setView('login');
+                                }
                             } catch (e) {
                                 console.error("Erro no prompt de instalação", e);
                                 setShowInstallGuide(true);
@@ -12917,8 +13107,14 @@ export default function App() {
                     localStorage.setItem('gipp_force_pwa_closed', 'true');
                     setForcePwaClosed(true);
                 }}
+                setIsStandalone={setIsStandalone}
+                setShowInstallSuccessOverlay={setShowInstallSuccessOverlay}
+                setUser={setUser}
+                setView={setView}
             />
         )}
+
+        {showInstallSuccessOverlay && <PWAInstallSuccessOverlay db={db} onClose={() => setShowInstallSuccessOverlay(false)} />}
 
         </div> 
       </ChurchContext.Provider>
@@ -12973,8 +13169,14 @@ export default function App() {
                     localStorage.setItem('gipp_force_pwa_closed', 'true');
                     setForcePwaClosed(true);
                 }}
+                setIsStandalone={setIsStandalone}
+                setShowInstallSuccessOverlay={setShowInstallSuccessOverlay}
+                setUser={setUser}
+                setView={setView}
             />
         )}
+
+        {showInstallSuccessOverlay && <PWAInstallSuccessOverlay db={db} onClose={() => setShowInstallSuccessOverlay(false)} />}
     </ChurchContext.Provider>
   );
 }
