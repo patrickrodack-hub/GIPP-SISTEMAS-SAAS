@@ -2,7 +2,7 @@
   "name": "GIPP - Sistema de Gestão de Igrejas",
   "short_name": "GIPP",
   "start_url": ".",
-  "display": "fullscreen",
+  "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e293b",
   "description": "Sistema de Gestão Integrente para Igrejas e Pastores Digitais",

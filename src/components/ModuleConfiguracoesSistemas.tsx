@@ -1163,6 +1163,74 @@ const ModuleConfiguracoesSistemas = () => {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Guia de Compatibilidade e Instalação Mobile (Android, iOS e Windows) */}
+                            <div className="border-t border-slate-100 pt-6">
+                                <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                    <Smartphone size={16} className="text-indigo-600 animate-pulse" />
+                                    Guia de Instalação e Ativação de Notificações nos Celulares
+                                </h3>
+                                <p className="text-slate-400 text-xs mb-6 leading-relaxed">
+                                    Para receber escalas, mensagens e avisos automáticos em tempo real de forma estável, siga as instruções específicas do seu sistema operacional abaixo:
+                                </p>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Bloco iOS */}
+                                    <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col justify-between hover:border-indigo-100 hover:bg-indigo-50/5 transition-all duration-300">
+                                        <div>
+                                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-widest text-[#444] bg-white px-2 py-1 rounded-md border border-slate-200 mb-2.5">
+                                                🍎 Apple iOS (iPhone/iPad)
+                                            </span>
+                                            <p className="text-[11px] text-slate-500 font-semibold mb-3 leading-relaxed">
+                                                A Apple introduziu suporte a Push no **iOS 16.4+**, porém exige estritamente que você salve o app na tela inicial.
+                                            </p>
+                                            <ol className="list-decimal pl-4.5 text-[11px] text-slate-600 font-medium space-y-1.5 leading-relaxed">
+                                                <li>Abra este site utilizando o navegador <strong className="text-indigo-600">Safari</strong> do iPhone.</li>
+                                                <li>Toque no botão de no painel inferior <strong className="text-indigo-600">Compartilhar</strong> (quadrado com seta para cima).</li>
+                                                <li>Selecione a opção <strong className="text-indigo-600">"Adicionar à Tela de Início"</strong>.</li>
+                                                <li>Abra o aplicativo a partir do atalho que foi criado na sua tela de início do celular.</li>
+                                                <li>Faça seu login de membro/pastor e clique em <strong className="text-indigo-600">"Ativar Notificações Push"</strong>.</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+
+                                    {/* Bloco Android */}
+                                    <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col justify-between hover:border-indigo-100 hover:bg-indigo-50/5 transition-all duration-300">
+                                        <div>
+                                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-widest text-[#006e00] bg-white px-2 py-1 rounded-md border border-slate-200 mb-2.5">
+                                                🤖 Google Android (Samsung, Moto, Xiaomi...)
+                                            </span>
+                                            <p className="text-[11px] text-slate-500 font-semibold mb-3 leading-relaxed">
+                                                Dispositivos Android possuem suporte nativo total direto pelo navegador Chrome ou instalando o aplicativo PWA.
+                                            </p>
+                                            <ol className="list-decimal pl-4.5 text-[11px] text-slate-600 font-medium space-y-1.5 leading-relaxed">
+                                                <li>Abra o aplicativo utilizando o navegador <strong className="text-indigo-600">Chrome</strong>.</li>
+                                                <li>Clique em <strong className="text-indigo-600">"Instalar Aplicativo"</strong> no menu do Chrome ou quando solicitado pelo banner inferior.</li>
+                                                <li>Abra o aplicativo e no painel de configurações clique em <strong className="text-indigo-600">"Ativar Notificações Push"</strong>.</li>
+                                                <li>Quando o Android solicitar a permissão, selecione <strong className="text-emerald-700 font-bold">"Permitir" / "Autorizar"</strong>.</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+
+                                    {/* Bloco Windows */}
+                                    <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col justify-between hover:border-indigo-100 hover:bg-indigo-50/5 transition-all duration-300">
+                                        <div>
+                                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-black tracking-widest text-[#0c6291] bg-white px-2 py-1 rounded-md border border-slate-200 mb-2.5">
+                                                💻 Windows / macOS / Computadores
+                                            </span>
+                                            <p className="text-[11px] text-slate-500 font-semibold mb-3 leading-relaxed">
+                                                Em computadores de mesa ou notebooks do escritório, as notificações chegam normalmente por navegadores modernos.
+                                            </p>
+                                            <ol className="list-decimal pl-4.5 text-[11px] text-slate-600 font-medium space-y-1.5 leading-relaxed">
+                                                <li>Acesse o painel do sistema no seu navegador preferido (Chrome, Edge, Firefox, Opera).</li>
+                                                <li>Role até a aba Notificações e clique em <strong className="text-indigo-600">"Ativar Notificações Push"</strong>.</li>
+                                                <li>Quando o navegador emitir a caixinha de aviso no canto superior esquerdo ou direito, clique em <strong className="text-emerald-700 font-bold">"Permitir"</strong>.</li>
+                                                <li>Certifique-se de que o modo Foco/Não Perturbe do seu computador está desativado.</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
