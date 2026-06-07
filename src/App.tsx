@@ -6653,14 +6653,44 @@ const ThemeToggle = ({ variant = 'default', className = "" }) => {
 };
 
 // --- CENTRAL DE NOTIFICAÇÕES INTELIGENTE ---
+// Contém o sub-componente de histórico e o de preferências de canais (Escalas, Kids, Financeiro)
 const NotificationCenter = () => {
-    const { notifications, clearAllNotifications } = useContext(ChurchContext);
+    const { notifications, clearAllNotifications, user, dbFirestore, appId, addToast } = useContext(ChurchContext);
     const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
+    const [activeTab, setActiveTab] = useState<'alerts' | 'settings'>('alerts');
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+    // Preferências de push salvas no localStorage e vinculadas ao membro
+    const [pushPrefs, setPushPrefs] = useState({
+        escalas: localStorage.getItem('gipp_push_pref_escalas') !== 'false',
+        kids: localStorage.getItem('gipp_push_pref_kids') !== 'false',
+        financeiro: localStorage.getItem('gipp_push_pref_financeiro') !== 'false'
+    });
+
+    const handleTogglePref = async (key: 'escalas' | 'kids' | 'financeiro') => {
+        const newVal = !pushPrefs[key];
+        const updatedPrefs = { ...pushPrefs, [key]: newVal };
+        setPushPrefs(updatedPrefs);
+        localStorage.setItem(`gipp_push_pref_${key}`, newVal ? 'true' : 'false');
+        
+        addToast(`Canal de push "${key.toUpperCase()}" ${newVal ? 'ativado' : 'desativado'} com sucesso!`, 'info');
+        
+        // Se houver membro logado, sincroniza com o Firestore
+        if (user) {
+            try {
+                const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', user.id);
+                await setDoc(docRef, {
+                    [`push_pref_${key}`]: newVal
+                }, { merge: true });
+            } catch (err) {
+                console.warn("[Sync Push Prefs failed]", err);
+            }
+        }
+    };
 
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsOpen(false);
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -6682,51 +6712,127 @@ const NotificationCenter = () => {
 
             {isOpen && (
                 <div className="absolute right-0 mt-4 w-80 sm:w-96 glass-panel rounded-3xl shadow-2xl border border-white/60 overflow-hidden z-[100] animate-scale-in origin-top-right">
-                    <div className="p-4 bg-slate-50/80 border-b border-slate-200/50 flex justify-between items-center backdrop-blur-sm">
-                        <h3 className="font-black text-slate-800 flex items-center gap-2">
-                            <Bell size={18} className="text-indigo-600"/> Notificações
-                        </h3>
-                        {notifications.length > 0 ? (
+                    {/* Header com Abas em visual Premium */}
+                    <div className="p-4 bg-slate-50/80 border-b border-slate-200/50 flex flex-col gap-3 backdrop-blur-sm">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-black text-slate-800 flex items-center gap-2">
+                                <Bell size={18} className="text-indigo-600"/> Notificações
+                            </h3>
+                            {notifications.length > 0 && activeTab === 'alerts' && (
+                                <button 
+                                    onClick={() => {
+                                        clearAllNotifications(notifications.map(n => n.id));
+                                        playMenuSound();
+                                    }}
+                                    className="text-[10px] font-black tracking-wider uppercase text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-105/40 transition-colors flex items-center gap-1 cursor-pointer"
+                                >
+                                    <Trash2 size={10} /> Limpar
+                                </button>
+                            )}
+                        </div>
+                        
+                        {/* Selector de Abas */}
+                        <div className="grid grid-cols-2 bg-slate-100/80 p-1 rounded-xl border border-slate-200/30">
                             <button 
-                                onClick={() => {
-                                    clearAllNotifications(notifications.map(n => n.id));
-                                    playMenuSound();
-                                }}
-                                className="text-[10px] font-black tracking-wider uppercase text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-105/40 transition-colors flex items-center gap-1 cursor-pointer"
+                                onClick={() => setActiveTab('alerts')} 
+                                className={`py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeTab === 'alerts' ? 'bg-white shadow-xs text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                <Trash2 size={10} /> Limpar
+                                <History size={12} /> Histórico ({notifications.length})
                             </button>
-                        ) : (
-                            <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg uppercase">
-                                {notifications.length} Alertas
-                            </span>
-                        )}
+                            <button 
+                                onClick={() => setActiveTab('settings')} 
+                                className={`py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeTab === 'settings' ? 'bg-white shadow-xs text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Settings size={12} /> Canais Push
+                            </button>
+                        </div>
                     </div>
-                    <div className="max-h-[60vh] overflow-y-auto custom-scrollbar bg-white/40">
-                        {notifications.length === 0 ? (
-                            <div className="p-8 flex flex-col items-center justify-center text-center text-slate-400">
-                                <CheckCircle size={40} className="mb-3 text-emerald-300 opacity-50"/>
-                                <p className="font-bold text-slate-600">Tudo em dia!</p>
-                                <p className="text-xs mt-1">Não há pendências ou alertas próximos.</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-slate-100/50">
-                                {notifications.map((notif) => (
-                                    <div key={notif.id} className="p-4 hover:bg-white/60 transition-colors flex gap-4 items-start group cursor-default">
-                                        <div className={`p-2.5 rounded-xl bg-${notif.color}-50 text-${notif.color}-500 shrink-0 group-hover:scale-110 transition-transform shadow-sm border border-${notif.color}-100`}>
-                                            <notif.icon size={20} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <h4 className="text-sm font-bold text-slate-800 truncate pr-2">{notif.title}</h4>
-                                                <span className={`text-[9px] font-black uppercase whitespace-nowrap bg-${notif.color}-100 text-${notif.color}-700 px-1.5 py-0.5 rounded`}>
-                                                    {notif.time}
-                                                </span>
+
+                    <div className="max-h-[60vh] overflow-y-auto custom-scrollbar bg-white/45">
+                        {activeTab === 'alerts' ? (
+                            notifications.length === 0 ? (
+                                <div className="p-8 flex flex-col items-center justify-center text-center text-slate-400">
+                                    <CheckCircle size={40} className="mb-3 text-emerald-300 opacity-50"/>
+                                    <p className="font-bold text-slate-600">Histórico Vazio!</p>
+                                    <p className="text-xs mt-1">Nenhum evento recente pendente.</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100/50">
+                                    {notifications.map((notif) => (
+                                        <div key={notif.id} className="p-4 hover:bg-white/60 transition-colors flex gap-4 items-start group cursor-default">
+                                            <div className={`p-2.5 rounded-xl bg-${notif.color || 'indigo'}-50 text-${notif.color || 'indigo'}-500 shrink-0 group-hover:scale-110 transition-transform shadow-sm border border-${notif.color || 'indigo'}-100`}>
+                                                {isValidElement(notif.icon) ? notif.icon : (React.createElement(notif.icon || Bell, { size: 20 }))}
                                             </div>
-                                            <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-snug">{notif.desc}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <h4 className="text-sm font-bold text-slate-800 truncate pr-2">{notif.title}</h4>
+                                                    <span className={`text-[9px] font-black uppercase whitespace-nowrap bg-${notif.color || 'indigo'}-100 text-${notif.color || 'indigo'}-700 px-1.5 py-0.5 rounded`}>
+                                                        {notif.time}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-snug">{notif.desc}</p>
+                                            </div>
                                         </div>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            /* Painel de Configuração de Preferências por Canale de Push */
+                            <div className="p-5 space-y-4">
+                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-2">Desative canais específicos para filtrar suas notificações na barra do sistema:</p>
+                                
+                                <div className="space-y-3">
+                                    {/* Canal Escalas */}
+                                    <div className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 block">🔔 Escalas de Voluntários</span>
+                                            <span className="text-[9px] text-slate-400 font-semibold block">Avisos de novas escalas e convocações</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={pushPrefs.escalas} 
+                                                onChange={() => handleTogglePref('escalas')}
+                                                className="sr-only peer" 
+                                            />
+                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
+                                        </label>
                                     </div>
-                                ))}
+
+                                    {/* Canal Kids */}
+                                    <div className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 block">👶 Ministério Kids</span>
+                                            <span className="text-[9px] text-slate-400 font-semibold block">Ocorrências, chamadas e avisos de crianças</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={pushPrefs.kids} 
+                                                onChange={() => handleTogglePref('kids')}
+                                                className="sr-only peer" 
+                                            />
+                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
+                                        </label>
+                                    </div>
+
+                                    {/* Canal Financeiro */}
+                                    <div className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 block">💰 Financeiro & Dízimos</span>
+                                            <span className="text-[9px] text-slate-400 font-semibold block">Lembretes de carnês, dízimos e doações</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={pushPrefs.financeiro} 
+                                                onChange={() => handleTogglePref('financeiro')}
+                                                className="sr-only peer" 
+                                            />
+                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -6749,6 +6855,50 @@ const PortalPerfil = ({ user, db, setView }) => {
         notify_eventos: user.notify_eventos !== false
     });
     const [saving, setSaving] = useState(false);
+
+    const handleTestNotification = async () => {
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            addToast("As notificações nativas não são suportadas neste navegador.", "warning");
+            return;
+        }
+        
+        let permission = Notification.permission;
+        if (permission !== 'granted') {
+            addToast("Para receber o teste, por favor autorize a permissão no navegador.", "info");
+            permission = await Notification.requestPermission();
+        }
+
+        if (permission === 'granted') {
+            addToast("🔔 Disparando teste de Notificação Local & segundo plano! Verifique sua barra de status.", "success");
+            playNotificationSound();
+            
+            // Tenta disparar via Service Worker registrado (segundo plano nativo)
+            if ('serviceWorker' in navigator) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    reg.showNotification("🔔 Teste Push Conectado!", {
+                        body: "Este é um teste oficial de alertas em tempo real do GIPP. Se você está vendo isso, o seu smartphone/computador está pronto!",
+                        icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                        badge: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                        vibrate: [200, 100, 200],
+                        data: { url: "/#portal_more" }
+                    } as any);
+                } catch (swErr) {
+                    new Notification("🔔 Teste Alerta GIPP", {
+                        body: "Seu navegador está configurado para receber notificações nos portais do GIPP!",
+                        icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                    });
+                }
+            } else {
+                new Notification("🔔 Teste Alerta GIPP", {
+                    body: "Seu navegador está configurado para receber notificações nos portais do GIPP!",
+                    icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"
+                });
+            }
+        } else {
+            addToast("As notificações foram bloqueadas/negadas. Por favor reative-as nas configurações do site no seu navegador.", "error");
+        }
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -6959,6 +7109,29 @@ const PortalPerfil = ({ user, db, setView }) => {
                                             className="w-5 h-5 accent-emerald-500 rounded"
                                         />
                                     </label>
+                                </div>
+
+                                {/* Botão de Teste de Notificação Local / PWA */}
+                                <div className="p-5 mt-4 bg-gradient-to-r from-emerald-50 to-teal-50/40 border border-emerald-100 rounded-2xl">
+                                    <h4 className="text-xs font-black text-emerald-900 uppercase tracking-widest flex items-center gap-1.5 leading-none">
+                                        <Smartphone size={14} className="text-emerald-600 animate-pulse" />
+                                        Teste de Conectividade Push
+                                    </h4>
+                                    <p className="text-[11px] text-emerald-700 mt-1 font-semibold">
+                                        Verifique instantaneamente se seu dispositivo (Android, iOS ou Windows) e o navegador atual estão configurados para exibir as notificações reais da congregação.
+                                    </p>
+                                    <div className="mt-3.5 flex flex-wrap gap-3 items-center">
+                                        <button 
+                                            type="button" 
+                                            onClick={handleTestNotification}
+                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-transform flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                        >
+                                            <Bell size={12} /> Testar Notificações
+                                        </button>
+                                        <span className="text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-1 rounded">
+                                            Status: {typeof window !== 'undefined' && 'Notification' in window ? Notification.permission.toUpperCase() : 'NÃO SUPORTADO'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -9937,6 +10110,41 @@ export default function App() {
       if (unsubscribe) unsubscribe();
     };
   }, [app]);
+
+  // Sincroniza e auto-solicita canais push ao carregar o portal
+  useEffect(() => {
+    if (user && typeof window !== 'undefined' && 'Notification' in window) {
+      const currentPermission = Notification.permission;
+      
+      // Sincroniza o status no Firestore para auditoria
+      const syncPermissionStatus = async () => {
+        try {
+          const logRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'user_push_status', user.id);
+          await setDoc(logRef, {
+            userId: user.id,
+            userNome: user.nome,
+            userTipo: user.tipo || 'membro',
+            permissionStatus: currentPermission,
+            fcmToken: fcmToken,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        } catch (err) {
+          console.warn("[syncPermissionStatus failed]", err);
+        }
+      };
+      
+      syncPermissionStatus();
+
+      // Solicita permissão se ainda estiver como 'default' para garantir que receba alertas
+      if (currentPermission === 'default') {
+        const timer = setTimeout(() => {
+          requestFcmPermission();
+        }, 4000); // 4 segundos de atraso para transição suave
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, fcmToken]);
+
   const [clearedNotifications, setClearedNotifications] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('gipp_cleared_notifs') || '[]');
@@ -11592,6 +11800,56 @@ export default function App() {
 
   const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
 
+  // --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
+  const MobilePushCompatibilityCheck = () => {
+      const [status, setStatus] = useState<'ok' | 'unsupported_pwa' | 'blocked'>('ok');
+      const [dismissed, setDismissed] = useState(false);
+
+      useEffect(() => {
+          if (typeof window !== 'undefined') {
+              const hasSW = 'serviceWorker' in navigator;
+              const hasPush = 'PushManager' in window;
+              const hasNotif = 'Notification' in window;
+              
+              if (!hasSW || !hasPush || !hasNotif) {
+                  setStatus('unsupported_pwa');
+              } else if (Notification.permission === 'denied') {
+                  setStatus('blocked');
+              }
+          }
+      }, []);
+
+      if (status === 'ok' || dismissed) return null;
+
+      return (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl mb-6 flex gap-3 animate-entrance relative">
+              <AlertTriangle className="text-amber-600 shrink-0 mt-0.5 animate-bounce" size={18} />
+              <div className="flex-1">
+                  <h4 className="text-[10px] font-black text-amber-950 uppercase tracking-wider">Aviso de Compatibilidade de Alertas</h4>
+                  <p className="text-[11px] text-amber-800 font-bold mt-1 leading-relaxed pr-6">
+                      {status === 'unsupported_pwa' ? (
+                          <span>
+                              Seu navegador móvel atual limita as notificações push. <strong className="font-black underline">No iOS (iPhone) ou Android, adicione este aplicativo à sua Tela de Início (Compartilhar &gt; Tela de Início)</strong> para habilitar as notificações nativas!
+                          </span>
+                      ) : (
+                          <span>
+                              A permissão de notificações deste site está bloqueada. <strong className="font-black underline">Por favor, libere os alertas nas configurações do navegador</strong> para continuar recebendo avisos.
+                          </span>
+                      )}
+                  </p>
+                  <button 
+                      type="button" 
+                      onClick={() => setDismissed(true)} 
+                      className="absolute top-3 right-3 text-amber-500 hover:text-amber-800 transition-colors p-1"
+                      title="Fechar aviso"
+                  >
+                      <X size={14} />
+                  </button>
+              </div>
+          </div>
+      );
+  };
+
   if (!user) { 
     return ( 
       <ChurchContext.Provider value={ctxValues}>
@@ -11707,6 +11965,8 @@ export default function App() {
                         <button type="button" onClick={() => setLoginMode('membro')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${loginMode === 'membro' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Sou Membro</button>
                     </div>
                 )}
+
+                <MobilePushCompatibilityCheck />
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     {!isFirstAccess ? (
