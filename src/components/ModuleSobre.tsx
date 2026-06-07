@@ -13,6 +13,7 @@ import {
   ClipboardList, Gift, PieChart as PieChartIcon, Upload, Image as ImageIcon, Database, Save, RefreshCw, Trash,
   Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
+  Instagram, Facebook,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
@@ -51,8 +52,8 @@ const ModuleSobre = () => {
                 <div className="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/30 transform rotate-3 hover:rotate-0 transition-transform">
                     <Building2 size={48} className="text-white"/>
                 </div>
-                <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight block">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">Versão 6.9.0 (SaaS Gold Edition)</p>
+                <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight block uppercase">{db.igreja?.saas_nome_sistema || "GIPP - GESTÃO DE IGREJA"}</h2>
+                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">{db.igreja?.saas_versao_sistema || "Versão 6.9.0 (SaaS Gold Edition)"}</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -79,25 +80,74 @@ const ModuleSobre = () => {
                         <h3 className="font-black text-xl text-slate-800 mb-8 flex items-center gap-2 w-full justify-center pb-4 border-b border-slate-200/50"><UserCheck size={24} className="text-emerald-500"/> Desenvolvedor & Criador</h3>
                         <div className="relative mb-5 hover:scale-105 transition-transform duration-300 cursor-default">
                             <div className="w-28 h-28 rounded-full border-4 border-indigo-100 shadow-2xl overflow-hidden bg-white flex items-center justify-center text-white font-black text-4xl">
-                                <img src={db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} alt="Ícone do Aplicativo" className="w-full h-full object-contain p-2" />
+                                <img src={db.igreja?.saas_dev_imagem || db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} alt="Desenvolvedor" className="w-full h-full object-cover" />
                             </div>
                             <div className="absolute bottom-0 right-0 bg-emerald-500 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center z-10 shadow-lg" title="Desenvolvedor Verificado"><Check size={12} className="text-white" strokeWidth={4}/></div>
                         </div>
                         <div>
-                            <h4 className="font-black text-3xl text-slate-900">PATRICK PESSOA</h4>
+                            <h4 className="font-black text-3xl text-slate-900 uppercase font-sans">{db.igreja?.saas_nome_desenvolvedor || "PATRICK PESSOA"}</h4>
                             <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mt-2 bg-indigo-50 py-1.5 px-4 rounded-full inline-block">Software Creator & Engineer</p>
-                            <p className="text-sm text-slate-500 mt-6 leading-relaxed max-w-sm mx-auto font-medium">Aplicativo idealizado, arquitetado e desenvolvido com excelência para modernizar a administração eclesiástica, aliando fé a tecnologia de ponta.</p>
+                            <p className="text-sm text-slate-500 mt-6 leading-relaxed max-w-sm mx-auto font-medium">
+                                {db.igreja?.saas_descricao_sistema || "Aplicativo idealizado, arquitetado e desenvolvido com excelência para modernizar a administração eclesiástica, aliando fé a tecnologia de ponta."}
+                            </p>
                             
-                            <a 
-                                href="https://gipp-site.vercel.app/" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
-                            >
-                                <Globe size={16} />
-                                Visitar Nosso Site
-                                <ExternalLink size={14} className="opacity-80" />
-                            </a>
+                            <div className="flex flex-wrap gap-2 justify-center mt-6">
+                                <a 
+                                    href={db.igreja?.saas_site || "https://gipp-site.vercel.app/"} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-5 py-2 hover:bg-indigo-55 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow-md transition-all duration-200 cursor-pointer"
+                                >
+                                    <Globe size={14} />
+                                    Site Oficial
+                                </a>
+
+                                {db.igreja?.saas_whatsapp && (
+                                    <a 
+                                        href={`https://wa.me/${db.igreja.saas_whatsapp}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all duration-200 cursor-pointer"
+                                    >
+                                        <Phone size={14} />
+                                        WhatsApp
+                                    </a>
+                                )}
+
+                                {db.igreja?.saas_email && (
+                                    <a 
+                                        href={`mailto:${db.igreja.saas_email}`} 
+                                        className="inline-flex items-center gap-2 px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md transition-all duration-200"
+                                    >
+                                        <Mail size={14} />
+                                        E-mail
+                                    </a>
+                                )}
+
+                                {db.igreja?.saas_instagram && (
+                                    <a 
+                                        href={db.igreja.saas_instagram.startsWith('http') ? db.igreja.saas_instagram : `https://instagram.com/${db.igreja.saas_instagram}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs rounded-xl shadow-md transition-all duration-200 cursor-pointer"
+                                    >
+                                        <Instagram size={14} />
+                                        Instagram
+                                    </a>
+                                )}
+
+                                {db.igreja?.saas_facebook && (
+                                    <a 
+                                        href={db.igreja.saas_facebook.startsWith('http') ? db.igreja.saas_facebook : `https://facebook.com/${db.igreja.saas_facebook}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all duration-200 cursor-pointer"
+                                    >
+                                        <Facebook size={14} />
+                                        Facebook
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -208,7 +258,7 @@ const ModuleSobre = () => {
                 <div className="relative z-10 text-center md:text-left">
                     <h4 className="font-black text-rose-700 text-xl uppercase tracking-wider mb-2">Aviso Legal de Direitos Autorais</h4>
                     <p className="text-sm font-bold text-rose-800 leading-relaxed text-justify">
-                        É estritamente <strong>PROIBIDA</strong> a cópia, clonagem, modificação, distribuição, revenda ou comercialização deste software, total ou parcialmente, sob qualquer pretexto, sem a prévia, expressa e documentada autorização do seu criador e desenvolvedor exclusivo, <strong>PATRICK PESSOA</strong>. O uso não autorizado está sujeito às penalidades da lei de proteção de propriedade intelectual e direitos de autor vigentes.
+                        É estritamente <strong>PROIBIDA</strong> a cópia, clonagem, modificação, distribuição, revenda ou comercialização deste software, total ou parcialmente, sob qualquer pretexto, sem a prévia, expressa e documentada autorização do seu criador e desenvolvedor exclusivo, <strong>{db.igreja?.saas_nome_desenvolvedor || "PATRICK PESSOA"}</strong>. O uso não autorizado está sujeito às penalidades da lei de proteção de propriedade intelectual e direitos de autor vigentes.
                     </p>
                 </div>
             </div>

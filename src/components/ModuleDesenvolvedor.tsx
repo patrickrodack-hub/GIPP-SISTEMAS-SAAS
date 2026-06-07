@@ -21,7 +21,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, Instagram, Facebook
 } from 'lucide-react';
 
 import { 
@@ -405,6 +405,28 @@ const ModuleDesenvolvedor = () => {
             if (data.bot_faq !== undefined) payload.bot_faq = data.bot_faq;
             if (data.custom_mary_avatar !== undefined) payload.custom_mary_avatar = data.custom_mary_avatar;
             
+            // Novos campos do SaaS cadastrados globalmente
+            if (data.saas_site !== undefined) payload.saas_site = data.saas_site;
+            if (data.saas_email !== undefined) payload.saas_email = data.saas_email;
+            if (data.saas_instagram !== undefined) payload.saas_instagram = data.saas_instagram;
+            if (data.saas_facebook !== undefined) payload.saas_facebook = data.saas_facebook;
+            if (data.saas_whatsapp !== undefined) payload.saas_whatsapp = data.saas_whatsapp;
+            if (data.saas_nome_desenvolvedor !== undefined) payload.saas_nome_desenvolvedor = data.saas_nome_desenvolvedor;
+            if (data.saas_chave_pix !== undefined) payload.saas_chave_pix = data.saas_chave_pix;
+            if (data.saas_nome_sistema !== undefined) payload.saas_nome_sistema = data.saas_nome_sistema;
+            if (data.saas_versao_sistema !== undefined) payload.saas_versao_sistema = data.saas_versao_sistema;
+            if (data.saas_descricao_sistema !== undefined) payload.saas_descricao_sistema = data.saas_descricao_sistema;
+
+            if (data.saas_dev_imagem !== undefined) {
+                if (typeof data.saas_dev_imagem === 'string' && data.saas_dev_imagem.startsWith('data:image/') && data.saas_dev_imagem.length > 50000) {
+                    const compressed = await resizeImageAndCompress(data.saas_dev_imagem, 300, 300, 0.75);
+                    payload.saas_dev_imagem = compressed;
+                    setData(prev => ({...prev as any, saas_dev_imagem: compressed}));
+                } else {
+                    payload.saas_dev_imagem = data.saas_dev_imagem;
+                }
+            }
+            
             if (data.bot_avatar !== undefined) {
                 if (typeof data.bot_avatar === 'string' && data.bot_avatar.startsWith('data:image/') && data.bot_avatar.length > 50000) {
                     const compressed = await resizeImageAndCompress(data.bot_avatar, 150, 150, 0.75);
@@ -427,6 +449,24 @@ const ModuleDesenvolvedor = () => {
         } catch (e) { 
             console.error("Erro detalhado ao salvar config:", e);
             addToast("Erro ao salvar os dados.", "error"); 
+        }
+    };
+
+    const handleSaasDevImagemUpload = (e: any) => {
+        const file = e.target.files[0];
+        if (file) {
+             const reader = new FileReader();
+             reader.onloadend = async () => {
+                 try {
+                     setData(prev => ({...prev as any, saas_dev_imagem: reader.result}));
+                     await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { saas_dev_imagem: reader.result }, { merge: true });
+                     try {
+                         await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'settings', 'config'), { saas_dev_imagem: reader.result }, { merge: true });
+                     } catch (err) {}
+                     addToast("Foto do Desenvolvedor atualizada!", "success");
+                 } catch (err) {}
+             };
+             reader.readAsDataURL(file);
         }
     };
 
@@ -1242,6 +1282,80 @@ const ModuleDesenvolvedor = () => {
 
                                 <div className="flex justify-end pt-4 border-t border-slate-100">
                                     <Button onClick={handleSaveConfig} variant="primary" className="shadow-lg w-full md:w-auto"><Save size={18}/> Salvar Dados Fiscais</Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="font-black text-lg text-indigo-800 uppercase tracking-widest mb-4 flex items-center gap-2 mt-10"><Sliders size={20}/> Informações Gerais do SaaS GIPP (Base do Sistema)</h3>
+                            <div className="flex flex-col gap-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm animate-fadeIn">
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">Estes parâmetros definem de forma global e centralizada todas as informações estáticas do aplicativo e do suporte que abastecem as demais telas do GIPP.</p>
+                                
+                                <div className="flex flex-col md:flex-row items-center gap-6 bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100/50">
+                                    <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-indigo-400 flex flex-col items-center justify-center bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer relative overflow-hidden group shrink-0 shadow-md">
+                                        {data.saas_dev_imagem ? <img src={data.saas_dev_imagem} className="w-full h-full object-cover" alt="Foto do Desenvolvedor" /> : <div className="text-center text-indigo-400"><UserCheck size={28} className="mx-auto mb-1"/><span className="text-[10px] font-bold">Foto Dev</span></div>}
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleSaasDevImagemUpload}/>
+                                        <div className="absolute inset-0 bg-indigo-900/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black text-center leading-tight p-2 uppercase tracking-widest">Alterar Foto</div>
+                                    </label>
+                                    <div className="flex-1 text-center md:text-left">
+                                        <h4 className="font-bold text-slate-800 text-sm">Imagem do Desenvolvedor</h4>
+                                        <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">Carregue a foto oficial do criador do sistema. Esta foto será exibida dinamicamente no módulo "Sobre", contatos e outras áreas integradas.</p>
+                                        {data.saas_dev_imagem && (
+                                            <button 
+                                                type="button" 
+                                                onClick={async () => { 
+                                                    setData(prev => ({...prev as any, saas_dev_imagem: ''})); 
+                                                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { saas_dev_imagem: '' }, { merge: true });
+                                                    try {
+                                                        await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'settings', 'config'), { saas_dev_imagem: '' }, { merge: true });
+                                                    } catch (err) {}
+                                                    addToast("Foto do desenvolvedor removida!", "info");
+                                                }}
+                                                className="mt-2 text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 transition-colors mx-auto md:mx-0"
+                                            >
+                                                <Trash2 size={12}/> Remover Foto
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormInput label="Nome do Desenvolvedor" value={data.saas_nome_desenvolvedor || ''} onChange={v => setData({...data, saas_nome_desenvolvedor: v})} placeholder="Ex: PATRICK PESSOA" className="!mb-0" />
+                                    <FormInput label="Chave PIX Oficial" value={data.saas_chave_pix || ''} onChange={v => setData({...data, saas_chave_pix: v})} placeholder="E-mail ou Chave aleatória" className="!mb-0" />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormInput label="Nome do Sistema" value={data.saas_nome_sistema || ''} onChange={v => setData({...data, saas_nome_sistema: v})} placeholder="Ex: GIPP - GESTÃO DE IGREJA" className="!mb-0" />
+                                    <FormInput label="Versão do Sistema / Licenciamento" value={data.saas_versao_sistema || ''} onChange={v => setData({...data, saas_versao_sistema: v})} placeholder="Ex: Versão 6.9.0 (SaaS Gold Edition)" className="!mb-0" />
+                                    <FormInput label="Site Oficial" value={data.saas_site || ''} onChange={v => setData({...data, saas_site: v})} placeholder="Ex: https://gipp-site.vercel.app/" className="!mb-0" />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormInput label="E-mail de Suporte Tecnológico" value={data.saas_email || ''} onChange={v => setData({...data, saas_email: v})} placeholder="Ex: devs@gipp-sistema.com" className="!mb-0" />
+                                    <FormInput label="WhatsApp de Contato" value={data.saas_whatsapp || ''} onChange={v => setData({...data, saas_whatsapp: v})} placeholder="Ex: 5521999999999" className="!mb-0" />
+                                    <FormInput label="Site Alternativo/Instagram Link" value={data.saas_instagram || ''} onChange={v => setData({...data, saas_instagram: v})} placeholder="Ex: https://instagram.com/gipp_sistema" className="!mb-0" />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormInput label="Link do Facebook" value={data.saas_facebook || ''} onChange={v => setData({...data, saas_facebook: v})} placeholder="Ex: https://facebook.com/gippsistema" className="!mb-0" />
+                                    <div className="flex flex-col gap-1.5 justify-end">
+                                        <p className="text-[10px] text-slate-400 font-bold">Os canais acima substituem os contatos estáticos no manual, rodapé, telas de bloqueio de mensalidade, notas de serviço e suporte.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black uppercase text-slate-500 tracking-wider">Descrição / Bio Geral do GIPP</label>
+                                    <textarea 
+                                        rows={3}
+                                        className="w-full border-2 border-slate-200 focus:border-indigo-500/60 bg-slate-50/30 p-3 rounded-2xl text-xs font-semibold text-slate-700 placeholder-slate-400 outline-none transition-all leading-relaxed"
+                                        placeholder="Descreva o propósito do aplicativo para as páginas institucionais..."
+                                        value={data.saas_descricao_sistema || ''}
+                                        onChange={(e) => setData({...data, saas_descricao_sistema: e.target.value})}
+                                    />
+                                </div>
+
+                                <div className="flex justify-end pt-4 border-t border-slate-100">
+                                    <Button onClick={handleSaveConfig} variant="primary" className="shadow-lg w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"><Save size={18}/> Salvar Estilo e Dados do SaaS</Button>
                                 </div>
                             </div>
                         </div>

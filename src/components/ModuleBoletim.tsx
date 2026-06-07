@@ -47,6 +47,7 @@ const ModuleBoletim = () => {
     const isAdmin = user?.tipo !== 'membro';
     const [isEditing, setIsEditing] = useState(false);
     const [readerItem, setReaderItem] = useState<any | null>(null);
+    const [isBoletimFullscreen, setIsBoletimFullscreen] = useState(false);
     
     // --- ESTADOS E AÇÕES DE PUSH NOTIFICATIONS ---
     const [permissionState, setPermissionState] = useState(
@@ -1025,11 +1026,11 @@ const ModuleBoletim = () => {
                     onClick={() => setReaderItem(null)}
                 >
                     <div 
-                        className="relative w-full max-w-2xl bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all animate-scale-up"
+                        className={`relative bg-white/10 backdrop-blur-2xl border border-white/20 overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col ${isBoletimFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-2xl rounded-[2.5rem]'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header/Banner do Modal de Leitura */}
-                        <div className={`h-40 md:h-48 relative overflow-hidden flex items-center justify-center p-6 ${readerItem.imagem ? '' : (readerItem.color ? `bg-${readerItem.color}-600/50` : 'bg-indigo-600/50')}`}>
+                        <div className={`relative overflow-hidden flex items-center justify-center p-6 shrink-0 transition-all duration-350 ${isBoletimFullscreen ? 'h-52 md:h-64' : 'h-40 md:h-48'} ${readerItem.imagem ? '' : (readerItem.color ? `bg-${readerItem.color}-600/50` : 'bg-indigo-600/50')}`}>
                             {readerItem.imagem ? (
                                 <div className="absolute inset-0 w-full h-full">
                                     <img src={readerItem.imagem} className="w-full h-full object-cover" alt={readerItem.titulo} />
@@ -1043,28 +1044,38 @@ const ModuleBoletim = () => {
                                 <span className="text-[10px] uppercase font-black tracking-widest bg-white/25 border border-white/25 px-3 py-1 rounded-full backdrop-blur-md mb-2 inline-block">
                                     {readerItem.tipo || 'Boletim'}
                                 </span>
-                                <h3 className="text-xl md:text-3xl font-black tracking-tight drop-shadow-md leading-tight">{readerItem.titulo}</h3>
+                                <h3 className={`font-black tracking-tight drop-shadow-md leading-tight transition-all ${isBoletimFullscreen ? 'text-2xl md:text-4xl max-w-4xl' : 'text-xl md:text-3xl'}`}>{readerItem.titulo}</h3>
                             </div>
                             
-                            <button 
-                                onClick={() => setReaderItem(null)}
-                                className="absolute top-6 right-6 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors border border-white/10 cursor-pointer"
-                            >
-                                <X size={18}/>
-                            </button>
+                            <div className="absolute top-6 right-6 flex items-center gap-2 z-30">
+                                <button 
+                                    onClick={() => setIsBoletimFullscreen(prev => !prev)}
+                                    className="p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-all border border-white/10 cursor-pointer"
+                                    title={isBoletimFullscreen ? "Minimizar" : "Tela Cheia"}
+                                >
+                                    {isBoletimFullscreen ? <Minimize size={18}/> : <Maximize size={18}/>}
+                                </button>
+                                <button 
+                                    onClick={() => { setReaderItem(null); setIsBoletimFullscreen(false); }}
+                                    className="p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-all border border-white/10 cursor-pointer"
+                                    title="Fechar"
+                                >
+                                    <X size={18}/>
+                                </button>
+                            </div>
                         </div>
                         
                         {/* Conteúdo do Modal de Leitura */}
-                        <div className="p-8 text-white space-y-6 max-h-[50vh] overflow-y-auto">
-                            <div className="space-y-4">
-                                <p className="text-sm md:text-base leading-relaxed text-slate-100 font-medium whitespace-pre-line">
+                        <div className={`p-8 text-white space-y-6 overflow-y-auto custom-scrollbar flex-1 transition-all duration-300 ${isBoletimFullscreen ? 'max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-240px)] py-12' : 'max-h-[50vh]'}`}>
+                            <div className={`space-y-4 transition-all duration-300 ${isBoletimFullscreen ? 'max-w-3xl mx-auto' : ''}`}>
+                                <p className={`leading-relaxed text-slate-100 font-medium whitespace-pre-line transition-all duration-300 ${isBoletimFullscreen ? 'text-lg md:text-xl' : 'text-sm md:text-base'}`}>
                                     {readerItem.desc || readerItem.descricao || "Sem detalhes descritivos cadastrados."}
                                 </p>
                             </div>
                             
                             {/* Metadados do Evento no Modo Leitura */}
                             {(readerItem.data || readerItem.hora || readerItem.local) && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/15 text-xs font-bold text-slate-200">
+                                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/15 text-xs font-bold text-slate-200 transition-all duration-300 ${isBoletimFullscreen ? 'max-w-3xl mx-auto' : ''}`}>
                                     {readerItem.data && (
                                         <div className="flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
                                             <Calendar size={16} className="text-indigo-300"/>
@@ -1088,7 +1099,7 @@ const ModuleBoletim = () => {
                         </div>
                         
                         {/* Rodapé do Modal com Compartilhamento e Fechar */}
-                        <div className="p-6 bg-black/40 border-t border-white/10 flex flex-wrap gap-4 items-center justify-between">
+                        <div className="p-6 bg-black/40 border-t border-white/10 flex flex-wrap gap-4 items-center justify-between shrink-0">
                             <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">
                                 GIPP • Modo Leitura Glassmorphism
                             </span>
@@ -1103,7 +1114,7 @@ const ModuleBoletim = () => {
                                     <Share2 size={14}/> Compartilhar WhatsApp
                                 </button>
                                 <button 
-                                    onClick={() => setReaderItem(null)}
+                                    onClick={() => { setReaderItem(null); setIsBoletimFullscreen(false); }}
                                     className="px-4.5 py-2.5 bg-white/10 hover:bg-white/20 font-bold text-xs text-slate-300 rounded-xl transition-all border border-white/20 cursor-pointer active:scale-95"
                                 >
                                     Fechar

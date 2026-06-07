@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
+import { ChurchContext } from '../App';
 import { 
   BookOpen, Search, ChevronRight, HelpCircle, Users, Wallet, Calendar, 
   MapPin, Bell, Shield, Info, Download, Star, Settings, CheckCircle, 
@@ -10,6 +11,9 @@ import {
 import { jsPDF } from 'jspdf';
 
 export default function ModuleManualUsuario() {
+  const context = useContext(ChurchContext);
+  const db = context?.db || { igreja: {} };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState('introducao');
   const [directoryFilter, setDirectoryFilter] = useState('todos');
@@ -1747,18 +1751,24 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 pt-2 text-xs font-bold text-indigo-150">
-                <a href="https://gipp-site.vercel.app/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:underline">
-                  Website Oficial: gipp-site.vercel.app
+                <a href={db.igreja?.saas_site || "https://gipp-site.vercel.app/"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:underline">
+                  Website Oficial: {db.igreja?.saas_site ? db.igreja.saas_site.replace(/^https?:\/\//, '') : "gipp-site.vercel.app"}
                 </a>
                 <span className="hidden sm:inline">|</span>
                 <span className="flex items-center gap-1.5">
                   <Mail size={14} />
-                  patrickrodack@gmail.com
+                  {db.igreja?.saas_email || "patrickrodack@gmail.com"}
                 </span>
                 <span className="hidden sm:inline">|</span>
                 <span className="flex items-center gap-1.5">
                   <Phone size={14} />
-                  +55 (80) 9999-9999 (Suporte)
+                  {db.igreja?.saas_whatsapp ? (
+                    <a href={`https://wa.me/${db.igreja.saas_whatsapp}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      WhatsApp: {db.igreja.saas_whatsapp}
+                    </a>
+                  ) : (
+                    <span>+55 (80) 9999-9999 (Suporte)</span>
+                  )}
                 </span>
               </div>
             </div>

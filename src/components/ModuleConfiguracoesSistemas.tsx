@@ -977,9 +977,25 @@ const ModuleConfiguracoesSistemas = () => {
                                                 <span className="text-indigo-600 bg-indigo-50 p-2.5 rounded-xl"><Mail size={16}/></span>
                                                 <div>
                                                     <h4 className="text-xs font-black text-slate-800">E-mail Direto Dev</h4>
-                                                    <p className="text-[10px] text-slate-400 font-bold">devs@gipp-sistema.com</p>
+                                                    <p className="text-[10px] text-slate-400 font-bold">{db.igreja?.saas_email || "devs@gipp-sistema.com"}</p>
                                                 </div>
                                             </div>
+                                            {db.igreja?.saas_whatsapp && (
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-indigo-600 bg-indigo-50 p-2.5 rounded-xl"><MessageSquare size={16}/></span>
+                                                    <div>
+                                                        <h4 className="text-xs font-black text-slate-800">WhatsApp Suporte</h4>
+                                                        <a 
+                                                            href={`https://wa.me/${db.igreja.saas_whatsapp}`} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer" 
+                                                            className="text-[10px] text-indigo-500 font-bold hover:underline"
+                                                        >
+                                                            {db.igreja.saas_whatsapp}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-3">
                                                 <span className="text-indigo-600 bg-indigo-50 p-2.5 rounded-xl"><Clock size={16}/></span>
                                                 <div>

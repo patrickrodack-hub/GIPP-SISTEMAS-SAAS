@@ -8620,6 +8620,7 @@ const PortalEBD = ({ user, db }) => {
     const [aiLesson, setAiLesson] = useState<any>(null);
     const [downloadedLessons, setDownloadedLessons] = useState<string[]>([]);
     const [downloadingIds, setDownloadingIds] = useState<string[]>([]);
+    const [isEbdFullscreen, setIsEbdFullscreen] = useState(false);
 
     const minhaMatricula = db.ebd?.alunos?.find(a => a.membro_id === user.id || a.nome === user.nome);
     const minhaTurma = minhaMatricula ? db.ebd?.turmas?.find(t => t.id === minhaMatricula.turma_id) : null;
@@ -8840,7 +8841,7 @@ const PortalEBD = ({ user, db }) => {
             {/* AI Lesson Modal - Estudo Interativo Portal Membro */}
             {aiLesson && (
                 <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-entrance">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh] relative">
+                    <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 relative ${isEbdFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-5xl max-h-[95vh] rounded-[2.5rem]'}`}>
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-emerald-50/80 backdrop-blur-sm sticky top-0 z-20">
                             <h3 className="font-black text-xl text-emerald-900 flex items-center gap-2">
                                 <BookOpen size={24} className="text-emerald-600"/> {aiLesson.title}
@@ -8848,41 +8849,52 @@ const PortalEBD = ({ user, db }) => {
                                     <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse ml-2">Leitura Offline</span>
                                 )}
                             </h3>
-                            <button onClick={() => setAiLesson(null)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"><X size={24}/></button>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setIsEbdFullscreen(prev => !prev)} 
+                                    className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all"
+                                    title={isEbdFullscreen ? "Minimizar" : "Tela Cheia"}
+                                >
+                                    {isEbdFullscreen ? <Minimize size={20}/> : <Maximize size={20}/>}
+                                </button>
+                                <button onClick={() => { setAiLesson(null); setIsEbdFullscreen(false); }} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"><X size={24}/></button>
+                            </div>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-slate-50/50">
+                        <div className={`flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-slate-50/50 ${isEbdFullscreen ? 'justify-center items-start' : ''}`}>
                             {/* Coluna Esquerda: Capa da Revista */}
-                            <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
-                                {aiLesson.capa && aiLesson.capa !== 'null' && !aiLesson.capa.includes('URL_CAPA') ? (
-                                    <div className="w-full max-w-[250px] aspect-[2/3] rounded-lg shadow-xl border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6 bg-slate-100">
-                                        <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
-                                        <div className="hidden absolute inset-0 flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
-                                            <BookOpen size={40} className="mb-2 opacity-50"/>
-                                            <span className="text-xs font-bold">Capa não disponível</span>
+                            {!isEbdFullscreen && (
+                                <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
+                                    {aiLesson.capa && aiLesson.capa !== 'null' && !aiLesson.capa.includes('URL_CAPA') ? (
+                                        <div className="w-full max-w-[250px] aspect-[2/3] rounded-lg shadow-xl border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6 bg-slate-100">
+                                            <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
+                                            <div className="hidden absolute inset-0 flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
+                                                <BookOpen size={40} className="mb-2 opacity-50"/>
+                                                <span className="text-xs font-bold">Capa não disponível</span>
+                                            </div>
                                         </div>
+                                    ) : (
+                                        <div className="w-full max-w-[250px] aspect-[2/3] bg-gradient-to-b from-emerald-600 via-teal-700 to-slate-900 rounded-lg shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6">
+                                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                            <div className="relative z-10">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1 border-b border-emerald-500/50 pb-2">Lições Bíblicas Adultos</span>
+                                                <h3 className="font-black text-xl text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
+                                            </div>
+                                            <div className="relative z-10 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
+                                                <div className="text-xs font-bold uppercase tracking-wider text-emerald-100 mb-1">Lição</div>
+                                                <div className="text-5xl font-black text-white">{aiLesson.licao}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="w-full text-center">
+                                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">Material de Estudo</span>
+                                        <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Conteúdo interativo gerado com base no currículo e portal da CPAD.</p>
                                     </div>
-                                ) : (
-                                    <div className="w-full max-w-[250px] aspect-[2/3] bg-gradient-to-b from-emerald-600 via-teal-700 to-slate-900 rounded-lg shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6">
-                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                                        <div className="relative z-10">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1 border-b border-emerald-500/50 pb-2">Lições Bíblicas Adultos</span>
-                                            <h3 className="font-black text-xl text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
-                                        </div>
-                                        <div className="relative z-10 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
-                                            <div className="text-xs font-bold uppercase tracking-wider text-emerald-100 mb-1">Lição</div>
-                                            <div className="text-5xl font-black text-white">{aiLesson.licao}</div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="w-full text-center">
-                                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">Material de Estudo</span>
-                                    <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Conteúdo interativo gerado com base no currículo e portal da CPAD.</p>
                                 </div>
-                            </div>
- 
+                            )}
+  
                             {/* Coluna Direita: Conteúdo da Lição */}
-                            <div className="flex-1 p-8 md:p-12 bg-white relative">
+                            <div className={`flex-1 bg-white relative transition-all duration-300 ${isEbdFullscreen ? 'max-w-4xl w-full p-8 md:p-16 my-8 rounded-3xl shadow-xl border border-slate-100/80 mx-4 shrink-0 sm:shrink' : 'p-8 md:p-12'}`}>
                                 {aiLesson.loading ? (
                                     <div className="flex flex-col items-center justify-center h-full text-emerald-600 min-h-[400px]">
                                         <div className="w-20 h-20 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
@@ -8916,6 +8928,7 @@ const PortalEBD = ({ user, db }) => {
                                     console.error(err);
                                 }
                                 setAiLesson(null); 
+                                setIsEbdFullscreen(false);
                             }} variant="success" className="shadow-emerald-500/30 px-8">Concluir Estudo</Button>
                         </div>
                     </div>
@@ -9555,13 +9568,13 @@ const MemberPortalLayout = () => {
                     
                     <div className="bg-white text-slate-900 p-6 rounded-3xl shadow-xl w-full mb-6">
                         <div className="p-2 bg-slate-50 rounded-2xl border border-slate-200 mb-4 w-fit mx-auto shadow-inner">
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698', 'PATRICK PESSOA', 'Rio de Janeiro'))}&color=0f172a&bgcolor=ffffff`} alt="PIX" className="w-32 h-32 object-contain"/>
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload(db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698', db.igreja?.saas_nome_desenvolvedor || 'PATRICK PESSOA', 'Rio de Janeiro'))}&color=0f172a&bgcolor=ffffff`} alt="PIX" className="w-32 h-32 object-contain"/>
                         </div>
                         <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 mb-5">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX (Aleatória)</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX Oficial</p>
                             <div className="flex items-center justify-between gap-2">
-                                <span className="font-mono font-black text-xs sm:text-sm text-slate-800 break-all">4d9868d2-88f7-4fed-ad87-6dfc3c4ae698</span>
-                                <button onClick={() => { copyToClipboard('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
+                                <span className="font-mono font-black text-xs sm:text-sm text-slate-800 break-all">{db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'}</span>
+                                <button onClick={() => { copyToClipboard(db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
                             </div>
                         </div>
                         
@@ -9971,13 +9984,13 @@ const AppLayout = () => {
                     
                     <div className="bg-white text-slate-900 p-6 rounded-3xl shadow-xl w-full mb-6">
                         <div className="p-2 bg-slate-50 rounded-2xl border border-slate-200 mb-4 w-fit mx-auto shadow-inner">
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698', 'PATRICK PESSOA', 'Rio de Janeiro'))}&color=0f172a&bgcolor=ffffff`} alt="PIX" className="w-32 h-32 object-contain"/>
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(generatePixPayload(db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698', db.igreja?.saas_nome_desenvolvedor || 'PATRICK PESSOA', 'Rio de Janeiro'))}&color=0f172a&bgcolor=ffffff`} alt="PIX" className="w-32 h-32 object-contain"/>
                         </div>
                         <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 mb-5">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX (Aleatória)</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX Oficial</p>
                             <div className="flex items-center justify-between gap-2">
-                                <span className="font-mono font-black text-xs sm:text-sm text-slate-800 break-all">4d9868d2-88f7-4fed-ad87-6dfc3c4ae698</span>
-                                <button onClick={() => { copyToClipboard('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
+                                <span className="font-mono font-black text-xs sm:text-sm text-slate-800 break-all">{db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'}</span>
+                                <button onClick={() => { copyToClipboard(db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
                             </div>
                         </div>
                         
@@ -10138,7 +10151,7 @@ const clearBrowserAppCache = () => {
 };
 
 // --- TELA DE CARREGAMENTO (SPLASH SCREEN) PÓS-LOGIN ---
-const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false, isMaryMode = false }) => {
+const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false, isMaryMode = false, saasSettings = {} as any }) => {
     const [progress, setProgress] = useState(0);
     const [step, setStep] = useState(-1);
 
@@ -10209,14 +10222,14 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <h2 className="text-2xl md:text-3xl font-bold text-white/90 drop-shadow-lg animate-slide-up-fade mt-2" style={{ opacity: 0, animationDelay: '1s', animationFillMode: 'forwards' }}>
                         Sistema de Gestão de Igrejas
                     </h2>
-                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.9.0</span>
+                    <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
+                        <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>SaaS Gold Edition</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 6.9.0"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
-                            por PATRICK PESSOA
+                            por {saasSettings?.saas_nome_desenvolvedor || "PATRICK PESSOA"}
                         </p>
                     </div>
                     {isDevMode && (
@@ -12298,7 +12311,7 @@ export default function App() {
           <GlobalStyles />
           <OsThemeStyles />
           <ToastContainer toasts={toasts} removeToast={removeToast} />
-          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} />}
+          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} />}
           
           <div className="absolute top-6 right-6 z-[100] pointer-events-auto hidden sm:flex gap-3">
               <OsThemeToggle variant="dark" />
@@ -12376,8 +12389,8 @@ export default function App() {
                         <div className="flex -space-x-3">
                             {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-indigo-900 bg-indigo-800/50 backdrop-blur-sm flex items-center justify-center text-[10px] text-white font-bold">{i}</div>)}
                         </div>
-                        <div className="text-xs text-indigo-300 font-medium flex items-center">
-                            Desenvolvedor : PATRICK PESSOA
+                        <div className="text-xs text-indigo-300 font-medium flex items-center gap-1">
+                            Desenvolvedor : {db.igreja?.saas_nome_desenvolvedor || "PATRICK PESSOA"}
                         </div>
                     </div>
                 </div>
@@ -13096,7 +13109,7 @@ export default function App() {
         <DynamicPrintStyles orientation={printOrientation} marginType={printMarginType} mode={printMode} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         <FloatingChatWidget />
-        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} />}
+        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} />}
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
         <BackupModal backupState={backupState} onConfirm={handleBackupConfirm} onCancel={handleBackupCancel} />

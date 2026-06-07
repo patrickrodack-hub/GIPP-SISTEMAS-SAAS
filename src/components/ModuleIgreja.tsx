@@ -618,16 +618,16 @@ const ModuleIgreja = () => {
                                 <p className="text-sm text-slate-500 font-medium mb-6 max-w-sm">Escaneie o QR Code abaixo pelo aplicativo do seu banco ou use a chave PIX celular.</p>
                                 
                                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 mb-6 shadow-inner">
-                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=4d9868d2-88f7-4fed-ad87-6dfc3c4ae698&color=0f172a&bgcolor=ffffff`} alt="QR Code PIX PATRICK PESSOA" className="w-40 h-40 object-contain rounded-xl"/>
+                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(generatePixPayload(db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698', db.igreja?.saas_nome_desenvolvedor || 'PATRICK PESSOA', 'RIO DE JANEIRO'))}&color=0f172a&bgcolor=ffffff`} alt={`QR Code PIX ${db.igreja?.saas_nome_desenvolvedor || 'PATRICK PESSOA'}`} className="w-40 h-40 object-contain rounded-xl"/>
                                 </div>
 
                                 <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full mb-8">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX (Aleatória)</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Chave PIX Oficial</p>
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="font-mono font-black text-sm md:text-lg text-slate-800 truncate">4d9868d2-88f7-4fed-ad87-6dfc3c4ae698</span>
-                                        <button onClick={() => { copyToClipboard('4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave PIX Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
+                                        <span className="font-mono font-black text-sm md:text-lg text-slate-800 truncate">{db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'}</span>
+                                        <button onClick={() => { copyToClipboard(db.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698'); addToast('Chave PIX Copiada!', 'success'); }} className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-2 rounded-lg font-bold text-xs transition-colors shrink-0">Copiar</button>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-2 font-medium">Titular: PATRICK PESSOA</p>
+                                    <p className="text-xs text-slate-500 mt-2 font-medium">Titular: {db.igreja?.saas_nome_desenvolvedor || 'PATRICK PESSOA'}</p>
                                 </div>
 
                                 <Button onClick={handleVerificarPagamento} disabled={verificandoPix} variant="success" className="w-full py-4 text-base shadow-emerald-500/30">
