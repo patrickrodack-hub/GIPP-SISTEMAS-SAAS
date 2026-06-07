@@ -11183,7 +11183,7 @@ export default function App() {
           const nomeDigitado = u.toLowerCase().trim();
           const passDigitada = p.trim();
           
-          const foundMember = db.membros.find(m => m.nome.toLowerCase().trim() === nomeDigitado);
+          const foundMember = (db.membros || []).find(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().trim() === nomeDigitado);
           
           if (foundMember) {
               const isLiberado = foundMember.acesso_portal_liberado || (foundMember.senha_portal && foundMember.acesso_portal_liberado !== false);
@@ -11444,7 +11444,8 @@ export default function App() {
 
       const nomeDigitado = nome.toLowerCase().trim();
 
-      const foundMember = db.membros.find(m =>
+      const foundMember = (db.membros || []).find(m =>
+          m && typeof m.nome === 'string' &&
           m.nome.toLowerCase().trim() === nomeDigitado &&
           m.data_nascimento === data_nascimento
       );
@@ -12009,7 +12010,7 @@ export default function App() {
                                 </div>
                                 {loginMode === 'membro' && showMemberDropdown && loginData.user && (
                                     <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
-                                        {db.membros.filter(m => m.nome.toLowerCase().includes(loginData.user.toLowerCase())).map(m => (
+                                        {(db.membros || []).filter(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().includes((loginData.user || '').toLowerCase())).map(m => (
                                             <div key={m.id} onClick={() => { setLoginData({...loginData, user: m.nome}); setShowMemberDropdown(false); }} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
                                                 {m.nome}
                                             </div>
@@ -12075,7 +12076,7 @@ export default function App() {
                                 />
                                 {showFirstAccessDropdown && firstAccessData.nome && (
                                     <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto custom-scrollbar">
-                                        {db.membros.filter(m => m.nome.toLowerCase().includes(firstAccessData.nome.toLowerCase())).map(m => (
+                                        {(db.membros || []).filter(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().includes((firstAccessData.nome || '').toLowerCase())).map(m => (
                                             <div key={m.id} onClick={() => { setFirstAccessData({...firstAccessData, nome: m.nome}); setShowFirstAccessDropdown(false); }} className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
                                                 {m.nome}
                                             </div>
