@@ -1022,7 +1022,7 @@ const ModuleBoletim = () => {
             {readerItem && (
                 <div 
                     id="reading-mode-modal"
-                    className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-entrance"
+                    className={`fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-entrance ${isBoletimFullscreen ? 'p-0' : 'p-4'}`}
                     onClick={() => setReaderItem(null)}
                 >
                     <div 
@@ -1044,7 +1044,7 @@ const ModuleBoletim = () => {
                                 <span className="text-[10px] uppercase font-black tracking-widest bg-white/25 border border-white/25 px-3 py-1 rounded-full backdrop-blur-md mb-2 inline-block">
                                     {readerItem.tipo || 'Boletim'}
                                 </span>
-                                <h3 className={`font-black tracking-tight drop-shadow-md leading-tight transition-all ${isBoletimFullscreen ? 'text-2xl md:text-4xl max-w-4xl' : 'text-xl md:text-3xl'}`}>{readerItem.titulo}</h3>
+                                <h3 className={`font-black tracking-tight drop-shadow-md leading-tight transition-all ${isBoletimFullscreen ? 'text-2xl md:text-5xl' : 'text-xl md:text-3xl'}`}>{readerItem.titulo}</h3>
                             </div>
                             
                             <div className="absolute top-6 right-6 flex items-center gap-2 z-30">
@@ -1066,16 +1066,16 @@ const ModuleBoletim = () => {
                         </div>
                         
                         {/* Conteúdo do Modal de Leitura */}
-                        <div className={`p-8 text-white space-y-6 overflow-y-auto custom-scrollbar flex-1 transition-all duration-300 ${isBoletimFullscreen ? 'max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-240px)] py-12' : 'max-h-[50vh]'}`}>
-                            <div className={`space-y-4 transition-all duration-300 ${isBoletimFullscreen ? 'max-w-3xl mx-auto' : ''}`}>
-                                <p className={`leading-relaxed text-slate-100 font-medium whitespace-pre-line transition-all duration-300 ${isBoletimFullscreen ? 'text-lg md:text-xl' : 'text-sm md:text-base'}`}>
+                        <div className={`p-8 text-white space-y-6 overflow-y-auto custom-scrollbar flex-1 transition-all duration-300 ${isBoletimFullscreen ? 'max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-240px)] py-12 px-12 md:px-24' : 'max-h-[50vh]'}`}>
+                            <div className="space-y-4">
+                                <p className={`leading-relaxed text-slate-100 font-medium whitespace-pre-line transition-all duration-300 ${isBoletimFullscreen ? 'text-lg md:text-2xl' : 'text-sm md:text-base'}`}>
                                     {readerItem.desc || readerItem.descricao || "Sem detalhes descritivos cadastrados."}
                                 </p>
                             </div>
                             
                             {/* Metadados do Evento no Modo Leitura */}
                             {(readerItem.data || readerItem.hora || readerItem.local) && (
-                                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/15 text-xs font-bold text-slate-200 transition-all duration-300 ${isBoletimFullscreen ? 'max-w-3xl mx-auto' : ''}`}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/15 text-xs font-bold text-slate-200">
                                     {readerItem.data && (
                                         <div className="flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
                                             <Calendar size={16} className="text-indigo-300"/>

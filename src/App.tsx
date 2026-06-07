@@ -8840,7 +8840,7 @@ const PortalEBD = ({ user, db }) => {
 
             {/* AI Lesson Modal - Estudo Interativo Portal Membro */}
             {aiLesson && (
-                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-entrance">
+                <div className={`fixed inset-0 z-[11000] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-entrance ${isEbdFullscreen ? 'p-0' : 'p-4'}`}>
                     <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 relative ${isEbdFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-5xl max-h-[95vh] rounded-[2.5rem]'}`}>
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-emerald-50/80 backdrop-blur-sm sticky top-0 z-20">
                             <h3 className="font-black text-xl text-emerald-900 flex items-center gap-2">
@@ -8861,7 +8861,7 @@ const PortalEBD = ({ user, db }) => {
                             </div>
                         </div>
                         
-                        <div className={`flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-slate-50/50 ${isEbdFullscreen ? 'justify-center items-start' : ''}`}>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-slate-50/50">
                             {/* Coluna Esquerda: Capa da Revista */}
                             {!isEbdFullscreen && (
                                 <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
@@ -8894,7 +8894,7 @@ const PortalEBD = ({ user, db }) => {
                             )}
   
                             {/* Coluna Direita: Conteúdo da Lição */}
-                            <div className={`flex-1 bg-white relative transition-all duration-300 ${isEbdFullscreen ? 'max-w-4xl w-full p-8 md:p-16 my-8 rounded-3xl shadow-xl border border-slate-100/80 mx-4 shrink-0 sm:shrink' : 'p-8 md:p-12'}`}>
+                            <div className={`flex-1 bg-white relative transition-all duration-300 ${isEbdFullscreen ? 'p-12 md:p-20' : 'p-8 md:p-12'}`}>
                                 {aiLesson.loading ? (
                                     <div className="flex flex-col items-center justify-center h-full text-emerald-600 min-h-[400px]">
                                         <div className="w-20 h-20 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
