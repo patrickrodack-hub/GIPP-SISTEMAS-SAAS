@@ -91,18 +91,29 @@ self.addEventListener('push', event => {
     }
   }
 
+  // Extrair campos de forma segura aceitando formato plano ou envelopado em data.notification (FCM/WebPush padrão)
+  let title = data.title || 'Alerta GIPP';
+  let body = data.body || 'Mensagem urgente da secretaria';
+  let customIcon = data.icon || (data.notification && data.notification.icon);
+  let customBadge = data.badge || (data.notification && data.notification.badge);
+  let clickUrl = data.url || (data.notification && data.notification.data && data.notification.data.url) || '/';
+
+  // Forçar preferencialmente os ícones oficiais do GIPP para evitar ícones genéricos da empresa de hospedagem do site
+  const systemIcon = customIcon || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png";
+  const systemBadge = customBadge || systemIcon;
+
   const options = {
-    body: data.body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    body: body,
+    icon: systemIcon,
+    badge: systemBadge,
     vibrate: [150, 80, 150],
     data: {
-      url: data.url || '/'
+      url: clickUrl
     }
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(title, options)
   );
 });
 

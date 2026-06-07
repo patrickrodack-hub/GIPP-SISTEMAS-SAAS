@@ -16,10 +16,15 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Mensagem recebida em segundo plano: ', payload);
   const notificationTitle = payload.notification?.title || 'Mensagem do GIPP';
+  
+  // Forçar preferencialmente os ícones oficiais do GIPP para evitar ícones genéricos do ecossistema de hospedagem
+  const systemIcon = payload.notification?.icon || 'https://cdn-icons-png.flaticon.com/512/3004/3004613.png';
+  const systemBadge = payload.notification?.badge || systemIcon;
+
   const notificationOptions = {
     body: payload.notification?.body || 'Você possui uma nova atualização.',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: systemIcon,
+    badge: systemBadge,
     data: {
       url: payload.data?.url || '/'
     }

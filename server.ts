@@ -93,7 +93,8 @@ app.post("/api/push/send", async (req, res) => {
             notification: {
                 title: title || "Alerta",
                 body: body || "",
-                icon: "/icon.png",
+                icon: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                badge: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
                 data: { url: url || "/" }
             }
         });
@@ -255,7 +256,8 @@ async function checkPendingFinancialTitlesAndNotify() {
             notification: {
                 title: "⚠️ Alerta de Atraso Financeiro",
                 body: bodyContent,
-                icon: "/icon.png",
+                icon: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                badge: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
                 data: { url: "/#portal_financeiro" }
             }
         });

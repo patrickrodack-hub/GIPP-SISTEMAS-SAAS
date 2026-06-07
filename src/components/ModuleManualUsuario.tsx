@@ -1173,7 +1173,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     { id: 's_s18', name: 'Assinaturas Digitais Criptografadas', category: 'seguranca', desc: 'Registros criptográficos permanentes nas tabelas de auditoria.' },
     { id: 's_s19', name: 'Histórico de Bloqueio de IPs Suspeitos', category: 'seguranca', desc: 'Monitoramento ativo de força bruta em acessos indesejados.' },
     { id: 's_s20', name: 'Recuperação de Parâmetros Originais', category: 'seguranca', desc: 'Restaurador padrão de fábrica de fontes, cores e acessos.' },
-    // KIDS EXPANDED (v6.7.0)
+    // KIDS EXPANDED (v6.8.0)
     { id: 'k1', name: 'Check-in e Check-out Seguro - Salinha Kids', category: 'secretaria', desc: 'Controle de entrada e saída de crianças com código PIN secreto e crachás cadastrais.' },
     { id: 'k2', name: 'Painel de Relatório de Ocorrências - Salinha Kids', category: 'secretaria', desc: 'Resumo estatístico para coordenação ministerial com exportação em PDF timbrado.' },
     { id: 'k3', name: 'Notificações Ativas de Incidentes - Portal Kids', category: 'seguranca', desc: 'Disparo de alertas e som de notificações no Portal do Membro para avisar aos pais.' },
@@ -1774,8 +1774,8 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       category: 'Secretaria',
       content: (
         <div className="space-y-6">
-          <p className="text-sm text-slate-600 leading-relaxed font-semibold">
-            O GIPP v6.7.0 estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino de qualidade (EBD dominical e cursos teológicos EAD) e na ministração estruturada e litúrgica de ordem pastoral.
+          <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
+            O GIPP v6.8.0 estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino de qualidade (EBD dominical e cursos teológicos EAD) e na ministração estruturada e litúrgica de ordem pastoral.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

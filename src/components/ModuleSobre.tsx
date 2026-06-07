@@ -52,7 +52,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight block">GIPP - GESTÃO DE IGREJA</h2>
-                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">Versão 6.7.0 (SaaS Gold Edition)</p>
+                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">Versão 6.8.0 (SaaS Gold Edition)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">

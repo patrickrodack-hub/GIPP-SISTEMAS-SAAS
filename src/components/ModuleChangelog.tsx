@@ -47,11 +47,23 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.8.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-indigo-750 font-[Outfit]">v6.8.0 - Chaves VAPID Customizadas, Sincronização Nativa de Notificações & Estabilização Geral do Push</h3>
+                <p className="text-xs text-indigo-500 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans">Chaves VAPID Customizadas:</strong> Integração flexível com chaves de criptografia sob medida nas configurações do servidor.</li>
+                    <li><strong className="text-slate-700">Sincronização Nativa de Dispositivos:</strong> Mapeamento transparente de inscrições de push integradas com a persistência em tempo real para recebimento imediato de escalas e avisos.</li>
+                    <li><strong className="text-slate-700">Compatibilidade Ampliada:</strong> Comunicação otimizada direto com os celulares de obreiros e membros sem a dependência exclusiva do FCM.</li>
+                </ul>
+            </div>
+
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 6.7.0 */}
-            <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance">
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+            <div className="relative pl-8 border-l-2 border-emerald-500">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
                 <h3 className="font-extrabold text-lg text-emerald-750 font-[Outfit]">v6.7.0 - Painel de Relatório Kids, Notificações Ativas, Gráficos de Ocupação & Manual E-Book Expandido</h3>
-                <p className="text-xs text-emerald-500 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <p className="text-xs text-emerald-500 font-black uppercase mb-3 tracking-wider">Julho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans">Painel de Relatório Salinha Kids:</strong> Novo portal consolidado estatístico de ocorrências para coordenadores com agrupamentos Diários/Semanais e exportação instantânea em PDF timbrado para amparo contábil ou fiscal.</li>
                     <li><strong className="text-slate-700">Notificações Push / Alertas Ativos:</strong> Engrenagem síncrona integrada à navegação que sinaliza incidentes urgentes imediatamente aos pais via sino e som e alarmes de síntese de voz.</li>

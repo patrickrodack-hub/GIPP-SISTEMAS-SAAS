@@ -9699,7 +9699,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         Sistema de Gestão de Igrejas
                     </h2>
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
-                        <span>Versão 6.7.0</span>
+                        <span>Versão 6.8.0</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>SaaS Gold Edition</span>
                     </div>
@@ -10230,6 +10230,7 @@ export default function App() {
   const notifiedIdsRef = useRef<string[]>([]);
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const iconeOficial = db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png";
       notifications.forEach((notif: any) => {
         if (!notifiedIdsRef.current.includes(notif.id)) {
           try {
@@ -10238,8 +10239,8 @@ export default function App() {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notif.title, {
                   body: notif.desc,
-                  icon: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
-                  badge: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
+                  icon: iconeOficial,
+                  badge: iconeOficial,
                   vibrate: [150, 80, 150],
                   tag: notif.id,
                   data: {
@@ -10250,16 +10251,16 @@ export default function App() {
                 // Fallback standard se o SW não estiver totalmente pronto
                 new Notification(notif.title, {
                   body: notif.desc,
-                  icon: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
-                  badge: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png'
+                  icon: iconeOficial,
+                  badge: iconeOficial
                 });
               });
             } else {
               // Fallback se SW não for suportado no browser
               new Notification(notif.title, {
                 body: notif.desc,
-                icon: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png',
-                badge: 'https://cdn-icons-png.flaticon.com/512/3223/3223605.png'
+                icon: iconeOficial,
+                badge: iconeOficial
               });
             }
 
@@ -10271,7 +10272,7 @@ export default function App() {
         }
       });
     }
-  }, [notifications]);
+  }, [notifications, db.igreja?.icone_sistema]);
 
   // NOVO: Detetar telemóvel e forçar Portal do Membro
   useEffect(() => {
@@ -11690,7 +11691,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.7.0</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 inline-block bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">GIPP v6.8.0</p>
                         </div>
                     </div>
                     <div>
