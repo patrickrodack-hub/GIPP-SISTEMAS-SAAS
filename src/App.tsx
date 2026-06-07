@@ -12771,7 +12771,7 @@ export default function App() {
                                                 }}
                                                 className="p-1 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 text-[10px] uppercase tracking-wider font-extrabold rounded-lg border border-indigo-150 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
                                             >
-                                                <Copy size={12} stopPropagation="true" /> Copiar
+                                                <Copy size={12} /> Copiar
                                             </button>
                                         </div>
                                     </div>
