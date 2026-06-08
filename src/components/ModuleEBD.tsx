@@ -451,6 +451,130 @@ const ModuleEBD = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* NOVO: Gráfico de Rosca de Distribuição e Visualização de Turmas Superlotadas */}
+                        <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 bg-white/50 backdrop-blur-sm shadow-sm mt-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h4 className="font-black text-slate-800 text-sm uppercase tracking-wide">Distribuição de Alunos & Lotação de Turmas</h4>
+                                    <p className="text-[10px] text-slate-400 font-bold">Proporção de matriculados por turma para monitoramento de superlotação (Limite recomendado: ≤ 15 alunos por turma)</p>
+                                </div>
+                                <span className="p-2 bg-indigo-50 text-indigo-500 rounded-xl"><PieChartIcon size={18} /></span>
+                            </div>
+                            
+                            {(() => {
+                                const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#3b82f6'];
+                                const dataPie = turmasFiltradas.map((turma, idx) => {
+                                    const totalMatriculas = (db.ebd?.alunos || []).filter(a => a.turma_id === turma.id).length;
+                                    return {
+                                        name: turma.nome,
+                                        value: totalMatriculas,
+                                        color: COLORS[idx % COLORS.length]
+                                    };
+                                });
+                                const totalVal = dataPie.reduce((sum, item) => sum + item.value, 0);
+
+                                return turmasFiltradas.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                                        {/* Gráfico de rosca */}
+                                        <div className="md:col-span-1 flex justify-center items-center h-52 relative">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={totalVal === 0 ? [{ name: 'Sem Alunos', value: 1, color: '#e2e8f0' }] : dataPie.filter(d => d.value > 0)}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={65}
+                                                        outerRadius={85}
+                                                        paddingAngle={3}
+                                                        dataKey="value"
+                                                    >
+                                                        {totalVal === 0 ? (
+                                                            <Cell key="empty" fill="#e2e8f0" />
+                                                        ) : (
+                                                            dataPie.filter(d => d.value > 0).map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                                            ))
+                                                        )}
+                                                    </Pie>
+                                                    <RechartsTooltip 
+                                                        formatter={(value, name) => [name === 'Sem Alunos' ? 0 : `${value} Aluno(s)`, 'Matrículas']}
+                                                        contentStyle={{ borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                    />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            {/* Center indicator */}
+                                            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                                                <span className="text-3xl font-black text-slate-700 leading-none">{totalAlunos}</span>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Alunos</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Detalhes de Lotação */}
+                                        <div className="md:col-span-2 space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                                            {turmasFiltradas.map((turma, idx) => {
+                                                const totalMatriculas = (db.ebd?.alunos || []).filter(a => a.turma_id === turma.id).length;
+                                                const propTotal = totalAlunos > 0 ? ((totalMatriculas / totalAlunos) * 100).toFixed(1) : "0.0";
+                                                const classColor = COLORS[idx % COLORS.length];
+                                                
+                                                // Monitoramento de Lotação
+                                                let statusLevel = "Adequada";
+                                                let statusColor = "bg-emerald-50 text-emerald-600 border-emerald-250";
+                                                if (totalMatriculas > 15) {
+                                                    statusLevel = "Superlotada ⚠️";
+                                                    statusColor = "bg-rose-50 text-rose-600 border-rose-250";
+                                                } else if (totalMatriculas > 10) {
+                                                    statusLevel = "Lotação Alta";
+                                                    statusColor = "bg-amber-50 text-amber-600 border-amber-250";
+                                                } else if (totalMatriculas === 0) {
+                                                    statusLevel = "Sem Alunos";
+                                                    statusColor = "bg-slate-100 text-slate-400 border-slate-200";
+                                                }
+                                                
+                                                return (
+                                                    <div key={turma.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white border border-slate-200 rounded-2xl shadow-xs gap-3">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="w-4 h-4 rounded-full shrink-0 border-2 border-white shadow-xs" style={{ backgroundColor: classColor }}></div>
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-black text-slate-700 truncate">{turma.nome}</p>
+                                                                <p className="text-[10px] text-slate-400 font-medium">Lugar: {turma.sala || 'Sala Geral'}</p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Progress bar visualizer */}
+                                                        <div className="flex-1 max-w-xs hidden lg:block mx-4">
+                                                            <div className="flex justify-between text-[10px] text-slate-400 font-semibold mb-1">
+                                                                <span>Ocupação</span>
+                                                                <span>{propTotal}%</span>
+                                                            </div>
+                                                            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                                <div className="h-full rounded-full" style={{ width: `${propTotal}%`, backgroundColor: classColor }}></div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-black text-slate-700">{totalMatriculas} Aluno(s)</p>
+                                                                <p className="text-[10px] font-bold text-slate-400">{propTotal}% do total</p>
+                                                            </div>
+                                                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-xl border ${statusColor}`}>
+                                                                {statusLevel}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="py-12 flex flex-col items-center justify-center text-slate-400 text-center">
+                                        <PieChartIcon size={44} className="opacity-30 mb-2" />
+                                        <p className="text-sm font-bold">Nenhuma turma cadastrada para analisar.</p>
+                                        <p className="text-xs text-slate-400 max-w-sm mt-1">Surgirá um sumário completo de lotação e participação por classe após criar turmas e matricular alunos.</p>
+                                    </div>
+                                );
+                            })()}
+                        </div>
                     </div>
                 )}
                 {tab === 2 && <GenericTable title="Gestão de Turmas" type="ebd_turma" data={turmasFiltradas} columns={[{header:'Turma', key:'nome'}, {header:'Sala', key:'sala'}, {header:'Professores', key:'prof1_id', render: (t) => [t.prof1_id, t.prof2_id, t.prof3_id].map(id => db.membros.find(m=>m.id===id)?.nome?.split(' ')[0]).filter(Boolean).join(', ') || 'Sem professor'}]} />}

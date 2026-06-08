@@ -216,14 +216,14 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
       };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md overflow-hidden no-print">
+    <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md overflow-hidden no-print interactive-window-backdrop">
       {/* Background click to optionally close (only if users clicking on strict backdrop outside the dialog) */}
       <div className="absolute inset-0 z-0" onClick={onClose}></div>
 
       {/* Main draggable resizable window container */}
       <div
         style={currentStyle}
-        className={`bg-white rounded-[2rem] shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/40 border border-slate-250 z-10 transition-shadow ${
+        className={`bg-white rounded-[2rem] shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/40 border border-slate-250 z-10 transition-shadow interactive-window-main ${
           isFullscreen ? 'rounded-none' : 'hover:shadow-indigo-500/10'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -232,36 +232,36 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
         <div
           onMouseDown={handleHeaderMouseDown}
           onTouchStart={handleHeaderMouseDown}
-          className={`px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/20 select-none relative cursor-move hover:brightness-105 active:scale-[0.995] transition-all`}
+          className="px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/20 select-none relative cursor-move hover:brightness-105 active:scale-[0.995] transition-all interactive-window-header"
         >
           {/* Header Gradients and Styling */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${headerBg} bg-[length:200%_200%] animate-pulse-glow z-0`}></div>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.12] mix-blend-overlay pointer-events-none"></div>
+          <div className={`absolute inset-0 bg-gradient-to-br ${headerBg} bg-[length:200%_200%] animate-pulse-glow z-0 interactive-window-header-bg`}></div>
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.12] mix-blend-overlay pointer-events-none interactive-window-header-pattern"></div>
 
           <div className="relative z-10 flex items-center gap-4 w-full min-w-0 pr-4">
             {IconComponent && (
-              <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center text-white shrink-0 group relative shadow-inner">
-                <IconComponent size={24} className={`${iconColor} drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]`} />
+              <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center text-white shrink-0 group relative shadow-inner interactive-window-icon-container">
+                <IconComponent size={24} className={`${iconColor} drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] interactive-window-icon`} />
               </div>
             )}
             <div className="min-w-0 flex-1">
               {subtitle && (
-                <p className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] mb-1 truncate">
+                <p className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] mb-1 truncate interactive-window-subtitle">
                   {subtitle}
                 </p>
               )}
-              <h3 className="font-extrabold text-lg tracking-tight leading-none drop-shadow-2xl font-['Outfit'] truncate text-white">
+              <h3 className="font-extrabold text-lg tracking-tight leading-none drop-shadow-2xl font-['Outfit'] truncate text-white interactive-window-title">
                 {title}
               </h3>
             </div>
           </div>
 
-          <div className="relative z-10 flex items-center gap-1.5 shrink-0">
+          <div className="relative z-10 flex items-center gap-1.5 shrink-0 interactive-window-controls">
             {/* Quick Helper to Reset Position */}
             <button
               onClick={resetWindow}
               title="Centralizar Janela"
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer"
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-reset"
             >
               <Command size={14} className="animate-pulse" />
             </button>
@@ -270,7 +270,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
             <button
               onClick={toggleFullscreen}
               title={isFullscreen ? 'Restaurar Janela' : 'Maximizar'}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer"
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-resize"
             >
               {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
@@ -279,7 +279,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
             <button
               onClick={onClose}
               title="Fechar"
-              className="bg-white/10 hover:bg-rose-600 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer"
+              className="bg-white/10 hover:bg-rose-600 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-close"
             >
               <X size={14} />
             </button>
@@ -287,22 +287,22 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50/70 p-6 sm:p-8">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50/70 p-6 sm:p-8 interactive-window-content">
           {children}
         </div>
 
         {/* Footer Area */}
         {footer ? (
-          <div className="p-4 sm:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+          <div className="p-4 sm:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0 interactive-window-footer">
             {footer}
           </div>
         ) : onSave ? (
-          <div className="p-4 sm:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+          <div className="p-4 sm:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0 interactive-window-footer">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-5 py-2.5 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-sm font-semibold transition-all cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 hover:bg-slate-100 border border-slate-250 rounded-xl text-slate-600 text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 interactive-window-btn-cancel"
             >
               Cancelar
             </button>
@@ -310,7 +310,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
               type="button"
               onClick={onSave}
               disabled={isSaving}
-              className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-100 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-100 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 interactive-window-btn-save"
             >
               Salvar Dados
             </button>

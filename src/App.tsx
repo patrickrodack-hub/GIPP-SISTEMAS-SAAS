@@ -383,10 +383,143 @@ const OsThemeStyles = () => (
         body[data-os-theme="win11"] svg { stroke-width: 1.5px !important; stroke-linecap: round !important; stroke-linejoin: round !important; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.05)); }
 
         body[data-os-theme="winxp"] {
-            background: url('https://upload.wikimedia.org/wikipedia/commons/2/21/Bliss_%28Windows_XP%29.png') center/cover no-repeat fixed, linear-gradient(to bottom, #5998D6 0%, #76A8D9 50%, #75A943 50%, #4D8E2E 100%) !important;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Bliss_%28Windows_XP%29.png/1440px-Bliss_%28Windows_XP%29.png') center/cover no-repeat fixed, linear-gradient(to bottom, #5998D6 0%, #76A8D9 50%, #75A943 50%, #4D8E2E 100%) !important;
             font-family: Tahoma, 'Trebuchet MS', Arial, sans-serif !important;
             color: #000000 !important;
             image-rendering: auto !important;
+        }
+
+        /* Animações e Transições Suaves do Windows XP */
+        @keyframes xp-window-entrance {
+            from {
+                opacity: 0;
+                transform: scale(0.96) translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-backdrop {
+            background-color: rgba(0, 0, 0, 0.35) !important;
+            backdrop-filter: blur(1.5px) !important;
+            transition: all 0.3s ease-in-out;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-main {
+            animation: xp-window-entrance 0.25s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important;
+            background: #ece9d8 !important;
+            border: 3px solid #0054e3 !important;
+            border-radius: 8px 8px 4px 4px !important;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45) !important;
+            font-family: Tahoma, Arial, sans-serif !important;
+            overflow: hidden;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-header {
+            background: linear-gradient(to bottom, #1e72e1 0%, #1656c0 10%, #1247a8 50%, #1247a8 51%, #1d69e4 100%) !important;
+            border-bottom: 2px solid #002d96 !important;
+            border-radius: 5px 5px 0 0 !important;
+            color: #ffffff !important;
+            padding: 8px 14px !important;
+            text-shadow: 1px 1px 1px #002d96 !important;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-title {
+            font-family: Tahoma, sans-serif !important;
+            font-weight: bold !important;
+            font-size: 14.5px !important;
+            color: #ffffff !important;
+            letter-spacing: 0.3px !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-subtitle {
+            color: #bfd5ff !important;
+            font-family: Tahoma, sans-serif !important;
+            font-weight: bold !important;
+            font-size: 9px !important;
+            letter-spacing: 0.2em !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-icon-container {
+            background: rgba(255, 255, 255, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 4px !important;
+            width: 32px !important;
+            height: 32px !important;
+        }
+
+        /* Estilo Autêntico de Botões Luna do Windows XP no Painel Superior */
+        body[data-os-theme="winxp"] .interactive-window-btn {
+            width: 21px !important;
+            height: 21px !important;
+            border-radius: 3px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-left: 2px !important;
+            transition: all 0.1s ease !important;
+            box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.55), 1px 1px 1px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-reset,
+        body[data-os-theme="winxp"] .interactive-window-btn-resize {
+            background: linear-gradient(to bottom, #9ebcf2 0%, #5d93ec 45%, #2564db 55%, #3d80ea 100%) !important;
+            border: 1px solid #1c4ea3 !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-reset:hover,
+        body[data-os-theme="winxp"] .interactive-window-btn-resize:hover {
+            background: linear-gradient(to bottom, #b8cefa 0%, #7fabf5 45%, #427ee8 55%, #5e9cf5 100%) !important;
+            filter: brightness(1.1);
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-reset svg,
+        body[data-os-theme="winxp"] .interactive-window-btn-resize svg {
+            color: #ffffff !important;
+            filter: none !important;
+            stroke-width: 3px !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-close {
+            background: linear-gradient(to bottom, #f39174 0%, #e35a3e 45%, #d13a1a 55%, #da5f3d 100%) !important;
+            border: 1px solid #701500 !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-close:hover {
+            background: linear-gradient(to bottom, #f7b29d 0%, #ea7d66 45%, #e04a29 55%, #e78267 100%) !important;
+            filter: brightness(1.15);
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-close:active {
+            background: linear-gradient(to bottom, #be3316 0%, #cd4226 100%) !important;
+            box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-btn-close svg {
+            color: #ffffff !important;
+            filter: none !important;
+            stroke-width: 3px !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-content {
+            background-color: #f1ebd9 !important; /* Visual suave e clássico das janelas de diálogo do XP */
+            border: 1px solid #919082 !important;
+            border-radius: 0px !important;
+            margin: 8px !important;
+            padding: 20px !important;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.08), inset -1px -1px 0px #ffffff !important;
+        }
+
+        body[data-os-theme="winxp"] .interactive-window-footer {
+            background: #ece9d8 !important;
+            border-top: 1px solid #d8d2bd !important;
+            padding: 12px 16px !important;
+            display: flex !important;
+            gap: 12px !important;
         }
 
         /* Scrollbar Retro do Windows XP */
@@ -463,7 +596,7 @@ const OsThemeStyles = () => (
 
         /* Barra de Tarefas Lateral / Sidebar no Estilo do Painel do Windows Explorer */
         body[data-os-theme="winxp"] aside {
-            background: #739cd9 url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='2' height='2' fill='%236893d2'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%236893d2'/%3E%3C/svg%3E") repeat !important;
+            background: linear-gradient(to bottom, #749be8 0%, #5d81d2 100%) !important;
             border-right: 3px solid #0054e3 !important;
             border-radius: 0px !important;
             box-shadow: none !important;
@@ -471,26 +604,31 @@ const OsThemeStyles = () => (
         body[data-os-theme="winxp"] aside * {
             color: #002d96 !important;
         }
-        body[data-os-theme="winxp"] aside .bg-slate-900\\/50,
+        body[data-os-theme="winxp"] aside .bg-slate-[#131154]/50,
+        body[data-os-theme="winxp"] aside .bg-slate-900\/50,
         body[data-os-theme="winxp"] aside [class*="bg-"] {
             background-color: transparent !important;
         }
         body[data-os-theme="winxp"] aside a,
         body[data-os-theme="winxp"] aside button {
-            background: #ffffff !important;
-            border: 1px solid #d6dff7 !important;
-            border-radius: 4px !important;
-            padding: 6px 12px !important;
+            background: linear-gradient(to bottom, #ffffff 0%, #f4f6fb 100%) !important;
+            border: 1px solid #9fb9ef !important;
+            border-radius: 5px !important;
+            padding: 8px 12px !important;
             color: #002d96 !important;
-            margin-bottom: 2px !important;
+            margin-bottom: 4px !important;
             font-weight: bold !important;
             text-shadow: none !important;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05) !important;
+            transition: all 0.15s ease !important;
         }
         body[data-os-theme="winxp"] aside a:hover,
         body[data-os-theme="winxp"] aside button:hover {
-            text-decoration: underline !important;
-            background: #e6efff !important;
-            color: #3b5a9a !important;
+            text-decoration: none !important;
+            background: #ffea9f !important;
+            border-color: #fca724 !important;
+            color: #002d96 !important;
+            transform: translateX(2px);
         }
 
         /* Inputs e Formulários */
@@ -1136,7 +1274,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
             {!papelParede && theme === 'winxp' && (
                 <div 
                     className="absolute inset-0 bg-cover bg-center" 
-                    style={{ backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/2/21/Bliss_%28Windows_XP%29.png')`, backgroundPosition: '50% 65%' }}
+                    style={{ backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Bliss_%28Windows_XP%29.png/1440px-Bliss_%28Windows_XP%29.png')`, backgroundPosition: '50% 65%' }}
                 />
             )}
 

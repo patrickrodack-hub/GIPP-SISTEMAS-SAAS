@@ -373,6 +373,80 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 {menuItems.map(item => <TabButton key={item.id} item={item} />)}
             </div>
 
+            {/* NOVO: Barra de Filtros Rápidos por Mês e Ano */}
+            <div className="bg-white/75 backdrop-blur-md border border-slate-200/80 p-4 rounded-3xl shadow-xs flex flex-col lg:flex-row justify-between items-center gap-4 shrink-0">
+                <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                        <Filter size={12} className="text-indigo-600" /> Ano:
+                    </span>
+                    <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
+                        {(() => {
+                            const currentYearNum = new Date().getFullYear();
+                            const years = [currentYearNum - 2, currentYearNum - 1, currentYearNum, currentYearNum + 1];
+                            const selectedYear = filterDate.split('-')[0];
+                            return years.map(y => {
+                                const isSelected = String(y) === selectedYear;
+                                return (
+                                    <button
+                                        key={y}
+                                        onClick={() => {
+                                            const currentMonth = filterDate.split('-')[1] || "01";
+                                            setFilterDate(`${y}-${currentMonth}`);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                            isSelected 
+                                            ? 'bg-indigo-600 text-white shadow-sm scale-102 font-black' 
+                                            : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                                        }`}
+                                    >
+                                        {y}
+                                    </button>
+                                );
+                            });
+                        })()}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 w-full lg:w-auto overflow-x-auto custom-scrollbar whitespace-nowrap py-0.5">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest shrink-0">Mês:</span>
+                    <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 w-full lg:w-auto justify-between lg:justify-start">
+                        {[
+                            { value: '01', label: 'Jan' },
+                            { value: '02', label: 'Fev' },
+                            { value: '03', label: 'Mar' },
+                            { value: '04', label: 'Abr' },
+                            { value: '05', label: 'Mai' },
+                            { value: '06', label: 'Jun' },
+                            { value: '07', label: 'Jul' },
+                            { value: '08', label: 'Ago' },
+                            { value: '09', label: 'Set' },
+                            { value: '10', label: 'Out' },
+                            { value: '11', label: 'Nov' },
+                            { value: '12', label: 'Dez' }
+                        ].map(m => {
+                            const selectedMonth = filterDate.split('-')[1] || "01";
+                            const isSelected = m.value === selectedMonth;
+                            return (
+                                <button
+                                    key={m.value}
+                                    onClick={() => {
+                                        const currentYear = filterDate.split('-')[0] || String(new Date().getFullYear());
+                                        setFilterDate(`${currentYear}-${m.value}`);
+                                    }}
+                                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex-1 lg:flex-none text-center ${
+                                        isSelected 
+                                        ? 'bg-indigo-600 text-white shadow-sm scale-102 font-black' 
+                                        : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                                    }`}
+                                >
+                                    {m.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
             <div className="flex-1 overflow-hidden">
                 {tab === 1 && (
                     <div className="space-y-6 h-full overflow-y-auto custom-scrollbar p-2">
