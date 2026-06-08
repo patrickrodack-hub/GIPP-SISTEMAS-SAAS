@@ -40,6 +40,7 @@ import {
 import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
 
 // --- MODULARIZED IMPORTS ---
+import { InteractiveWindow } from './components/InteractiveWindow';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
 import ModuleEmailAdmin from './components/ModuleEmailAdmin';
@@ -2593,47 +2594,29 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-entrance backdrop-blur-lg">
-            <div className="glass-modern rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/40 border-0">
-                <div className={`p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20`}>
-                    <div className={`absolute inset-0 bg-gradient-to-br ${themeInfo.bg} bg-[length:200%_200%] animate-pulse-glow`}></div>
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.15] mix-blend-overlay pointer-events-none"></div>
-                    <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }}></div>
-                    <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
-                    <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full">
-                         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative">
-                             <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                             <IconComponent size={36} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] relative z-10 sm:w-10 sm:h-10"/>
-                         </div>
-                         <div className="min-w-0 flex-1">
-                             <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md flex items-center gap-1.5 truncate">
-                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-black/40 border border-white/20 shadow-inner shrink-0">
-                                    {data.id ? <Edit size={10} className="text-amber-300"/> : <Plus size={10} className="text-emerald-300"/>} 
-                                </span>
-                                {data.id ? 'Editando Registro' : 'Novo Registro'} • <span className="text-white/60">{themeInfo.title}</span>
-                             </p>
-                             <h3 className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] truncate text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-50 to-slate-300" title={data.nome || data.titulo || data.descricao || (data.id ? 'Modificar Registro' : 'Novo Registro')}>
-                                 {data.nome || data.titulo || data.descricao || (data.id ? 'Modificar Registro' : 'Novo Registro')}
-                             </h3>
-                         </div>
-                    </div>
-                    <button onClick={onClose} className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110">
-                        <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
-                    </button>
-                </div>
-                <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 bg-white/40">
-                    {renderForm()}
-                </div>
-                <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex justify-end gap-4 relative">
-                    <Button variant="ghost" onClick={onClose} disabled={isSaving} className="border border-white/60 bg-white/40 hover:bg-white">Cancelar</Button>
-                    <Button variant="primary" onClick={handleInternalSave} disabled={isSaving} className="shadow-indigo-500/40">
+    return createPortal(
+        <InteractiveWindow
+            id={`generic_modal_${type}`}
+            title={data.nome || data.titulo || data.descricao || (data.id ? 'Modificar Registro' : 'Novo Registro')}
+            subtitle={`${data.id ? 'Editando Registro' : 'Novo Registro'} • ${themeInfo.title}`}
+            onClose={onClose}
+            icon={themeInfo.icon}
+            headerBg={themeInfo.bg}
+            defaultWidth={670}
+            defaultHeight={670}
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onClose} disabled={isSaving} className="border border-white/60 bg-white/40 hover:bg-white cursor-pointer">Cancelar</Button>
+                    <Button variant="primary" onClick={handleInternalSave} disabled={isSaving} className="shadow-indigo-500/40 cursor-pointer flex items-center gap-2">
                         {isSaving ? <Loader2 size={20} className="animate-spin inline" /> : <Save size={20} />} 
                         {isSaving ? 'A Salvar...' : 'Salvar Dados'}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </>
+            }
+        >
+            {renderForm()}
+        </InteractiveWindow>,
+        document.body
     );
 };
 
@@ -8841,99 +8824,103 @@ const PortalEBD = ({ user, db }) => {
 
             {/* AI Lesson Modal - Estudo Interativo Portal Membro */}
             {aiLesson && createPortal(
-                <div className={`fixed inset-0 z-[11000] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-entrance ${isEbdFullscreen ? 'p-0' : 'p-4'}`}>
-                    <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 relative ${isEbdFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-2xl max-h-[90vh] rounded-[2.5rem]'}`}>
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-emerald-50/80 backdrop-blur-sm sticky top-0 z-20">
-                            <h3 className="font-black text-xl text-emerald-900 flex items-center gap-2">
-                                <BookOpen size={24} className="text-emerald-600"/> {aiLesson.title}
-                                {aiLesson.fromCache && (
-                                    <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse ml-2">Leitura Offline</span>
-                                )}
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={() => setIsEbdFullscreen(prev => !prev)} 
-                                    className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all"
-                                    title={isEbdFullscreen ? "Minimizar" : "Tela Cheia"}
+                <InteractiveWindow
+                    id="member_portal_ebd_study"
+                    title={aiLesson.title}
+                    subtitle={`EBD Inteligente • Estudar com IA ${aiLesson.fromCache ? '• Leitura Offline' : ''}`}
+                    onClose={() => { setAiLesson(null); setIsEbdFullscreen(false); }}
+                    icon={BookOpen}
+                    headerBg="from-emerald-600 via-teal-700 to-slate-950"
+                    defaultWidth={1000}
+                    defaultHeight={750}
+                    footer={
+                        <>
+                            {!aiLesson.loading && (
+                                <Button 
+                                    onClick={() => { 
+                                        navigator.clipboard.writeText(aiLesson.text); 
+                                        addToast("Conteúdo copiado para a área de transferência!", "success"); 
+                                    }} 
+                                    variant="secondary" 
+                                    className="shadow-sm border-slate-300 cursor-pointer"
                                 >
-                                    {isEbdFullscreen ? <Minimize size={20}/> : <Maximize size={20}/>}
-                                </button>
-                                <button onClick={() => { setAiLesson(null); setIsEbdFullscreen(false); }} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"><X size={24}/></button>
-                            </div>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-slate-50/50">
-                            {/* Coluna Esquerda: Capa da Revista */}
-                            {!isEbdFullscreen && (
-                                <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
-                                    {aiLesson.capa && aiLesson.capa !== 'null' && !aiLesson.capa.includes('URL_CAPA') ? (
-                                        <div className="w-full max-w-[250px] aspect-[2/3] rounded-lg shadow-xl border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6 bg-slate-100">
-                                            <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
-                                            <div className="hidden absolute inset-0 flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
-                                                <BookOpen size={40} className="mb-2 opacity-50"/>
-                                                <span className="text-xs font-bold">Capa não disponível</span>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full max-w-[250px] aspect-[2/3] bg-gradient-to-b from-emerald-600 via-teal-700 to-slate-900 rounded-lg shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6">
-                                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                                            <div className="relative z-10">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1 border-b border-emerald-500/50 pb-2">Lições Bíblicas Adultos</span>
-                                                <h3 className="font-black text-xl text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
-                                            </div>
-                                            <div className="relative z-10 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
-                                                <div className="text-xs font-bold uppercase tracking-wider text-emerald-100 mb-1">Lição</div>
-                                                <div className="text-5xl font-black text-white">{aiLesson.licao}</div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div className="w-full text-center">
-                                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">Material de Estudo</span>
-                                        <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Conteúdo interativo gerado com base no currículo e portal da CPAD.</p>
+                                    <Copy size={18} className="mr-1.5"/> Copiar Estudo Completo
+                                </Button>
+                            )}
+                            <Button 
+                                onClick={async () => { 
+                                    try {
+                                        const currentUserProfile = db.membros.find(m => m.id === user.id) || user;
+                                        const currentEstudos = currentUserProfile.estudos_ebd_concluidos || [];
+                                        const currentMonthStr = new Date().toISOString().slice(0, 7);
+                                        
+                                        // Regista a conclusão do estudo no banco de dados para garantir a gremiação
+                                        if (!currentEstudos.some(e => e.mes === currentMonthStr && e.licao === aiLesson.licao)) {
+                                            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', user.id), {
+                                                estudos_ebd_concluidos: [...currentEstudos, { mes: currentMonthStr, licao: aiLesson.licao, data: new Date().toISOString() }]
+                                            }, { merge: true });
+                                            addToast("Parabéns! Estudo EBD concluído e registado nas suas conquistas deste mês.", "success");
+                                        }
+                                    } catch(err) {
+                                        console.error(err);
+                                    }
+                                    setAiLesson(null); 
+                                    setIsEbdFullscreen(false);
+                                }} 
+                                variant="success" 
+                                className="shadow-emerald-500/30 px-8 cursor-pointer"
+                            >
+                                Concluir Estudo
+                            </Button>
+                        </>
+                    }
+                >
+                    <div className="flex flex-col lg:flex-row bg-slate-50/50 -m-6 sm:-m-8">
+                        {/* Coluna Esquerda: Capa da Revista */}
+                        <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
+                            {aiLesson.capa && aiLesson.capa !== 'null' && !aiLesson.capa.includes('URL_CAPA') ? (
+                                <div className="w-full max-w-[220px] aspect-[2/3] rounded-lg shadow-xl border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6 bg-slate-100">
+                                    <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
+                                    <div className="hidden absolute inset-0 flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
+                                        <BookOpen size={40} className="mb-2 opacity-50"/>
+                                        <span className="text-xs font-bold">Capa não disponível</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="w-full max-w-[220px] aspect-[2/3] bg-gradient-to-b from-emerald-600 via-teal-700 to-slate-900 rounded-lg shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6">
+                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                    <div className="relative z-10">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1 border-b border-emerald-500/50 pb-2">Lições Bíblicas Adultos</span>
+                                        <h3 className="font-black text-sm text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
+                                    </div>
+                                    <div className="relative z-10 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
+                                        <div className="text-xs font-bold uppercase tracking-wider text-emerald-100 mb-1">Lição</div>
+                                        <div className="text-3xl font-black text-white">{aiLesson.licao}</div>
                                     </div>
                                 </div>
                             )}
-  
-                            {/* Coluna Direita: Conteúdo da Lição */}
-                            <div className={`flex-1 bg-white relative transition-all duration-300 ${isEbdFullscreen ? 'p-12 md:p-20' : 'p-8 md:p-12'}`}>
-                                {aiLesson.loading ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-emerald-600 min-h-[400px]">
-                                        <div className="w-20 h-20 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
-                                        <p className="font-black text-lg animate-pulse mb-1">Buscando na biblioteca teológica...</p>
-                                        <p className="text-sm font-medium text-slate-500">A preparar o texto áureo e a explicação dos tópicos.</p>
-                                    </div>
-                                ) : (
-                                    <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-loose font-serif prose-headings:font-black prose-headings:text-slate-900 prose-a:text-emerald-600 prose-strong:text-slate-800">
-                                        {aiLesson.text}
-                                    </div>
-                                )}
+                            <div className="w-full text-center">
+                                <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">Material de Estudo</span>
+                                <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Conteúdo interativo gerado com base no currículo e portal da CPAD.</p>
                             </div>
                         </div>
-                        
-                        <div className="p-6 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
-                            {!aiLesson.loading && <Button onClick={() => { navigator.clipboard.writeText(aiLesson.text); addToast("Conteúdo copiado para a área de transferência!", "success"); }} variant="secondary" className="shadow-sm border-slate-300"><Copy size={18}/> Copiar Estudo Completo</Button>}
-                            <Button onClick={async () => { 
-                                try {
-                                    const currentUserProfile = db.membros.find(m => m.id === user.id) || user;
-                                    const currentEstudos = currentUserProfile.estudos_ebd_concluidos || [];
-                                    const currentMonthStr = new Date().toISOString().slice(0, 7);
-                                    
-                                    // Regista a conclusão do estudo no banco de dados para garantir a gremiação
-                                    if (!currentEstudos.some(e => e.mes === currentMonthStr && e.licao === aiLesson.licao)) {
-                                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', user.id), {
-                                            estudos_ebd_concluidos: [...currentEstudos, { mes: currentMonthStr, licao: aiLesson.licao, data: new Date().toISOString() }]
-                                        }, { merge: true });
-                                        addToast("Parabéns! Estudo EBD concluído e registado nas suas conquistas deste mês.", "success");
-                                    }
-                                } catch(err) {
-                                    console.error(err);
-                                }
-                                setAiLesson(null); 
-                                setIsEbdFullscreen(false);
-                            }} variant="success" className="shadow-emerald-500/30 px-8">Concluir Estudo</Button>
+
+                        {/* Coluna Direita: Conteúdo da Lição */}
+                        <div className="flex-1 bg-white p-6 sm:p-8 md:p-12">
+                            {aiLesson.loading ? (
+                                <div className="flex flex-col items-center justify-center text-emerald-600 min-h-[350px]">
+                                    <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
+                                    <p className="font-black text-base animate-pulse mb-1">Buscando na biblioteca teológica...</p>
+                                    <p className="text-xs font-medium text-slate-500 text-center">A preparar o texto áureo e a explicação dos tópicos.</p>
+                                </div>
+                            ) : (
+                                <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-loose font-serif prose-headings:font-black prose-headings:text-slate-900 prose-a:text-emerald-600 prose-strong:text-slate-800">
+                                    {aiLesson.text}
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>,
+                </InteractiveWindow>,
                 document.body
             )}
         </div>
