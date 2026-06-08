@@ -8744,6 +8744,26 @@ const PortalEBD = ({ user, db }) => {
     const [downloadingIds, setDownloadingIds] = useState<string[]>([]);
     const [isEbdFullscreen, setIsEbdFullscreen] = useState(false);
 
+    const isLicaoNova = (licao: any) => {
+        if (licao.createdAt) {
+            try {
+                const createdTime = new Date(licao.createdAt).getTime();
+                const now = new Date().getTime();
+                const diffDays = (now - createdTime) / (1000 * 60 * 60 * 24);
+                if (diffDays >= 0 && diffDays <= 7) return true;
+            } catch (e) {}
+        }
+        if (licao.data) {
+            try {
+                const lessonTime = new Date(licao.data).getTime();
+                const now = new Date().getTime();
+                const diffDays = (now - lessonTime) / (1000 * 60 * 60 * 24);
+                if (diffDays >= -3 && diffDays <= 7) return true;
+            } catch (e) {}
+        }
+        return false;
+    };
+
     const minhaMatricula = db.ebd?.alunos?.find(a => a.membro_id === user.id || a.nome === user.nome);
     const minhaTurma = minhaMatricula ? db.ebd?.turmas?.find(t => t.id === minhaMatricula.turma_id) : null;
     
@@ -8774,6 +8794,15 @@ const PortalEBD = ({ user, db }) => {
         addToast(`Pré-carregando Lição ${licao.licao_numero || ''} para leitura offline...`, "info");
         await handleGenerateLessonPlan(licao, true); // silent = true, just save to cache
         setDownloadingIds(prev => prev.filter(id => id !== (licao.id || licao.licao_numero)));
+    };
+
+    const handleDeleteOfflineCache = (licao, e) => {
+        e.stopPropagation();
+        const cacheKey = `gipp_cached_ebd_lesson_${licao.id || licao.licao_numero || '1'}_${licao.revista}`;
+        localStorage.removeItem(cacheKey);
+        
+        setDownloadedLessons(prev => prev.filter(id => id !== (licao.id || licao.licao_numero)));
+        addToast(`Estudo da Lição ${licao.licao_numero || ''} removido do armazenamento offline!`, "success");
     };
 
     const handleGenerateLessonPlan = async (licao, silent = false) => {
@@ -8871,7 +8900,7 @@ const PortalEBD = ({ user, db }) => {
     };
 
     return (
-        <div className="space-y-6 animate-entrance">
+        <div id="portal_ebd" className="space-y-6 animate-entrance">
             <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><BookOpen size={28} className="text-emerald-500"/> Escola Bíblica Dominical</h2>
             
             {minhaTurma ? (
@@ -8895,7 +8924,7 @@ const PortalEBD = ({ user, db }) => {
                 <div className="bg-amber-50 border-2 border-amber-200 p-8 rounded-3xl flex flex-col items-center justify-center text-center">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 text-amber-500 shadow-sm"><Info size={32}/></div>
                     <h3 className="font-black text-xl text-amber-800 mb-2">Ainda não está matriculado(a)</h3>
-                    <p className="text-sm text-amber-700 font-medium max-w-md">Não encontrámos o seu nome numa turma ativa. Procure a secretaria para realizar a matrícula. No entanto, pode aceder ao estudo livre interativo abaixo.</p>
+                    <p className="text-sm text-amber-700 font-medium max-w-md">Não encontrámos o seu nome numa turma activa. Procure a secretaria para realizar a matrícula. No entanto, pode aceder ao estudo livre interativo abaixo.</p>
                 </div>
             )}
 
@@ -8923,6 +8952,11 @@ const PortalEBD = ({ user, db }) => {
                                                         <Check size={8} /> DISPONÍVEL OFFLINE
                                                     </span>
                                                 )}
+                                                {isLicaoNova(l) && (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black bg-amber-500 text-white rounded border border-amber-600/15 shadow-2xs animate-pulse">
+                                                        <Sparkles size={8} className="text-white fill-white" /> NOVO
+                                                    </span>
+                                                )}
                                             </div>
                                             <h5 className="font-bold text-slate-800 truncate" title={l.revista}>{l.revista}</h5>
                                             <p className="text-xs text-slate-500 mt-0.5 font-medium"><Calendar size={12} className="inline mr-1"/> {formatDateLocal(l.data)}</p>
@@ -8945,6 +8979,15 @@ const PortalEBD = ({ user, db }) => {
                                                         <Download size={13} /> Pré-carregar
                                                     </>
                                                 )}
+                                            </button>
+                                        )}
+                                        {isCached && (
+                                            <button 
+                                                onClick={(e) => handleDeleteOfflineCache(l, e)}
+                                                className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 hover:border-rose-300 bg-white cursor-pointer transition-colors shadow-2xs"
+                                                title="Excluir lição offline do aparelho"
+                                            >
+                                                <Trash2 size={13} /> Excluir
                                             </button>
                                         )}
                                         <button onClick={() => handleGenerateLessonPlan(l)} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl transition-all shadow-sm font-bold text-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer">
