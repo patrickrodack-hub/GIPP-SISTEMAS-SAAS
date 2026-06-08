@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -416,7 +417,7 @@ const ModuleBackup = () => {
                 </div>
             </div>
 
-            {restoring && (
+            {restoring && createPortal(
                 <div className="fixed inset-0 bg-slate-900/90 z-[11000] flex flex-col items-center justify-center p-6 backdrop-blur-md">
                     <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-entrance">
                         <div className="relative mx-auto w-20 h-20 bg-emerald-100 text-emerald-650 rounded-full flex items-center justify-center animate-pulse">
@@ -431,7 +432,8 @@ const ModuleBackup = () => {
                         </div>
                         <p className="text-xs font-mono font-black text-emerald-650 bg-emerald-50 py-1.5 px-4 rounded-xl inline-block">{restoreProgress}% Processado</p>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -1742,7 +1743,7 @@ const ModuleDesenvolvedor = () => {
 
                 {/* --- MODAL DE CONFIRMAÇÃO E PROCESSO DE RESET --- */}
 
-            {resetModalOpen && (
+            {resetModalOpen && createPortal(
                 <div className="fixed inset-0 bg-slate-900/90 z-[12000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance">
                     <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden relative border border-rose-200 p-8 text-center">
                         {!isResetting ? (
@@ -1781,11 +1782,12 @@ const ModuleDesenvolvedor = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {uppercaseModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fadeIn">
+            {uppercaseModalOpen && createPortal(
+                <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[12000] flex items-center justify-center p-4 animate-fadeIn">
                     <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-scaleUp">
                         <div className="bg-indigo-600 p-8 text-center relative overflow-hidden">
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
@@ -1830,7 +1832,8 @@ const ModuleDesenvolvedor = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

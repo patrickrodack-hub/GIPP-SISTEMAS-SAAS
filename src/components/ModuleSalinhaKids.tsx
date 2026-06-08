@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Baby, Heart, ShieldAlert, FileText, UserPlus, Search, Plus, Trash2, Edit, Calendar, Clock, Phone, AlertTriangle, Check, CheckCircle2, Volume2, Share2, HelpCircle, Activity, HeartHandshake, Eye, Users, FileBarChart, Bell, Sparkles, Send, MapPin, Smile, Key, Lock, Printer, QrCode, ShieldCheck, RefreshCw, BarChart2, Award, User,
   Download, Layers
@@ -2023,7 +2024,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
       )}
 
       {/* MODAL 1: ADD / EDIT CHILD */}
-      {childModalOpen && (
+      {childModalOpen && createPortal(
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[95vh]">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-rose-50/50">
@@ -2154,11 +2155,12 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: ADD OCCURRENCE */}
-      {occModalOpen && (
+      {occModalOpen && createPortal(
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[95vh]">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-rose-50/50">
@@ -2266,11 +2268,12 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* NEW MASTER MODAL A: VOLUNTEER ROSTER SCALE SCHEDULER */}
-      {volModalOpen && (
+      {volModalOpen && createPortal(
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-entrance">
             <div className="p-6 border-b border-slate-100 bg-rose-50/50 flex justify-between items-center bg-rose-50/30">
@@ -2368,11 +2371,12 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* NEW MASTER MODAL B: INDIVIDUAL PRESENCES RATE LEDGER */}
-      {attendanceHistoryModalOpen && historyChild && (
+      {attendanceHistoryModalOpen && historyChild && createPortal(
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-entrance">
             <div className="p-6 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
@@ -2445,11 +2449,12 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 3: CHECKOUT PIN VERIFICATION OVERLAY */}
-      {checkoutModalOpen && checkoutChild && (
+      {checkoutModalOpen && checkoutChild && createPortal(
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-100 bg-slate-900 text-white flex justify-between items-center">
@@ -2533,11 +2538,12 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 4: IDENTIFICATION BADGE / CARD DISPLAY */}
-      {badgeModalOpen && badgeChild && (
+      {badgeModalOpen && badgeChild && createPortal(
         <div className="fixed inset-0 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4 z-[12000] animate-entrance">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative print:border-0 print:shadow-none">
             
@@ -2635,7 +2641,8 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

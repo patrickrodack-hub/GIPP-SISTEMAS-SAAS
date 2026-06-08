@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -153,8 +154,8 @@ const ModuleRelatorios = memo(() => {
                 ))}
             </div>
 
-            {configModal.open && (
-                <div className="fixed inset-0 bg-slate-900/60 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
+            {configModal.open && createPortal(
+                <div className="fixed inset-0 bg-slate-900/60 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
                     <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden ring-1 ring-white/40 border border-slate-200">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <h3 className="font-black text-xl text-slate-800 flex items-center gap-2"><Settings size={20} className="text-indigo-500"/> Configurar Relatório</h3>
@@ -341,7 +342,8 @@ const ModuleRelatorios = memo(() => {
                             </Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

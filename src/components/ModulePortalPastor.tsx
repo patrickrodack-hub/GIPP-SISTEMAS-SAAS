@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -1261,8 +1262,8 @@ const ModulePortalPastor = () => {
                                             })()}
 
                                             {/* Terminal Logs Popup de Auto-validação PIX */}
-                                            {autoPixScanning && (
-                                                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                                            {autoPixScanning && createPortal(
+                                                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[11000] flex items-center justify-center p-4 shadow-2xl">
                                                     <div className="bg-[#0c0c0e] text-emerald-400 w-full max-w-lg rounded-2xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden font-mono text-xs sm:text-sm animate-scale-in">
                                                         <div className="bg-[#121215] px-4 py-3 flex items-center justify-between border-b border-slate-800">
                                                             <span className="font-extrabold text-slate-300 flex items-center gap-2 text-[11px] tracking-wider">
@@ -1286,7 +1287,8 @@ const ModulePortalPastor = () => {
                                                             <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Canal mTLS {db.igreja?.banco || 'Bancário'} Ativado</span>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                </div>,
+                                                document.body
                                             )}
 
                                         {/* Totalizers */}
@@ -1603,8 +1605,8 @@ const ModulePortalPastor = () => {
                 </div>
             )}
 
-            {showAgendaModal && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
+            {showAgendaModal && createPortal(
+                <div className="fixed inset-0 bg-slate-900/40 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 p-8 space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-black text-slate-800">{editingAgendaId ? 'Editar Agendamento' : 'Agendar Novo Horário'}</h3>
@@ -1651,11 +1653,12 @@ const ModulePortalPastor = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {showEsbocoModal && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
+            {showEsbocoModal && createPortal(
+                <div className="fixed inset-0 bg-slate-900/40 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 p-8 space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-black text-slate-800">{editingEsbocoId ? 'Editar Esboço' : 'Novo Esboço de Sermão'}</h3>
@@ -1685,11 +1688,12 @@ const ModulePortalPastor = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {showAtaModal && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+            {showAtaModal && createPortal(
+                <div className="fixed inset-0 bg-slate-900/40 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl border border-white/20 p-8 space-y-6 my-8 animate-entrance max-h-[90vh] overflow-y-auto custom-scrollbar">
                         <div className="flex justify-between items-center">
                             <div>
@@ -1761,11 +1765,12 @@ const ModulePortalPastor = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {showBudgetModal && editingBudgetCC && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+            {showBudgetModal && editingBudgetCC && createPortal(
+                <div className="fixed inset-0 bg-slate-900/40 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-white/20 p-8 space-y-6 my-8 animate-entrance">
                         <div className="flex justify-between items-center">
                             <div>
@@ -1854,7 +1859,8 @@ const ModulePortalPastor = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

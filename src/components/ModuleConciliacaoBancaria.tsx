@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -621,8 +622,8 @@ const ModuleConciliacaoBancaria = () => {
                             </div>
 
                             {/* Terminal Logs Popup de Auto-validação PIX - Admin Dashboard */}
-                            {autoPixScanning && (
-                                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            {autoPixScanning && createPortal(
+                                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[11000] flex items-center justify-center p-4">
                                     <div className="bg-[#0c0c0e] text-emerald-400 w-full max-w-lg rounded-2xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden font-mono text-xs sm:text-sm animate-scale-in">
                                         <div className="bg-[#121215] px-4 py-3 flex items-center justify-between border-b border-slate-800">
                                             <span className="font-extrabold text-slate-300 flex items-center gap-2 text-[11px] tracking-wider">
@@ -646,7 +647,8 @@ const ModuleConciliacaoBancaria = () => {
                                             <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Enlace de segurança direto ativado</span>
                                         </div>
                                     </div>
-                                </div>
+                                </div>,
+                                document.body
                             )}
                         </div>
                     )}

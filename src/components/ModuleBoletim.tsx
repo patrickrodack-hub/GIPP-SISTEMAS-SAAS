@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -381,8 +382,8 @@ const ModuleBoletim = () => {
 
     // --- VISUALIZAÇÃO DO EDITOR DE BOLETIM ---
     if (isEditing) {
-        return (
-            <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-entrance backdrop-blur-lg text-slate-900">
+        return createPortal(
+            <div className="fixed inset-0 bg-slate-900/60 z-[11000] flex items-center justify-center p-4 animate-entrance backdrop-blur-lg text-slate-900">
                 <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
                     <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-white shrink-0">
                          <div>
@@ -448,7 +449,8 @@ const ModuleBoletim = () => {
                         </Button>
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
         );
     }
 
@@ -1021,10 +1023,10 @@ const ModuleBoletim = () => {
             </footer>
 
             {/* MODAL MODERN GLASSMORPHISM - MODO LEITURA */}
-            {readerItem && (
+            {readerItem && createPortal(
                 <div 
                     id="reading-mode-modal"
-                    className={`fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-entrance ${isBoletimFullscreen ? 'p-0' : 'p-4'}`}
+                    className={`fixed inset-0 z-[11000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-entrance ${isBoletimFullscreen ? 'p-0' : 'p-4'}`}
                     onClick={() => setReaderItem(null)}
                 >
                     <div 
@@ -1124,7 +1126,8 @@ const ModuleBoletim = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

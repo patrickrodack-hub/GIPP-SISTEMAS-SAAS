@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -1152,8 +1153,8 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             </div>
 
             {/* Modal do Histórico de Alterações */}
-            {selectedHistoryItem && (
-                <div className="fixed inset-0 bg-slate-900/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+            {selectedHistoryItem && createPortal(
+                <div className="fixed inset-0 bg-slate-900/60 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 p-8 space-y-6 my-8 animate-entrance font-sans text-slate-800">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
@@ -1210,7 +1211,8 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
                         <button onClick={() => setSelectedHistoryItem(null)} className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl transition-all">Fechar Histórico</button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

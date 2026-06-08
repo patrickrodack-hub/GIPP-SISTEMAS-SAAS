@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -114,8 +115,8 @@ const ModuleAcessosPortal = () => {
                 />
             </div>
 
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 z-[10000] flex items-center justify-center p-4 animate-entrance backdrop-blur-sm">
+            {isModalOpen && createPortal(
+                <div className="fixed inset-0 bg-slate-900/60 z-[11000] flex items-center justify-center p-4 animate-entrance backdrop-blur-sm">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden p-8 border border-slate-200">
                         <h3 className="text-xl font-black text-slate-800 mb-2">Alterar Senha</h3>
                         <p className="text-sm text-slate-500 mb-6">Defina uma nova senha de acesso ao portal para o membro <strong className="text-indigo-600">{selectedMember?.nome}</strong>.</p>
@@ -127,7 +128,8 @@ const ModuleAcessosPortal = () => {
                             <Button variant="primary" onClick={handleSavePassword} className="flex-1 shadow-indigo-500/30">Salvar Senha</Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
