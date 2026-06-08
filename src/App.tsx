@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -8839,7 +8840,7 @@ const PortalEBD = ({ user, db }) => {
             </div>
 
             {/* AI Lesson Modal - Estudo Interativo Portal Membro */}
-            {aiLesson && (
+            {aiLesson && createPortal(
                 <div className={`fixed inset-0 z-[11000] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-entrance ${isEbdFullscreen ? 'p-0' : 'p-4'}`}>
                     <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 relative ${isEbdFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-2xl max-h-[90vh] rounded-[2.5rem]'}`}>
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-emerald-50/80 backdrop-blur-sm sticky top-0 z-20">
@@ -8932,7 +8933,8 @@ const PortalEBD = ({ user, db }) => {
                             }} variant="success" className="shadow-emerald-500/30 px-8">Concluir Estudo</Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
