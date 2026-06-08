@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -668,36 +669,59 @@ const ModuleEBD = () => {
             </div>
 
             {/* AI Lesson Modal - Estudo Interativo */}
-            {aiLesson && (
-                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-entrance">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh] relative">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-50/80 backdrop-blur-sm sticky top-0 z-20">
-                            <h3 className="font-black text-xl text-indigo-900 flex items-center gap-2"><BookOpen size={24} className="text-indigo-600"/> {aiLesson.title}</h3>
-                            <button onClick={() => setAiLesson(null)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"><X size={24}/></button>
+            {aiLesson && createPortal(
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-lg animate-entrance">
+                    <div className="glass-modern rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh] ring-1 ring-white/40 border-0 relative">
+                        {/* Modal Header inside gradient wrapper */}
+                        <div className="p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20">
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-blue-700 to-indigo-900 bg-[length:200%_200%] animate-pulse-glow"></div>
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.15] mix-blend-overlay pointer-events-none"></div>
+                            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }} />
+                            <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+                            <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative">
+                                    <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <Sparkles size={36} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] relative z-10 sm:w-10 sm:h-10 text-rose-300 animate-pulse"/>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md">
+                                        EBD Inteligente • Estudar com IA
+                                    </p>
+                                    <h3 className="font-extrabold text-xl sm:text-2xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] text-white">
+                                        {aiLesson.title}
+                                    </h3>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => { setAiLesson(null); setAiQuizText(''); }} 
+                                className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110 cursor-pointer"
+                            >
+                                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
+                            </button>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-slate-50/50">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row bg-white/45 backdrop-blur-md">
                             {/* Coluna Esquerda: Capa da Revista */}
-                            <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
-                                <div className="w-full max-w-[250px] aspect-[2/3] bg-gradient-to-b from-blue-700 via-indigo-800 to-slate-900 rounded-lg shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6">
+                            <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200/50 flex flex-col items-center bg-white/10 shrink-0">
+                                <div className="w-full max-w-[250px] aspect-[2/3] bg-gradient-to-b from-indigo-700 via-indigo-800 to-slate-900 rounded-[2rem] shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200/40 relative overflow-hidden mb-6">
                                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                                     <div className="relative z-10">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1 border-b border-blue-500/50 pb-2">Lições Bíblicas Adultos</span>
-                                        <h3 className="font-black text-xl text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-1 border-b border-white/20 pb-2">Lições Bíblicas Adultos</span>
+                                        <h3 className="font-extrabold text-lg text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
                                     </div>
-                                    <div className="relative z-10 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
-                                        <div className="text-xs font-bold uppercase tracking-wider text-blue-200 mb-1">Lição</div>
+                                    <div className="relative z-10 bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20">
+                                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-200 mb-1">Lição</div>
                                         <div className="text-5xl font-black text-white">{aiLesson.licao}</div>
                                     </div>
                                 </div>
                                 <div className="w-full text-center">
-                                    <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-indigo-200">Material de Estudo</span>
-                                    <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Este conteúdo interativo é gerado com base no currículo simulado de Escolas Bíblicas (CPAD).</p>
+                                    <span className="bg-indigo-50/50 text-indigo-700 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-indigo-200/40">Material de Apoio (IA)</span>
+                                    <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Este conteúdo interativo é gerado com base no currículo oficial de escolas bíblicas.</p>
                                 </div>
                             </div>
 
                             {/* Coluna Direita: Conteúdo da Lição */}
-                            <div className="flex-1 p-8 md:p-12 bg-white relative">
+                            <div className="flex-1 p-8 md:p-12 bg-white/80 relative">
                                 {aiLesson.loading ? (
                                     <div className="flex flex-col items-center justify-center h-full text-indigo-600 min-h-[400px]">
                                         <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
@@ -706,7 +730,7 @@ const ModuleEBD = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-8 text-left">
-                                        <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-loose font-serif prose-headings:font-black prose-headings:text-slate-900 prose-a:text-indigo-600 prose-strong:text-slate-800">
+                                        <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-loose font-serif prose-headings:font-black prose-headings:text-slate-900 prose-a:text-indigo-600 prose-strong:text-indigo-800">
                                             {aiLesson.text}
                                         </div>
 
@@ -716,7 +740,7 @@ const ModuleEBD = () => {
                                                     <Sparkles size={16} className="text-rose-500 animate-bounce" />
                                                     <span>Dinâmica Pedagógica & Quiz do Professor (IA)</span>
                                                 </div>
-                                                <div className="text-slate-700 whitespace-pre-wrap font-sans text-xs leading-relaxed bg-white/70 p-4 rounded-2xl border border-rose-100">
+                                                <div className="text-slate-705 whitespace-pre-wrap font-sans text-xs leading-relaxed bg-white/85 p-4 rounded-2xl border border-rose-100/50">
                                                     {aiQuizText}
                                                 </div>
                                             </div>
@@ -726,7 +750,7 @@ const ModuleEBD = () => {
                             </div>
                         </div>
                         
-                        <div className="p-6 border-t border-slate-200 bg-slate-50 flex flex-wrap gap-3 justify-end items-center shrink-0">
+                        <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex flex-wrap gap-3 justify-end items-center shrink-0">
                             {!aiLesson.loading && (
                                 <>
                                     <button 
@@ -748,7 +772,7 @@ Gere em formatação simples e amigável.`;
                                             }
                                         }}
                                         disabled={aiGeneratingQuiz}
-                                        className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 disabled:bg-slate-100 text-rose-750 disabled:text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-xl border border-rose-200 transition-all flex items-center gap-1.5"
+                                        className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 disabled:bg-slate-100 text-rose-750 disabled:text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-xl border border-rose-200/60 transition-all flex items-center gap-1.5 cursor-pointer"
                                     >
                                         <Sparkles size={14} className="text-rose-500 animate-pulse" /> {aiGeneratingQuiz ? "Gerando Dinâmica..." : "Gerar Dinâmica + Quiz (IA)"}
                                     </button>
@@ -759,7 +783,7 @@ Gere em formatação simples e amigável.`;
                                             navigator.clipboard.writeText(copyText);
                                             addToast("Resumo formatado p/ WhatsApp copiado!", "success");
                                         }}
-                                        className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-750 font-black text-[10px] uppercase tracking-wider rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5"
+                                        className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-750 font-black text-[10px] uppercase tracking-wider rounded-xl border border-emerald-200/60 transition-all flex items-center gap-1.5 cursor-pointer"
                                         title="Copiar resumo curto com emojis para grupos de classe"
                                     >
                                         <Smartphone size={14} className="text-emerald-500" /> Copiar para WhatsApp
@@ -793,7 +817,7 @@ Gere em formatação simples e amigável.`;
                                             doc.save(`estudo_ebd_licao_${aiLesson.licao}.pdf`);
                                             addToast("Guia de Estudo em PDF baixado com sucesso!", "success");
                                         }}
-                                        className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-750 font-black text-[10px] uppercase tracking-wider rounded-xl border border-blue-200 transition-all flex items-center gap-1.5"
+                                        className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-750 font-black text-[10px] uppercase tracking-wider rounded-xl border border-blue-200/60 transition-all flex items-center gap-1.5 cursor-pointer"
                                     >
                                         <Download size={14} className="text-blue-500" /> Salvar PDF
                                     </button>
@@ -804,57 +828,81 @@ Gere em formatação simples e amigável.`;
                             <Button onClick={() => { setAiLesson(null); setAiQuizText(''); }} variant="primary" className="shadow-indigo-500/30 px-8 text-[10px] font-black uppercase">Concluir</Button>
                         </div>
                     </div>
-                </div>
-             )}
+                </div>,
+                document.body
+            )}
 
             {/* MODAL 1: REGISTRO DE CHAMADA (CONTROLE DE PRESENÇA) */}
-            {chamadaModalOpen && selectedTurmaForChamada && (
-                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-entrance">
-                    <form onSubmit={handleSaveChamada} className="bg-white rounded-[2.2rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-100">
-                        <div className="p-6 bg-gradient-to-r from-indigo-700 to-blue-800 text-white flex justify-between items-center">
-                            <div>
-                                <span className="px-3 py-1 bg-white/10 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/20">Chamada de Classe</span>
-                                <h3 className="font-black text-xl tracking-tight mt-1">Turma: {selectedTurmaForChamada.nome}</h3>
+            {chamadaModalOpen && selectedTurmaForChamada && createPortal(
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-lg animate-entrance">
+                    <form onSubmit={handleSaveChamada} className="glass-modern rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/40 border-0">
+                        <div className="p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20">
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-blue-700 to-indigo-900 bg-[length:200%_200%] animate-pulse-glow"></div>
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.14] mix-blend-overlay pointer-events-none"></div>
+                            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }} />
+                            <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+                            <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative">
+                                    <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <ClipboardList size={36} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] relative z-10 sm:w-10 sm:h-10"/>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md">
+                                        Controle de Lições • Frequência
+                                    </p>
+                                    <h3 className="font-extrabold text-xl sm:text-2xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] text-white">
+                                        Turma: {selectedTurmaForChamada.nome}
+                                    </h3>
+                                </div>
                             </div>
-                            <button type="button" onClick={() => setChamadaModalOpen(false)} className="p-2 text-white/75 hover:text-white hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+                            <button 
+                                type="button"
+                                onClick={() => setChamadaModalOpen(false)} 
+                                className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110 cursor-pointer"
+                            >
+                                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
+                            </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-6 bg-white/40 backdrop-blur-md">
                             {/* Inputs de Configuração da Lição Ministrada */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <FormInput
-                                    label="Data da Aula"
-                                    type="date"
-                                    value={chamadaDate}
-                                    onChange={(e: any) => setChamadaDate(e.target.value)}
-                                    required
-                                />
-                                <FormInput
-                                    label="Revista / Tema Central"
-                                    placeholder="Ex: Fruto do Espírito"
-                                    value={chamadaRevista}
-                                    onChange={(e: any) => setChamadaRevista(e.target.value)}
-                                    required
-                                />
-                                <FormInput
-                                    label="Lição Número"
-                                    placeholder="Ex: Lição 10"
-                                    value={chamadaLicaoNum}
-                                    onChange={(e: any) => setChamadaLicaoNum(e.target.value)}
-                                    required
-                                />
+                            <div className="bg-white/60 p-4 sm:p-5 rounded-3xl border border-white/80 shadow-sm space-y-4">
+                                <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Dados da Lição de EBD</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <FormInput
+                                        label="Data da Aula"
+                                        type="date"
+                                        value={chamadaDate}
+                                        onChange={(e: any) => setChamadaDate(e.target.value)}
+                                        required
+                                    />
+                                    <FormInput
+                                        label="Revista / Tema Central"
+                                        placeholder="Ex: Fruto do Espírito"
+                                        value={chamadaRevista}
+                                        onChange={(e: any) => setChamadaRevista(e.target.value)}
+                                        required
+                                    />
+                                    <FormInput
+                                        label="Lição Número"
+                                        placeholder="Ex: Lição 10"
+                                        value={chamadaLicaoNum}
+                                        onChange={(e: any) => setChamadaLicaoNum(e.target.value)}
+                                        required
+                                    />
+                                </div>
                             </div>
 
                             {/* Tabela de Alunos com Chamada Dinâmica */}
-                            <div>
-                                <div className="flex justify-between items-center mb-3">
+                            <div className="bg-white/60 p-4 sm:p-5 rounded-3xl border border-white/80 shadow-sm">
+                                <div className="flex justify-between items-center mb-4">
                                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Users size={14} className="text-indigo-500" /> Alunos Matriculados</h4>
                                     <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-md">
                                         Presentes hoje: {Object.values(studentAttendanceMap).filter((st: any) => st.presente).length}
                                     </span>
                                 </div>
 
-                                <div className="space-y-2.5 max-h-[45vh] overflow-y-auto custom-scrollbar pr-1">
+                                <div className="space-y-2.5 max-h-[38vh] overflow-y-auto custom-scrollbar pr-1">
                                     {(db.ebd?.alunos || []).filter(a => a.turma_id === selectedTurmaForChamada.id).map(aluno => {
                                         const cur = studentAttendanceMap[aluno.id] || { presente: false, trouxeBiblia: false, trouxeRevista: false, oferta: false };
                                         
@@ -893,12 +941,12 @@ Gere em formatação simples e amigável.`;
                                         };
 
                                         return (
-                                            <div key={aluno.id} className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${cur.presente ? 'bg-indigo-50/40 border-indigo-200' : 'bg-slate-50/50 border-slate-200/60'}`}>
+                                            <div key={aluno.id} className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${cur.presente ? 'bg-indigo-50/40 border-indigo-250' : 'bg-slate-50/50 border-slate-200/60'}`}>
                                                 <div className="flex items-center gap-2.5">
                                                     <button
                                                         type="button"
                                                         onClick={() => toggleProp('presente')}
-                                                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${cur.presente ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-350 bg-white hover:border-slate-400'}`}
+                                                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer ${cur.presente ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white hover:border-slate-400'}`}
                                                     >
                                                         {cur.presente && <Check size={12} strokeWidth={3} />}
                                                     </button>
@@ -913,7 +961,7 @@ Gere em formatação simples e amigável.`;
                                                     <button
                                                         type="button"
                                                         onClick={() => toggleProp('trouxeBiblia')}
-                                                        className={`p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all ${cur.trouxeBiblia ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                                                        className={`p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer ${cur.trouxeBiblia ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-xs' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-350'}`}
                                                         title="Trouxe Bíblia Sagrada"
                                                     >
                                                         📖 <span className="hidden sm:inline">Bíblia</span>
@@ -921,7 +969,7 @@ Gere em formatação simples e amigável.`;
                                                     <button
                                                         type="button"
                                                         onClick={() => toggleProp('trouxeRevista')}
-                                                        className={`p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all ${cur.trouxeRevista ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                                                        className={`p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer ${cur.trouxeRevista ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-350'}`}
                                                         title="Trouxe Revista de Lição"
                                                     >
                                                         📚 <span className="hidden sm:inline">Revista</span>
@@ -929,7 +977,7 @@ Gere em formatação simples e amigável.`;
                                                     <button
                                                         type="button"
                                                         onClick={() => toggleProp('oferta')}
-                                                        className={`p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all ${cur.oferta ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                                                        className={`p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer ${cur.oferta ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-xs' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-350'}`}
                                                         title="Contribuição de Oferta para Classe"
                                                     >
                                                         🪙 <span className="hidden sm:inline">Oferta</span>
@@ -945,78 +993,95 @@ Gere em formatação simples e amigável.`;
                             </div>
                         </div>
 
-                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
-                            <Button type="button" onClick={() => setChamadaModalOpen(false)} variant="secondary" className="border-slate-300">Cancelar</Button>
+                        <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex justify-end gap-3 shrink-0">
+                            <Button type="button" onClick={() => setChamadaModalOpen(false)} variant="ghost" className="border border-white/60 bg-white/40 hover:bg-white">Cancelar</Button>
                             <Button type="submit" variant="primary" className="shadow-indigo-500/25 px-8">Salvar Frequência</Button>
                         </div>
                     </form>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* MODAL 2: FICHA DE DESEMPENHO E HISTÓRICO DO ALUNO (INDIVIDUAL) */}
-            {alunoHistoryModalOpen && selectedAlunoForHistory && (
-                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-entrance">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-100">
-                        <div className="p-6 bg-gradient-to-r from-slate-800 to-slate-900 text-white flex justify-between items-center shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-white/10 text-white font-bold flex items-center justify-center text-lg border border-white/25">{selectedAlunoForHistory.nome.charAt(0)}</div>
-                                <div>
-                                    <h3 className="font-black text-lg tracking-tight leading-tight">{selectedAlunoForHistory.nome}</h3>
-                                    <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-0.5">Aluno da EBD</p>
+            {/* MODAL 2: FICHA DE DESEMPENHO E HISTÓRICO DO ALUNO (INDIVIDUAL) */}
+            {alunoHistoryModalOpen && selectedAlunoForHistory && createPortal(
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-lg animate-entrance">
+                    <div className="glass-modern rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/40 border-0">
+                        <div className="p-6 sm:p-8 flex justify-between items-start relative overflow-hidden shrink-0 shadow-lg border-b border-white/20">
+                            <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 bg-[length:200%_200%] animate-pulse-glow"></div>
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.14] mix-blend-overlay pointer-events-none"></div>
+                            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(0,0,0,0)_50%,rgba(255,255,255,0.15)_100%)] animate-spin mix-blend-overlay pointer-events-none" style={{ animationDuration: '10s' }} />
+                            <div className="absolute bottom-0 left-0 w-full h-2/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+                            <div className="relative z-10 flex items-center gap-4 sm:gap-6 w-full">
+                                <div className="w-16 h-16 sm:w-18 sm:h-18 bg-white/10 backdrop-blur-xl rounded-[1.2rem] shadow-[0_0_25px_rgba(255,255,255,0.15)] border-y border-white/40 border-x border-white/10 flex items-center justify-center text-white transform -rotate-6 hover:rotate-0 transition-all duration-500 hover:scale-110 shrink-0 group relative font-extrabold text-2xl font-['Outfit']">
+                                    {selectedAlunoForHistory.nome.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md">
+                                        EBD • Ficha do Aluno
+                                    </p>
+                                    <h3 className="font-extrabold text-xl sm:text-2xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] text-white truncate">
+                                        {selectedAlunoForHistory.nome}
+                                    </h3>
                                 </div>
                             </div>
-                            <button onClick={() => setAlunoHistoryModalOpen(false)} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all"><X size={20}/></button>
+                            <button 
+                                onClick={() => setAlunoHistoryModalOpen(false)} 
+                                className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110 cursor-pointer"
+                            >
+                                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
+                            </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-6 bg-white/40 backdrop-blur-md">
                             {/* Cartões de Indicadores Chave de Frequência */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-wider">Presenças</p>
+                                <div className="bg-indigo-50/50 border border-indigo-100/60 rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider">Presenças</p>
                                     <h4 className="text-3xl font-black text-indigo-800 mt-1">{getStudentStats(selectedAlunoForHistory.id).presencas}</h4>
-                                    <span className="text-[9px] text-slate-450 font-bold block mt-1">/{getStudentStats(selectedAlunoForHistory.id).totalAulas} aulas aplicadas</span>
+                                    <span className="text-[9px] text-slate-500 font-bold block mt-1">/{getStudentStats(selectedAlunoForHistory.id).totalAulas} aulas</span>
                                 </div>
-                                <div className="bg-emerald-50/50 border border-emerald-105 rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] font-black text-emerald-550 uppercase tracking-wider">Bíblias</p>
+                                <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">Bíblias</p>
                                     <h4 className="text-3xl font-black text-emerald-800 mt-1">{getStudentStats(selectedAlunoForHistory.id).biblias}</h4>
-                                    <span className="text-[9px] text-slate-450 font-bold block mt-1">Trouxe nas aulas</span>
+                                    <span className="text-[9px] text-slate-500 font-bold block mt-1">Trouxe nas aulas</span>
                                 </div>
-                                <div className="bg-blue-50/50 border border-blue-105 rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] font-black text-blue-550 uppercase tracking-wider">Revistas</p>
+                                <div className="bg-blue-50/50 border border-blue-105/60 rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-wider">Revistas</p>
                                     <h4 className="text-3xl font-black text-blue-800 mt-1">{getStudentStats(selectedAlunoForHistory.id).revistas}</h4>
-                                    <span className="text-[9px] text-slate-450 font-bold block mt-1">Estudou a lição</span>
+                                    <span className="text-[9px] text-slate-500 font-bold block mt-1">Estudou a lição</span>
                                 </div>
-                                <div className="bg-amber-50/50 border border-amber-105 rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] font-black text-amber-550 uppercase tracking-wider">Ofertas</p>
+                                <div className="bg-amber-50/50 border border-amber-105/60 rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider">Ofertas</p>
                                     <h4 className="text-3xl font-black text-amber-800 mt-1">{getStudentStats(selectedAlunoForHistory.id).ofertas}</h4>
-                                    <span className="text-[9px] text-slate-450 font-bold block mt-1">Aulas ofertadas</span>
+                                    <span className="text-[9px] text-slate-500 font-bold block mt-1">Aulas ofertadas</span>
                                 </div>
                             </div>
 
                             {/* Desempenho e Medalhas de Aproveitamento */}
-                            <div className="bg-slate-50 border border-slate-200/70 rounded-2.5xl p-5 flex flex-col sm:flex-row items-center gap-5">
+                            <div className="bg-white/60 border border-white/80 rounded-3xl p-5 flex flex-col sm:flex-row items-center gap-5 shadow-xs">
                                 <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
                                     <svg className="absolute w-full h-full transform -rotate-90">
-                                        <circle cx="48" cy="48" r="40" stroke="#f1f5f9" strokeWidth="8" fill="transparent" />
+                                        <circle cx="48" cy="48" r="40" stroke="#e2e8f0" strokeWidth="8" fill="transparent" />
                                         <circle cx="48" cy="48" r="40" stroke="#4f46e5" strokeWidth="8" fill="transparent"
                                                 strokeDasharray={2 * Math.PI * 40}
                                                 strokeDashoffset={2 * Math.PI * 40 * (1 - getStudentStats(selectedAlunoForHistory.id).taxaPresenca / 100)} />
                                     </svg>
-                                    <span className="text-xl font-black text-indigo-950">{getStudentStats(selectedAlunoForHistory.id).taxaPresenca}%</span>
+                                    <span className="text-xl font-extrabold text-indigo-950 font-['Outfit']">{getStudentStats(selectedAlunoForHistory.id).taxaPresenca}%</span>
                                 </div>
                                 <div>
-                                    <h4 className="font-black text-slate-800 text-sm">Status Dominical: {
+                                    <h4 className="font-extrabold text-slate-800 text-sm">Status Dominical: {
                                         getStudentStats(selectedAlunoForHistory.id).taxaPresenca >= 90 ? '🏅 Aluno Ouro' :
                                         getStudentStats(selectedAlunoForHistory.id).taxaPresenca >= 75 ? '🥈 Aluno Prata' :
                                         getStudentStats(selectedAlunoForHistory.id).taxaPresenca >= 50 ? '🥉 Aluno Integrado' : '🌱 Aluno Iniciante'
                                     }</h4>
-                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">Considerando a assiduidade histórica na leitura teológica das lições, pontualidade e engajamento geral no trimestre.</p>
+                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">Considerando a assiduidade histórica na leitura doutrinária das lições, pontualidade e engajamento geral no trimestre corrente.</p>
                                 </div>
                             </div>
 
                             {/* Registro Fino de Lições Ministradas */}
-                            <div>
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Calendar size={14} className="text-slate-500" /> Presenças Registradas</h4>
+                            <div className="bg-white/60 border border-white/80 rounded-3xl p-5 shadow-xs">
+                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><Calendar size={14} className="text-slate-500" /> Histórico de Presenças</h4>
                                 <div className="space-y-2 max-h-[25vh] overflow-y-auto custom-scrollbar pr-1">
                                     {(db.ebd?.licoes || []).filter(l => {
                                         const t = turmasFiltradas.find(tf=>tf.id===l.turma_id);
@@ -1024,20 +1089,20 @@ Gere em formatação simples e amigável.`;
                                     }).map(licao => {
                                         const det = licao.detalhes_chamada?.[selectedAlunoForHistory.id];
                                         return (
-                                            <div key={licao.id} className="p-3 bg-white border border-slate-100 rounded-xl flex items-center justify-between hover:border-slate-200 transition-all">
+                                            <div key={licao.id} className="p-3 bg-white/70 border border-slate-100 rounded-2xl flex items-center justify-between hover:border-slate-250 transition-all">
                                                 <div>
-                                                    <p className="font-bold text-xs text-slate-800">{licao.revista || 'Revista EBD'}</p>
-                                                    <p className="text-[9px] text-slate-450 font-bold">{licao.licao_numero || 'Lição'} • {formatDateLocal(licao.data)}</p>
+                                                    <p className="font-extrabold text-xs text-slate-800">{licao.revista || 'Revista EBD'}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold">{licao.licao_numero || 'Lição'} • {formatDateLocal(licao.data)}</p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {det?.presente ? (
-                                                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-emerald-100">✔ Presente</span>
+                                                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-emerald-100">✔ Presente</span>
                                                     ) : (
-                                                        <span className="px-2 py-0.5 bg-rose-55 text-rose-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-rose-100">❌ Ausente</span>
+                                                        <span className="px-2.5 py-0.5 bg-rose-50 text-rose-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-rose-100">❌ Ausente</span>
                                                     )}
-                                                    {det?.trouxeBiblia && <span className="text-xs" title="Trouxe Bíblia">📖</span>}
-                                                    {det?.trouxeRevista && <span className="text-xs" title="Trouxe Revista">📚</span>}
-                                                    {det?.oferta && <span className="text-xs" title="Ofertou">🪙</span>}
+                                                    {det?.trouxeBiblia && <span className="text-xs select-none" title="Trouxe Bíblia">📖</span>}
+                                                    {det?.trouxeRevista && <span className="text-xs select-none" title="Trouxe Revista">📚</span>}
+                                                    {det?.oferta && <span className="text-xs select-none" title="Ofertou">🪙</span>}
                                                 </div>
                                             </div>
                                         );
@@ -1052,11 +1117,12 @@ Gere em formatação simples e amigável.`;
                             </div>
                         </div>
 
-                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
-                            <Button onClick={() => setAlunoHistoryModalOpen(false)} variant="primary" className="px-8">Fechar Ficha</Button>
+                        <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex justify-end shrink-0">
+                            <Button onClick={() => setAlunoHistoryModalOpen(false)} variant="primary" className="px-8 text-xs font-black uppercase tracking-wider">Fechar Ficha</Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
