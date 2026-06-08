@@ -42,6 +42,8 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+import { InteractiveWindow } from './InteractiveWindow';
+
 // Exporting component
 const ModuleBoletim = () => {
     const { db, user, setDoc, doc, dbFirestore, appId, addToast, isOnline } = useContext(ChurchContext);
@@ -1022,111 +1024,102 @@ const ModuleBoletim = () => {
                 <p>© {currentYear} {db.igreja?.nome}. Todos os direitos reservados.</p>
             </footer>
 
-            {/* MODAL MODERN GLASSMORPHISM - MODO LEITURA */}
+            {/* INTERACTIVE WINDOW - MODO LEITURA INFORMATIVO DIGITAL */}
             {readerItem && createPortal(
-                <div 
-                    id="reading-mode-modal"
-                    className={`fixed inset-0 z-[11000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md transition-all duration-300 animate-entrance ${isBoletimFullscreen ? 'p-0' : 'p-4'}`}
-                    onClick={() => setReaderItem(null)}
+                <InteractiveWindow
+                    id="member_portal_boletim_read"
+                    title={readerItem.titulo}
+                    subtitle={`Informativo GIPP • ${readerItem.tipo || 'Boletim'}`}
+                    onClose={() => { setReaderItem(null); setIsBoletimFullscreen(false); }}
+                    icon={Newspaper}
+                    headerBg={readerItem.color ? `from-${readerItem.color}-600 via-${readerItem.color}-700 to-slate-950` : "from-indigo-600 via-indigo-700 to-slate-950"}
+                    defaultWidth={900}
+                    defaultHeight={700}
+                    footer={
+                        <div className="flex gap-2.5">
+                            <button 
+                                onClick={() => {
+                                    const shareText = `*${readerItem.titulo}*\n📌 *${readerItem.tipo || 'Boletim'}*\n\n📅 *Data:* ${readerItem.data ? formatDateLocal(readerItem.data) : 'Programação Fixa'}\n⏰ *Horário:* ${readerItem.hora || ''}\n📍 *Local:* ${readerItem.local || ''}\n\n_${readerItem.desc || readerItem.descricao || ''}_`;
+                                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+                                }}
+                                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 font-bold text-xs text-white rounded-xl transition-all flex items-center gap-2 active:scale-95 cursor-pointer shadow-md shadow-emerald-500/10"
+                            >
+                                <Share2 size={14}/> Compartilhar WhatsApp
+                            </button>
+                            <button 
+                                onClick={() => { setReaderItem(null); setIsBoletimFullscreen(false); }}
+                                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700 rounded-xl transition-all border border-slate-200 cursor-pointer active:scale-95"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    }
                 >
-                    <div 
-                        className={`relative bg-white/10 backdrop-blur-2xl border border-white/20 overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col ${isBoletimFullscreen ? 'w-full max-w-full h-full max-h-screen rounded-none' : 'w-full max-w-2xl rounded-[2.5rem]'}`}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Header/Banner do Modal de Leitura */}
-                        <div className={`relative overflow-hidden flex items-center justify-center p-6 shrink-0 transition-all duration-350 ${isBoletimFullscreen ? 'h-52 md:h-64' : 'h-40 md:h-48'} ${readerItem.imagem ? '' : (readerItem.color ? `bg-${readerItem.color}-600/50` : 'bg-indigo-600/50')}`}>
+                    <div className="flex flex-col h-full bg-slate-50 overflow-hidden rounded-2xl border border-slate-200/50">
+                        {/* Banner do Informativo */}
+                        <div className="relative overflow-hidden flex items-center justify-center p-8 shrink-0 h-44 md:h-52">
                             {readerItem.imagem ? (
                                 <div className="absolute inset-0 w-full h-full">
-                                    <img src={readerItem.imagem} className="w-full h-full object-cover" alt={readerItem.titulo} />
+                                    <img src={readerItem.imagem} className="w-full h-full object-cover" alt={readerItem.titulo} referrerPolicy="no-referrer" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
                                 </div>
                             ) : (
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-800/40 to-purple-800/40"></div>
+                                <div className={`absolute inset-0 bg-gradient-to-br from-indigo-800 via-${readerItem.color || 'indigo'}-900 to-slate-950`}></div>
                             )}
                             
-                            <div className="relative z-10 text-center text-white p-4">
-                                <span className="text-[10px] uppercase font-black tracking-widest bg-white/25 border border-white/25 px-3 py-1 rounded-full backdrop-blur-md mb-2 inline-block">
+                            <div className="relative z-10 text-center text-white max-w-xl px-4">
+                                <span className="text-[10px] uppercase font-black tracking-widest bg-white/20 border border-white/20 px-3.5 py-1 rounded-full backdrop-blur-md mb-2 inline-block">
                                     {readerItem.tipo || 'Boletim'}
                                 </span>
-                                <h3 className={`font-black tracking-tight drop-shadow-md leading-tight transition-all ${isBoletimFullscreen ? 'text-2xl md:text-5xl' : 'text-xl md:text-3xl'}`}>{readerItem.titulo}</h3>
-                            </div>
-                            
-                            <div className="absolute top-6 right-6 flex items-center gap-2 z-30">
-                                <button 
-                                    onClick={() => setIsBoletimFullscreen(prev => !prev)}
-                                    className="p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-all border border-white/10 cursor-pointer"
-                                    title={isBoletimFullscreen ? "Minimizar" : "Tela Cheia"}
-                                >
-                                    {isBoletimFullscreen ? <Minimize size={18}/> : <Maximize size={18}/>}
-                                </button>
-                                <button 
-                                    onClick={() => { setReaderItem(null); setIsBoletimFullscreen(false); }}
-                                    className="p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-all border border-white/10 cursor-pointer"
-                                    title="Fechar"
-                                >
-                                    <X size={18}/>
-                                </button>
+                                <h3 className="font-extrabold tracking-tight drop-shadow-md leading-tight text-xl md:text-3xl text-white">
+                                    {readerItem.titulo}
+                                </h3>
                             </div>
                         </div>
-                        
-                        {/* Conteúdo do Modal de Leitura */}
-                        <div className={`p-8 text-white space-y-6 overflow-y-auto custom-scrollbar flex-1 transition-all duration-300 ${isBoletimFullscreen ? 'max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-240px)] py-12 px-12 md:px-24' : 'max-h-[50vh]'}`}>
-                            <div className="space-y-4">
-                                <p className={`leading-relaxed text-slate-100 font-medium whitespace-pre-line transition-all duration-300 ${isBoletimFullscreen ? 'text-lg md:text-2xl' : 'text-sm md:text-base'}`}>
+
+                        {/* Conteúdo do Informativo */}
+                        <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+                            <div className="prose prose-slate max-w-none">
+                                <p className="leading-relaxed text-slate-705 font-medium whitespace-pre-line text-xs md:text-sm">
                                     {readerItem.desc || readerItem.descricao || "Sem detalhes descritivos cadastrados."}
                                 </p>
                             </div>
                             
-                            {/* Metadados do Evento no Modo Leitura */}
+                            {/* Metadados do Evento de forma elegante */}
                             {(readerItem.data || readerItem.hora || readerItem.local) && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/15 text-xs font-bold text-slate-200">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-slate-100 text-xs font-bold text-slate-600">
                                     {readerItem.data && (
-                                        <div className="flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
-                                            <Calendar size={16} className="text-indigo-300"/>
-                                            <span>Data: {formatDateLocal(readerItem.data)}</span>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/60 shadow-inner">
+                                            <Calendar size={18} className="text-indigo-600"/>
+                                            <div>
+                                                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block">Data oficial</div>
+                                                <span className="text-slate-700">{formatDateLocal(readerItem.data)}</span>
+                                            </div>
                                         </div>
                                     )}
                                     {readerItem.hora && (
-                                        <div className="flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
-                                            <Clock size={16} className="text-indigo-300"/>
-                                            <span>Horário: {readerItem.hora}</span>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/60 shadow-inner">
+                                            <Clock size={18} className="text-indigo-600"/>
+                                            <div>
+                                                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block">Horário</div>
+                                                <span className="text-slate-700">{readerItem.hora}</span>
+                                            </div>
                                         </div>
                                     )}
                                     {readerItem.local && (
-                                        <div className="sm:col-span-2 flex items-center gap-2.5 bg-white/5 p-3.5 rounded-2xl border border-white/10 shadow-inner">
-                                            <MapPin size={16} className="text-indigo-300"/>
-                                            <span className="truncate">Local: {readerItem.local}</span>
+                                        <div className="sm:col-span-2 flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/60 shadow-inner">
+                                            <MapPin size={18} className="text-indigo-600"/>
+                                            <div className="min-w-0">
+                                                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block">Localização</div>
+                                                <span className="text-slate-700 truncate block">{readerItem.local}</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             )}
                         </div>
-                        
-                        {/* Rodapé do Modal com Compartilhamento e Fechar */}
-                        <div className="p-6 bg-black/40 border-t border-white/10 flex flex-wrap gap-4 items-center justify-between shrink-0">
-                            <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">
-                                GIPP • Modo Leitura Glassmorphism
-                            </span>
-                            <div className="flex gap-2.5">
-                                <button 
-                                    onClick={() => {
-                                        const shareText = `*${readerItem.titulo}*\n📌 *${readerItem.tipo || 'Boletim'}*\n\n📅 *Data:* ${readerItem.data ? formatDateLocal(readerItem.data) : 'Programação Fixa'}\n⏰ *Horário:* ${readerItem.hora || ''}\n📍 *Local:* ${readerItem.local || ''}\n\n_${readerItem.desc || readerItem.descricao || ''}_`;
-                                        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
-                                    }}
-                                    className="px-4.5 py-2.5 bg-emerald-500 hover:bg-emerald-600 font-bold text-xs text-white rounded-xl transition-all flex items-center gap-2 border border-emerald-400/20 active:scale-95 cursor-pointer shadow-sm shadow-emerald-500/10 animate-pulse"
-                                >
-                                    <Share2 size={14}/> Compartilhar WhatsApp
-                                </button>
-                                <button 
-                                    onClick={() => { setReaderItem(null); setIsBoletimFullscreen(false); }}
-                                    className="px-4.5 py-2.5 bg-white/10 hover:bg-white/20 font-bold text-xs text-slate-300 rounded-xl transition-all border border-white/20 cursor-pointer active:scale-95"
-                                >
-                                    Fechar
-                                </button>
-                            </div>
-                        </div>
                     </div>
-                </div>,
+                </InteractiveWindow>,
                 document.body
             )}
         </div>
