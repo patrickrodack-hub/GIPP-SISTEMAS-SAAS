@@ -1,62 +1,47 @@
-import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { toPng, toJpeg, toBlob } from 'html-to-image';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { 
-  PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line
-} from 'recharts';
-import { 
-  LayoutDashboard, Users, Building2, CreditCard, FileText, Settings, 
-  LogOut, ChevronDown, ChevronRight, Plus, Edit, Trash2, Printer, 
-  Search, Menu, X, DollarSign, BookOpen, Globe, Calendar, UserCheck, 
-  CheckCircle, AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter, MapPin, Briefcase, Heart, GraduationCap, Shield, Download,
-  ClipboardList, Gift, PieChart as PieChartIcon, Upload, Image as ImageIcon, Database, Save, RefreshCw, Trash,
-  Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
-  CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
-  FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
-  MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
-  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
-  TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
-  MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
-  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
-  LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
-  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  BookOpen, ChevronDown, ChevronRight, ChevronLeft, Award, HelpCircle, 
+  Loader2, DownloadCloud, Copy, Book, TrendingUp, User, Star, CheckCheck, AlertTriangle
 } from 'lucide-react';
 
 import { 
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 
-  setDoc, onSnapshot, query, writeBatch, where, getDocs,
-  enableIndexedDbPersistence
+  collection, doc, setDoc, getDocs
 } from 'firebase/firestore';
 
-import { preprocessImage, storeMedia, getMedia, clearMedia, getAllKeys } from '../lib/indexedDbService';
+import { storeMedia, getMedia, getAllKeys } from '../lib/indexedDbService';
 
 import {
-  ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
-  Button, FormInput, FormSelect, BackupModal, ConfirmModal,
-  GenericTable, GenericModal, PageBoundaryIndicators, DocumentPreviewModal, PrintSystem,
-  AutocompleteRecipient, SharedEmailModule,
-  playMenuSound, playNotificationSound, getTodayDate, formatDateLocal, isValidCPF, formatCPF,
-  copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
+  ChurchContext, CachedImage, callGeminiAI,
+  Button, playMenuSound, playNotificationSound,
+  copyToClipboard
 } from '../App';
 
 import { BIBLE_BOOKS } from './ModuleDevSuporte';
 
 // Exporting component
 const ModuleBiblia = () => {
-    const { addToast, isOnline } = useContext(ChurchContext);
-    const [selectedBook, setSelectedBook] = useState(null);
-    const [selectedChapter, setSelectedChapter] = useState(null);
-    const [readingData, setReadingData] = useState(null); // Text and Study
-    const [readingPages, setReadingPages] = useState([]); // NOVO: Paginação
-    const [currentReadingPage, setCurrentReadingPage] = useState(0); // NOVO: Paginação
-    const [isLoading, setIsLoading] = useState(false);
+    const { db, setDoc, doc, dbFirestore, appId, user, addToast, isOnline } = useContext(ChurchContext);
+    const [selectedBook, setSelectedBook] = useState<any>(null);
+    const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+    const [readingData, setReadingData] = useState<any>(null); // Text and Study
+    const [readingPages, setReadingPages] = useState<string[]>([]); // NOVO: Paginação
+    const [currentReadingPage, setCurrentReadingPage] = useState<number>(0); // NOVO: Paginação
+    const [isLoading, setIsLoading] = useState<boolean>(false);
 
     // Recursos de Caching & Modo Offline
     const [cachedChapters, setCachedChapters] = useState<Set<string>>(new Set());
     const [downloadingBook, setDownloadingBook] = useState<string | null>(null);
     const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
+
+    // Estados de Gamificação (Modo Gremiaçao/Estudos)
+    const [sidebarTab, setSidebarTab] = useState<'books' | 'achievements'>('books');
+    const [currentQuizQuestions, setCurrentQuizQuestions] = useState<any[] | null>(null);
+    const [activeQuizMode, setActiveQuizMode] = useState<boolean>(false);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+    const [selectedOption, setSelectedOption] = useState<number | null>(null);
+    const [quizScore, setQuizScore] = useState<number>(0);
+    const [quizComplete, setQuizComplete] = useState<boolean>(false);
+    const [quizFailed, setQuizFailed] = useState<boolean>(false);
 
     const updateCachedChapters = async () => {
         try {
@@ -72,6 +57,42 @@ const ModuleBiblia = () => {
         updateCachedChapters();
     }, []);
 
+    // Sincronização Inteligente do Cache Bíblico Compartilhado
+    useEffect(() => {
+        if (!isOnline || !dbFirestore || !appId) return;
+
+        const syncSharedBibleCache = async () => {
+            try {
+                const keys = await getAllKeys();
+                const localKeysSet = new Set(keys.filter(k => k.startsWith('bible_study_')));
+
+                const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'biblia_estudo_cache');
+                const snapshot = await getDocs(colRef);
+
+                let docAdded = 0;
+                for (const docSnap of snapshot.docs) {
+                    const data = docSnap.data();
+                    if (data && data.key && data.content && !localKeysSet.has(data.key)) {
+                        await storeMedia(data.key, data.content);
+                        docAdded++;
+                    }
+                }
+                if (docAdded > 0) {
+                    console.log(`[Backup Bíblico] ${docAdded} capítulos de estudos bíblicos novos sincronizados para acesso offline do portal!`);
+                    updateCachedChapters();
+                }
+            } catch (err) {
+                console.error("Erro na sincronização da Bíblia offline compartilhada:", err);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            syncSharedBibleCache();
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, [isOnline, dbFirestore, appId]);
+
     const vtBooks = BIBLE_BOOKS.filter(b => b.test === 'VT');
     const ntBooks = BIBLE_BOOKS.filter(b => b.test === 'NT');
 
@@ -80,9 +101,28 @@ const ModuleBiblia = () => {
         let contexto = "";
         let esboco = "";
         let conclusao = "";
+        let quizList = null;
 
         try {
-            const p1 = content.split('[CONTEXTO]');
+            let cleanContent = content;
+            if (content.includes('[QUIZ]')) {
+                const parts = content.split('[QUIZ]');
+                cleanContent = parts[0];
+                try {
+                    const jsonText = parts[1].trim();
+                    let cleanJson = jsonText;
+                    if (cleanJson.includes('```json')) {
+                        cleanJson = cleanJson.split('```json')[1].split('```')[0].trim();
+                    } else if (cleanJson.includes('```')) {
+                        cleanJson = cleanJson.split('```')[1].split('```')[0].trim();
+                    }
+                    quizList = JSON.parse(cleanJson);
+                } catch (err) {
+                    console.error("Falha ao parsear quiz JSON:", err);
+                }
+            }
+
+            const p1 = cleanContent.split('[CONTEXTO]');
             texto = p1[0].replace('[TEXTO]', '').trim();
             
             const p2 = p1[1].split('[ESBOCO]');
@@ -92,7 +132,6 @@ const ModuleBiblia = () => {
             esboco = p3[0].trim();
             conclusao = p3[1].trim();
         } catch (e) {
-            // Fallback de segurança caso a IA omita as tags
             texto = content;
         }
 
@@ -103,6 +142,45 @@ const ModuleBiblia = () => {
         
         for (let i = 0; i < textLines.length; i += LINES_PER_PAGE) {
             textPages.push(textLines.slice(i, i + LINES_PER_PAGE).join('\n'));
+        }
+
+        // Configurar Quiz Questions
+        if (quizList && Array.isArray(quizList) && quizList.length === 3) {
+            setCurrentQuizQuestions(quizList);
+        } else {
+            // Fallback default quiz
+            setCurrentQuizQuestions([
+                {
+                    "q": "Qual é a atitude do coração que mais edifica ao ler, pregar ou estudar as Escrituras Sagradas?",
+                    "options": [
+                        "Efetuar a leitura de forma rápida, puramente acadêmica ou fria",
+                        "Meditar profundamente com espírito submisso, aplicando os preceitos éticos na retidão e prática diária",
+                        "Desprezar o estudo histórico das notas ou debater vazios literários",
+                        "Simplesmente acumular pontos para autoafirmação teológica"
+                    ],
+                    "answer": 1
+                },
+                {
+                    "q": "Segundo as exposições e estudos oferecidos, de que forma o crente obtém crescimento em sua caminhada?",
+                    "options": [
+                        "Dedicando-se à leitura assídua das escrituras, comunhão viva na igreja, oração e Escola Dominical",
+                        "Afastando-se de qualquer tipo de comunhão pastoral ou eclesiástica",
+                        "Debatendo apenas as traduções gregas sem demonstrar amor ao irmão",
+                        "Não assumindo nenhum compromisso litúrgico"
+                    ],
+                    "answer": 0
+                },
+                {
+                    "q": "Qual o principal propósito para o estudo sistematizado dos Esboços de Pregação gerados em cada capítulo?",
+                    "options": [
+                        "Capacitar o obreiro e o crente a compreender e anunciar em fidelidade as mensagens eternas de Deus",
+                        "Disputar com outras igrejas em retórica teórica fria",
+                        "Estimular discussões vazias sobre versos soltos",
+                        "Excluir-se de cultos pastorais presenciais"
+                    ],
+                    "answer": 0
+                }
+            ]);
         }
 
         // Unir todas as páginas (Texto 1..N, Contexto, Esboço, Conclusão)
@@ -120,6 +198,12 @@ const ModuleBiblia = () => {
         setReadingData(null);
         setReadingPages([]);
         setCurrentReadingPage(0);
+        setActiveQuizMode(false);
+        setCurrentQuestionIndex(0);
+        setSelectedOption(null);
+        setQuizScore(0);
+        setQuizComplete(false);
+        setQuizFailed(false);
 
         const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${chapter}`;
         
@@ -171,7 +255,29 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 
 [CONCLUSAO]
 ## 💡 Conclusão e Aplicação
-[Resumo de como aplicar a mensagem hoje na igreja]`;
+[Resumo de como aplicar a mensagem hoje na igreja]
+
+[QUIZ]
+[Escreva uma lista com exatamente 3 perguntas de múltipla escolha baseadas rigorosamente no texto bíblico e notas de estudo geradas acima, no formato JSON estrito, sem textos adicionais antes ou depois da lista JSON. Exemplo de formato:
+[
+  {
+    "q": "Qual é a primeira pergunta?",
+    "options": ["Opção 1", "Opção 2", "Opção 3", "Opção 4"],
+    "answer": 0
+  },
+  {
+    "q": "Qual é a segunda pergunta?",
+    "options": ["Opção 1", "Opção 2", "Opção 3", "Opção 4"],
+    "answer": 1
+  },
+  {
+    "q": "Qual é a terceira pergunta?",
+    "options": ["Opção 1", "Opção 2", "Opção 3", "Opção 4"],
+    "answer": 2
+  }
+]
+]
+`;
 
             const result = await callGeminiAI(prompt, 3);
             if (!result) {
@@ -180,6 +286,23 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
             
             // Grava no IndexedDB automaticamente para uso offline futuro
             await storeMedia(cacheKey, result);
+
+            // Grava compartilhado no Firestore para que todos os membros tenham acesso imediato offline!
+            if (dbFirestore && appId) {
+                try {
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'biblia_estudo_cache', cacheKey), {
+                        key: cacheKey,
+                        content: result,
+                        bookName: book.name,
+                        chapter: chapter,
+                        cachedBy: user?.nome || 'Membro',
+                        createdAt: new Date().toISOString()
+                    });
+                } catch (e) {
+                    console.error("Erro ao salvar cache de estudos no Firestore:", e);
+                }
+            }
+
             updateCachedChapters();
 
             const parsedPages = parseStudyContent(result);
@@ -205,7 +328,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 
         setDownloadingBook(book.name);
         setDownloadProgress({ current: 1, total: book.chapters });
-        addToast(`Iniciando download de ${book.name} (${book.chapters} capítulos)...`, "info");
+        addToast(`Iniciando download completo de ${book.name} (${book.chapters} capítulos) com IA de Estudo...`, "info");
 
         let successCount = 0;
         
@@ -220,8 +343,8 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                     continue;
                 }
 
-                const prompt = `Atue como a Bíblia Sagrada na versão NVI (Nova Versão Internacional) e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
-                
+                const prompt = `Atue como a Bíblia Sagrada na versão NVI e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
+            
 POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
 
 [TEXTO]
@@ -235,12 +358,11 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 
 [ESBOCO]
 ## 📝 Esboço Homilético
-**Tema Sugerido:** [Título impactante para pregar sobre este capítulo]
-**Texto-Base:** [Versículo chave do capítulo]
+**Tema Sugerido:** [Tema sobre este capítulo]
+**Texto-Base:** [Versão homilética do capítulo]
 
 **I. [Primeiro Tópico Principal]**
 - [Breve explicação]
-- [Referência cruzada]
 
 **II. [Segundo Tópico Principal]**
 - [Breve explicação]
@@ -250,11 +372,40 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 
 [CONCLUSAO]
 ## 💡 Conclusão e Aplicação
-[Resumo de como aplicar a mensagem hoje na igreja]`;
+[Resumo de como aplicar a mensagem hoje na igreja]
+
+[QUIZ]
+[Escreva exatamente 3 perguntas de múltipla escolha baseadas rigorosamente no texto bíblico e notas de estudo, em JSON estrito. Exemplo:
+[
+  {
+    "q": "Qual é a pergunta?",
+    "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
+    "answer": 0
+  },
+  ... (repetir 3 vezes)
+]
+]`;
 
                 const result = await callGeminiAI(prompt, 3);
                 if (result) {
                     await storeMedia(cacheKey, result);
+
+                    // Sincroniza sincronamente com a nuvem para toda a membresia do portal usar
+                    if (dbFirestore && appId) {
+                        try {
+                            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'biblia_estudo_cache', cacheKey), {
+                                key: cacheKey,
+                                content: result,
+                                bookName: book.name,
+                                chapter: cap,
+                                cachedBy: user?.nome || 'Membro',
+                                createdAt: new Date().toISOString()
+                            });
+                        } catch (e) {
+                            console.error("Erro no download compartilhado no Firestore:", e);
+                        }
+                    }
+
                     successCount++;
                 }
                 
@@ -265,9 +416,112 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
             }
         }
 
-        addToast(`Download concluído! ${successCount} de ${book.chapters} capítulos estão agora em cache offline!`, "success");
+        addToast(`Download concluído! ${successCount} de ${book.chapters} capítulos de ${book.name} salvos offline localmente e no portal!`, "success");
         setDownloadingBook(null);
         updateCachedChapters();
+    };
+
+    // Metricas do perfil de gamificação
+    const profile = db.membros?.find((m: any) => m.id === user?.id) || user || {};
+    const biblePoints = profile.biblia_pontos || 0;
+    const completedChapters = profile.biblia_capitulos_concluidos || [];
+
+    const getFaithLevel = (xp: number) => {
+        if (xp >= 5000) return { title: "Doutor da Lei (Bereia)", color: "text-amber-500", border: "border-amber-500", bg: "bg-amber-500/10", nextXp: 10000 };
+        if (xp >= 2000) return { title: "Bereano Sábio", color: "text-emerald-500", border: "border-emerald-500", bg: "bg-emerald-500/10", nextXp: 5000 };
+        if (xp >= 800) return { title: "Discípulo Fiel", color: "text-indigo-500", border: "border-indigo-500", bg: "bg-indigo-500/10", nextXp: 2000 };
+        if (xp >= 200) return { title: "Buscador da Verdade", color: "text-blue-500", border: "border-blue-500", bg: "bg-blue-500/10", nextXp: 800 };
+        return { title: "Estudante e Recruta", color: "text-slate-500", border: "border-slate-300", bg: "bg-slate-500/10", nextXp: 200 };
+    };
+
+    const faithLevel = getFaithLevel(biblePoints);
+    const progressToNextLevel = Math.min(100, Math.round((biblePoints / faithLevel.nextXp) * 100));
+
+    // Ranking de Outros Membros (Gremiação/Gamificação)
+    const leaderboard = useMemo(() => {
+        return (db.membros || [])
+            .map((m: any) => ({
+                id: m.id,
+                nome: m.nome,
+                foto: m.foto,
+                pontos: m.biblia_pontos || 0,
+                caps: (m.biblia_capitulos_concluidos || []).length
+            }))
+            .filter((m: any) => m.pontos > 0)
+            .sort((a: any, b: any) => b.pontos - a.pontos);
+    }, [db.membros]);
+
+    // Responder alternativa do Quiz
+    const handleAnswerQuestion = (idx: number) => {
+        if (quizComplete || quizFailed) return;
+        setSelectedOption(idx);
+    };
+
+    // Submete a pergunta atual do Quiz
+    const handleNextQuestion = async () => {
+        if (selectedOption === null) {
+            addToast("Selecione uma alternativa antes de continuar.", "warning");
+            return;
+        }
+
+        const currentQ = currentQuizQuestions ? currentQuizQuestions[currentQuestionIndex] : null;
+        if (!currentQ) return;
+        const isCorrect = selectedOption === currentQ.answer;
+        
+        let newScore = quizScore;
+        if (isCorrect) {
+            newScore += 1;
+            setQuizScore(newScore);
+            addToast("Correto! Muito bem!", "success");
+            playNotificationSound();
+        } else {
+            addToast("Alternativa incorreta. Continue estudando!", "warning");
+        }
+
+        const nextIdx = currentQuestionIndex + 1;
+        if (currentQuizQuestions && nextIdx < currentQuizQuestions.length) {
+            setCurrentQuestionIndex(nextIdx);
+            setSelectedOption(null);
+        } else {
+            // Fim do Quiz
+            if (newScore >= 2) {
+                // Aprovado (70% ou mais)
+                setQuizComplete(true);
+                const chapterKey = `${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`;
+                
+                if (!completedChapters.includes(chapterKey)) {
+                    const updatedChapters = [...completedChapters, chapterKey];
+                    const updatedPoints = biblePoints + 100;
+                    
+                    try {
+                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', user.id), {
+                            biblia_pontos: updatedPoints,
+                            biblia_capitulos_concluidos: updatedChapters
+                        }, { merge: true });
+                        addToast("Parabéns! Capítulo estudado de forma aprovada (+100 XP)", "success");
+                    } catch (err) {
+                        console.error("Erro ao salvar progresso bíblico do membro:", err);
+                    }
+                }
+            } else {
+                setQuizFailed(true);
+                addToast("Você necessita pelo menos acertar 2 questões para concluir.", "warning");
+            }
+        }
+    };
+
+    const handleStartQuiz = () => {
+        if (!currentQuizQuestions) {
+            addToast("Os desafios bíblicos não estão prontos para este capítulo.", "warning");
+            return;
+        }
+        playMenuSound();
+        setActiveQuizMode(true);
+        setCurrentQuestionIndex(0);
+        setSelectedOption(null);
+        setQuizScore(0);
+        setQuizComplete(false);
+        setQuizFailed(false);
     };
 
     return (
@@ -287,78 +541,161 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                     )}
                 </div>
 
+                {/* TAB SELECTOR DA BARRA LATERAL (MODO DIRETO / GAMIFICAÇÃO) */}
+                <div className="flex bg-slate-100 border-b border-[#e5e0d8] p-1.5 gap-1 select-none text-[11px] font-bold tracking-wider uppercase">
+                    <button 
+                        onClick={() => setSidebarTab('books')}
+                        className={`flex-1 py-2 rounded-lg text-center transition-all ${sidebarTab === 'books' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:bg-slate-200/50'}`}
+                    >
+                        📖 Livros
+                    </button>
+                    <button 
+                        onClick={() => setSidebarTab('achievements')}
+                        className={`flex-1 py-2 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${sidebarTab === 'achievements' ? 'bg-amber-500 text-white shadow' : 'text-slate-500 hover:bg-slate-200/50'}`}
+                    >
+                        🏆 Conquistas
+                    </button>
+                </div>
+
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 relative">
-                    {!selectedBook ? (
-                        <div className="space-y-6 pb-6">
-                            <div>
-                                <h3 className="font-bold text-xs uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-200 pb-2">Antigo Testamento</h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {vtBooks.map(b => (
-                                        <button key={b.name} onClick={() => setSelectedBook(b)} className="text-left p-2 rounded-lg text-sm font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border border-transparent hover:border-amber-200">
-                                            {b.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-xs uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-200 pb-2">Novo Testamento</h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {ntBooks.map(b => (
-                                        <button key={b.name} onClick={() => setSelectedBook(b)} className="text-left p-2 rounded-lg text-sm font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border border-transparent hover:border-amber-200">
-                                            {b.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="animate-slideRight">
-                            <button onClick={() => { setSelectedBook(null); setSelectedChapter(null); setReadingData(null); }} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 mb-4 px-2 py-1 bg-slate-50 rounded-lg w-full border border-slate-200">
-                                <ChevronLeft size={16}/> Voltar ao Índice
-                            </button>
-                            
-                            <div className="flex items-center justify-between mb-4 px-2">
-                                <h3 className="font-serif text-2xl font-black text-slate-800">{selectedBook.name}</h3>
-                                {downloadingBook === selectedBook.name ? (
-                                    <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-700 font-bold px-2 py-1 rounded-lg flex items-center gap-1 animate-pulse">
-                                        <Loader2 size={10} className="animate-spin" />
-                                        <span>{downloadProgress.current}/{downloadProgress.total}</span>
+                    {sidebarTab === 'books' ? (
+                        <>
+                            {!selectedBook ? (
+                                <div className="space-y-6 pb-6">
+                                    <div>
+                                        <h3 className="font-bold text-xs uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-200 pb-2">Antigo Testamento</h3>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {vtBooks.map(b => (
+                                                <button key={b.name} onClick={() => setSelectedBook(b)} className="text-left p-2 rounded-lg text-sm font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border border-transparent hover:border-amber-200">
+                                                    {b.name}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <button 
-                                        onClick={() => handleDownloadBookOffline(selectedBook)} 
-                                        className="text-xs flex items-center gap-1 font-bold text-amber-600 hover:text-amber-750 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 transition-colors shadow-xs"
-                                        title="Baixar todos os capítulos deste livro para estudar offline"
-                                    >
-                                        <DownloadCloud size={14} /> <span className="hidden sm:inline">Baixar Livro</span>
+                                    <div>
+                                        <h3 className="font-bold text-xs uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-200 pb-2">Novo Testamento</h3>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {ntBooks.map(b => (
+                                                <button key={b.name} onClick={() => setSelectedBook(b)} className="text-left p-2 rounded-lg text-sm font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border border-transparent hover:border-amber-200">
+                                                    {b.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="animate-entrance">
+                                    <button onClick={() => { setSelectedBook(null); setSelectedChapter(null); setReadingData(null); }} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 mb-4 px-2 py-1 bg-slate-50 rounded-lg w-full border border-slate-200">
+                                        <ChevronLeft size={16}/> Voltar ao Índice
                                     </button>
-                                )}
+                                    
+                                    <div className="flex items-center justify-between mb-4 px-2">
+                                        <h3 className="font-serif text-2xl font-black text-slate-800">{selectedBook.name}</h3>
+                                        {downloadingBook === selectedBook.name ? (
+                                            <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-700 font-bold px-2 py-1 rounded-lg flex items-center gap-1 animate-pulse">
+                                                <Loader2 size={10} className="animate-spin" />
+                                                <span>{downloadProgress.current}/{downloadProgress.total}</span>
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleDownloadBookOffline(selectedBook)} 
+                                                className="text-xs flex items-center gap-1 font-bold text-amber-600 hover:text-amber-750 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 transition-colors shadow-xs"
+                                                title="Baixar todos os capítulos deste livro para estudar offline"
+                                            >
+                                                <DownloadCloud size={14} /> <span className="hidden sm:inline">Baixar Livro</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(cap => {
+                                            const keyToCheck = `${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+                                            const isStudied = completedChapters.includes(keyToCheck);
+                                            const cacheKey = `bible_study_${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+                                            const isChapterCached = cachedChapters.has(cacheKey);
+                                            return (
+                                                <button 
+                                                    key={cap} 
+                                                    onClick={() => handleSelectChapter(selectedBook, cap)}
+                                                    className={`relative aspect-square rounded-xl font-bold flex flex-col items-center justify-center transition-all border shadow-sm ${selectedChapter === cap ? 'bg-slate-900 text-white border-slate-900 scale-110' : 'bg-white text-slate-700 hover:bg-amber-100 hover:border-amber-300 border-slate-200'}`}
+                                                >
+                                                    <span className={`${isStudied ? "text-amber-500 line-through decoration-amber-500 mr-1" : ""}`}>{cap}</span>
+                                                    {isChapterCached && (
+                                                        <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-emerald-500" title="Disponível Offline" />
+                                                    )}
+                                                    {isStudied && (
+                                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-amber-500 flex items-center justify-center border border-white text-[6px] text-white font-serif">★</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        // MODO GREMIAÇÃO: LISTA DE DESAFIOS E PLACAR DA IGREJA
+                        <div className="space-y-6 pb-6 animate-entrance">
+                            {/* MEU RANKING */}
+                            <div className="p-4 bg-gradient-to-br from-slate-950 to-slate-900 text-white rounded-2xl border border-slate-800 shadow-md">
+                                <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider">Meu Medalheiro</span>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center border border-amber-500/30">
+                                        <Award size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-serif text-lg font-black leading-none">{biblePoints} <span className="text-xs text-slate-400">XP</span></h4>
+                                        <p className="text-[10px] font-bold text-slate-300">{completedChapters.length} capítulos estudados</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase mb-1">
+                                        <span>Nível: {faithLevel.title}</span>
+                                        <span>{progressToNextLevel}%</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-slate-850 rounded-full overflow-hidden">
+                                        <div className="h-full bg-amber-500 transition-all duration-700" style={{ width: `${progressToNextLevel}%` }}></div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div className="grid grid-cols-5 gap-2">
-                                {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(cap => {
-                                    const cacheKey = `bible_study_${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
-                                    const isChapterCached = cachedChapters.has(cacheKey);
-                                    return (
-                                        <button 
-                                            key={cap} 
-                                            onClick={() => handleSelectChapter(selectedBook, cap)}
-                                            className={`relative aspect-square rounded-xl font-bold flex flex-col items-center justify-center transition-all border shadow-sm ${selectedChapter === cap ? 'bg-slate-900 text-white border-slate-900 scale-110' : 'bg-white text-slate-700 hover:bg-amber-100 hover:border-amber-300 border-slate-200'}`}
-                                        >
-                                            <span>{cap}</span>
-                                            {isChapterCached && (
-                                                <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-emerald-500" title="Disponível Offline" />
-                                            )}
-                                        </button>
-                                    );
-                                })}
+
+                            {/* PLACAR DE LIDERANÇA DA IGREJA */}
+                            <div>
+                                <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5 border-b pb-2">
+                                    <TrendingUp size={14} className="text-[#c2410c]" /> Placar de Estudiosos
+                                </h4>
+                                {leaderboard.length === 0 ? (
+                                    <p className="text-[10px] font-medium text-slate-400 text-center py-4 bg-slate-50 rounded-xl border border-slate-200">Comece a fazer desafios e inaugure este ranking!</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {leaderboard.map((m: any, index: number) => (
+                                            <div key={m.id} className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-100 hover:border-amber-200 transition-all shadow-xs">
+                                                <div className="flex items-center gap-2 font-serif">
+                                                    <div className="text-xs font-black w-5 text-center text-slate-500">
+                                                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                                                    </div>
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center border border-slate-200">
+                                                        {m.foto ? <CachedImage src={m.foto} cacheKey={`user_${m.id}_foto`} className="w-full h-full object-cover"/> : <User size={14} className="text-slate-400"/>}
+                                                    </div>
+                                                    <div className="max-w-[120px] truncate">
+                                                        <p className="text-xs font-black text-slate-800 leading-tight truncate font-sans">{m.nome}</p>
+                                                        <p className="text-[9px] font-medium text-slate-400 font-sans">{m.caps} Capítulos</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <span className="text-xs font-serif font-black text-amber-600">{m.pontos} XP</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* ÁREA DE LEITURA (PÁGINA DO LIVRO) */}
+            {/* ÁREA DE LEITURA (PÁGINA DO LIVRO / COMPONENT DE QUIZ) */}
             <div className="flex-1 flex flex-col h-2/3 md:h-full relative overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
                 {isLoading ? (
                     <div className="h-full flex flex-col items-center justify-center text-amber-700 p-10 text-center animate-entrance">
@@ -367,21 +704,119 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                             <BookOpen size={32} className="animate-pulse"/>
                         </div>
                         <h3 className="text-2xl font-black text-slate-800 mb-2 font-serif">Buscando as Escrituras...</h3>
-                        <p className="text-slate-600 font-medium max-w-md">A preparar o capítulo e a redigir as notas de estudo e o esboço homilético para a sua edificação.</p>
+                        <p className="text-slate-600 font-medium max-w-md">Gerando notas do pregador, comentários hermenêuticos e o desafio bíblico inteligente com o GIPP AI.</p>
+                    </div>
+                ) : activeQuizMode && currentQuizQuestions ? (
+                    /* INTERFACE DO DESAFIO DO CAPÍTULO (BÍBLIA DE ESTUDOS) */
+                    <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 md:p-12 items-center justify-center">
+                        <div className="max-w-2xl w-full bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden animate-entrance">
+                            
+                            {/* Header de progresso do Desafio */}
+                            <div className="p-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                                <div className="flex items-center gap-2 font-serif">
+                                    <Award size={20} className="text-amber-500 animate-bounce" />
+                                    <span className="text-xs font-black uppercase tracking-wider font-sans">Desafio Bíblico • {selectedBook?.name} {selectedChapter}</span>
+                                </div>
+                                <span className="text-xs font-black text-slate-400 bg-slate-800 px-3 py-1 rounded">Questão {currentQuestionIndex + 1}/3</span>
+                            </div>
+
+                            <div className="p-8">
+                                {!quizComplete && !quizFailed ? (
+                                    <>
+                                        <h3 className="font-serif text-lg md:text-xl font-bold text-slate-800 mb-6 leading-relaxed">
+                                            {currentQuizQuestions[currentQuestionIndex]?.q}
+                                        </h3>
+
+                                        <div className="space-y-3 font-serif">
+                                            {currentQuizQuestions[currentQuestionIndex]?.options.map((opt: string, idx: number) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleAnswerQuestion(idx)}
+                                                    className={`w-full text-left p-4 rounded-2xl border transition-all text-xs font-bold leading-normal flex items-start gap-3 ${selectedOption === idx ? 'bg-indigo-50 border-indigo-500 text-indigo-750 shadow-xs' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                                                >
+                                                    <span className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center border text-[10px] font-bold ${selectedOption === idx ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-100 border-slate-300 text-slate-500'}`}>
+                                                        {String.fromCharCode(65 + idx)}
+                                                    </span>
+                                                    <span>{opt}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex gap-4 mt-8 pt-4 border-t border-slate-100">
+                                            <Button variant="ghost" onClick={() => setActiveQuizMode(false)} className="flex-1 border text-xs text-slate-500 hover:bg-slate-50">Sair do Desafio</Button>
+                                            <Button variant="primary" onClick={handleNextQuestion} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider">Responder</Button>
+                                        </div>
+                                    </>
+                                ) : quizComplete ? (
+                                    /* SUCESSO DO DESAFIO BÍBLICO */
+                                    <div className="text-center py-6 animate-entrance">
+                                        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-300 shadow-lg">
+                                            <CheckCheck size={40} className="animate-bounce" />
+                                        </div>
+                                        <h3 className="font-serif text-3xl font-black text-slate-800 leading-none">Desafio Vencido!</h3>
+                                        <p className="text-slate-500 text-sm mt-2 max-w-sm mx-auto font-medium">Você concluiu com maestria o estudo bíblico deste capítulo com pontuação de **{quizScore} de 3**!</p>
+                                        
+                                        <div className="mt-6 inline-block bg-amber-50 px-5 py-3 rounded-2xl border border-amber-200 text-center font-bold">
+                                            <span className="text-[10px] block font-black uppercase text-amber-700 tracking-widest">Recompensa Obtida</span>
+                                            <span className="text-2xl font-serif font-black text-amber-800">+100 PONTOS XP</span>
+                                        </div>
+
+                                        <div className="flex gap-4 mt-8 max-w-sm mx-auto">
+                                            <Button variant="primary" onClick={() => { setActiveQuizMode(false); }} className="w-full bg-slate-900 hover:bg-slate-900/90 text-white font-black text-xs uppercase tracking-wider">Voltar para Leitura</Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* FALHA DO DESAFIO BÍBLICO */
+                                    <div className="text-center py-6 animate-entrance">
+                                        <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-300 shadow-lg">
+                                            <AlertTriangle size={40} />
+                                        </div>
+                                        <h3 className="font-serif text-3xl font-black text-slate-800 leading-none font-sans">Estude um Pouco Mais</h3>
+                                        <p className="text-slate-500 text-sm mt-2 max-w-md mx-auto font-medium">Você alcançou **{quizScore} de 3** acertos nesta tentativa. Releia atentamente os esboços e comentários e tente o teste novamente.</p>
+
+                                        <div className="flex gap-4 mt-8 max-w-sm mx-auto">
+                                            <Button variant="ghost" onClick={() => setActiveQuizMode(false)} className="flex-1 border border-slate-200 text-xs">Voltar para Leitura</Button>
+                                            <Button variant="primary" onClick={handleStartQuiz} className="flex-1 bg-amber-500 hover:bg-amber-600 font-extrabold text-xs text-white uppercase tracking-wider">Tentar Novamente</Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 ) : readingPages.length > 0 ? (
                     <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn relative">
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12">
-                            <div className="max-w-3xl mx-auto bg-[#faf8f5] shadow-[0_10px_40px_rgba(0,0,0,0.05)] rounded-sm border border-[#e5e0d8] p-8 md:p-14 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-red-200/50 font-serif">
+                            <div className="max-w-3xl mx-auto bg-[#faf8f5] shadow-[0_10px_40px_rgba(0,0,0,0.05)] rounded-sm border border-[#e5e0d8] p-8 md:p-14 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px]/50 font-serif">
                                 
                                 <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-slate-800/10">
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBook.name} • Capítulo {selectedChapter}</span>
+                                    {completedChapters.includes(`${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`) && (
+                                        <span className="text-[10px] bg-amber-500 text-white font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm font-sans">★ ESTUDADO</span>
+                                    )}
                                     <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded shadow-sm">NVI</span>
                                 </div>
 
-                                <div className="prose prose-lg md:prose-xl max-w-none prose-slate font-serif prose-headings:font-black prose-headings:text-slate-900 prose-p:leading-loose prose-strong:text-slate-900 prose-a:text-amber-600 marker:text-amber-500 whitespace-pre-wrap">
+                                <div className="prose prose-lg md:prose-xl max-w-none prose-slate font-serif prose-headings:font-black prose-headings:text-slate-900 prose-p:leading-loose prose-strong:text-slate-900 prose-a:text-amber-600 marker:text-amber-500 whitespace-pre-wrap animate-entrance">
                                     {readingPages[currentReadingPage]}
                                 </div>
+
+                                {/* CARD DO DESAFIO NO FIM DA LEITURA */}
+                                {currentReadingPage === readingPages.length - 1 && (
+                                    <div className="mt-12 border-t-2 border-dashed border-amber-600/20 pt-8 animate-entrance">
+                                        <div className="bg-amber-50/50 border border-amber-200/60 rounded-3xl p-6 md:p-8 text-center max-w-lg mx-auto shadow-sm">
+                                            <Award size={36} className="text-amber-500 mx-auto mb-3 animate-bounce" />
+                                            <h4 className="font-serif text-xl font-black text-slate-800 leading-tight">Estudo de Compreensão Bíblica</h4>
+                                            <p className="text-slate-500 text-xs mt-2 font-medium max-w-sm mx-auto font-sans">Você completou todos os esboços e tópicos explicativos de {selectedBook.name} {selectedChapter}. Coloque à prova seus conhecimentos para ganhar **+100 XP**!</p>
+                                            
+                                            <button
+                                                onClick={handleStartQuiz}
+                                                className="mt-5 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all font-sans"
+                                            >
+                                                🏆 Iniciar Desafio Bíblico
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                                 
                             </div>
                         </div>
@@ -394,12 +829,12 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                                 variant="ghost"
                                 className="border border-slate-300 bg-white hover:bg-amber-50 text-slate-600"
                             >
-                                <ChevronLeft size={18}/> <span className="hidden sm:inline">Página Anterior</span>
+                                <ChevronLeft size={18}/> <span className="hidden sm:inline font-sans font-bold">Página Anterior</span>
                             </Button>
                             
                             <div className="flex flex-col items-center">
                                 <span className="text-sm font-black text-slate-700 font-serif">
-                                    {currentReadingPage + 1} <span className="text-slate-400 font-medium">de</span> {readingPages.length}
+                                    {currentReadingPage + 1} <span className="text-slate-400 font-medium font-sans">de</span> {readingPages.length}
                                 </span>
                                 <div className="flex gap-1 mt-1">
                                     {readingPages.map((_, idx) => (
@@ -414,7 +849,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                                 variant="primary"
                                 className="shadow-amber-600/30 bg-gradient-to-r from-amber-600 to-orange-600 border-0"
                             >
-                                <span className="hidden sm:inline">Próxima Página</span> <ChevronRight size={18}/>
+                                <span className="hidden sm:inline font-sans font-black text-xs uppercase tracking-widest">Próxima Página</span> <ChevronRight size={18}/>
                             </Button>
                         </div>
                         
@@ -440,6 +875,5 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
         </div>
     );
 };
-
 
 export default ModuleBiblia;
