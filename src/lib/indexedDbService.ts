@@ -96,6 +96,28 @@ export async function clearMedia(key: string): Promise<void> {
 }
 
 /**
+ * Obtém todas as chaves gravadas no cache do IndexedDB
+ */
+export async function getAllKeys(): Promise<string[]> {
+  try {
+    const db = await initDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAllKeys();
+
+      request.onsuccess = () => {
+        resolve(request.result as string[]);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error("Erro ao obter chaves do IndexedDB:", error);
+    return [];
+  }
+}
+
+/**
  * Pré-processa uma imagem no navegador utilizando um componente Canvas HTML5.
  * Redimensiona e comprime (JPEG) para economizar largura de banda e acelerar transfers.
  *

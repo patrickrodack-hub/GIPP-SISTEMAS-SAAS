@@ -47,6 +47,18 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 7.1.0 */}
+            <div className="relative pl-8 border-l-2 border-amber-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-amber-750 font-[Outfit]">v7.1.0 - Bíblia de Estudos Offline NVI (Edição do Pregador) & Prefetch Inteligente EBD</h3>
+                <p className="text-xs text-amber-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans">Bíblia de Estudos Offline:</strong> Suporte nativo completo para estudos bíblicos offline. Permite baixar livros inteiros de forma assíncrona, sincronizando e cacheando os esboços, comentários e versículos diretamente no banco IndexedDB para leitura segura sem internet, incluindo progresso de download e marcadores visuais.</li>
+                    <li><strong className="text-slate-700 font-sans">Pré-carregamento (Prefetch) Inteligente:</strong> Pré-carregamento automático de mídias e capas das lições da EBD em segundo plano ao acessar o portal, zerando o tempo de renderização e garantindo transições instantâneas entre revistas.</li>
+                    <li><strong className="text-slate-700">Otimização de Carregamento Assíncrono:</strong> Implementação de delay inteligente para inicializar rotinas em segundo plano, priorizando o render crítico da interface principal para melhor experiência do usuário (FCP).</li>
+                </ul>
+            </div>
+
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 7.0.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-650 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>

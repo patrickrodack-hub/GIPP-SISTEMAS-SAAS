@@ -30,7 +30,7 @@ import {
   enableIndexedDbPersistence
 } from 'firebase/firestore';
 
-import { preprocessImage, storeMedia, getMedia, clearMedia } from '../lib/indexedDbService';
+import { preprocessImage, storeMedia, getMedia, clearMedia, getAllKeys } from '../lib/indexedDbService';
 
 import {
   ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
@@ -45,7 +45,7 @@ import { BIBLE_BOOKS } from './ModuleDevSuporte';
 
 // Exporting component
 const ModuleBiblia = () => {
-    const { addToast } = useContext(ChurchContext);
+    const { addToast, isOnline } = useContext(ChurchContext);
     const [selectedBook, setSelectedBook] = useState(null);
     const [selectedChapter, setSelectedChapter] = useState(null);
     const [readingData, setReadingData] = useState(null); // Text and Study
@@ -53,17 +53,94 @@ const ModuleBiblia = () => {
     const [currentReadingPage, setCurrentReadingPage] = useState(0); // NOVO: Paginação
     const [isLoading, setIsLoading] = useState(false);
 
+    // Recursos de Caching & Modo Offline
+    const [cachedChapters, setCachedChapters] = useState<Set<string>>(new Set());
+    const [downloadingBook, setDownloadingBook] = useState<string | null>(null);
+    const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
+
+    const updateCachedChapters = async () => {
+        try {
+            const keys = await getAllKeys();
+            const bibleKeys = keys.filter(k => k.startsWith('bible_study_'));
+            setCachedChapters(new Set(bibleKeys));
+        } catch (e) {
+            console.error("Erro ao obter cache do IndexedDB:", e);
+        }
+    };
+
+    useEffect(() => {
+        updateCachedChapters();
+    }, []);
+
     const vtBooks = BIBLE_BOOKS.filter(b => b.test === 'VT');
     const ntBooks = BIBLE_BOOKS.filter(b => b.test === 'NT');
 
-    const handleSelectChapter = async (book, chapter) => {
+    const parseStudyContent = (content: string) => {
+        let texto = "";
+        let contexto = "";
+        let esboco = "";
+        let conclusao = "";
+
+        try {
+            const p1 = content.split('[CONTEXTO]');
+            texto = p1[0].replace('[TEXTO]', '').trim();
+            
+            const p2 = p1[1].split('[ESBOCO]');
+            contexto = p2[0].trim();
+            
+            const p3 = p2[1].split('[CONCLUSAO]');
+            esboco = p3[0].trim();
+            conclusao = p3[1].trim();
+        } catch (e) {
+            // Fallback de segurança caso a IA omita as tags
+            texto = content;
+        }
+
+        // Dividir o texto bíblico em páginas de 50 linhas
+        const textLines = texto.split('\n');
+        const textPages = [];
+        const LINES_PER_PAGE = 50;
+        
+        for (let i = 0; i < textLines.length; i += LINES_PER_PAGE) {
+            textPages.push(textLines.slice(i, i + LINES_PER_PAGE).join('\n'));
+        }
+
+        // Unir todas as páginas (Texto 1..N, Contexto, Esboço, Conclusão)
+        return [
+            ...textPages,
+            contexto,
+            esboco,
+            conclusao
+        ].filter(page => page && page.trim() !== '');
+    };
+
+    const handleSelectChapter = async (book: any, chapter: number) => {
         setSelectedChapter(chapter);
         setIsLoading(true);
         setReadingData(null);
         setReadingPages([]);
         setCurrentReadingPage(0);
+
+        const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${chapter}`;
         
         try {
+            // Tenta obter primeiro do cache offline IndexedDB
+            const cachedStudy = await getMedia(cacheKey);
+            if (cachedStudy) {
+                const parsedPages = parseStudyContent(cachedStudy);
+                setReadingPages(parsedPages);
+                setReadingData(cachedStudy);
+                setIsLoading(false);
+                return;
+            }
+
+            // Se não houver cache e estiver offline, avisa o usuário
+            if (!isOnline) {
+                addToast("Este capítulo não está disponível offline. Conecte-se à internet para carregá-lo.", "warning");
+                setIsLoading(false);
+                return;
+            }
+            
             const prompt = `Atue como a Bíblia Sagrada na versão NVI (Nova Versão Internacional) e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${chapter}.
             
 POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
@@ -97,52 +174,100 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 [Resumo de como aplicar a mensagem hoje na igreja]`;
 
             const result = await callGeminiAI(prompt, 3);
-            
-            // --- LÓGICA DE PAGINAÇÃO ---
-            let texto = "";
-            let contexto = "";
-            let esboco = "";
-            let conclusao = "";
-
-            try {
-                const p1 = result.split('[CONTEXTO]');
-                texto = p1[0].replace('[TEXTO]', '').trim();
-                
-                const p2 = p1[1].split('[ESBOCO]');
-                contexto = p2[0].trim();
-                
-                const p3 = p2[1].split('[CONCLUSAO]');
-                esboco = p3[0].trim();
-                conclusao = p3[1].trim();
-            } catch (e) {
-                // Fallback de segurança caso a IA omita as tags
-                texto = result;
+            if (!result) {
+                throw new Error("Resposta da IA vazia");
             }
-
-            // Dividir o texto bíblico em páginas de 50 linhas
-            const textLines = texto.split('\n');
-            const textPages = [];
-            const LINES_PER_PAGE = 50;
             
-            for (let i = 0; i < textLines.length; i += LINES_PER_PAGE) {
-                textPages.push(textLines.slice(i, i + LINES_PER_PAGE).join('\n'));
-            }
+            // Grava no IndexedDB automaticamente para uso offline futuro
+            await storeMedia(cacheKey, result);
+            updateCachedChapters();
 
-            // Unir todas as páginas (Texto 1..N, Contexto, Esboço, Conclusão)
-            const allPages = [
-                ...textPages,
-                contexto,
-                esboco,
-                conclusao
-            ].filter(page => page && page.trim() !== '');
-
-            setReadingPages(allPages);
+            const parsedPages = parseStudyContent(result);
+            setReadingPages(parsedPages);
             setReadingData(result);
         } catch (error) {
-            addToast("Erro ao buscar o texto bíblico.", "error");
+            console.error(error);
+            addToast("Falha ao buscar o capítulo bíblico com a IA.", "error");
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleDownloadBookOffline = async (book: any) => {
+        if (!isOnline) {
+            addToast("Você precisa de conexão à Internet para fazer o download.", "warning");
+            return;
+        }
+        if (downloadingBook) {
+            addToast("Já existe um download em andamento.", "info");
+            return;
+        }
+
+        setDownloadingBook(book.name);
+        setDownloadProgress({ current: 1, total: book.chapters });
+        addToast(`Iniciando download de ${book.name} (${book.chapters} capítulos)...`, "info");
+
+        let successCount = 0;
+        
+        for (let cap = 1; cap <= book.chapters; cap++) {
+            setDownloadProgress({ current: cap, total: book.chapters });
+            const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+            
+            try {
+                const cached = await getMedia(cacheKey);
+                if (cached) {
+                    successCount++;
+                    continue;
+                }
+
+                const prompt = `Atue como a Bíblia Sagrada na versão NVI (Nova Versão Internacional) e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
+                
+POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
+
+[TEXTO]
+# 📖 ${book.name} ${cap} (NVI)
+[Transcreva aqui TODO o texto bíblico do capítulo exato na versão NVI, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]
+
+[CONTEXTO]
+# 📚 ESTUDO DO PREGADOR
+## 🌍 Contexto Histórico e Teológico
+[Explique brevemente o cenário deste capítulo]
+
+[ESBOCO]
+## 📝 Esboço Homilético
+**Tema Sugerido:** [Título impactante para pregar sobre este capítulo]
+**Texto-Base:** [Versículo chave do capítulo]
+
+**I. [Primeiro Tópico Principal]**
+- [Breve explicação]
+- [Referência cruzada]
+
+**II. [Segundo Tópico Principal]**
+- [Breve explicação]
+
+**III. [Terceiro Tópico Principal]**
+- [Breve explicação]
+
+[CONCLUSAO]
+## 💡 Conclusão e Aplicação
+[Resumo de como aplicar a mensagem hoje na igreja]`;
+
+                const result = await callGeminiAI(prompt, 3);
+                if (result) {
+                    await storeMedia(cacheKey, result);
+                    successCount++;
+                }
+                
+                // Leve atraso para consistência nas requisições da API
+                await new Promise(r => setTimeout(r, 600));
+            } catch (err) {
+                console.error(`Erro ao pré-baixar o capítulo ${cap} de ${book.name}:`, err);
+            }
+        }
+
+        addToast(`Download concluído! ${successCount} de ${book.chapters} capítulos estão agora em cache offline!`, "success");
+        setDownloadingBook(null);
+        updateCachedChapters();
     };
 
     return (
@@ -150,10 +275,16 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
             
             {/* SIDEBAR DE NAVEGAÇÃO (ÍNDICE) */}
             <div className="w-full md:w-80 bg-white border-r border-[#e5e0d8] flex flex-col shrink-0 z-10 h-1/3 md:h-full shadow-md">
-                <div className="p-6 bg-slate-900 text-[#f4f1ea] border-b-4 border-amber-600 flex flex-col items-center text-center shrink-0">
+                <div className="p-6 bg-slate-900 text-[#f4f1ea] border-b-4 border-amber-600 flex flex-col items-center text-center shrink-0 relative">
                     <BookOpen size={36} className="text-amber-500 mb-2"/>
-                    <h2 className="font-serif text-2xl font-black uppercase tracking-widest leading-none">Bíblia Sagrada</h2>
+                    <h2 className="font-serif text-2xl font-black uppercase tracking-widest leading-none">Bíblia de Estudo</h2>
                     <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-2 font-bold">NVI • Edição do Pregador</p>
+                    
+                    {!isOnline && (
+                        <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> Offline
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 relative">
@@ -185,17 +316,42 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                             <button onClick={() => { setSelectedBook(null); setSelectedChapter(null); setReadingData(null); }} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 mb-4 px-2 py-1 bg-slate-50 rounded-lg w-full border border-slate-200">
                                 <ChevronLeft size={16}/> Voltar ao Índice
                             </button>
-                            <h3 className="font-serif text-2xl font-black text-slate-800 mb-4 px-2">{selectedBook.name}</h3>
-                            <div className="grid grid-cols-5 gap-2">
-                                {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(cap => (
+                            
+                            <div className="flex items-center justify-between mb-4 px-2">
+                                <h3 className="font-serif text-2xl font-black text-slate-800">{selectedBook.name}</h3>
+                                {downloadingBook === selectedBook.name ? (
+                                    <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-700 font-bold px-2 py-1 rounded-lg flex items-center gap-1 animate-pulse">
+                                        <Loader2 size={10} className="animate-spin" />
+                                        <span>{downloadProgress.current}/{downloadProgress.total}</span>
+                                    </div>
+                                ) : (
                                     <button 
-                                        key={cap} 
-                                        onClick={() => handleSelectChapter(selectedBook, cap)}
-                                        className={`aspect-square rounded-xl font-bold flex items-center justify-center transition-all border shadow-sm ${selectedChapter === cap ? 'bg-slate-900 text-white border-slate-900 scale-110' : 'bg-white text-slate-700 hover:bg-amber-100 hover:border-amber-300 border-slate-200'}`}
+                                        onClick={() => handleDownloadBookOffline(selectedBook)} 
+                                        className="text-xs flex items-center gap-1 font-bold text-amber-600 hover:text-amber-750 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 transition-colors shadow-xs"
+                                        title="Baixar todos os capítulos deste livro para estudar offline"
                                     >
-                                        {cap}
+                                        <DownloadCloud size={14} /> <span className="hidden sm:inline">Baixar Livro</span>
                                     </button>
-                                ))}
+                                )}
+                            </div>
+                            
+                            <div className="grid grid-cols-5 gap-2">
+                                {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(cap => {
+                                    const cacheKey = `bible_study_${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+                                    const isChapterCached = cachedChapters.has(cacheKey);
+                                    return (
+                                        <button 
+                                            key={cap} 
+                                            onClick={() => handleSelectChapter(selectedBook, cap)}
+                                            className={`relative aspect-square rounded-xl font-bold flex flex-col items-center justify-center transition-all border shadow-sm ${selectedChapter === cap ? 'bg-slate-900 text-white border-slate-900 scale-110' : 'bg-white text-slate-700 hover:bg-amber-100 hover:border-amber-300 border-slate-200'}`}
+                                        >
+                                            <span>{cap}</span>
+                                            {isChapterCached && (
+                                                <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-emerald-500" title="Disponível Offline" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -216,7 +372,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                 ) : readingPages.length > 0 ? (
                     <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn relative">
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12">
-                            <div className="max-w-3xl mx-auto bg-[#faf8f5] shadow-[0_10px_40px_rgba(0,0,0,0.05)] rounded-sm border border-[#e5e0d8] p-8 md:p-14 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-red-200/50">
+                            <div className="max-w-3xl mx-auto bg-[#faf8f5] shadow-[0_10px_40px_rgba(0,0,0,0.05)] rounded-sm border border-[#e5e0d8] p-8 md:p-14 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-red-200/50 font-serif">
                                 
                                 <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-slate-800/10">
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBook.name} • Capítulo {selectedChapter}</span>
@@ -267,10 +423,17 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-10 opacity-60">
+                    <div className="h-full flex flex-col items-center justify-center text-center p-10 opacity-70">
                         <Book size={80} className="text-amber-900/20 mb-6"/>
                         <h3 className="font-serif text-3xl font-black text-slate-800 mb-2">A Palavra Viva</h3>
                         <p className="text-slate-500 max-w-sm">Selecione um livro e um capítulo no índice lateral para iniciar a sua leitura e explorar os esboços do pregador.</p>
+                        
+                        {cachedChapters.size > 0 && (
+                            <div className="mt-8 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full text-[11px] font-bold text-emerald-700 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                {cachedChapters.size} {cachedChapters.size === 1 ? 'capítulo de estudo disponível' : 'capítulos de estudo disponíveis'} offline neste dispositivo
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
