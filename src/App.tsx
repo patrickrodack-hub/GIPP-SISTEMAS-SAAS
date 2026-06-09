@@ -8753,6 +8753,65 @@ const PortalEBD = ({ user, db }) => {
         return () => clearTimeout(timer);
     }, []);
 
+    // Pré-carregamento (prefetch) automático das capas das revistas no IndexedDB
+    useEffect(() => {
+        if (!isOnline) return;
+        
+        let isMounted = true;
+        const prefetchEbdImages = async () => {
+            const licoes = db.ebd?.licoes || [];
+            const uniqueRevistas = new Set<string>();
+            const itemsToPrefetch: { url: string; key: string }[] = [];
+
+            licoes.forEach((l: any) => {
+                if (uniqueRevistas.has(l.revista)) return;
+                const capa = l.capa && l.capa !== 'null' ? l.capa : (licoes.find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null);
+                if (capa && capa.startsWith('http')) {
+                    uniqueRevistas.add(l.revista);
+                    itemsToPrefetch.push({ url: capa, key: `ebd_capa_${l.revista}` });
+                }
+            });
+
+            // Executa o pré-carregamento em segundo plano sem bloquear a interface de usuário
+            for (const item of itemsToPrefetch) {
+                if (!isMounted) break;
+                try {
+                    const cached = await getMedia(item.key);
+                    if (!cached) {
+                        const response = await fetch(item.url, { mode: 'cors' });
+                        if (!response.ok) continue;
+                        const blob = await response.blob();
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            if (reader.result && isMounted) {
+                                storeMedia(item.key, reader.result as string)
+                                    .then(() => {
+                                        console.log(`[Prefetch] Capa da revista pre-carregada e salva em IndexedDB: ${item.key}`);
+                                    })
+                                    .catch((err) => {
+                                        console.error(`[Prefetch] Falha ao armazenar a capa da revista ${item.key}:`, err);
+                                    });
+                            }
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                } catch (e) {
+                    console.warn(`[Prefetch] Falha ao efetuar prefetch da imagem EBD ${item.url}:`, e);
+                }
+            }
+        };
+
+        // Delay inicial leve para priorizar primeiro render do Portal EBD
+        const delayTimer = setTimeout(() => {
+            prefetchEbdImages();
+        }, 1500);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(delayTimer);
+        };
+    }, [db.ebd?.licoes, isOnline]);
+
     const isLicaoNova = (licao: any) => {
         if (licao.createdAt) {
             try {
@@ -9040,7 +9099,7 @@ const PortalEBD = ({ user, db }) => {
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         <div className="w-12 h-16 bg-slate-50 text-slate-500 group-hover:bg-emerald-50 rounded-xl flex items-center justify-center transition-all shrink-0 border border-slate-200 group-hover:border-emerald-200 shadow-sm overflow-hidden">
                                             {manualOrMagazineCapa ? (
-                                                <img src={manualOrMagazineCapa} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Capa" />
+                                                <CachedImage src={manualOrMagazineCapa} cacheKey={`ebd_capa_${l.revista}`} className="w-full h-full object-cover" alt="Capa" />
                                             ) : (
                                                 <BookOpen size={20} className="group-hover:text-emerald-600 transition-colors" />
                                             )}
