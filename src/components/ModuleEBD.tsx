@@ -319,16 +319,26 @@ const ModuleEBD = () => {
         const cacheKey = `gipp_cached_ebd_lesson_${licao.id || licao.licao_numero || '1'}_${licao.revista}`;
         const cachedData = localStorage.getItem(cacheKey);
 
+        const getManualCapa = (l: any) => {
+            if (l.capa && l.capa !== 'null') return l.capa;
+            const licoes = db.ebd?.licoes || [];
+            const licaoComCapa = licoes.find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null');
+            return licaoComCapa ? licaoComCapa.capa : null;
+        };
+
+        const manualCapa = getManualCapa(licao);
+
         if (cachedData && !silent) {
             try {
                 const parsed = JSON.parse(cachedData);
+                const finalCapa = manualCapa || parsed.capa || null;
                 setAiLesson({
                     loading: false,
                     text: parsed.text,
                     title: parsed.title,
                     revista: parsed.revista,
                     licao: parsed.licao,
-                    capa: parsed.capa,
+                    capa: finalCapa,
                     fromCache: true
                 });
                 addToast("Lição carregada do Cache Local (Offline-ready)!", "success");
@@ -338,21 +348,62 @@ const ModuleEBD = () => {
             }
         }
 
+        // Se o estudo já tiver sido gerado e persistido no Firestore, carrega-o diretamente de lá!
+        if (licao.conteudo_estudo) {
+            try {
+                const finalCapa = manualCapa || licao.capa || null;
+                const payload = {
+                    text: licao.conteudo_estudo,
+                    title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                    revista: licao.revista,
+                    licao: licao.licao_numero || '1',
+                    capa: finalCapa
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(payload));
+                
+                setDownloadedLessons(prev => {
+                    const id = licao.id || licao.licao_numero;
+                    if (!prev.includes(id)) return [...prev, id];
+                    return prev;
+                });
+
+                if (!silent) {
+                    setAiLesson({
+                        loading: false,
+                        text: licao.conteudo_estudo,
+                        title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                        revista: licao.revista,
+                        licao: licao.licao_numero || '1',
+                        capa: finalCapa,
+                        fromCache: true
+                    });
+                    addToast("Lição carregada da biblioteca sincronizada!", "success");
+                } else {
+                    addToast(`Lição ${licao.licao_numero} pré-carregada e disponível offline!`, "success");
+                }
+                return;
+            } catch (err) {
+                console.error("Erro ao tratar conteúdo pré-existente", err);
+            }
+        }
+
         if (!isOnline && !cachedData) {
             addToast("Você está offline e esta lição não está na memória do aparelho. Conecte-se à internet para estudar.", "warning");
             return;
         }
 
+        const initialCapa = manualCapa || licao.capa || null;
         if (!silent) {
-            setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: licao.capa || null });
+            setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: initialCapa });
         }
         
         try {
+            const hasCapaExistente = !!initialCapa;
             const prompt = `Atue como um teólogo especialista no material oficial da CPAD. 
             Pesquise e use obrigatoriamente como base de conteúdo e imagens as seguintes fontes: o currículo e portal oficial da CPAD (Casa Publicadora das Assembleias de Deus), Google Books API e Sistema EBD.
-            O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", especificamente a Lição número ${licao.licao_numero || '1'}. 
+            O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", específicamente a Lição número ${licao.licao_numero || '1'}. 
             
-            ${!licao.capa ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
+            ${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
 
             Gere um conteúdo fiel, interativo e completo contendo:
             1. Título da Lição
@@ -367,13 +418,15 @@ const ModuleEBD = () => {
             const result = await callGeminiAI(prompt, 5);
             
             let texto = result;
-            let capaUrl = licao.capa || null;
+            let capaUrl = initialCapa;
             
-            if (!licao.capa) {
+            if (!hasCapaExistente) {
                 const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
                 if (match && match[1] && match[1] !== 'null') {
                     capaUrl = match[1].trim();
                     texto = result.replace(match[0], ''); // Remove a URL do texto final para não aparecer no UI
+                } else {
+                    capaUrl = manualCapa || null;
                 }
             }
             
@@ -386,6 +439,19 @@ const ModuleEBD = () => {
                 capa: capaUrl
             };
             localStorage.setItem(cacheKey, JSON.stringify(payload));
+            
+            // Salvar no Firestore para que todos os membros tenham acesso instantâneo
+            if (licao.id && dbFirestore && appId) {
+                try {
+                    const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_licoes', licao.id);
+                    await updateDoc(docRef, {
+                        conteudo_estudo: texto,
+                        capa: capaUrl
+                    });
+                } catch (dbErr) {
+                    console.error("Erro ao sincronizar o estudo no Firestore:", dbErr);
+                }
+            }
             
             if (!silent) {
                 setAiLesson({
@@ -871,23 +937,35 @@ const ModuleEBD = () => {
                                     columns={[
                                         {header:'Data', key:'data', render: d=>formatDateLocal(d.data)}, 
                                         {header:'Turma', key:'turma_id', render: l => turmasFiltradas.find(t=>t.id===l.turma_id)?.nome}, 
-                                        {header:'Revista/Tema', key:'revista', render: l => (
-                                            <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-3">
-                                                <span className="font-semibold text-slate-800 break-all">{l.revista}</span>
-                                                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                                                    {isLicaoNova(l) && (
-                                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-amber-500 text-white rounded border border-amber-600/10 shadow-3xs animate-pulse">
-                                                            <Sparkles size={7} className="text-white fill-white" /> NOVO
-                                                        </span>
-                                                    )}
-                                                    {downloadedLessons.includes(l.id || l.licao_numero) && (
-                                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-emerald-500 text-white rounded border border-emerald-600/10 shadow-3xs">
-                                                            <Check size={8} /> OFFLINE
-                                                        </span>
-                                                    )}
+                                        {header:'Revista/Tema', key:'revista', render: l => {
+                                            const manualOrMagazineCapa = l.capa && l.capa !== 'null' ? l.capa : ((db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null);
+                                            return (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-14 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
+                                                        {manualOrMagazineCapa ? (
+                                                            <img src={manualOrMagazineCapa} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Capa" />
+                                                        ) : (
+                                                            <BookOpen size={16} />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-3">
+                                                        <span className="font-semibold text-slate-800 break-all">{l.revista}</span>
+                                                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                                            {isLicaoNova(l) && (
+                                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-amber-500 text-white rounded border border-amber-600/10 shadow-3xs animate-pulse">
+                                                                    <Sparkles size={7} className="text-white fill-white" /> NOVO
+                                                                </span>
+                                                            )}
+                                                            {downloadedLessons.includes(l.id || l.licao_numero) && (
+                                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-emerald-500 text-white rounded border border-emerald-600/10 shadow-3xs">
+                                                                    <Check size={8} /> OFFLINE
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}, 
+                                            );
+                                        }}, 
                                         {header:'Lição', key:'licao_numero'}, 
                                         {header:'Presentes', key:'qtd_presentes'}
                                     ]} 

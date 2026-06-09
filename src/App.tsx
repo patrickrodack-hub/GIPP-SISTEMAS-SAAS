@@ -8818,16 +8818,26 @@ const PortalEBD = ({ user, db }) => {
         const cacheKey = `gipp_cached_ebd_lesson_${licao.id || licao.licao_numero || '1'}_${licao.revista}`;
         const cachedData = localStorage.getItem(cacheKey);
 
+        const getManualCapa = (l: any) => {
+            if (l.capa && l.capa !== 'null') return l.capa;
+            const licoes = db.ebd?.licoes || [];
+            const licaoComCapa = licoes.find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null');
+            return licaoComCapa ? licaoComCapa.capa : null;
+        };
+
+        const manualCapa = getManualCapa(licao);
+
         if (cachedData && !silent) {
             try {
                 const parsed = JSON.parse(cachedData);
+                const finalCapa = manualCapa || parsed.capa || null;
                 setAiLesson({
                     loading: false,
                     text: parsed.text,
                     title: parsed.title,
                     revista: parsed.revista,
                     licao: parsed.licao,
-                    capa: parsed.capa,
+                    capa: finalCapa,
                     fromCache: true
                 });
                 addToast("Lição carregada do Cache Local (Offline-ready)!", "success");
@@ -8837,21 +8847,63 @@ const PortalEBD = ({ user, db }) => {
             }
         }
 
+        // Se o estudo já tiver sido gerado e sincronizado no Firestore, carrega-o instantaneamente!
+        if (licao.conteudo_estudo) {
+            try {
+                const finalCapa = manualCapa || licao.capa || null;
+                const lessonObj = {
+                    text: licao.conteudo_estudo,
+                    title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                    revista: licao.revista,
+                    licao: licao.licao_numero || '1',
+                    capa: finalCapa
+                };
+                
+                localStorage.setItem(cacheKey, JSON.stringify(lessonObj));
+                
+                setDownloadedLessons(prev => {
+                    const keyId = licao.id || licao.licao_numero;
+                    if (!prev.includes(keyId)) return [...prev, keyId];
+                    return prev;
+                });
+                
+                if (!silent) {
+                    setAiLesson({
+                        loading: false,
+                        text: licao.conteudo_estudo,
+                        title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                        revista: licao.revista,
+                        licao: licao.licao_numero || '1',
+                        capa: finalCapa,
+                        fromCache: true
+                    });
+                    addToast("Lição carregada instantaneamente da biblioteca sincronizada!", "success");
+                } else {
+                    addToast(`Lição ${licao.licao_numero} pré-carregada e disponível offline!`, "success");
+                }
+                return;
+            } catch (err) {
+                console.error("Erro ao tratar conteúdo pré-existente:", err);
+            }
+        }
+
         if (!isOnline && !cachedData) {
             addToast("Você está offline e esta lição não está na memória do aparelho. Conecte-se à internet para estudar.", "warning");
             return;
         }
 
+        const initialCapa = manualCapa || licao.capa || null;
         if (!silent) {
-            setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: licao.capa || null });
+            setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: initialCapa });
         }
         
         try {
+            const hasCapaExistente = !!initialCapa;
             const prompt = `Atue como um teólogo especialista no material oficial da CPAD. 
             Pesquise e use obrigatoriamente como base de conteúdo e imagens as seguintes fontes: o currículo e portal oficial da CPAD (Casa Publicadora das Assembleias de Deus), Google Books API e Sistema EBD.
             O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", especificamente a Lição número ${licao.licao_numero || '1'}. 
             
-            ${!licao.capa ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
+            ${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
 
             Gere um conteúdo fiel, interativo e completo contendo:
             1. Título da Lição
@@ -8866,13 +8918,15 @@ const PortalEBD = ({ user, db }) => {
             const result = await callGeminiAI(prompt, 5);
             
             let texto = result;
-            let capaUrl = licao.capa || null;
+            let capaUrl = initialCapa;
             
-            if (!licao.capa) {
+            if (!hasCapaExistente) {
                 const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
                 if (match && match[1] && match[1] !== 'null') {
                     capaUrl = match[1].trim();
                     texto = result.replace(match[0], '');
+                } else {
+                    capaUrl = manualCapa || null;
                 }
             }
             
@@ -8885,6 +8939,18 @@ const PortalEBD = ({ user, db }) => {
             };
             
             localStorage.setItem(cacheKey, JSON.stringify(lessonObj));
+            
+            // Sincronizar de volta para o Firestore para todos os membros
+            if (licao.id && dbFirestore && appId) {
+                try {
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_licoes', licao.id), {
+                        conteudo_estudo: texto,
+                        capa: capaUrl
+                    }, { merge: true });
+                } catch (dbErr) {
+                    console.error("Erro ao sincronizar geração do estudo no Firestore:", dbErr);
+                }
+            }
             
             // Update downloaded list
             setDownloadedLessons(prev => {
@@ -8967,12 +9033,17 @@ const PortalEBD = ({ user, db }) => {
                         {licoesDisponiveis.map((l, i) => {
                             const isCached = downloadedLessons.includes(l.id || l.licao_numero);
                             const isDownloading = downloadingIds.includes(l.id || l.licao_numero);
+                            const manualOrMagazineCapa = l.capa && l.capa !== 'null' ? l.capa : ((db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null);
                             
                             return (
                                 <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all group">
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className="w-12 h-12 bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-600 rounded-xl flex items-center justify-center transition-colors shrink-0 border border-slate-200 group-hover:border-emerald-200 shadow-sm">
-                                            <BookOpen size={20} />
+                                        <div className="w-12 h-16 bg-slate-50 text-slate-500 group-hover:bg-emerald-50 rounded-xl flex items-center justify-center transition-all shrink-0 border border-slate-200 group-hover:border-emerald-200 shadow-sm overflow-hidden">
+                                            {manualOrMagazineCapa ? (
+                                                <img src={manualOrMagazineCapa} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Capa" />
+                                            ) : (
+                                                <BookOpen size={20} className="group-hover:text-emerald-600 transition-colors" />
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -8982,6 +9053,11 @@ const PortalEBD = ({ user, db }) => {
                                                 {isCached && (
                                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black bg-emerald-50 border border-emerald-200 text-emerald-600 rounded">
                                                         <Check size={8} /> DISPONÍVEL OFFLINE
+                                                    </span>
+                                                )}
+                                                {l.conteudo_estudo && !isCached && (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black bg-teal-50 border border-teal-200 text-teal-600 rounded animate-pulse">
+                                                        <Check size={8} /> ESTUDO COMPARTILHADO
                                                     </span>
                                                 )}
                                                 {isLicaoNova(l) && (
