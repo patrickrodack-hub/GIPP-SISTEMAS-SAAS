@@ -83,6 +83,7 @@ import ModulePatrimonio from './components/ModulePatrimonio';
 import ModuleCelulas from './components/ModuleCelulas';
 import ModuleBoletim from './components/ModuleBoletim';
 import ModuleManualUsuario from './components/ModuleManualUsuario';
+import { InteractiveMagazineView } from './components/InteractiveMagazineView';
 // ----------------------------
 
 
@@ -8743,6 +8744,14 @@ const PortalEBD = ({ user, db }) => {
     const [downloadedLessons, setDownloadedLessons] = useState<string[]>([]);
     const [downloadingIds, setDownloadingIds] = useState<string[]>([]);
     const [isEbdFullscreen, setIsEbdFullscreen] = useState(false);
+    const [loadingList, setLoadingList] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setLoadingList(false);
+        }, 850);
+        return () => clearTimeout(timer);
+    }, []);
 
     const isLicaoNova = (licao: any) => {
         if (licao.createdAt) {
@@ -8930,7 +8939,30 @@ const PortalEBD = ({ user, db }) => {
 
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
                 <h4 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><List size={18} className="text-emerald-500"/> {minhaTurma ? 'Últimas Lições Ministradas' : 'Biblioteca de Lições (Estudo Livre)'}</h4>
-                {licoesDisponiveis.length > 0 ? (
+                {loadingList ? (
+                    <div className="space-y-4">
+                        {[1, 2, 3].map((num) => (
+                            <div key={num} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-100/70 transition-all">
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 border border-slate-200 shadow-sm animate-pulse">
+                                        <BookOpen size={20} className="text-slate-300" />
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-4 w-16 bg-slate-200 rounded animate-pulse"></div>
+                                        </div>
+                                        <div className="h-5 w-2/3 bg-slate-200 rounded animate-pulse"></div>
+                                        <div className="h-4 w-1/3 bg-slate-100 rounded animate-pulse"></div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 self-end sm:self-center">
+                                    <div className="h-8 w-24 bg-slate-100 rounded-xl animate-pulse"></div>
+                                    <div className="h-8 w-24 bg-slate-150 rounded-xl animate-pulse"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : licoesDisponiveis.length > 0 ? (
                     <div className="space-y-4">
                         {licoesDisponiveis.map((l, i) => {
                             const isCached = downloadedLessons.includes(l.id || l.licao_numero);
@@ -9056,51 +9088,22 @@ const PortalEBD = ({ user, db }) => {
                         </>
                     }
                 >
-                    <div className="flex flex-col lg:flex-row bg-slate-50/50 -m-6 sm:-m-8">
-                        {/* Coluna Esquerda: Capa da Revista */}
-                        <div className="w-full lg:w-1/3 p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col items-center bg-white shrink-0">
-                            {aiLesson.capa && aiLesson.capa !== 'null' && !aiLesson.capa.includes('URL_CAPA') ? (
-                                <div className="w-full max-w-[220px] aspect-[2/3] rounded-lg shadow-xl border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6 bg-slate-100">
-                                    <img src={aiLesson.capa} alt="Capa da Revista" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}/>
-                                    <div className="hidden absolute inset-0 flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
-                                        <BookOpen size={40} className="mb-2 opacity-50"/>
-                                        <span className="text-xs font-bold">Capa não disponível</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="w-full max-w-[220px] aspect-[2/3] bg-gradient-to-b from-emerald-600 via-teal-700 to-slate-900 rounded-lg shadow-xl p-6 flex flex-col justify-between text-center border-4 border-white ring-1 ring-slate-200 relative overflow-hidden mb-6">
-                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                                    <div className="relative z-10">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1 border-b border-emerald-500/50 pb-2">Lições Bíblicas Adultos</span>
-                                        <h3 className="font-black text-sm text-white uppercase mt-4 leading-snug drop-shadow-md line-clamp-4">{aiLesson.revista}</h3>
-                                    </div>
-                                    <div className="relative z-10 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20">
-                                        <div className="text-xs font-bold uppercase tracking-wider text-emerald-100 mb-1">Lição</div>
-                                        <div className="text-3xl font-black text-white">{aiLesson.licao}</div>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="w-full text-center">
-                                <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">Material de Estudo</span>
-                                <p className="text-xs text-slate-500 font-medium mt-3 leading-relaxed">Conteúdo interativo gerado com base no currículo e portal da CPAD.</p>
-                            </div>
+                    {aiLesson.loading ? (
+                        <div className="flex flex-col items-center justify-center text-emerald-600 min-h-[450px]">
+                            <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
+                            <p className="font-black text-base animate-pulse mb-1 animate-duration-1500">Buscando na biblioteca teológica...</p>
+                            <p className="text-xs font-medium text-slate-500 text-center">A preparar o texto áureo e a explicação dos tópicos.</p>
                         </div>
-
-                        {/* Coluna Direita: Conteúdo da Lição */}
-                        <div className="flex-1 bg-white p-6 sm:p-8 md:p-12">
-                            {aiLesson.loading ? (
-                                <div className="flex flex-col items-center justify-center text-emerald-600 min-h-[350px]">
-                                    <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
-                                    <p className="font-black text-base animate-pulse mb-1">Buscando na biblioteca teológica...</p>
-                                    <p className="text-xs font-medium text-slate-500 text-center">A preparar o texto áureo e a explicação dos tópicos.</p>
-                                </div>
-                            ) : (
-                                <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-loose font-serif prose-headings:font-black prose-headings:text-slate-900 prose-a:text-emerald-600 prose-strong:text-slate-800">
-                                    {aiLesson.text}
-                                </div>
-                            )}
+                    ) : (
+                        <div className="-m-6 sm:-m-8">
+                            <InteractiveMagazineView 
+                                lessonText={aiLesson.text}
+                                revista={aiLesson.revista}
+                                licaoNum={aiLesson.licao}
+                                capaUrl={aiLesson.capa}
+                            />
                         </div>
-                    </div>
+                    )}
                 </InteractiveWindow>,
                 document.body
             )}
