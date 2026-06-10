@@ -369,7 +369,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
   }, [db.kids_criancas, user]);
 
   const sortedKidsList = useMemo(() => {
-    return [...kidsList].sort((a, b) => a.nome.localeCompare(b.nome));
+    return [...kidsList].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   }, [kidsList]);
 
   // Filters current instances based on searchTerm and filterTurma
@@ -2086,7 +2086,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                   className="w-full mt-1.5 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
                 >
                   <option value="">-- Selecione o Responsável --</option>
-                  {(db.membros || []).slice().sort((a: any, b: any) => a.nome.localeCompare(b.nome)).map((m: any) => (
+                  {(db.membros || []).slice().sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '')).map((m: any) => (
                     <option key={m.id} value={m.id}>{m.nome} ({m.funcao || 'Membro'})</option>
                   ))}
                 </select>
@@ -2417,7 +2417,7 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                 ) : (
                   <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                     {presencesList.filter((p: any) => p.crianca_id === historyChild.id)
-                      .sort((a: any, b: any) => b.data.localeCompare(a.data))
+                      .sort((a: any, b: any) => (b.data || '').localeCompare(a.data || ''))
                       .map((registry: any, idx: number) => {
                         return (
                           <div key={registry.id || idx} className="p-3.5 rounded-xl border border-slate-150 bg-white shadow-inner flex justify-between items-center text-xs">

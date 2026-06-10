@@ -801,7 +801,7 @@ const ModulePortalPastor = () => {
                                         className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-bold bg-white text-slate-700 transition-all"
                                     >
                                         <option value="">-- Contribuição Geral (Sem Membro) --</option>
-                                        {(db.membros || []).slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map((m: any) => (
+                                        {(db.membros || []).slice().sort((a,b)=>(a.nome || '').localeCompare(b.nome || '')).map((m: any) => (
                                             <option key={m.id} value={m.id}>{m.nome} ({m.cargo || 'Membro'})</option>
                                         ))}
                                     </select>

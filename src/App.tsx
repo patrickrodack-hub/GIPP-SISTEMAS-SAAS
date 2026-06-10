@@ -1953,8 +1953,8 @@ export const GenericTable = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-white/40 bg-transparent">
-            {paginatedData.map(item => (
-              <tr key={item.id} className="hover:bg-white/60 transition-all duration-300 group/row relative border-l-4 border-transparent hover:border-indigo-500">
+            {paginatedData.map((item, idx) => (
+              <tr key={item.id || `row-${idx}`} className="hover:bg-white/60 transition-all duration-300 group/row relative border-l-4 border-transparent hover:border-indigo-500">
                 {onSelectionChange && <td className="px-4 py-5"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={()=>handleSelect(item.id)} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"/></td>}
                 {columns.map((c, i) => {
                     let cellContent;

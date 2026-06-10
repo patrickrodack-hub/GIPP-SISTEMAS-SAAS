@@ -298,7 +298,7 @@ const ModuleEBD = () => {
         });
         const sorted = Object.entries(grouped)
             .map(([date, qtd]) => ({ date, qtd }))
-            .sort((a, b) => a.date.localeCompare(b.date))
+            .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
             .slice(-8); // últimas 8 chamadas registradas
         return sorted;
     }, [licoesFiltradasTotal]);
@@ -623,9 +623,9 @@ const ModuleEBD = () => {
                                         {membrosNaoMatriculados.map(m => (
                                             <div key={m.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-white border border-slate-100 hover:border-slate-200 transition-colors shadow-xs">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-full bg-slate-50 text-slate-600 font-bold text-[10px] flex items-center justify-center border border-slate-200">{m.nome.charAt(0)}</div>
+                                                    <div className="w-7 h-7 rounded-full bg-slate-50 text-slate-600 font-bold text-[10px] flex items-center justify-center border border-slate-200">{(m.nome || '?').charAt(0)}</div>
                                                     <div>
-                                                        <p className="text-xs font-bold text-slate-700 leading-tight">{m.nome}</p>
+                                                        <p className="text-xs font-bold text-slate-700 leading-tight">{m.nome || 'Membro sem nome'}</p>
                                                         <p className="text-[9px] text-slate-400 font-bold">{m.cargo_ministerial || 'Membro'}</p>
                                                     </div>
                                                 </div>
@@ -1058,9 +1058,9 @@ const ModuleEBD = () => {
                                                 <div className="space-y-2">
                                                     {profs.map((p, idx) => p && (
                                                         <div key={idx} className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-bold border border-blue-100">{p.nome.charAt(0)}</div>
+                                                            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-bold border border-blue-100">{(p.nome || '?').charAt(0)}</div>
                                                             <div>
-                                                                <p className="font-bold text-sm text-slate-800 leading-none">{p.nome}</p>
+                                                                <p className="font-bold text-sm text-slate-800 leading-none">{p.nome || 'Sem Nome'}</p>
                                                                 <p className="text-[10px] text-slate-500">Professor(a)</p>
                                                             </div>
                                                         </div>
@@ -1398,10 +1398,10 @@ Gere em formatação simples e amigável.`;
             {alunoHistoryModalOpen && selectedAlunoForHistory && (
                 <InteractiveWindow
                     id="ebd_aluno_historico_window"
-                    title={selectedAlunoForHistory.nome}
+                    title={selectedAlunoForHistory.nome || 'Ficha do Aluno'}
                     subtitle="EBD • Ficha do Aluno"
                     onClose={() => setAlunoHistoryModalOpen(false)}
-                    icon={() => <div className="text-white font-extrabold text-sm font-['Outfit'] h-full flex items-center justify-center scale-125 select-none">{selectedAlunoForHistory.nome.charAt(0).toUpperCase()}</div>}
+                    icon={() => <div className="text-white font-extrabold text-sm font-['Outfit'] h-full flex items-center justify-center scale-125 select-none">{(selectedAlunoForHistory.nome || '?').charAt(0).toUpperCase()}</div>}
                     headerBg="from-slate-700 via-slate-800 to-slate-950"
                     defaultWidth={700}
                     defaultHeight={650}
