@@ -138,6 +138,110 @@ const ModuleConfiguracoesSistemas = () => {
     const [isSavingGlobalConfigs, setIsSavingGlobalConfigs] = useState(false);
     const [selectedEngagedMember, setSelectedEngagedMember] = useState<any>(null);
 
+    const membersList = db.membros || [];
+
+    // Datasets agregados e realísticos baseados nos dados cadastrados da igreja
+    const aggregateStats = useMemo(() => {
+        const total = membersList.length;
+        const active = membersList.filter((m: any) => m.senha_portal || m.acesso_portal_liberado).length || Math.round(total * 0.7);
+        const bibleXPTotal = membersList.reduce((acc: number, cur: any) => acc + (cur.biblia_pontos || 0), 0);
+        const avgBibleXP = total > 0 ? Math.round(bibleXPTotal / total) : 0;
+        const coursesFinished = membersList.filter((m: any) => (m.cursos_concluidos || []).length > 0).length;
+        
+        return { total, active, avgBibleXP, coursesFinished };
+    }, [membersList]);
+
+    // Histórico de logs de 30 dias para os gráficos (Recharts)
+    const last30DaysLogins = useMemo(() => {
+        const data = [];
+        const now = new Date();
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            const dayStr = d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+            
+            // Ajusta o patamar de logins de acordo com a quantidade real de membros
+            const baseLogins = Math.max(5, Math.round(membersList.length * 0.35));
+            const randomVariation = Math.floor(Math.random() * (baseLogins * 0.5));
+            const weekendBonus = (d.getDay() === 0 || d.getDay() === 6) ? Math.round(baseLogins * 0.6) : 0;
+            
+            data.push({
+                data: dayStr,
+                "Acessos Portal": baseLogins + randomVariation + weekendBonus,
+                "Atividades EBD / Bíblia": Math.round((baseLogins + randomVariation + weekendBonus) * 0.8)
+            });
+        }
+        return data;
+    }, [membersList]);
+
+    // Uso das principais funcionalidades do portal
+    const featureUsageData = useMemo(() => {
+        // Mapeia o uso coletivo das abas
+        let bibliaHits = 0;
+        let ebdHits = 0;
+        let cursosHits = 0;
+        let secretáriaHits = 0;
+        let dizimosHits = 0;
+
+        membersList.forEach((m: any) => {
+            if (m.biblia_pontos && m.biblia_pontos > 0) bibliaHits += 5;
+            if (m.ebd_presencas && m.ebd_presencas.length > 0) ebdHits += m.ebd_presencas.length;
+            if (m.cursos_concluidos && m.cursos_concluidos.length > 0) cursosHits += m.cursos_concluidos.length * 3;
+            if (m.senha_portal) secretáriaHits += 2;
+            if (m.dizimos_envelopes && m.dizimos_envelopes.length > 0) dizimosHits += m.dizimos_envelopes.length;
+        });
+
+        // Se estiver tudo vazio, gera demonstração representativa padrão
+        return [
+            { name: "Bíblia de Estudos", acessos: bibliaHits || Math.max(12, Math.round(membersList.length * 2.4)), fill: "#f59e0b" },
+            { name: "Escola Dominical (EBD)", acessos: ebdHits || Math.max(8, Math.round(membersList.length * 1.8)), fill: "#10b981" },
+            { name: "Cursos Teológicos", acessos: cursosHits || Math.max(10, Math.round(membersList.length * 1.5)), fill: "#3b82f6" },
+            { name: "Credencial Digital", acessos: Math.max(15, Math.round(membersList.length * 2.1)), fill: "#6366f1" },
+            { name: "Salinha Kids / Seg", acessos: Math.max(5, Math.round(membersList.length * 0.9)), fill: "#ec4899" },
+            { name: "Tesouraria / Dízimos", acessos: dizimosHits || Math.max(6, Math.round(membersList.length * 1.2)), fill: "#14b8a6" }
+        ];
+    }, [membersList]);
+
+    // Dados específicos para o membro selecionado no drilldown
+    const selectedMemberMetrics = useMemo(() => {
+        if (!selectedEngagedMember) return null;
+        
+        // Extrai informações reais do perfil do membro
+        const totalBibleStudyXP = selectedEngagedMember.biblia_pontos || 0;
+        const completedChaptersCount = (selectedEngagedMember.biblia_capitulos_concluidos || []).length;
+        const hasPortalAccess = !!(selectedEngagedMember.senha_portal || selectedEngagedMember.acesso_portal_liberado);
+        const hasEbdClasses = (selectedEngagedMember.ebd_classes || []).length;
+        
+        // Histórico simulado do último mês para este usuário específico
+        const dailyLogins = Array.from({ length: 30 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (29 - i));
+            const activeOnDay = hasPortalAccess && (Math.random() > 0.6 || i % 4 === 0);
+            return {
+                data: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
+                "Visualizações": activeOnDay ? Math.floor(Math.random() * 5) + 1 : 0
+            };
+        });
+
+        // Gráfico Radar/Barra individual de áreas acessadas
+        const individualModules = [
+            { module: "Bíblia NVI", interacoes: completedChaptersCount * 10 + (totalBibleStudyXP > 0 ? 12 : 0) },
+            { module: "EBD", interacoes: hasEbdClasses * 8 + (selectedEngagedMember.presenca_ebd_frequentado ? 15 : 0) },
+            { module: "Cursos", interacoes: (selectedEngagedMember.cursos_concluidos || []).length * 18 + 5 },
+            { module: "Carteirinha", interacoes: hasPortalAccess ? 10 : 0 },
+            { module: "Lançamento Dízimo", interacoes: (selectedEngagedMember.dizimos_envelopes || []).length * 14 }
+        ];
+
+        return {
+            totalBibleStudyXP,
+            completedChaptersCount,
+            hasPortalAccess,
+            hasEbdClasses,
+            dailyLogins,
+            individualModules
+        };
+    }, [selectedEngagedMember]);
+
     useEffect(() => {
         if (db.igreja) {
             setGlobalSite(db.igreja.site || db.igreja.saas_site || '');
@@ -1727,112 +1831,7 @@ const ModuleConfiguracoesSistemas = () => {
                     </div>
                 )}
 
-                {activeTab === 'relatorio_engajamento' && (() => {
-                    const membersList = db.membros || [];
-                    
-                    // Datasets agregados e realísticos baseados nos dados cadastrados da igreja
-                    const aggregateStats = useMemo(() => {
-                        const total = membersList.length;
-                        const active = membersList.filter((m: any) => m.senha_portal || m.acesso_portal_liberado).length || Math.round(total * 0.7);
-                        const bibleXPTotal = membersList.reduce((acc: number, cur: any) => acc + (cur.biblia_pontos || 0), 0);
-                        const avgBibleXP = total > 0 ? Math.round(bibleXPTotal / total) : 0;
-                        const coursesFinished = membersList.filter((m: any) => (m.cursos_concluidos || []).length > 0).length;
-                        
-                        return { total, active, avgBibleXP, coursesFinished };
-                    }, [membersList]);
-
-                    // Histórico de logs de 30 dias para os gráficos (Recharts)
-                    const last30DaysLogins = useMemo(() => {
-                        const data = [];
-                        const now = new Date();
-                        for (let i = 29; i >= 0; i--) {
-                            const d = new Date();
-                            d.setDate(now.getDate() - i);
-                            const dayStr = d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
-                            
-                            // Ajusta o patamar de logins de acordo com a quantidade real de membros
-                            const baseLogins = Math.max(5, Math.round(membersList.length * 0.35));
-                            const randomVariation = Math.floor(Math.random() * (baseLogins * 0.5));
-                            const weekendBonus = (d.getDay() === 0 || d.getDay() === 6) ? Math.round(baseLogins * 0.6) : 0;
-                            
-                            data.push({
-                                data: dayStr,
-                                "Acessos Portal": baseLogins + randomVariation + weekendBonus,
-                                "Atividades EBD / Bíblia": Math.round((baseLogins + randomVariation + weekendBonus) * 0.8)
-                            });
-                        }
-                        return data;
-                    }, [membersList]);
-
-                    // Uso das principais funcionalidades do portal
-                    const featureUsageData = useMemo(() => {
-                        // Mapeia o uso coletivo das abas
-                        let bibliaHits = 0;
-                        let ebdHits = 0;
-                        let cursosHits = 0;
-                        let secretáriaHits = 0;
-                        let dizimosHits = 0;
-
-                        membersList.forEach((m: any) => {
-                            if (m.biblia_pontos && m.biblia_pontos > 0) bibliaHits += 5;
-                            if (m.ebd_presencas && m.ebd_presencas.length > 0) ebdHits += m.ebd_presencas.length;
-                            if (m.cursos_concluidos && m.cursos_concluidos.length > 0) cursosHits += m.cursos_concluidos.length * 3;
-                            if (m.senha_portal) secretáriaHits += 2;
-                            if (m.dizimos_envelopes && m.dizimos_envelopes.length > 0) dizimosHits += m.dizimos_envelopes.length;
-                        });
-
-                        // Se estiver tudo vazio, gera demonstração representativa padrão
-                        return [
-                            { name: "Bíblia de Estudos", acessos: bibliaHits || Math.max(12, Math.round(membersList.length * 2.4)), fill: "#f59e0b" },
-                            { name: "Escola Dominical (EBD)", acessos: ebdHits || Math.max(8, Math.round(membersList.length * 1.8)), fill: "#10b981" },
-                            { name: "Cursos Teológicos", acessos: cursosHits || Math.max(10, Math.round(membersList.length * 1.5)), fill: "#3b82f6" },
-                            { name: "Credencial Digital", acessos: Math.max(15, Math.round(membersList.length * 2.1)), fill: "#6366f1" },
-                            { name: "Salinha Kids / Seg", acessos: Math.max(5, Math.round(membersList.length * 0.9)), fill: "#ec4899" },
-                            { name: "Tesouraria / Dízimos", acessos: dizimosHits || Math.max(6, Math.round(membersList.length * 1.2)), fill: "#14b8a6" }
-                        ];
-                    }, [membersList]);
-
-                    // Dados específicos para o membro selecionado no drilldown
-                    const selectedMemberMetrics = useMemo(() => {
-                        if (!selectedEngagedMember) return null;
-                        
-                        // Extrai informações reais do perfil do membro
-                        const totalBibleStudyXP = selectedEngagedMember.biblia_pontos || 0;
-                        const completedChaptersCount = (selectedEngagedMember.biblia_capitulos_concluidos || []).length;
-                        const hasPortalAccess = !!(selectedEngagedMember.senha_portal || selectedEngagedMember.acesso_portal_liberado);
-                        const hasEbdClasses = (selectedEngagedMember.ebd_classes || []).length;
-                        
-                        // Histórico simulado do último mês para este usuário específico
-                        const dailyLogins = Array.from({ length: 30 }, (_, i) => {
-                            const date = new Date();
-                            date.setDate(date.getDate() - (29 - i));
-                            const activeOnDay = hasPortalAccess && (Math.random() > 0.6 || i % 4 === 0);
-                            return {
-                                data: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
-                                "Visualizações": activeOnDay ? Math.floor(Math.random() * 5) + 1 : 0
-                            };
-                        });
-
-                        // Gráfico Radar/Barra individual de áreas acessadas
-                        const individualModules = [
-                            { module: "Bíblia NVI", interacoes: completedChaptersCount * 10 + (totalBibleStudyXP > 0 ? 12 : 0) },
-                            { module: "EBD", interacoes: hasEbdClasses * 8 + (selectedEngagedMember.presenca_ebd_frequentado ? 15 : 0) },
-                            { module: "Cursos", interacoes: (selectedEngagedMember.cursos_concluidos || []).length * 18 + 5 },
-                            { module: "Carteirinha", interacoes: hasPortalAccess ? 10 : 0 },
-                            { module: "Lançamento Dízimo", interacoes: (selectedEngagedMember.dizimos_envelopes || []).length * 14 }
-                        ];
-
-                        return {
-                            totalBibleStudyXP,
-                            completedChaptersCount,
-                            hasPortalAccess,
-                            hasEbdClasses,
-                            dailyLogins,
-                            individualModules
-                        };
-                    }, [selectedEngagedMember]);
-
-                    return (
+                {activeTab === 'relatorio_engajamento' && (
                         <div className="space-y-6 animate-entrance text-slate-800">
                             
                             {/* INTRODUCTORY TITLE */}
@@ -2056,8 +2055,7 @@ const ModuleConfiguracoesSistemas = () => {
                             </div>
 
                         </div>
-                    );
-                })()}
+                    )}
 
                 {activeTab === 'global_configs' && (
                     <div className="space-y-8 animate-entrance text-slate-800">
