@@ -118,7 +118,7 @@ interface FieldState {
 }
 
 const ModuleCarteirinha = () => {
-  const { db, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
+  const { db, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
   
   // High-level controls
   const [activeTab, setActiveTab] = useState<'editor' | 'batch_print' | 'projects'>('editor');
@@ -555,66 +555,27 @@ const ModuleCarteirinha = () => {
   };
 
   // Print sheets
-  const triggerBatchPrint = async () => {
+  const triggerBatchPrint = () => {
     if (printQueue.length === 0) return addToast("Selecione ao menos um membro para imprimir.", "warning");
-    addToast("Gerando páginas para impressão física...", "info");
+    addToast("Abrindo prancha de impressão comercial...", "info");
 
-    const printWin = window.open('', '_blank');
-    if (!printWin) return addToast("Popups bloqueados no navegador", "error");
+    const queueMembers = (db.membros || []).filter((m: any) => printQueue.includes(m.id));
 
-    printWin.document.write(`
-      <html>
-        <head>
-          <title>Imprimir Credenciais GIPP</title>
-          <style>
-            body { font-family: sans-serif; background: #fff; margin: 0; padding: 20px; }
-            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-            .card-wrapper { border: 1px dashed #ccc; padding: 10px; display: flex; justify-content: center; page-break-inside: avoid; }
-            .card-img { width: 100%; max-width: 380px; object-fit: contain; }
-            @media print {
-              body { padding: 0; }
-              .grid { gap: 10px; }
-            }
-          </style>
-        </head>
-        <body>
-          <h2>Preparando impressão de ${printQueue.length} credenciais...</h2>
-          <div class="grid" id="container"></div>
-        </body>
-      </html>
-    `);
+    // Prepare full data payload matching mode `carteirinha_custom`
+    const payload = {
+      igreja: {
+        ...db.igreja,
+        carteirinha_custom: {
+          ...layout,
+          orientation
+        }
+      },
+      membros: queueMembers
+    };
 
-    // Compile each card image in background
-    const prevMembId = previewMemberId;
-    const compiledImages: string[] = [];
-
-    for (const memId of printQueue) {
-      setPreviewMemberId(memId);
-      await new Promise(r => setTimeout(r, 350)); // let renderer bind data
-      const url = await generatePngURL();
-      if (url) compiledImages.push(url);
-    }
-
-    // Restore original active member
-    setPreviewMemberId(prevMembId);
-
-    // Populate and open window printer
-    const container = printWin.document.getElementById('container');
-    if (container) {
-      container.innerHTML = compiledImages.map(img => `
-        <div class="card-wrapper">
-          <img class="card-img" src="${img}" />
-        </div>
-      `).join('');
-    }
-
-    // Remove the temporary title
-    const title = printWin.document.querySelector('h2');
-    if (title) title.remove();
-
-    setTimeout(() => {
-      printWin.print();
-    }, 1000);
+    setPrintData(payload);
+    setPrintMode('carteirinha_custom');
+    setPreviewOpen(true);
   };
 
   // Filter members on print table

@@ -113,7 +113,28 @@ const ModuleMembros = memo(() => {
         }
     };
 
-    const cols = [{header:'', key:'foto'}, {header:'Nome', key:'nome', render: (m) => <div className="font-bold text-slate-700">{safeText(m.nome)}<div className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">{safeText(m.cargo)}{m.funcao_administrativa && m.funcao_administrativa !== 'NENHUMA' ? ` (${safeText(m.funcao_administrativa)})` : ''} • {!m.congregacao_id || m.congregacao_id === 'sede' ? 'SEDE' : db.congregacoes.find(c=>c.id===m.congregacao_id)?.nome}</div></div>}, {header:'Contato', key:'telefone'}, {header:'Status', key:'status'}]; 
+    const cols = [
+        {header:'', key:'foto'}, 
+        {
+            header:'Nome', 
+            key:'nome', 
+            render: (m) => (
+                <div className="font-bold text-slate-700">
+                    <div className="flex items-center flex-wrap gap-1.5">
+                        <span>{safeText(m.nome)}</span>
+                        {m.procedencia === 'outra_igreja' && (
+                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black bg-indigo-50 border border-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded uppercase tracking-wider" title={`Vindo de: ${m.igreja_origem}`}>
+                                ⛪ {m.igreja_origem || 'Igreja Origem'}
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">{safeText(m.cargo)}{m.funcao_administrativa && m.funcao_administrativa !== 'NENHUMA' ? ` (${safeText(m.funcao_administrativa)})` : ''} • {!m.congregacao_id || m.congregacao_id === 'sede' ? 'SEDE' : db.congregacoes.find(c=>c.id===m.congregacao_id)?.nome}</div>
+                </div>
+            )
+        }, 
+        {header:'Contato', key:'telefone'}, 
+        {header:'Status', key:'status'}
+    ]; 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance">
             <div className="flex justify-between items-center bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm flex-wrap gap-4">
@@ -136,8 +157,20 @@ const ModuleMembros = memo(() => {
                 <GenericTable title="Listagem de Membros" type="membro" data={membrosFiltrados} columns={cols} customActions={(item) => (
                     <div className="flex gap-2">
                         <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2.5 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100 bg-white cursor-pointer" title="Carteirinha"><FileBadge size={18}/></button>
-                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('rel_ficha_membro'); setPreviewOpen(true); }} className="p-2.5 text-amber-500 hover:bg-amber-500 hover:text-white rounded-xl transition-all shadow-sm border border-amber-100 bg-white cursor-pointer" title="Ficha do Membro"><FileText size={18}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('rel_ficha_membro'); setPreviewOpen(true); }} className="p-2.5 text-amber-500 hover:bg-amber-550 hover:text-white rounded-xl transition-all shadow-sm border border-amber-100 bg-white cursor-pointer" title="Ficha do Membro"><FileText size={18}/></button>
                         <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2.5 text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100 bg-white cursor-pointer" title="Escala de Compromissos"><ClipboardList size={18}/></button>
+                        
+                        {item.procedencia === 'outra_igreja' && item.carta_recomendacao && (
+                            <button onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = item.carta_recomendacao;
+                                link.download = `carta_recomendacao_${item.nome.trim().replace(/\s+/g, '_')}`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }} className="p-2.5 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100 bg-white cursor-pointer" title="Baixar Carta de Recomendação"><ScrollText size={18}/></button>
+                        )}
+
                         <button onClick={() => handleExportVouchers(item)} className="p-2.5 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white cursor-pointer" title="Exportar Comprovantes (.ZIP)"><Download size={18}/></button>
                         <button onClick={() => {
                             const text = encodeURIComponent(`Olá ${item.nome}, a Paz do Senhor!`);

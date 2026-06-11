@@ -1715,12 +1715,12 @@ const SendIconComp = ({ size }: { size: number }) => <Send size={size} />;
 
 export const GALLERY_WALLPAPERS = [
   { name: 'Sem Papel de Parede', value: null, thumb: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=10&w=200&auto=format&fit=crop' },
-  { name: 'Montanhas Majestosas', value: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=40&w=300&auto=format&fit=crop' },
-  { name: 'Noite Estrelada', value: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=40&w=300&auto=format&fit=crop' },
-  { name: 'Igreja do Monte', value: 'https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?q=40&w=300&auto=format&fit=crop' },
-  { name: 'Abstrato Geométrico', value: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=40&w=300&auto=format&fit=crop' },
-  { name: 'Suave Aurora Gradiente', value: 'https://images.unsplash.com/photo-1531315630201-bb15abeb1653?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1531315630201-bb15abeb1653?q=40&w=300&auto=format&fit=crop' },
-  { name: 'Madeira Escura Orgânica', value: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?q=40&w=300&auto=format&fit=crop' },
+  { name: 'Cristal Líquido (Suave)', value: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=40&w=300&auto=format&fit=crop' },
+  { name: 'Aurora Digital (Sleek)', value: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=40&w=300&auto=format&fit=crop' },
+  { name: 'Gradiente de Seda (Calmo)', value: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=40&w=300&auto=format&fit=crop' },
+  { name: 'Flow Holotrópico (Futurista)', value: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=40&w=300&auto=format&fit=crop' },
+  { name: 'Espectro Radiante (Sutil)', value: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=40&w=300&auto=format&fit=crop' },
+  { name: 'Cosmos Minimalista (Escuro)', value: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=40&w=300&auto=format&fit=crop' },
 ];
 
 export const ANIMATION_OPTIONS = [

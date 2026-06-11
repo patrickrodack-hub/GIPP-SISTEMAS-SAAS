@@ -77,6 +77,7 @@ import ModuleLixeira from './components/ModuleLixeira';
 import ModuleAcessosPortal from './components/ModuleAcessosPortal';
 import ModuleCredencial from './components/ModuleCredencial';
 import ModuleCarteirinha from './components/ModuleCarteirinha';
+import ModuleDPContabilidade from './components/ModuleDPContabilidade';
 import ModuleAuditoria from './components/ModuleAuditoria';
 import ModuleVisitantes from './components/ModuleVisitantes';
 import ModulePatrimonio from './components/ModulePatrimonio';
@@ -1632,7 +1633,7 @@ export const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [] };
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
@@ -2478,6 +2479,94 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                             <div className="grid grid-cols-2 gap-4">
                                 <FormInput label="Data de Admissão" type="date" value={data.data_admissao} onChange={v=>setData({...data, data_admissao:v})} />
                                 <div />
+                            </div>
+
+                            {/* Procedencia, Historico & Funcoes do Membro */}
+                            <div className="mt-6 pt-6 border-t border-indigo-100 space-y-4">
+                                <h5 className="text-[11px] font-black text-indigo-600 uppercase tracking-wider">Procedência, Histórico & Funções Anteriores</h5>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormSelect 
+                                        label="Procedência do Membro" 
+                                        value={data.procedencia || 'novo'} 
+                                        onChange={v => setData({...data, procedencia: v})} 
+                                        options={[
+                                            { label: 'Novo Convertido / Decisão', value: 'novo' },
+                                            { label: 'Veio de outra Congregação', value: 'outra_congregacao' },
+                                            { label: 'Veio de outra Igreja (Por Carta)', value: 'outra_igreja' }
+                                        ]} 
+                                    />
+                                    <FormInput 
+                                        label="Função Eclesiástica Exercida" 
+                                        value={data.funcao_eclesiastica_exercida} 
+                                        onChange={v => setData({...data, funcao_eclesiastica_exercida: v})} 
+                                        placeholder="Ex: Obreiro, Diácono da Casa..." 
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormInput 
+                                        label="Desempenhava Função Administrativa?" 
+                                        value={data.funcoes_administrativas_exercidas} 
+                                        onChange={v => setData({...data, funcoes_administrativas_exercidas: v})} 
+                                        placeholder="Ex: Secretário, Tesoureiro..." 
+                                    />
+                                    <FormInput 
+                                        label="Participava de algum Ministério?" 
+                                        value={data.ministerios_anteriores} 
+                                        onChange={v => setData({...data, ministerios_anteriores: v})} 
+                                        placeholder="Ex: Louvor, Infantil, Jovens..." 
+                                    />
+                                </div>
+
+                                {data.procedencia === 'outra_igreja' && (
+                                    <div className="p-4 bg-indigo-50/70 rounded-xl border border-indigo-100 space-y-4 animate-entrance">
+                                        <p className="text-[10px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-1.5">
+                                            <Building2 size={14} /> Igreja de Origem & Recomendação
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Nome da Igreja de Origem" 
+                                                value={data.igreja_origem} 
+                                                onChange={v => setData({...data, igreja_origem: v})} 
+                                                required 
+                                                placeholder="Ex: Assembleia de Deus Central" 
+                                            />
+                                            <FormInput 
+                                                label="Pastor Presidente" 
+                                                value={data.pastor_origem_presidente} 
+                                                onChange={v => setData({...data, pastor_origem_presidente: v})} 
+                                                required 
+                                                placeholder="Ex: Pr. Geraldo de Souza" 
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Anexar Carta de Recomendação</label>
+                                            <div className="flex items-center flex-wrap gap-3">
+                                                <label className="cursor-pointer bg-white hover:bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 inline-flex items-center gap-2 shadow-xs transition-colors">
+                                                    <Paperclip size={14} /> {data.carta_recomendacao ? 'Substituir Documento' : 'Escolher Arquivo'}
+                                                    <input type="file" className="hidden" accept="image/*,application/pdf" onChange={(e) => handleFileUpload(e, 'carta_recomendacao')} />
+                                                </label>
+                                                {data.carta_recomendacao ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[11px] text-indigo-600 font-bold bg-indigo-100/70 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+                                                            <CheckCircle size={14} className="text-emerald-500" /> Carta Anexada
+                                                        </span>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setData({...data, carta_recomendacao: null})} 
+                                                            className="text-xs font-bold text-rose-500 hover:text-rose-600 px-2 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                                                        >
+                                                            Remover
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[11px] text-slate-400 font-medium italic">Nenhum arquivo anexado (Limite: 500KB)</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -4184,12 +4273,13 @@ export const PrintSystem = ({
     if (mode === 'carteirinha_custom') {
         const layout = data.igreja?.carteirinha_custom || {};
         const bg = layout.bg || '#ffffff';
+        const bgImage = layout.bgImage || (bg.startsWith('http') || bg.startsWith('data:') ? bg : null);
         const fields = layout.fields || [];
 
         return (
             <div className="w-full flex flex-wrap gap-8 justify-center print:p-0" style={selectedMargin}>
                 {data.membros.map((membro, index) => (
-                    <div key={index} className="w-[85.6mm] h-[53.98mm] relative overflow-hidden flex shadow-lg border border-slate-300 shrink-0 print:shadow-none print:border-none avoid-break mb-8 bg-cover bg-center" style={{ backgroundColor: bg.startsWith('#') ? bg : 'transparent', backgroundImage: bg.startsWith('http') || bg.startsWith('data:') ? `url(${bg})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                    <div key={index} className="w-[85.6mm] h-[53.98mm] relative overflow-hidden flex shadow-lg border border-slate-300 shrink-0 print:shadow-none print:border-none avoid-break mb-8 bg-cover bg-center" style={{ backgroundColor: bg.startsWith('#') ? bg : 'transparent', backgroundImage: bgImage ? `url(${bgImage})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }}>
                         {fields.map(f => {
                             if (!f.visible) return null;
                             let content = '';
@@ -4201,7 +4291,7 @@ export const PrintSystem = ({
                                     : cargoBase;
                             }
                             if (f.id === 'cpf') content = membro.cpf;
-                            if (f.id === 'registro') content = membro.numero_registro;
+                            if (f.id === 'registro') content = membro.registro || membro.numero_registro || membro.id || 'N/A';
                             if (f.id === 'igreja') content = data.igreja.nome;
 
                             if (f.type === 'text') {
@@ -5310,6 +5400,25 @@ export const PrintSystem = ({
                              <Box label="Data de Admissão" value={formatDateLocal(m.data_admissao)} span={2}/>
                         </div>
                     </div>
+
+                    <div>
+                        <h3 className="font-bold text-sm bg-slate-800 text-white p-1 px-2 uppercase tracking-widest">4. Procedência & Funções Anteriores</h3>
+                        <div className="grid grid-cols-4 border-l border-t border-slate-400">
+                             <Box label="Procedência" value={
+                                 m.procedencia === 'outra_congregacao' ? 'Veio de outra Congregação' :
+                                 m.procedencia === 'outra_igreja' ? 'Veio de outra Igreja (Por Carta)' : 'Novo Convertido / Decisão'
+                             } span={2}/>
+                             <Box label="Função Eclesiástica Exercida" value={m.funcao_eclesiastica_exercida} span={2}/>
+                             <Box label="Funções Administrativas" value={m.funcoes_administrativas_exercidas} span={2}/>
+                             <Box label="Ministérios que participava" value={m.ministerios_anteriores} span={2}/>
+                             {m.procedencia === 'outra_igreja' && (
+                                 <>
+                                     <Box label="Igreja de Origem" value={m.igreja_origem} span={2}/>
+                                     <Box label="Pastor Presidente Origem" value={m.pastor_origem_presidente} span={2}/>
+                                 </>
+                             )}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="mt-12 text-center text-xs font-medium italic text-slate-600 avoid-break">
@@ -5733,6 +5842,470 @@ export const PrintSystem = ({
                     <strong className="text-slate-700">Nota:</strong> Este relatório consolida as metas de receitas e os limites de teto de gastos configurados anualmente pela liderança da igreja frente a todas as transações de receitas e despesas registradas no livro-caixa dentro do filtro de abrangência selecionado. Margens superiores a 100% nas receitas são excelentes, enquanto usos acima de 100% do teto de gastos no setor financeiro exigem contingenciamento e revisão orçamentária imediata.
                 </div>
             </PageContainer>
+        );
+    }
+
+    // --- CONTRA-CHEQUE CORPORATIVO DEPARTAMENTO PESSOAL ---
+    if (mode === 'dp_contracheque') {
+        const { slip, colaborador, igreja, mesReferenciaExtenso } = data;
+        const totProventos = (slip.proventos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
+        const totDescontos = (slip.descontos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
+        const valorLiquido = slip.valor_liquido || 0;
+
+        return (
+            <div className="w-full bg-white print-block relative flex flex-col mx-auto p-6" style={{ minHeight: '148mm', boxSizing: 'border-box', ...selectedMargin }}>
+                <div className="border-2 border-slate-800 p-4 rounded-lg space-y-4 bg-white text-slate-900">
+                    
+                    {/* Header */}
+                    <div className="flex justify-between items-center border-b border-slate-400 pb-3">
+                        <div>
+                            <h2 className="text-sm font-black uppercase text-slate-800">{igreja?.nome || "IGREJA SEDE"}</h2>
+                            <p className="text-[10px] text-slate-500 font-semibold">{igreja?.endereco || "Endereço não cadastrado"}</p>
+                            <p className="text-[10px] text-slate-500 font-semibold">CNPJ: {igreja?.cnpj || "00.000.000/0001-00"}</p>
+                        </div>
+                        <div className="text-right border-l border-slate-300 pl-4">
+                            <h1 className="text-xs font-black uppercase text-slate-705">Recibo de Pagamento</h1>
+                            <p className="text-[10px] text-slate-500">Mês de Referência: <strong className="uppercase text-indigo-700">{mesReferenciaExtenso || slip.mes_referencia}</strong></p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Status: {slip.status === 'pago' ? 'PAGO' : 'RASCUNHO'}</p>
+                        </div>
+                    </div>
+
+                    {/* Employee Profile */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                        <div className="md:col-span-2">
+                          <span className="block text-[8px] text-slate-400 font-bold uppercase">Nome do Colaborador</span>
+                          <strong className="text-slate-800">{colaborador?.nome}</strong>
+                        </div>
+                        <div>
+                          <span className="block text-[8px] text-slate-400 font-bold uppercase">CPF / RG</span>
+                          <span className="font-mono">{colaborador?.cpf || '-'} / {colaborador?.rg || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[8px] text-slate-400 font-bold uppercase">Função / Cargo</span>
+                          <span>{colaborador?.cargo || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[8px] text-slate-400 font-bold uppercase">Tipo de Vínculo</span>
+                          <span className="uppercase font-bold text-slate-600">{colaborador?.tipo === 'pastor' ? 'Prebenda Clerical' : colaborador?.tipo === 'funcionario' ? 'CLT' : colaborador?.tipo === 'prestador' ? 'Prestador' : 'Colaborador'}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[8px] text-slate-400 font-bold uppercase">Admissão</span>
+                          <span>{colaborador?.admissao || '-'}</span>
+                        </div>
+                        <div className="md:col-span-3">
+                          <span className="block text-[8px] text-slate-400 font-bold uppercase">Dados p/ Depósito Bancário / Transferência</span>
+                          <span className="font-semibold text-slate-600">
+                            {colaborador?.banco ? `Banco: ${colaborador.banco} Ag: ${colaborador.agencia || ''} C/C: ${colaborador.conta || ''}` : ''}
+                            {colaborador?.pix ? ` | PIX: ${colaborador.pix}` : ''}
+                            {!colaborador?.banco && !colaborador?.pix ? 'Dinheiro / Caixa Físico' : ''}
+                          </span>
+                        </div>
+                    </div>
+
+                    {/* Earnings and Deductions Table */}
+                    <table className="w-full text-left border-collapse text-[11px]">
+                        <thead>
+                            <tr className="bg-slate-805 text-white font-bold uppercase text-[9px] tracking-wider">
+                                <th className="p-2 border border-slate-700 w-12 text-center">Cód.</th>
+                                <th className="p-2 border border-slate-700">Descrição dos Lançamentos</th>
+                                <th className="p-2 border border-slate-700 text-center w-24">Referência</th>
+                                <th className="p-2 border border-slate-700 text-right w-28">Proventos (+)</th>
+                                <th className="p-2 border border-slate-700 text-right w-28">Descontos (-)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* Standard Salary base */}
+                            {(slip.proventos || []).map((item: any, idx: number) => (
+                                <tr key={`prov-${idx}`} className="border-b border-slate-200">
+                                    <td className="p-2 border-r border-slate-200 text-center text-slate-400 font-mono">10{idx}</td>
+                                    <td className="p-2 border-r border-slate-200 font-semibold">{item.descricao}</td>
+                                    <td className="p-2 border-r border-slate-200 text-center">30 dias</td>
+                                    <td className="p-2 border-r border-slate-200 text-right font-semibold text-slate-800">R$ {parseFloat(item.valor).toFixed(2)}</td>
+                                    <td className="p-2 border-r border-slate-200 text-right text-slate-400">-</td>
+                                </tr>
+                            ))}
+
+                            {(slip.descontos || []).map((item: any, idx: number) => (
+                                <tr key={`desc-${idx}`} className="border-b border-slate-200">
+                                    <td className="p-2 border-r border-slate-200 text-center text-slate-400 font-mono">20{idx}</td>
+                                    <td className="p-2 border-r border-slate-200 font-semibold text-slate-650">{item.descricao}</td>
+                                    <td className="p-2 border-r border-slate-200 text-center">{colaborador?.tipo === 'pastor' ? 'Clero' : 'CLT'}</td>
+                                    <td className="p-2 border-r border-slate-200 text-right text-slate-400">-</td>
+                                    <td className="p-2 border-r border-slate-200 text-right font-semibold text-rose-650">R$ {parseFloat(item.valor).toFixed(2)}</td>
+                                </tr>
+                            ))}
+
+                            {/* Spacing rows to fill height */}
+                            {Array.from({ length: Math.max(1, 6 - ((slip.proventos || []).length + (slip.descontos || []).length)) }).map((_, i) => (
+                                <tr key={`empty-${i}`} className="border-b border-slate-100 h-6">
+                                    <td className="p-2 border-r border-slate-200"></td>
+                                    <td className="p-2 border-r border-slate-200"></td>
+                                    <td className="p-2 border-r border-slate-200"></td>
+                                    <td className="p-2 border-r border-slate-200"></td>
+                                    <td className="p-2 border-r border-slate-200"></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {/* Summaries */}
+                    <div className="grid grid-cols-3 gap-0 border border-slate-400 text-[11px]">
+                        <div className="p-2 border-r border-slate-400 text-right">
+                            <span className="block text-[8px] text-slate-400 font-bold uppercase text-left">Total de Proventos</span>
+                            <strong className="text-slate-850 text-xs">R$ {totProventos.toFixed(2)}</strong>
+                        </div>
+                        <div className="p-2 border-r border-slate-400 text-right">
+                            <span className="block text-[8px] text-slate-400 font-bold uppercase text-left">Total de Descontos</span>
+                            <strong className="text-rose-600 text-xs">R$ {totDescontos.toFixed(2)}</strong>
+                        </div>
+                        <div className="p-2 text-right bg-slate-50">
+                            <span className="block text-[8px] text-slate-500 font-black uppercase text-left">Valor Líquido</span>
+                            <strong className="text-slate-900 text-sm">R$ {valorLiquido.toFixed(2)}</strong>
+                        </div>
+                    </div>
+
+                    {/* Footer Declarations */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dotted border-slate-400 text-[10px]">
+                        <div className="space-y-4">
+                            <p className="text-justify text-slate-500 leading-relaxed font-semibold">
+                                Declaro ter recebido de <strong className="text-slate-800">{igreja?.nome || 'IGREJA DE DEUS'}</strong> a importância líquida discriminada neste recibo de pagamento administrativo, para a qual dou plena e irrevogável quitação.
+                            </p>
+                            <div className="border-b border-slate-400 w-full pt-4"></div>
+                            <p className="text-center font-bold text-slate-600 uppercase tracking-widest text-[8px]">Assinatura do Colaborador / Cooperador</p>
+                        </div>
+                        <div className="text-right flex flex-col justify-end space-y-4 pr-4">
+                            <div>
+                                <p className="font-bold text-slate-700">Data de Pagamento: <span className="font-mono">{slip.data_pagamento ? new Date(slip.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span></p>
+                                <p className="text-slate-400 italic text-[9px] mt-0.5">Gerado via Módulo Eclesiástico DP / Contábil</p>
+                            </div>
+                            <div className="border-b border-slate-400 w-11/12 ml-auto pt-4"></div>
+                            <p className="text-center font-bold text-slate-600 uppercase tracking-widest text-[8px]">Assinatura do Responsável (Tesouraria)</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        );
+    }
+
+    // --- LOTE DE CONTRA-CHEQUES DEPARTAMENTO PESSOAL ---
+    if (mode === 'dp_contracheque_lote') {
+        const { slips, colaboradores, igreja, mesReferenciaExtenso } = data;
+
+        return (
+            <div className="w-full bg-white relative flex flex-col mx-auto space-y-8 print:space-y-0 text-slate-1000">
+                {(slips || []).map((slip: any) => {
+                    const colaborador = colaboradores.find((c: any) => c.id === slip.colaborador_id);
+                    if (!colaborador) return null;
+
+                    const totProventos = (slip.proventos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
+                    const totDescontos = (slip.descontos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
+                    const valorLiquido = slip.valor_liquido || 0;
+
+                    return (
+                        <div 
+                            key={slip.id} 
+                            className="bg-white p-6 relative flex flex-col mx-auto border-b border-dashed border-slate-300 pb-12 print:border-b-0 print:pb-0 break-after-page page-break-after-always" 
+                            style={{ minHeight: '148mm', boxSizing: 'border-box', ...selectedMargin }}
+                        >
+                            <div className="border-2 border-slate-800 p-4 rounded-lg space-y-4 bg-white text-slate-900">
+                                
+                                {/* Header */}
+                                <div className="flex justify-between items-center border-b border-slate-400 pb-3">
+                                    <div>
+                                        <h2 className="text-sm font-black uppercase text-slate-800">{igreja?.nome || "IGREJA SEDE"}</h2>
+                                        <p className="text-[10px] text-slate-500 font-semibold">{igreja?.endereco || "Endereço não cadastrado"}</p>
+                                        <p className="text-[10px] text-slate-500 font-semibold">CNPJ: {igreja?.cnpj || "00.000.000/0001-00"}</p>
+                                    </div>
+                                    <div className="text-right border-l border-slate-300 pl-4">
+                                        <h1 className="text-xs font-black uppercase text-slate-705">Recibo de Pagamento</h1>
+                                        <p className="text-[10px] text-slate-500">Mês de Referência: <strong className="uppercase text-indigo-700">{mesReferenciaExtenso || slip.mes_referencia}</strong></p>
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Status: {slip.status === 'pago' ? 'PAGO' : 'RASCUNHO'}</p>
+                                    </div>
+                                </div>
+
+                                {/* Employee Profile */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                                    <div className="md:col-span-2">
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase">Nome do Colaborador</span>
+                                      <strong className="text-slate-800">{colaborador?.nome}</strong>
+                                    </div>
+                                    <div>
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase">CPF / RG</span>
+                                      <span className="font-mono">{colaborador?.cpf || '-'} / {colaborador?.rg || '-'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase">Função / Cargo</span>
+                                      <span>{colaborador?.cargo || '-'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase">Tipo de Vínculo</span>
+                                      <span className="uppercase font-bold text-slate-600">{colaborador?.tipo === 'pastor' ? 'Prebenda Clerical' : colaborador?.tipo === 'funcionario' ? 'CLT' : colaborador?.tipo === 'prestador' ? 'Prestador' : 'Colaborador'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase">Admissão</span>
+                                      <span>{colaborador?.admissao || '-'}</span>
+                                    </div>
+                                    <div className="md:col-span-3">
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase">Dados p/ Depósito Bancário / Transferência</span>
+                                      <span className="font-semibold text-slate-600">
+                                        {colaborador?.banco ? `Banco: ${colaborador.banco} Ag: ${colaborador.agencia || ''} C/C: ${colaborador.conta || ''}` : ''}
+                                        {colaborador?.pix ? ` | PIX: ${colaborador.pix}` : ''}
+                                        {!colaborador?.banco && !colaborador?.pix ? 'Dinheiro / Caixa Físico' : ''}
+                                      </span>
+                                    </div>
+                                </div>
+
+                                {/* Earnings and Deductions Table */}
+                                <table className="w-full text-left border-collapse text-[11px]">
+                                    <thead>
+                                        <tr className="bg-slate-805 text-white font-bold uppercase text-[9px] tracking-wider">
+                                            <th className="p-2 border border-slate-700 w-12 text-center">Cód.</th>
+                                            <th className="p-2 border border-slate-700">Descrição dos Lançamentos</th>
+                                            <th className="p-2 border border-slate-700 text-center w-24">Referência</th>
+                                            <th className="p-2 border border-slate-700 text-right w-28">Proventos (+)</th>
+                                            <th className="p-2 border border-slate-700 text-right w-28">Descontos (-)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(slip.proventos || []).map((item: any, idx: number) => (
+                                            <tr key={`prov-${idx}`} className="border-b border-slate-200">
+                                                <td className="p-2 border-r border-slate-200 text-center text-slate-400 font-mono">10{idx}</td>
+                                                <td className="p-2 border-r border-slate-200 font-semibold">{item.descricao}</td>
+                                                <td className="p-2 border-r border-slate-200 text-center">30 dias</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-semibold text-slate-800">R$ {parseFloat(item.valor).toFixed(2)}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right text-slate-400">-</td>
+                                            </tr>
+                                        ))}
+
+                                        {(slip.descontos || []).map((item: any, idx: number) => (
+                                            <tr key={`desc-${idx}`} className="border-b border-slate-200">
+                                                <td className="p-2 border-r border-slate-200 text-center text-slate-400 font-mono">20{idx}</td>
+                                                <td className="p-2 border-r border-slate-200 font-semibold text-slate-650">{item.descricao}</td>
+                                                <td className="p-2 border-r border-slate-200 text-center">{colaborador?.tipo === 'pastor' ? 'Clero' : 'CLT'}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right text-slate-400">-</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-semibold text-rose-650">R$ {parseFloat(item.valor).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+
+                                        {Array.from({ length: Math.max(1, 6 - ((slip.proventos || []).length + (slip.descontos || []).length)) }).map((_, i) => (
+                                            <tr key={`empty-${i}`} className="border-b border-slate-100 h-6">
+                                                <td className="p-2 border-r border-slate-200"></td>
+                                                <td className="p-2 border-r border-slate-200"></td>
+                                                <td className="p-2 border-r border-slate-200"></td>
+                                                <td className="p-2 border-r border-slate-200"></td>
+                                                <td className="p-2 border-r border-slate-200"></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* Summaries */}
+                                <div className="grid grid-cols-3 gap-0 border border-slate-400 text-[11px]">
+                                    <div className="p-2 border-r border-slate-400 text-right">
+                                        <span className="block text-[8px] text-slate-400 font-bold uppercase text-left">Total de Proventos</span>
+                                        <strong className="text-slate-850 text-xs">R$ {totProventos.toFixed(2)}</strong>
+                                    </div>
+                                    <div className="p-2 border-r border-slate-400 text-right">
+                                        <span className="block text-[8px] text-slate-400 font-bold uppercase text-left">Total de Descontos</span>
+                                        <strong className="text-rose-600 text-xs">R$ {totDescontos.toFixed(2)}</strong>
+                                    </div>
+                                    <div className="p-2 text-right bg-slate-50">
+                                        <span className="block text-[8px] text-slate-500 font-black uppercase text-left">Valor Líquido</span>
+                                        <strong className="text-slate-900 text-sm">R$ {valorLiquido.toFixed(2)}</strong>
+                                    </div>
+                                </div>
+
+                                {/* Footer Declarations */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dotted border-slate-400 text-[10px]">
+                                    <div className="space-y-4">
+                                        <p className="text-justify text-slate-500 leading-relaxed font-semibold">
+                                            Declaro ter recebido de <strong className="text-slate-800">{igreja?.nome || 'IGREJA DE DEUS'}</strong> a importância líquida discriminada neste recibo de pagamento administrativo, para a qual dou plena e irrevogável quitação.
+                                        </p>
+                                        <div className="border-b border-slate-400 w-full pt-4"></div>
+                                        <p className="text-center font-bold text-slate-600 uppercase tracking-widest text-[8px]">Assinatura do Colaborador / Cooperador</p>
+                                    </div>
+                                    <div className="text-right flex flex-col justify-end space-y-4 pr-4">
+                                        <div>
+                                            <p className="font-bold text-slate-700">Data de Pagamento: <span className="font-mono">{slip.data_pagamento ? new Date(slip.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span></p>
+                                            <p className="text-slate-400 italic text-[9px] mt-0.5">Gerado via Módulo Eclesiástico DP / Automação de Lote</p>
+                                        </div>
+                                        <div className="border-b border-slate-400 w-11/12 ml-auto pt-4"></div>
+                                        <p className="text-center font-bold text-slate-600 uppercase tracking-widest text-[8px]">Assinatura do Responsável (Tesouraria)</p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    // --- RELATÓRIOS DO DEPARTAMENTO PESSOAL ---
+    if (mode === 'dp_funcionarios_lista') {
+        const { reportType, colaboradores, foiValores, selectedMonth, igreja, congregacoes } = data;
+        const parts = selectedMonth?.split('-');
+        const dateObj = parts ? new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 15) : new Date();
+        const labelMês = dateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
+
+        return (
+            <div className="w-full bg-white print-block relative flex flex-col mx-auto p-12 font-sans" style={{ minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
+                
+                {/* Header */}
+                <div className="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
+                    <div>
+                        <h1 className="text-lg font-black uppercase text-slate-900">{igreja?.nome || "Igreja Sede Geral"}</h1>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Contramedida de Controle de Departamento Pessoal / Contabilidade</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">Filtro Referência: <strong className="text-indigo-600">{labelMês}</strong></p>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-[10px] bg-slate-950 text-white font-black px-2.5 py-0.5 rounded uppercase tracking-wider block">Relatório Oficial</span>
+                        <span className="text-[9px] text-slate-400 font-semibold block mt-1">Impresso em: {new Date().toLocaleDateString('pt-BR')}</span>
+                    </div>
+                </div>
+
+                {/* Report Type 1: colaboradores_lista */}
+                {reportType === 'colaboradores_lista' && (
+                    <div className="space-y-4">
+                        <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-200 pb-2">Relação Geral de Funcionários e Auxiliares Ativos ({colaboradores.length})</h2>
+                        
+                        <table className="w-full text-left border-collapse text-[11px] border border-slate-300">
+                            <thead>
+                                <tr className="bg-slate-800 text-white uppercase text-[8px] font-bold">
+                                    <th className="p-2 border border-slate-300">Colaborador</th>
+                                    <th className="p-2 border border-slate-300">CPF</th>
+                                    <th className="p-2 border border-slate-300">Vínculo</th>
+                                    <th className="p-2 border border-slate-300">Cargo Administrativo</th>
+                                    <th className="p-2 border border-slate-300">Admissão</th>
+                                    <th className="p-2 border border-slate-300 text-right">Salário Base (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {colaboradores.map((c: any) => (
+                                    <tr key={c.id} className="border-b border-slate-200 hover:bg-slate-50">
+                                        <td className="p-2 border-r border-slate-200 font-bold text-slate-800">{c.nome}</td>
+                                        <td className="p-2 border-r border-slate-200 font-mono text-slate-650">{c.cpf || 'Não informado'}</td>
+                                        <td className="p-2 border-r border-slate-200 uppercase font-semibold text-slate-500">
+                                            {c.tipo === 'pastor' ? 'Prebenda' : c.tipo === 'funcionario' ? 'CLT' : c.tipo === 'prestador' ? 'Prestador' : 'Colaborador'}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200">{c.cargo || 'Membro do Time'}</td>
+                                        <td className="p-2 border-r border-slate-200">{c.admissao ? new Date(c.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                                        <td className="p-2 text-right font-mono font-bold text-slate-700">R$ {parseFloat(c.salario_base || 0).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                <tr className="bg-slate-50 font-black text-slate-900 border-t border-slate-400">
+                                    <td colSpan={5} className="p-2 text-right uppercase text-[9px] tracking-wider">Totalização Geral das Folhas Contratuais Ativas:</td>
+                                    <td className="p-2 text-right font-mono text-xs">
+                                        R$ {colaboradores.reduce((acc: number, cur: any) => acc + (parseFloat(cur.salario_base) || 0), 0).toFixed(2)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Report Type 2: prebendas_clero */}
+                {reportType === 'prebendas_clero' && (
+                    <div className="space-y-4">
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Declaração de Sustento Religioso Pastoral (Regulamentação Federal)</h3>
+                            <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
+                                As importâncias pagas aos ministros de confissão religiosa, membros de congregação, de ordem religiosa na forma de Prebenda, Côngrua ou Sustento eclesiástico são desprovidas de vínculo empregatício trabalhista sob a Lei Federal nº 8.212/91, desde que pagas para subsistência e atividades sacerdotais exclusivas. Este relatório consolida e certifica referidas prebendas.
+                            </p>
+                        </div>
+
+                        <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-200 pb-2 mt-4">Relação de Líderes Religiosos e Pastores (Subsistência Ministerial)</h2>
+                        
+                        <table className="w-full text-left border-collapse text-[11px] border border-slate-350">
+                            <thead>
+                                <tr className="bg-slate-900 text-white uppercase text-[8px] font-bold">
+                                    <th className="p-2 border border-slate-350">Pastor / Líder Clérigo</th>
+                                    <th className="p-2 border border-slate-350">CPF Ministro</th>
+                                    <th className="p-2 border border-slate-350">Cargo de Ordenação e Congregação</th>
+                                    <th className="p-2 border border-slate-350">Chave PIX / Depósito</th>
+                                    <th className="p-2 border border-slate-350 text-right">Subsídio Prebenda (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {colaboradores.filter((c: any) => c.tipo === 'pastor').map((c: any) => (
+                                    <tr key={c.id} className="border-b border-slate-200 hover:bg-slate-50">
+                                        <td className="p-2 border-r border-slate-200 font-black text-slate-800">{c.nome}</td>
+                                        <td className="p-2 border-r border-slate-200 font-mono text-slate-600">{c.cpf || 'Não Informado'}</td>
+                                        <td className="p-2 border-r border-slate-200">
+                                            {c.cargo || 'Pastor Sacerdote'} - <span className="text-[10px] font-bold text-slate-400">{c.congregacao_id === 'sede' ? 'SEDE GENERAL' : 'CONGREGAÇÃO'}</span>
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 font-mono text-[10px] text-slate-500">{c.pix || 'Transferência no caixa'}</td>
+                                        <td className="p-2 text-right font-mono font-black text-slate-800">R$ {parseFloat(c.salario_base || 0).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                <tr className="bg-slate-100 font-black text-slate-900 border-t border-slate-400">
+                                    <td colSpan={4} className="p-2 text-right uppercase text-[8px] tracking-wider">Total de Subsídios Clericais e Prebendas Registradas:</td>
+                                    <td className="p-2 text-right font-mono text-sm text-indigo-700">
+                                        R$ {colaboradores.filter((c: any) => c.tipo === 'pastor').reduce((acc: number, cur: any) => acc + (parseFloat(cur.salario_base) || 0), 0).toFixed(2)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Report Type 3: consolidado_congregacao */}
+                {reportType === 'consolidado_congregacao' && (
+                    <div className="space-y-4">
+                        <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-200 pb-2">Totalização Consolidada de Salários e Impostos Estimados por Filial</h2>
+                        
+                        <table className="w-full text-left border-collapse text-[11px] border border-slate-350">
+                            <thead>
+                                <tr className="bg-slate-800 text-white uppercase text-[8px] font-bold">
+                                    <th className="p-2 border border-slate-350">Filial / Congregação</th>
+                                    <th className="p-2 border border-slate-350 text-center w-36">Quantidade de Colaboradores</th>
+                                    <th className="p-2 border border-slate-350 text-right w-44">Total Desembolsado Base (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {['sede', ...congregacoes.map((cg: any) => cg.id)].map((cId: string) => {
+                                    const congregacaoNome = cId === 'sede' ? 'SEDE GERAL' : (congregacoes.find((x: any) => x.id === cId)?.nome || '').toUpperCase();
+                                    const listStaff = colaboradores.filter((c: any) => (c.congregacao_id || 'sede') === cId && c.status === 'ativo' && !c.deleted);
+                                    if (listStaff.length === 0) return null;
+
+                                    const sumBase = listStaff.reduce((acc: number, cur: any) => acc + (parseFloat(cur.salario_base) || 0), 0);
+
+                                    return (
+                                        <tr key={cId} className="border-b border-slate-200">
+                                            <td className="p-2 border-r border-slate-200 font-bold text-slate-800">{congregacaoNome}</td>
+                                            <td className="p-2 border-r border-slate-200 text-center font-mono font-bold text-slate-600">{listStaff.length} colaboradores ativos</td>
+                                            <td className="p-2 text-right font-mono font-bold text-slate-700">R$ {sumBase.toFixed(2)}</td>
+                                        </tr>
+                                    );
+                                })}
+                                <tr className="bg-slate-100 font-black text-slate-900 border-t border-slate-400">
+                                    <td colSpan={2} className="p-2 text-right uppercase text-[8px] tracking-wider">Desembolso Geral da Organização Religiosa Sede + Filiais:</td>
+                                    <td className="p-2 text-right font-mono text-sm">
+                                        R$ {colaboradores.filter((c: any) => c.status === 'ativo' && !c.deleted).reduce((acc: number, cur: any) => acc + (parseFloat(cur.salario_base) || 0), 0).toFixed(2)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Footer Signature slots */}
+                <div className="mt-16 pt-8 border-t border-slate-300 grid grid-cols-2 gap-12 text-[10px] avoid-break">
+                    <div className="text-center">
+                        <div className="border-b border-slate-400 w-3/4 mx-auto pt-6"></div>
+                        <p className="font-bold text-slate-800 uppercase tracking-widest text-[8px] mt-2">Tesoureiro / Contador Geral</p>
+                        <p className="text-slate-400">Conselho Administrativo Responsável</p>
+                    </div>
+                    <div className="text-center">
+                        <div className="border-b border-slate-400 w-3/4 mx-auto pt-6"></div>
+                        <p className="font-bold text-slate-800 uppercase tracking-widest text-[8px] mt-2">Pastor Presidente</p>
+                        <p className="text-slate-400">Assinatura Clérigo Homologação</p>
+                    </div>
+                </div>
+
+            </div>
         );
     }
 
@@ -6500,8 +7073,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
         const defaultPlanos = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual']
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -6656,6 +7229,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_fin_analise') && checkPlan('fin_conciliacao') && <MenuItem id="fin_conciliacao" icon={FileCheck} label="Bank. Conciliação" />}
                         {hasPermission('access_fin_carnes') && checkPlan('fin_carnes') && <MenuItem id="fin_carnes" icon={CreditCard} label="Carnês & Campanhas" />}
                         {hasPermission('access_fin_cadastros') && checkPlan('fin_utilitarios') && <MenuItem id="fin_utilitarios" icon={Settings} label="Utilitários (Bases)" />}
+                        {hasPermission('access_fin_saidas') && checkPlan('dp_contabilidade') && <MenuItem id="dp_contabilidade" icon={Users} label="Depto. Pessoal / RH" />}
                     </div>
                 )}
 
@@ -10341,6 +10915,7 @@ const AppLayout = () => {
         'rede_social': { component: ModuleRedeSocial, access: 'access_midia' },
         'relatorios': { component: ModuleRelatorios, access: 'access_sec_relatorios' },
         'assistente_ai': { component: ModuleAssistenteAI, access: 'access_ia' },
+        'dp_contabilidade': { component: ModuleDPContabilidade, access: 'access_fin_saidas' },
         'fin_entrada': { component: () => <ModuleFinanceiro initialTab={2} />, access: 'access_fin_entradas' },
         'fin_saida': { component: () => <ModuleFinanceiro initialTab={3} />, access: 'access_fin_saidas' },
         'fin_dre': { component: () => <ModuleFinanceiro initialTab={1} />, access: 'access_fin_analise' },
@@ -11583,7 +12158,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
