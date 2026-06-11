@@ -88,11 +88,81 @@ const ModuleDPContabilidade = memo(() => {
   // Individual Pay Slip Custom Additions/Deductions states in editing mode
   const [expandedSlipId, setExpandedSlipId] = useState<string | null>(null);
 
+  // States for Analytical Payroll Report
+  const [folhaReportType, setFolhaReportType] = useState<'mensal' | 'trimestral' | 'anual' | 'periodo'>('mensal');
+  const [folhaReportYear, setFolhaReportYear] = useState(() => new Date().getFullYear().toString());
+  const [folhaReportMonth, setFolhaReportMonth] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [folhaReportQuarter, setFolhaReportQuarter] = useState<'1' | '2' | '3' | '4'>('1');
+  const [folhaReportStartMonth, setFolhaReportStartMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-01`;
+  });
+  const [folhaReportEndMonth, setFolhaReportEndMonth] = useState(() => {
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    return `${today.getFullYear()}-${mm}`;
+  });
+  const [showInAppFolhaPreview, setShowInAppFolhaPreview] = useState(false);
+
   // Active DP lists
   const colaboradores = useMemo(() => db.dp_colaboradores || [], [db.dp_colaboradores]);
   const folhas = useMemo(() => db.dp_folhas || [], [db.dp_folhas]);
   const congregacoes = useMemo(() => db.congregacoes || [], [db.congregacoes]);
   const membrosGerais = useMemo(() => db.membros || [], [db.membros]);
+
+  // Compute filtered pay slips for the Analytical report
+  const filteredFolhasForReport = useMemo(() => {
+    const activeStaffs = colaboradores.filter((c: any) => !c.deleted);
+    const activeStaffsMap = new Map<string, any>(activeStaffs.map((c: any) => [c.id, c]));
+
+    const filtered = (db.dp_folhas || []).filter((f: any) => {
+      if (f.deleted) return false;
+      const ref = f.mes_referencia;
+      if (!ref) return false;
+
+      const c: any = activeStaffsMap.get(f.colaborador_id);
+      if (!c) return false;
+
+      if (folhaReportType === 'mensal') {
+        return ref === `${folhaReportYear}-${folhaReportMonth}`;
+      } else if (folhaReportType === 'trimestral') {
+        const year = ref.substring(0, 4);
+        const month = ref.substring(5, 7);
+        if (year !== folhaReportYear) return false;
+        
+        if (folhaReportQuarter === '1') {
+          return month === '01' || month === '02' || month === '03';
+        } else if (folhaReportQuarter === '2') {
+          return month === '04' || month === '05' || month === '06';
+        } else if (folhaReportQuarter === '3') {
+          return month === '07' || month === '08' || month === '09';
+        } else if (folhaReportQuarter === '4') {
+          return month === '10' || month === '11' || month === '12';
+        }
+      } else if (folhaReportType === 'anual') {
+        return ref.startsWith(`${folhaReportYear}-`);
+      } else if (folhaReportType === 'periodo') {
+        return ref >= folhaReportStartMonth && ref <= folhaReportEndMonth;
+      }
+      return false;
+    });
+
+    return filtered.map((f: any) => {
+      const colab = activeStaffsMap.get(f.colaborador_id);
+      return {
+        ...f,
+        colaborador_nome: colab ? colab.nome : 'Desconhecido',
+        colaborador_cpf: colab ? colab.cpf : '',
+        colaborador_tipo: colab ? colab.tipo : 'funcionario',
+        colaborador_cargo: colab ? colab.cargo : ''
+      };
+    }).sort((a: any, b: any) => {
+      if (a.mes_referencia !== b.mes_referencia) {
+        return a.mes_referencia.localeCompare(b.mes_referencia);
+      }
+      return a.colaborador_nome.localeCompare(b.colaborador_nome);
+    });
+  }, [db.dp_folhas, colaboradores, folhaReportType, folhaReportYear, folhaReportMonth, folhaReportQuarter, folhaReportStartMonth, folhaReportEndMonth]);
 
   // Months listing for payroll select
   const availableMonths = useMemo(() => {
@@ -1574,6 +1644,26 @@ const ModuleDPContabilidade = memo(() => {
     setPreviewOpen(true);
   };
 
+  // Print system helper for Analytical Payroll Report
+  const handlePrintAnalitico = () => {
+    setPrintData({
+      reportType: 'folha_analitica',
+      folhas: filteredFolhasForReport,
+      reportParams: {
+        tipo: folhaReportType,
+        ano: folhaReportYear,
+        mes: folhaReportMonth,
+        trimestre: folhaReportQuarter,
+        inicio: folhaReportStartMonth,
+        fim: folhaReportEndMonth
+      },
+      igreja: db.igreja,
+      congregacoes
+    });
+    setPrintMode('dp_funcionarios_lista');
+    setPreviewOpen(true);
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6 animate-entrance">
       {/* HEADER CONTROLE CORPORATIVO */}
@@ -2352,10 +2442,10 @@ const ModuleDPContabilidade = memo(() => {
               <Printer size={18} className="text-indigo-600" /> Emissão de Relatórios Oficiais do Departamento Pessoal
             </h3>
             <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-              Consolide os gastos de funcionários e líderança religiosa para fins de conciliação bancária, fechamentos mensais de contabilidade de igreja ou emissão de balanços. Todos os relatórios utilizam a mesma paleta elegante de visual do sistema.
+              Consolide os gastos de funcionários e liderança religiosa para fins de conciliação bancária, fechamentos mensais de contabilidade de igreja ou emissão de balanços. Todos os relatórios utilizam a mesma paleta elegante de visual do sistema.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                 <div>
@@ -2369,7 +2459,7 @@ const ModuleDPContabilidade = memo(() => {
                 </div>
                 <button 
                   onClick={() => handlePrintReports('colaboradores_lista')}
-                  className="mt-6 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-250 font-bold rounded-xl text-xs text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  className="mt-6 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-250 font-bold rounded-xl text-xs text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors w-full"
                 >
                   <Printer size={14} className="text-slate-500" /> Imprimir Quadro Geral
                 </button>
@@ -2387,7 +2477,7 @@ const ModuleDPContabilidade = memo(() => {
                 </div>
                 <button 
                   onClick={() => handlePrintReports('prebendas_clero')}
-                  className="mt-6 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-250 font-bold rounded-xl text-xs text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  className="mt-6 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-250 font-bold rounded-xl text-xs text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors w-full"
                 >
                   <Printer size={14} className="text-slate-500" /> Imprimir Relatório Clero
                 </button>
@@ -2398,20 +2488,316 @@ const ModuleDPContabilidade = memo(() => {
                   <span className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl inline-block mb-3.5 shadow-sm">
                     <Building2 size={20} />
                   </span>
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">DEMONSTRATIVO POR FILIAL CONREGADO</h4>
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">DEMONSTRATIVO POR FILIAL CONGREGADO</h4>
                   <p className="text-[11px] text-slate-500 mt-2">
                     Consolidação agregada de gastos de pessoal organizados por Congregação / Sub-divisões, ideal para tesourarias setoriais.
                   </p>
                 </div>
                 <button 
                   onClick={() => handlePrintReports('consolidado_congregacao')}
-                  className="mt-6 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-250 font-bold rounded-xl text-xs text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  className="mt-6 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-250 font-bold rounded-xl text-xs text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors w-full"
                 >
                   <Printer size={14} className="text-slate-500" /> Imprimir Dividido por Filial
                 </button>
               </div>
 
+              {/* CARTÃO 4: RELATÓRIO DE FOLHA ANALÍTICA DE FECHAMENTO */}
+              <div className="bg-indigo-50/20 border border-indigo-150 p-5 rounded-2xl shadow-xs flex flex-col justify-between hover:border-indigo-300/80 transition-colors">
+                <div>
+                  <span className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl inline-block mb-3.5 shadow-sm">
+                    <FileText size={20} />
+                  </span>
+                  <h4 className="text-xs font-black text-indigo-850 uppercase tracking-wider">RELATÓRIO DE FOLHA ANALÍTICA</h4>
+                  <p className="text-[11px] text-slate-500 mt-1 pb-3 border-b border-indigo-100/40">
+                    Consolide em lote dízimos, deduções de INSS, IRRF e valores líquidos integrados para fechamentos mensais, trimestrais ou anuais.
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-12 gap-3.5">
+                    {/* Period selection inputs */}
+                    <div className="md:col-span-12 space-y-2">
+                      <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Filtro Temporal de Fechamento</label>
+                      <div className="grid grid-cols-4 gap-1 bg-slate-105 p-1 rounded-xl border border-slate-200">
+                        {(['mensal', 'trimestral', 'anual', 'periodo'] as const).map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => {
+                              setFolhaReportType(t);
+                              setShowInAppFolhaPreview(true);
+                            }}
+                            className={`px-1.5 py-1 text-center text-[9px] font-bold rounded-lg transition-all capitalize select-none cursor-pointer ${
+                              folhaReportType === t 
+                                ? 'bg-indigo-600 text-white shadow-xs' 
+                                : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            {t === 'periodo' ? 'Lote Livre' : t === 'mensal' ? 'Mensal' : t === 'trimestral' ? 'Trimestral' : 'Anual'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Param Details */}
+                    <div className="md:col-span-12 space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div className="grid grid-cols-2 gap-2 text-left">
+                        {folhaReportType === 'mensal' && (
+                          <>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase text-slate-500">Mês</label>
+                              <select 
+                                value={folhaReportMonth}
+                                onChange={(e) => {
+                                  setFolhaReportMonth(e.target.value);
+                                  setShowInAppFolhaPreview(true);
+                                }}
+                                className="w-full text-[11px] bg-white border border-slate-250 p-1 font-bold rounded text-slate-700 shadow-xs"
+                              >
+                                {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => (
+                                  <option key={m} value={m}>{new Date(2026, parseInt(m)-1, 1).toLocaleDateString('pt-BR', {month: 'long'}).toUpperCase()}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase text-slate-500">Ano</label>
+                              <input 
+                                type="number" 
+                                value={folhaReportYear}
+                                onChange={(e) => {
+                                  setFolhaReportYear(e.target.value);
+                                  setShowInAppFolhaPreview(true);
+                                }}
+                                className="w-full text-[11px] bg-white border border-slate-250 p-1 font-bold rounded text-slate-700 shadow-xs text-center"
+                                min="2020"
+                                max="2035"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {folhaReportType === 'trimestral' && (
+                          <>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase text-slate-500">Trimestre</label>
+                              <select 
+                                value={folhaReportQuarter}
+                                onChange={(e) => {
+                                  setFolhaReportQuarter(e.target.value as any);
+                                  setShowInAppFolhaPreview(true);
+                                }}
+                                className="w-full text-[11px] bg-white border border-slate-250 p-1 font-bold rounded text-slate-700 shadow-xs"
+                              >
+                                <option value="1">1º Trimestre (Jan-Mar)</option>
+                                <option value="2">2º Trimestre (Abr-Jun)</option>
+                                <option value="3">3º Trimestre (Jul-Set)</option>
+                                <option value="4">4º Trimestre (Out-Dez)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase text-slate-500">Ano</label>
+                              <input 
+                                type="number" 
+                                value={folhaReportYear}
+                                onChange={(e) => {
+                                  setFolhaReportYear(e.target.value);
+                                  setShowInAppFolhaPreview(true);
+                                }}
+                                className="w-full text-[11px] bg-white border border-slate-250 p-1 font-bold rounded text-slate-700 shadow-xs text-center"
+                                min="2020"
+                                max="2035"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {folhaReportType === 'anual' && (
+                          <div className="col-span-2 space-y-1">
+                            <label className="text-[8px] font-black uppercase text-slate-500">Exercício Anual</label>
+                            <input 
+                              type="number" 
+                              value={folhaReportYear}
+                              onChange={(e) => {
+                                setFolhaReportYear(e.target.value);
+                                setShowInAppFolhaPreview(true);
+                              }}
+                              className="w-full text-[11px] bg-white border border-slate-250 p-1 font-bold rounded text-slate-700 shadow-xs text-center font-bold"
+                              min="2020"
+                              max="2035"
+                            />
+                          </div>
+                        )}
+
+                        {folhaReportType === 'periodo' && (
+                          <>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase text-slate-500">Início Ref.</label>
+                              <input 
+                                type="month" 
+                                value={folhaReportStartMonth}
+                                onChange={(e) => {
+                                  setFolhaReportStartMonth(e.target.value);
+                                  setShowInAppFolhaPreview(true);
+                                }}
+                                className="w-full text-[11px] bg-white border border-slate-250 p-0.5 px-2 font-bold rounded text-slate-700 shadow-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase text-slate-500">Fim Ref.</label>
+                              <input 
+                                type="month" 
+                                value={folhaReportEndMonth}
+                                onChange={(e) => {
+                                  setFolhaReportEndMonth(e.target.value);
+                                  setShowInAppFolhaPreview(true);
+                                }}
+                                className="w-full text-[11px] bg-white border border-slate-250 p-0.5 px-2 font-bold rounded text-slate-700 shadow-xs"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-[9px] text-slate-400 mt-2 font-bold flex items-center gap-1">
+                        <CheckCircle size={10} className="text-emerald-500" />
+                        <span>Contratos do lote: <strong className="text-indigo-600 font-extrabold">{filteredFolhasForReport.length} folhas registradas</strong>.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3.5 border-t border-slate-200/65 flex gap-2 justify-end">
+                  <button 
+                    onClick={() => setShowInAppFolhaPreview(!showInAppFolhaPreview)}
+                    className="px-3 py-1.5 border border-indigo-200 hover:bg-indigo-50 font-black rounded-xl text-[11px] text-indigo-750 flex items-center gap-1 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <Eye size={12} /> {showInAppFolhaPreview ? 'Ocultar Visualização' : 'Conferir na Tela'}
+                  </button>
+                  <button 
+                    onClick={handlePrintAnalitico}
+                    className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-750 text-white font-black rounded-xl text-[11px] flex items-center gap-1 cursor-pointer shadow-sm shadow-indigo-500/10 transition-all"
+                  >
+                    <Printer size={12} /> Imprimir Folha Analítica
+                  </button>
+                </div>
+              </div>
+
             </div>
+
+            {/* LIVE IN-APP PREVIEW OF ANALYTICAL PAYROLL */}
+            {showInAppFolhaPreview && (
+              <div className="mt-8 border-t border-slate-200/80 pt-6 animate-entrance">
+                <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5">
+                      <Sparkles size={16} className="text-indigo-500 animate-pulse" /> Quadro Analítico Consolidado (Visualizador Rápido)
+                    </h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Confira os dízimos, incentivos sacerdotais, repasses previdenciários e salários líquidos antes de enviar à impressora.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handlePrintAnalitico}
+                    className="px-3 py-1.5 bg-indigo-600/10 border border-indigo-600/25 font-bold rounded-lg text-[10px] text-indigo-700 hover:bg-indigo-600/20 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Printer size={12} /> Imprimir Lote Filtrado ({filteredFolhasForReport.length})
+                  </button>
+                </div>
+
+                {filteredFolhasForReport.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white scrollbar-thin">
+                    <table className="w-full text-left border-collapse text-[11px]">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-black select-none uppercase text-[8px] tracking-widest">
+                          <th className="p-3">Colaborador / Cargo</th>
+                          <th className="p-3 text-center">Ref.</th>
+                          <th className="p-3 text-right">Salário Base</th>
+                          <th className="p-3 text-right">Proventos (Vantagens)</th>
+                          <th className="p-3 text-right">INSS Estimado</th>
+                          <th className="p-3 text-right">IRRF Retido</th>
+                          <th className="p-3 text-right">Outros Descontos</th>
+                          <th className="p-3 text-right font-black text-indigo-700 bg-indigo-50/20">Líquido Pago</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredFolhasForReport.map((slip: any) => {
+                          const base = parseFloat(slip.salario_base || 0) || 0;
+                          const totProventos = (slip.proventos || []).reduce((acc: number, p: any) => acc + (parseFloat(p.valor) || 0), 0);
+                          
+                          // Find INSS and IRRF inside descontos
+                          const inss = (slip.descontos || []).find((d: any) => d.descricao?.includes('INSS'));
+                          const inssVal = inss ? (parseFloat(inss.valor) || 0) : 0;
+                          
+                          const irrf = (slip.descontos || []).find((d: any) => d.descricao?.includes('IRRF') || d.descricao?.includes('IRPF'));
+                          const irrfVal = irrf ? (parseFloat(irrf.valor) || 0) : 0;
+                          
+                          const totDescontos = (slip.descontos || []).reduce((acc: number, d: any) => acc + (parseFloat(d.valor) || 0), 0);
+                          const outrosDescVal = Math.max(0, totDescontos - inssVal - irrfVal);
+                          const liquido = parseFloat(slip.valor_liquido || 0) || 0;
+
+                          return (
+                            <tr key={slip.id} className="border-b border-slate-150/80 hover:bg-slate-50 font-medium">
+                              <td className="p-3 text-slate-800">
+                                <div className="font-extrabold">{slip.colaborador_nome}</div>
+                                <div className="text-[9px] text-slate-400 uppercase font-black">{slip.colaborador_tipo === 'pastor' ? 'Prebenda' : 'CLT'} • {slip.colaborador_cargo || 'Vínculo'}</div>
+                              </td>
+                              <td className="p-3 text-center font-mono font-bold text-slate-650">{slip.mes_referencia}</td>
+                              <td className="p-3 text-right font-mono text-slate-600">{formatBRL(base)}</td>
+                              <td className="p-3 text-right font-mono text-emerald-700 font-bold">+{formatBRL(totProventos)}</td>
+                              <td className="p-3 text-right font-mono text-rose-500 font-bold">-{formatBRL(inssVal)}</td>
+                              <td className="p-3 text-right font-mono text-rose-500 font-bold">-{formatBRL(irrfVal)}</td>
+                              <td className="p-3 text-right font-mono text-rose-450">-{formatBRL(outrosDescVal)}</td>
+                              <td className="p-3 text-right font-mono font-black text-indigo-700 bg-indigo-50/20">{formatBRL(liquido)}</td>
+                            </tr>
+                          );
+                        })}
+                        {/* Totals Row */}
+                        <tr className="bg-slate-50/85 font-black border-t border-slate-300 text-slate-900 shadow-sm leading-6">
+                          <td colSpan={2} className="p-3.5 text-right uppercase tracking-widest text-[8px] text-slate-500 font-black">Totais do Lote:</td>
+                          <td className="p-3.5 text-right font-mono">
+                            {formatBRL(filteredFolhasForReport.reduce((acc, f: any) => acc + (parseFloat(f.salario_base || 0) || 0), 0))}
+                          </td>
+                          <td className="p-3.5 text-right font-mono text-emerald-800 font-black">
+                            +{formatBRL(filteredFolhasForReport.reduce((acc, f: any) => {
+                              const prov = (f.proventos || []).reduce((pAcc: number, p: any) => pAcc + (parseFloat(p.valor) || 0), 0);
+                              return acc + prov;
+                            }, 0))}
+                          </td>
+                          <td className="p-3.5 text-right font-mono text-rose-700 font-black">
+                            -{formatBRL(filteredFolhasForReport.reduce((acc, f: any) => {
+                              const inss = (f.descontos || []).find((d: any) => d.descricao?.includes('INSS'));
+                              return acc + (inss ? (parseFloat(inss.valor) || 0) : 0);
+                            }, 0))}
+                          </td>
+                          <td className="p-3.5 text-right font-mono text-rose-700 font-black">
+                            -{formatBRL(filteredFolhasForReport.reduce((acc, f: any) => {
+                              const irrf = (f.descontos || []).find((d: any) => d.descricao?.includes('IRRF') || d.descricao?.includes('IRPF'));
+                              return acc + (irrf ? (parseFloat(irrf.valor) || 0) : 0);
+                            }, 0))}
+                          </td>
+                          <td className="p-3.5 text-right font-mono text-rose-600 font-black">
+                            -{formatBRL(filteredFolhasForReport.reduce((acc, f: any) => {
+                              const totalD = (f.descontos || []).reduce((dAcc: number, d: any) => dAcc + (parseFloat(d.valor) || 0), 0);
+                              const inss = (f.descontos || []).find((d: any) => d.descricao?.includes('INSS'));
+                              const inssVal = inss ? (parseFloat(inss.valor) || 0) : 0;
+                              const irrf = (f.descontos || []).find((d: any) => d.descricao?.includes('IRRF') || d.descricao?.includes('IRPF'));
+                              const irrfVal = irrf ? (parseFloat(irrf.valor) || 0) : 0;
+                              return acc + Math.max(0, totalD - inssVal - irrfVal);
+                            }, 0))}
+                          </td>
+                          <td className="p-3.5 text-right font-mono text-xs text-indigo-900 bg-indigo-100/40">
+                            {formatBRL(filteredFolhasForReport.reduce((acc, f: any) => acc + (parseFloat(f.valor_liquido || 0) || 0), 0))}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-xl bg-white mt-1">
+                    <AlertCircle className="mx-auto text-slate-350 mb-2" size={24} />
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Nenhum contra-cheque localizado para o lote e intervalo informados.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       )}

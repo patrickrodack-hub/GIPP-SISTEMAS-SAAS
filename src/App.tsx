@@ -6145,7 +6145,7 @@ export const PrintSystem = ({
 
     // --- RELATÓRIOS DO DEPARTAMENTO PESSOAL ---
     if (mode === 'dp_funcionarios_lista') {
-        const { reportType, colaboradores, foiValores, selectedMonth, igreja, congregacoes } = data;
+        const { reportType, colaboradores, foiValores, selectedMonth, igreja, congregacoes, reportParams, folhas } = data;
         const parts = selectedMonth?.split('-');
         const dateObj = parts ? new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 15) : new Date();
         const labelMês = dateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
@@ -6288,6 +6288,126 @@ export const PrintSystem = ({
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* Report Type 4: folha_analitica */}
+                {reportType === 'folha_analitica' && (
+                    <div className="space-y-4">
+                        <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-250 pb-2 flex justify-between items-center">
+                            <span>Demonstrativo Contábil • Folha Analítica Consolidada de Pessoal</span>
+                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 8.0.0 Platinum Enterprise v8</span>
+                        </h2>
+                        
+                        {/* Parameters summary description */}
+                        <div className="bg-slate-50 border border-slate-205 p-3 rounded text-[10px] text-slate-600 flex justify-between items-center gap-4">
+                            <div>
+                                <span className="font-bold text-slate-500 uppercase text-[9px]">Período de Fechamento do Lote:</span>{' '}
+                                <span className="uppercase font-black text-indigo-800 tracking-wider">
+                                    {reportParams?.tipo === 'mensal' && `Mês de Referência (${reportParams?.mes}/${reportParams?.ano})`}
+                                    {reportParams?.tipo === 'trimestral' && `Trimestral (${reportParams?.trimestre}º Trimestre de ${reportParams?.ano})`}
+                                    {reportParams?.tipo === 'anual' && `Balanço Anual Eclesiástico (${reportParams?.ano})`}
+                                    {reportParams?.tipo === 'periodo' && `Lote Personalizado (Ref. ${reportParams?.inicio} Até ${reportParams?.fim})`}
+                                </span>
+                            </div>
+                            <div className="text-right">
+                                <span className="font-bold text-slate-500 text-[9px] uppercase">Guias Listadas:</span>{' '}
+                                <span className="font-mono font-black text-slate-800 text-xs bg-slate-200 px-1.5 py-0.5 rounded">{folhas?.length || 0}</span>
+                            </div>
+                        </div>
+
+                        {folhas && folhas.length > 0 ? (
+                            <table className="w-full text-left border-collapse text-[10px] border border-slate-300">
+                                <thead>
+                                    <tr className="bg-slate-900 text-white uppercase text-[8px] font-black tracking-wider">
+                                        <th className="p-2 border border-slate-300">Membro Colaborador / Vínculo</th>
+                                        <th className="p-2 border border-slate-300 text-center w-16">Ref.</th>
+                                        <th className="p-2 border border-slate-300 text-right">Salário Base (R$)</th>
+                                        <th className="p-2 border border-slate-300 text-right">Vantagens/Prov (R$)</th>
+                                        <th className="p-2 border border-slate-300 text-right">INSS (R$)</th>
+                                        <th className="p-2 border border-slate-300 text-right">IRRF/IPRF (R$)</th>
+                                        <th className="p-2 border border-slate-300 text-right">Outros Desc. (R$)</th>
+                                        <th className="p-2 border border-slate-300 text-right bg-slate-850">Líquido Recebido (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {folhas.map((slip: any) => {
+                                        const base = parseFloat(slip.salario_base || 0) || 0;
+                                        const totProventos = (slip.proventos || []).reduce((acc: number, p: any) => acc + (parseFloat(p.valor) || 0), 0);
+                                        
+                                        const inss = (slip.descontos || []).find((d: any) => d.descricao?.includes('INSS'));
+                                        const inssVal = inss ? (parseFloat(inss.valor) || 0) : 0;
+                                        
+                                        const irrf = (slip.descontos || []).find((d: any) => d.descricao?.includes('IRRF') || d.descricao?.includes('IRPF'));
+                                        const irrfVal = irrf ? (parseFloat(irrf.valor) || 0) : 0;
+                                        
+                                        const totDescontos = (slip.descontos || []).reduce((acc: number, d: any) => acc + (parseFloat(d.valor) || 0), 0);
+                                        const outrosDescVal = Math.max(0, totDescontos - inssVal - irrfVal);
+                                        const liquido = parseFloat(slip.valor_liquido || 0) || 0;
+
+                                        return (
+                                            <tr key={slip.id} className="border-b border-slate-200 hover:bg-slate-50 font-medium">
+                                                <td className="p-2 border-r border-slate-200">
+                                                    <div className="font-black text-slate-850 text-[10px]">{slip.colaborador_nome}</div>
+                                                    <div className="text-[7.5px] text-indigo-600 uppercase font-black tracking-widest">{slip.colaborador_tipo === 'pastor' ? 'Prebenda Eclesiástica' : 'Regime CLT'} • {slip.colaborador_cargo || 'Vínculo'}</div>
+                                                </td>
+                                                <td className="p-2 border-r border-slate-200 text-center font-mono font-bold text-slate-600">{slip.mes_referencia}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-700">R$ {base.toFixed(2)}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-mono text-emerald-800">R$ {totProventos.toFixed(2)}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-mono text-rose-800">R$ {inssVal.toFixed(2)}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-mono text-rose-800">R$ {irrfVal.toFixed(2)}</td>
+                                                <td className="p-2 border-r border-slate-200 text-right font-mono text-rose-600">R$ {outrosDescVal.toFixed(2)}</td>
+                                                <td className="p-2 text-right font-mono font-black text-slate-900 bg-slate-50/50">R$ {liquido.toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    
+                                    {/* Consolidated grand totals inside physical sheet */}
+                                    <tr className="bg-slate-100 font-extrabold text-[10px] text-slate-900 border-t-2 border-slate-400">
+                                        <td colSpan={2} className="p-2 px-3 text-right uppercase tracking-wider text-[8px] font-black">Totais Consolidados do Exercício:</td>
+                                        <td className="p-2 text-right font-mono">
+                                            R$ {folhas.reduce((acc: number, f: any) => acc + (parseFloat(f.salario_base || 0) || 0), 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-mono text-emerald-800">
+                                            R$ {folhas.reduce((acc: number, f: any) => {
+                                                const prov = (f.proventos || []).reduce((pAcc: number, p: any) => pAcc + (parseFloat(p.valor) || 0), 0);
+                                                return acc + prov;
+                                            }, 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-mono text-rose-800">
+                                            R$ {folhas.reduce((acc: number, f: any) => {
+                                                const inss = (f.descontos || []).find((d: any) => d.descricao?.includes('INSS'));
+                                                return acc + (inss ? (parseFloat(inss.valor) || 0) : 0);
+                                            }, 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-mono text-rose-800">
+                                            R$ {folhas.reduce((acc: number, f: any) => {
+                                                const irrf = (f.descontos || []).find((d: any) => d.descricao?.includes('IRRF') || d.descricao?.includes('IRPF'));
+                                                return acc + (irrf ? (parseFloat(irrf.valor) || 0) : 0);
+                                            }, 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-mono text-rose-700">
+                                            R$ {folhas.reduce((acc: number, f: any) => {
+                                                const totalD = (f.descontos || []).reduce((dAcc: number, d: any) => dAcc + (parseFloat(d.valor) || 0), 0);
+                                                const inss = (f.descontos || []).find((d: any) => d.descricao?.includes('INSS'));
+                                                const inssVal = inss ? (parseFloat(inss.valor) || 0) : 0;
+                                                const irrf = (f.descontos || []).find((d: any) => d.descricao?.includes('IRRF') || d.descricao?.includes('IRPF'));
+                                                const irrfVal = irrf ? (parseFloat(irrf.valor) || 0) : 0;
+                                                return acc + Math.max(0, totalD - inssVal - irrfVal);
+                                            }, 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-mono font-black text-xs text-indigo-900 bg-slate-200">
+                                            R$ {folhas.reduce((acc: number, f: any) => acc + (parseFloat(f.valor_liquido || 0) || 0), 0).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-xl leading-relaxed">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nenhuma folha de pagamento localizada no lote.</p>
+                                <p className="text-[9px] text-slate-400 mt-1">Gere contra-cheques para os colaboradores ativos e repita o procedimento de conferência.</p>
+                            </div>
+                        )}
                     </div>
                 )}
 
