@@ -14,6 +14,14 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell, Tooltip as RechartsTooltip
 } from 'recharts';
 
+const getTodayDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const ModuleDPContabilidade = memo(() => {
   const { 
     db, 
@@ -5771,7 +5779,8 @@ const ModuleDPContabilidade = memo(() => {
               />
             </div>
           </div>
-        </InteractiveWindow>
+        </InteractiveWindow>,
+        document.body
       )}
 
       {/* --- MODAL ADD / EDIT PROCESSO TRABALHISTA/CIVEL --- */}
@@ -5957,7 +5966,8 @@ const ModuleDPContabilidade = memo(() => {
               />
             </div>
           </div>
-        </InteractiveWindow>
+        </InteractiveWindow>,
+        document.body
       )}
 
       {/* MODAL PLANO DE CONTAS */}
