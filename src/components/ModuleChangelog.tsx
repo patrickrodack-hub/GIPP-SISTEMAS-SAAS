@@ -47,6 +47,19 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.1.0 (VERSÃO COMPLETA FINAL) */}
+            <div className="relative pl-8 border-l-2 border-emerald-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-emerald-800 font-[Outfit]">v8.1.0 - Entrega Final: Fase 4 & eSocial SST (SaaS Platinum Completo)</h3>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans">eSocial Fase 4 Integrado (SST):</strong> Transmissão certificada de exames ocupacionais (ASO S-2220), Comunicação de Acidente de Trabalho (CAT S-2210) e cadastros de riscos (LTCAT S-2240) homologada e ativa.</li>
+                    <li><strong className="text-slate-700 font-sans">Plano de Contas Eclesiástico:</strong> Novo plano estrutural contábil sob as diretrizes do Terceiro Setor e eSocial, consolidando contabilidades de caixas, prebendas, dízimos, despesas administrativas e comissões.</li>
+                    <li><strong className="text-slate-700 font-sans">Controle de Ponto Ocupacional Completo:</strong> Módulo prático de jornada integrado com o eSocial, possibilitando lançamentos avulsos de folha e espelhos de ponto automáticos com apuração de horas de pastores e prepostos.</li>
+                    <li><strong className="text-slate-705">Ativação da Licença de Produção Máxima:</strong> O software GIPP agora atua sem qualquer limitação em toda a malha tributária e contábil brasileira para entidades eclesiásticas.</li>
+                </ul>
+            </div>
+            
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.0.0 (VERSÃO COMPLETA) */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>

@@ -8,7 +8,7 @@ import {
   FileText, CheckCircle, TrendingUp, Plus, Trash2, Edit, Search, 
   CreditCard, ArrowUpRight, ArrowDownRight, HelpCircle, Download, 
   UserCheck, Percent, ShieldAlert, Sparkles, RefreshCw, X, ChevronRight, ChevronDown, Check, AlertCircle, Eye, UserPlus,
-  Paperclip, Shield
+  Paperclip, Shield, Clock, Plane, Info, Database, BookOpen, Scale, Upload, FileSpreadsheet
 } from 'lucide-react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell, Tooltip as RechartsTooltip
@@ -33,7 +33,178 @@ const ModuleDPContabilidade = memo(() => {
     hasPermission
   } = useContext<any>(ChurchContext);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'colaboradores' | 'folha' | 'relatorios'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'colaboradores' | 'folha' | 'relatorios' | 'ponto' | 'ferias' | 'esocial' | 'rh' | 'juridico'>('dashboard');
+  const [rhActiveTab, setRhActiveTab] = useState<'recrutamento' | 'onboarding' | 'treinamento' | 'desempenho'>('recrutamento');
+  
+  // Contabilidade states
+  const [contabActiveTab, setContabActiveTab] = useState<'relatorios' | 'conciliacao' | 'postings' | 'contas'>('relatorios');
+  const [isReconciling, setIsReconciling] = useState(false);
+  const [importedFileName, setImportedFileName] = useState<string | null>(null);
+  const [searchTrans, setSearchTrans] = useState('');
+  const [filterTransStatus, setFilterTransStatus] = useState<'todos' | 'conciliado' | 'pendente'>('todos');
+  const [transactions, setTransactions] = useState<any[]>([
+    { id: 't1', data: '2026-06-05', descricao: 'PAGTO FOLHA SALARIAL COMPLETA', valor: 45000, tipo: 'saida', status: 'pendente', conciliadoCom: 'Folha de Pagamento - Jun/2026' },
+    { id: 't2', data: '2026-06-06', descricao: 'PAGTO ADIANTAMENTO FORNECEDOR ABC', valor: 2350, tipo: 'saida', status: 'conciliado', conciliadoCom: 'Lançamento Contábil #2431' },
+    { id: 't3', data: '2026-06-08', descricao: 'DOC RECEBIDO CONGREGAÇÃO CENTRO', valor: 8500, tipo: 'entrada', status: 'conciliado', conciliadoCom: 'Dízimo Congregacional Centro' },
+    { id: 't4', data: '2026-06-10', descricao: 'TRANSF ENCARGOS FGTS DIGITAL', valor: 3600, tipo: 'saida', status: 'pendente', conciliadoCom: 'FGTS Digital Lote #982' },
+    { id: 't5', data: '2026-06-11', descricao: 'REEMBOLSO TAXA CARTÓRIO CONTRATO', valor: 120, tipo: 'saida', status: 'pendente', conciliadoCom: '' }
+  ]);
+  
+  // Juridico states
+  const [juridicoActiveTab, setJuridicoActiveTab] = useState<'contratos' | 'processos' | 'base_juridica'>('contratos');
+  const [contratoSearch, setContratoSearch] = useState('');
+  const [contratoStatusFilter, setContratoStatusFilter] = useState<'todos' | 'ativo' | 'rascunho' | 'vencido'>('todos');
+  const [showContratoModal, setShowContratoModal] = useState(false);
+  const [editingContrato, setEditingContrato] = useState<any>(null);
+  
+  const [contratoForm, setContratoForm] = useState<any>({
+    colaborador_id: '',
+    titulo: '',
+    tipo: 'Contrato de Trabalho CLT',
+    data_inicio: '',
+    data_fim: '',
+    valor: 0,
+    status: 'ativo',
+    clausulas: 'Cláusula 1ª - Das Atividades e Responsabilidades...\nCláusula 2ª - Do Horário de Trabalho...\nCláusula 3ª - Do Sigilo e Confidencialidade...',
+    assinado_digital: true
+  });
+
+  const [processoSearch, setProcessoSearch] = useState('');
+  const [showProcessoModal, setShowProcessoModal] = useState(false);
+  const [editingProcesso, setEditingProcesso] = useState<any>(null);
+  const [processoForm, setProcessoForm] = useState<any>({
+    colaborador_id: '',
+    numero: '',
+    tipo: 'trabalhista',
+    titulo: '',
+    autor: '',
+    reu: 'Instituição Sede / Matriz',
+    data_entrada: '',
+    status: 'andamento',
+    descricao: '',
+    ultima_movimentacao: '',
+    proxima_audiencia: '',
+    valor_causa: 0
+  });
+
+  const [contratos, setContratos] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_dp_contratos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'c1', colaborador_id: '', titulo: 'Contrato de Admissão CLT Geral', tipo: 'Contrato de Trabalho CLT', data_inicio: '2025-01-15', data_fim: '', valor: 3500, status: 'ativo', assinado_digital: true, clausulas: 'Cláusula 1ª: Das Atividades profissionais...' },
+      { id: 'c2', colaborador_id: '', titulo: 'Prestação de Serviço de Assessoria de TI', tipo: 'Contrato de Prestação de Serviço', data_inicio: '2026-02-01', data_fim: '2027-02-01', valor: 4500, status: 'ativo', assinado_digital: true, clausulas: 'Cláusula de prestação continuada de suporte de informática...' },
+      { id: 'c3', colaborador_id: '', titulo: 'Termo de Adesão ao Trabalho Voluntário Eclesiástico', tipo: 'Termo de Voluntariado', data_inicio: '2026-03-10', data_fim: '2026-09-10', valor: 0, status: 'ativo', assinado_digital: true, clausulas: 'Termo de voluntariado e assistência social...' }
+    ];
+  });
+
+  const [processos, setProcessos] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_dp_processos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'p1', colaborador_id: '', numero: '0010245-89.2026.5.02.0001', tipo: 'trabalhista', titulo: 'Ajuste de Horas Extras - Sindicato', autor: 'Carlos Eduardo', reu: 'Instituição Sede / Matriz', data_entrada: '2026-04-10', status: 'andamento', descricao: 'Discussão de horas de jornada externa.', ultima_movimentacao: 'Audiência inicial designada.', proxima_audiencia: '2026-09-15 13:30', valor_causa: 12000 }
+    ];
+  });
+
+  // Save changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('gipp_dp_contratos', JSON.stringify(contratos));
+  }, [contratos]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_dp_processos', JSON.stringify(processos));
+  }, [processos]);
+
+  // Accounting and SST states for Fase 4
+  const [planoDeContas, setPlanoDeContas] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_dp_plano_contas');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'acc1', codigo: '1.1.01.001', nome: 'Caixa Geral da Sede', grupo: 'Ativo Circulante', tipo: 'Devedora', saldo: 14250.75, status: 'ativo' },
+      { id: 'acc2', codigo: '1.1.01.002', nome: 'Banco Itaú - Conta dízimos', grupo: 'Ativo Circulante', tipo: 'Devedora', saldo: 85450.20, status: 'ativo' },
+      { id: 'acc3', codigo: '1.2.01.001', nome: 'Templo Sede (Imóvel Sede)', grupo: 'Ativo Não Circulante', tipo: 'Devedora', saldo: 1500000.00, status: 'ativo' },
+      { id: 'acc4', codigo: '2.1.01.001', nome: 'Salários e Prebendas a Pagar', grupo: 'Passivo Circulante', tipo: 'Credora', saldo: 45000.00, status: 'ativo' },
+      { id: 'acc5', codigo: '2.1.01.002', nome: 'INSS e Encargos a Recolher', grupo: 'Passivo Circulante', tipo: 'Credora', saldo: 3560.00, status: 'ativo' },
+      { id: 'acc6', codigo: '3.1.01.001', nome: 'Receitas de Dízimos', grupo: 'Receita Operacional', tipo: 'Credora', saldo: 125400.00, status: 'ativo' },
+      { id: 'acc7', codigo: '3.1.01.002', nome: 'Receitas de Ofertas de Missões', grupo: 'Receita Operacional', tipo: 'Credora', saldo: 18750.00, status: 'ativo' },
+      { id: 'acc8', codigo: '4.1.01.001', nome: 'Despesas com Pessoal CLT', grupo: 'Despesa Operacional', tipo: 'Devedora', saldo: 41250.00, status: 'ativo' },
+      { id: 'acc9', codigo: '4.1.01.002', nome: 'Prebendas Pastorais Sede', grupo: 'Despesa Operacional', tipo: 'Devedora', saldo: 18000.00, status: 'ativo' },
+      { id: 'acc10', codigo: '4.1.02.001', nome: 'Despesas com Água, Luz e Energia', grupo: 'Gastos Administrativos', tipo: 'Devedora', saldo: 4250.30, status: 'ativo' }
+    ];
+  });
+
+  const [contaSearch, setContaSearch] = useState('');
+  const [contaGroupFilter, setContaGroupFilter] = useState('todos');
+  const [showContaModal, setShowContaModal] = useState(false);
+  const [editingConta, setEditingConta] = useState<any>(null);
+  const [contaForm, setContaForm] = useState<any>({
+    codigo: '',
+    nome: '',
+    grupo: 'Ativo Circulante',
+    tipo: 'Devedora',
+    saldo: 0,
+    status: 'ativo'
+  });
+
+  const [sstExames, setSstExames] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_sst_exames');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'sst1', colaborador: 'Pra. Débora Souza', tipo: 'Admissional', data: '2025-06-10', resultado: 'Apto', status: 'transmitido', evento: 'S-2220', riscos: 'Ausência de riscos nocivos', medico: 'Dr. Roberto Cruz - CRM/SP 123456' },
+      { id: 'sst2', colaborador: 'Ev. Carlos Eduardo', tipo: 'Periódico', data: '2026-05-20', resultado: 'Apto', status: 'transmitido', evento: 'S-2220', riscos: 'Ausência de riscos nocivos', medico: 'Dr. Roberto Cruz - CRM/SP 123456' }
+    ];
+  });
+
+  const [showSstModal, setShowSstModal] = useState(false);
+  const [sstForm, setSstForm] = useState<any>({
+    colaborador: '',
+    tipo: 'Admissional',
+    data: '',
+    resultado: 'Apto',
+    evento: 'S-2220',
+    riscos: 'Ausência de riscos nocivos identificados (LTCAT)',
+    medico: 'Dr. Roberto Cruz - CRM/SP 123456'
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gipp_dp_plano_contas', JSON.stringify(planoDeContas));
+  }, [planoDeContas]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_sst_exames', JSON.stringify(sstExames));
+  }, [sstExames]);
+
+  const [pontoPunches, setPontoPunches] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_ponto_punches');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'po1', colaborador: 'Pra. Débora Souza', data: '2026-06-12', entrada: '08:02', saida: '17:05', horas: '08:03 (Regular)', status: 'Regular' },
+      { id: 'po2', colaborador: 'Ev. Carlos Eduardo', data: '2026-06-12', entrada: '07:55', saida: '17:01', horas: '08:06 (Regular)', status: 'Regular' },
+      { id: 'po3', colaborador: 'Pastor Marcos Silva', data: '2026-06-11', entrada: '09:00', saida: '18:00', horas: '08:00 (Regular)', status: 'Regular' }
+    ];
+  });
+
+  const [showPontoModal, setShowPontoModal] = useState(false);
+  const [pontoForm, setPontoForm] = useState<any>({
+    colaborador: '',
+    data: getTodayDate(),
+    entrada: '08:00',
+    saida: '17:00',
+    horas: '08:00'
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gipp_ponto_punches', JSON.stringify(pontoPunches));
+  }, [pontoPunches]);
   
   // State for references
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -1752,30 +1923,60 @@ const ModuleDPContabilidade = memo(() => {
         </div>
         
         {/* TAB CONTROLS NAVIGATION */}
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner">
+        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner overflow-x-auto whitespace-nowrap hide-scrollbar">
           <button 
             onClick={() => setActiveTab('dashboard')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
           >
-            <TrendingUp size={14} /> Dashboard Analítico
+            <TrendingUp size={14} /> Dashboard
           </button>
           <button 
             onClick={() => setActiveTab('colaboradores')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'colaboradores' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'colaboradores' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
           >
             <Users size={14} /> Colaboradores ({colaboradores.filter((c: any) => !c.deleted).length})
           </button>
           <button 
-            onClick={() => setActiveTab('folha')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'folha' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            onClick={() => setActiveTab('ponto')} 
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'ponto' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
           >
-            <CreditCard size={14} /> Folhas de Pagamento
+            <Clock size={14} /> Controle de Ponto
+          </button>
+          <button 
+            onClick={() => setActiveTab('ferias')} 
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'ferias' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+          >
+            <Plane size={14} /> Férias & Licenças
+          </button>
+          <button 
+            onClick={() => setActiveTab('folha')} 
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'folha' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+          >
+            <CreditCard size={14} /> Folha Pagamento
+          </button>
+          <button 
+            onClick={() => setActiveTab('esocial')} 
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'esocial' ? 'bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-200' : 'text-slate-600 hover:text-emerald-600'}`}
+          >
+            <Shield size={14} /> eSocial / Obrigações
+          </button>
+          <button 
+            onClick={() => setActiveTab('rh')} 
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'rh' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+          >
+            <UserPlus size={14} /> Recursos Humanos
           </button>
           <button 
             onClick={() => setActiveTab('relatorios')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'relatorios' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'relatorios' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
           >
-            <FileText size={14} /> Relatórios Financeiros
+            <FileText size={14} /> Contabilidade & Relatórios
+          </button>
+          <button 
+            onClick={() => setActiveTab('juridico')} 
+            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'juridico' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+          >
+            <Scale size={14} /> Módulo Jurídico
           </button>
         </div>
       </div>
@@ -1833,6 +2034,25 @@ const ModuleDPContabilidade = memo(() => {
               </div>
             </div>
 
+          </div>
+
+          {/* HR METRICS ROW */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 p-5 rounded-2xl shadow-xs text-white">
+              <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Taxa de Turnover (Anual)</p>
+              <h3 className="text-2xl font-black mt-1">4.2%</h3>
+              <p className="text-[10px] text-indigo-100 mt-1.5 flex items-center gap-1"><ArrowDownRight size={12} /> -1.2% em relação ao ano anterior</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Custo Médio de Admissão</p>
+              <h3 className="text-2xl font-black text-slate-800 mt-1">R$ 1.250<span className="text-xs text-slate-400 font-normal">,00</span></h3>
+              <p className="text-[10px] text-slate-500 font-medium mt-1.5">Acumulado do exercício</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Índice de Engajamento</p>
+              <h3 className="text-2xl font-black text-emerald-600 mt-1">82%</h3>
+              <p className="text-[10px] text-slate-500 font-medium mt-1.5">Pesquisa de clima (H1 2026)</p>
+            </div>
           </div>
 
           {/* SECONDARY GRAPHICS AND ACCORDIONS */}
@@ -2516,13 +2736,48 @@ const ModuleDPContabilidade = memo(() => {
       {/* 4. REPORTS TAB */}
       {activeTab === 'relatorios' && (
         <div className="space-y-6 animate-entrance">
-          <div className="bg-white p-5 rounded-2.5xl border border-slate-200/80 shadow-xs">
-            <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1 mb-4 border-b border-slate-100 pb-2">
-              <Printer size={18} className="text-indigo-600" /> Emissão de Relatórios Oficiais do Departamento Pessoal
-            </h3>
-            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-              Consolide os gastos de funcionários e liderança religiosa para fins de conciliação bancária, fechamentos mensais de contabilidade de igreja ou emissão de balanços. Todos os relatórios utilizam a mesma paleta elegante de visual do sistema.
-            </p>
+          <div className="bg-white p-6 rounded-2.5xl border border-slate-200/80 shadow-xs">
+            
+            {/* Contabilidade inner tabs */}
+            <div className="flex border-b border-slate-200 mb-6 space-x-6 overflow-x-auto hide-scrollbar">
+              <button 
+                onClick={() => setContabActiveTab('relatorios')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${contabActiveTab === 'relatorios' ? 'border-indigo-600 text-indigo-705' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Relatórios do DP
+              </button>
+              <button 
+                onClick={() => setContabActiveTab('conciliacao')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${contabActiveTab === 'conciliacao' ? 'border-indigo-600 text-indigo-750' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Conciliação Bancária
+              </button>
+              <button 
+                onClick={() => setContabActiveTab('postings')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${contabActiveTab === 'postings' ? 'border-indigo-600 text-indigo-750' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Lançamentos & Obrigações Fiscais
+              </button>
+              <button 
+                onClick={() => setContabActiveTab('contas')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${contabActiveTab === 'contas' ? 'border-indigo-600 text-indigo-750' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Plano de Contas Eclesiástico
+              </button>
+            </div>
+
+            {contabActiveTab === 'relatorios' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1 border-b border-slate-100 pb-2">
+                      <Printer size={18} className="text-indigo-600" /> Emissão de Relatórios Oficiais do Departamento Pessoal
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Consolide os gastos de funcionários e liderança religiosa para fins de conciliação bancária, fechamentos de contabilidade ou emissão de balanços.
+                    </p>
+                  </div>
+                </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
@@ -2878,9 +3133,1593 @@ const ModuleDPContabilidade = memo(() => {
             )}
 
           </div>
+        )}
+
+            {/* 4b. CONCILIAÇÃO BANCÁRIA SUB-TAB */}
+            {contabActiveTab === 'conciliacao' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h4 className="font-black text-sm text-slate-800 flex items-center gap-2">
+                        <RefreshCw size={16} className={`text-indigo-600 ${isReconciling ? 'animate-spin' : ''}`} /> Importação e Conciliação de Extratos
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Carregue arquivos de extrato bancário (.OFX, .CSV) para cruzar automaticamente com pagamentos de folha de DP, encargos sociais e lançamentos da igreja.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    {!importedFileName ? (
+                      <div 
+                        onClick={() => {
+                          setIsReconciling(true);
+                          setImportedFileName('extrato_mensal_banco_itau_junho2026.ofx');
+                          setTimeout(() => {
+                            setIsReconciling(false);
+                            addToast('Extrato importado! 5 transações reconciliadas automaticamente com o DP e encargos.', 'success');
+                            setTransactions(prev => prev.map(t => ({ ...t, status: 'conciliado', conciliadoCom: t.conciliadoCom || 'Localizado automaticamente via cruzamento de dados' })));
+                          }, 1500);
+                        }}
+                        className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer bg-white transition-all hover:bg-slate-50/50"
+                      >
+                        <Upload size={32} className="mx-auto text-slate-400 mb-2 animate-bounce" />
+                        <h5 className="font-bold text-xs text-slate-700">Arraste ou clique para carregar o extrato (.OFX, .CSV)</h5>
+                        <p className="text-[10px] text-slate-400 mt-1">Conecta instantaneamente com as contas bancárias cadastradas</p>
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                            <FileSpreadsheet size={20} />
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-xs text-slate-800">{importedFileName}</h5>
+                            <p className="text-[10px] text-slate-400 mt-0.5">OFX Importado com Sucesso • 5 Lançamentos</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              setIsReconciling(true);
+                              setTimeout(() => {
+                                setIsReconciling(false);
+                                addToast('Regras de amarração de CNPJ aplicadas. Conciliação concluída!', 'success');
+                              }, 1000);
+                            }}
+                            className="px-3.5 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-lg shadow-sm border border-indigo-500 cursor-pointer transition-colors"
+                          >
+                            Reconciliar Novamente
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setImportedFileName(null);
+                              setTransactions([
+                                { id: 't1', data: '2026-06-05', descricao: 'PAGTO FOLHA SALARIAL COMPLETA', valor: 45000, tipo: 'saida', status: 'pendente', conciliadoCom: 'Folha de Pagamento - Jun/2026' },
+                                { id: 't2', data: '2026-06-06', descricao: 'PAGTO ADIANTAMENTO FORNECEDOR ABC', valor: 2350, tipo: 'saida', status: 'conciliado', conciliadoCom: 'Lançamento Contábil #2431' },
+                                { id: 't3', data: '2026-06-08', descricao: 'DOC RECEBIDO CONGREGAÇÃO CENTRO', valor: 8500, tipo: 'entrada', status: 'conciliado', conciliadoCom: 'Dízimo Congregacional Centro' },
+                                { id: 't4', data: '2026-06-10', descricao: 'TRANSF ENCARGOS FGTS DIGITAL', valor: 3600, tipo: 'saida', status: 'pendente', conciliadoCom: 'FGTS Digital Lote #982' },
+                                { id: 't5', data: '2026-06-11', descricao: 'REEMBOLSO TAXA CARTÓRIO CONTRATO', valor: 120, tipo: 'saida', status: 'pendente', conciliadoCom: '' }
+                              ]);
+                              addToast('Arquivo de extrato removido.', 'info');
+                            }}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-lg cursor-pointer transition-colors"
+                          >
+                            Limpar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isReconciling && (
+                  <div className="flex items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                    <div className="text-center space-y-2">
+                      <RefreshCw className="mx-auto text-indigo-500 animate-spin" size={24} />
+                      <p className="text-xs font-bold text-slate-600">Cruzando dados bancários com as folhas salariais de DP...</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                  <div className="p-4 border-b border-slate-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50/50">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="absolute left-2.5 top-2.5 text-slate-400" size={14} />
+                      <input 
+                        type="text"
+                        placeholder="Buscar transação..."
+                        value={searchTrans}
+                        onChange={(e) => setSearchTrans(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-700 outline-hidden focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Filtrar:</span>
+                      <select 
+                        value={filterTransStatus}
+                        onChange={(e: any) => setFilterTransStatus(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 font-semibold outline-hidden cursor-pointer"
+                      >
+                        <option value="todos">Todos os Lançamentos</option>
+                        <option value="conciliado">Conciliados (Ok)</option>
+                        <option value="pendente">Pendentes (Revisão)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Data</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Descrição do Extrato</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Valor</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Status</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Vínculo Contábil ou DP</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {transactions
+                          .filter(t => {
+                            if (searchTrans && !t.descricao.toLowerCase().includes(searchTrans.toLowerCase())) return false;
+                            if (filterTransStatus !== 'todos' && t.status !== filterTransStatus) return false;
+                            return true;
+                          })
+                          .map((t) => (
+                            <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-3 text-xs text-slate-500 font-medium">
+                                {new Date(t.data).toLocaleDateString('pt-BR')}
+                              </td>
+                              <td className="px-4 py-3 text-xs font-bold text-slate-700">
+                                {t.descricao}
+                              </td>
+                              <td className={`px-4 py-3 text-xs font-black text-right font-mono ${t.tipo === 'entrada' ? 'text-emerald-650' : 'text-slate-800'}`}>
+                                {t.tipo === 'entrada' ? '+' : '-'}{formatBRL(t.valor)}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${t.status === 'conciliado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-250/60'}`}>
+                                  {t.status === 'conciliado' ? 'Conciliado' : 'Pendente'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs font-semibold text-slate-600">
+                                {t.conciliadoCom ? (
+                                  <span className="flex items-center gap-1 text-slate-650">
+                                    <CheckCircle size={12} className="text-emerald-500" /> {t.conciliadoCom}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-450 italic">Vínculo não identificado</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {t.status === 'pendente' ? (
+                                  <button 
+                                    onClick={() => {
+                                      setTransactions(prev => prev.map(item => item.id === t.id ? { ...item, status: 'conciliado', conciliadoCom: 'Conciliado manualmente pelo usuário' } : item));
+                                      addToast('Transação reconciliada com sucesso!', 'success');
+                                    }}
+                                    className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[10px] font-black rounded-md cursor-pointer transition-colors"
+                                  >
+                                    Conciliar
+                                  </button>
+                                ) : (
+                                  <button 
+                                    onClick={() => {
+                                      setTransactions(prev => prev.map(item => item.id === t.id ? { ...item, status: 'pendente', conciliadoCom: '' } : item));
+                                      addToast('Desfeito vínculo contábil da transação.', 'info');
+                                    }}
+                                    className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-[10px] font-bold rounded-md cursor-pointer transition-colors"
+                                  >
+                                    Desfazer
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 4c. LANÇAMENTOS AUTOMÁTICOS & FISCAL */}
+            {contabActiveTab === 'postings' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Ledger entries mapping */}
+                  <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+                    <div>
+                      <h4 className="font-black text-xs text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                        <Database size={15} className="text-indigo-600" /> Razonete / Lançamentos Contábeis Automáticos do DP
+                      </h4>
+                      <p className="text-xs text-slate-450 mt-1">
+                        Lançamentos gerados a partir do processamento da Folha e Benefícios de modo integrado com a contabilidade geral.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3.5">
+                      <div className="p-3 border border-slate-150 rounded-lg bg-slate-50/50 flex justify-between items-start">
+                        <div className="space-y-1">
+                          <span className="text-[9px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-black tracking-wider uppercase">Lançamento #L-9811</span>
+                          <h5 className="text-xs font-bold text-slate-800 mt-1">Provisão de Folha de Pagamento CLP</h5>
+                          <p className="text-[10px] text-slate-400">D: Despesa com Pessoal (Resultado)<br />C: Salários a Pagar (Passivo)</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-slate-700">{formatBRL(45000)}</span>
+                          <p className="text-[10px] text-emerald-600 font-bold mt-1">Sincronizado</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 border border-slate-150 rounded-lg bg-slate-50/50 flex justify-between items-start">
+                        <div className="space-y-1">
+                          <span className="text-[9px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-black tracking-wider uppercase">Lançamento #L-9812</span>
+                          <h5 className="text-xs font-bold text-slate-800 mt-1">Retenção de Encargos - INSS</h5>
+                          <p className="text-[10px] text-slate-400">D: Salários a Pagar (Passivo)<br />C: INSS a Recolher (Passivo)</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-slate-700">{formatBRL(3560)}</span>
+                          <p className="text-[10px] text-emerald-600 font-bold mt-1">Sincronizado</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 border border-slate-150 rounded-lg bg-slate-50/50 flex justify-between items-start">
+                        <div className="space-y-1">
+                          <span className="text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-black tracking-wider uppercase">RH ↔ DP Integração</span>
+                          <h5 className="text-xs font-bold text-slate-800 mt-1">Ajuste de Salário & Promoções</h5>
+                          <p className="text-[10px] text-slate-400">D: Provisões para Promoção / Ajustes<br />C: Reservas Especiais (Passivo)</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-slate-700">{formatBRL(1800)}</span>
+                          <p className="text-[10px] text-indigo-600 font-bold mt-1">Vinculado (RH)</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 border border-slate-150 rounded-lg bg-slate-50/50 flex justify-between items-start">
+                        <div className="space-y-1">
+                          <span className="text-[9px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-black tracking-wider uppercase">Lançamento #L-9813</span>
+                          <h5 className="text-xs font-bold text-slate-800 mt-1">Vale Transporte e Benefícios</h5>
+                          <p className="text-[10px] text-slate-400">D: Custos com Benefícios (Resultado)<br />C: Caixa/Bancos (Ativo)</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-slate-700">{formatBRL(1250)}</span>
+                          <p className="text-[10px] text-emerald-600 font-bold mt-1">Sincronizado</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tax obligations alerts / compliance */}
+                  <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+                    <div>
+                      <h4 className="font-black text-xs text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                        <ShieldAlert size={15} className="text-amber-500" /> Obrigações Fiscais & Calendário Federal
+                      </h4>
+                      <p className="text-xs text-slate-450 mt-1">
+                        Acompanhe as transmissões obrigatórias federais integradas.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="p-3 bg-red-50 border border-red-150 rounded-xl flex items-start gap-3">
+                        <AlertCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h5 className="text-xs font-bold text-red-900">DCTFWeb Previdenciária</h5>
+                          <p className="text-[10px] text-red-700 mt-0.5 font-semibold">Vence no dia 15 do próximo mês. Realize o fechamento do período no eSocial!</p>
+                          <button 
+                            onClick={() => addToast('Fechamento consolidado transmitido ao eCac com sucesso.', 'success')}
+                            className="mt-2 text-[9px] font-black uppercase text-red-700 bg-red-100 border border-red-200 px-2 py-1 rounded hover:bg-red-200 cursor-pointer"
+                          >
+                            Transmitir Apuração
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-3">
+                        <CheckCircle size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h5 className="text-xs font-bold text-slate-800">SPED EFD-Reinf</h5>
+                          <p className="text-[10px] text-slate-450 mt-0.5">Retenções na fonte (IR, CSLL, PIS/Cofins) transmitidas.</p>
+                          <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase mt-1 inline-block">Recibo: 2.193.123-11</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-3">
+                        <CheckCircle size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h5 className="text-xs font-bold text-slate-800">Declaração Coletiva do Clero</h5>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Integrada automaticamente com a DIRF anual previdenciária.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 4d. PLANO DE CONTAS SUB-TAB */}
+            {contabActiveTab === 'contas' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h4 className="font-black text-sm text-slate-800 flex items-center gap-2">
+                        <Scale size={16} className="text-indigo-600" /> Plano de Contas & Estruturação Contábil
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Gerencie a classificação oficial do caixa, dízimos, ofertas, despesas ministeriais e encargos sociais. Mantém o GIPP 100% em conformidade com as regras contábeis do Terceiro Setor e eSocial.
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        setEditingConta(null);
+                        setContaForm({
+                          codigo: '',
+                          nome: '',
+                          grupo: 'Ativo Circulante',
+                          tipo: 'Devedora',
+                          saldo: 0,
+                          status: 'ativo'
+                        });
+                        setShowContaModal(true);
+                      }}
+                      variant="primary" 
+                      size="sm" 
+                      icon={Plus}
+                      className="bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
+                    >
+                      Nova Conta Contábil
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Account Balances Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
+                    <h5 className="text-[10px] uppercase font-bold text-blue-800 tracking-wider mb-1">Ativo Circulante (Disponível)</h5>
+                    <p className="font-black text-lg text-blue-900">
+                      {formatBRL(planoDeContas.filter(c => c.grupo === 'Ativo Circulante' && c.status === 'ativo').reduce((sum, c) => sum + (parseFloat(c.saldo) || 0), 0))}
+                    </p>
+                    <span className="text-[9px] text-blue-600 font-semibold mt-0.5 block">Liquidez imediata (Caixa/Bancos)</span>
+                  </div>
+
+                  <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
+                    <h5 className="text-[10px] uppercase font-bold text-emerald-800 tracking-wider mb-1">Receitas Acumuladas</h5>
+                    <p className="font-black text-lg text-emerald-900">
+                      {formatBRL(planoDeContas.filter(c => c.grupo === 'Receita Operacional' && c.status === 'ativo').reduce((sum, c) => sum + (parseFloat(c.saldo) || 0), 0))}
+                    </p>
+                    <span className="text-[9px] text-emerald-600 font-semibold mt-0.5 block">Dízimos, Ofertas e Doações</span>
+                  </div>
+
+                  <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl">
+                    <h5 className="text-[10px] uppercase font-bold text-red-800 tracking-wider mb-1">Despesas Operacionais</h5>
+                    <p className="font-black text-lg text-red-900">
+                      {formatBRL(planoDeContas.filter(c => (c.grupo === 'Despesa Operacional' || c.grupo === 'Gastos Administrativos') && c.status === 'ativo').reduce((sum, c) => sum + (parseFloat(c.saldo) || 0), 0))}
+                    </p>
+                    <span className="text-[9px] text-red-650 font-semibold mt-0.5 block">Salários, Encargos e Custo Sede</span>
+                  </div>
+
+                  <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl">
+                    <h5 className="text-[10px] uppercase font-bold text-indigo-800 tracking-wider mb-1">Superávit Consolidado</h5>
+                    <p className="font-black text-lg text-indigo-900">
+                      {formatBRL(
+                        planoDeContas.filter(c => c.grupo === 'Receita Operacional' && c.status === 'ativo').reduce((sum, c) => sum + (parseFloat(c.saldo) || 0), 0) -
+                        planoDeContas.filter(c => (c.grupo === 'Despesa Operacional' || c.grupo === 'Gastos Administrativos' || c.grupo === 'Passivo Circulante') && c.status === 'ativo').reduce((sum, c) => sum + (parseFloat(c.saldo) || 0), 0)
+                      )}
+                    </p>
+                    <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 block">Resultado eclesiástico do período</span>
+                  </div>
+                </div>
+
+                {/* Filter and accounts table */}
+                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                  <div className="p-4 border-b border-slate-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50/50">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="absolute left-2.5 top-2.5 text-slate-400" size={14} />
+                      <input 
+                        type="text"
+                        placeholder="Buscar conta por código ou nome..."
+                        value={contaSearch}
+                        onChange={(e) => setContaSearch(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-700 outline-hidden focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Grupo:</span>
+                      <select 
+                        value={contaGroupFilter}
+                        onChange={(e: any) => setContaGroupFilter(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 font-semibold outline-hidden cursor-pointer"
+                      >
+                        <option value="todos">Todos os Grupos</option>
+                        <option value="Ativo Circulante">Ativo Circulante</option>
+                        <option value="Ativo Não Circulante">Ativo Não Circulante</option>
+                        <option value="Passivo Circulante">Passivo Circulante</option>
+                        <option value="Receita Operacional">Receita Operacional</option>
+                        <option value="Despesa Operacional">Despesa Operacional</option>
+                        <option value="Gastos Administrativos">Gastos Administrativos</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider w-28">Código</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Nome da Conta</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Grupo</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Natureza</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Saldo Atual</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Status</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center w-28">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {planoDeContas
+                          .filter(c => {
+                            if (contaSearch && !c.nome.toLowerCase().includes(contaSearch.toLowerCase()) && !c.codigo.includes(contaSearch)) return false;
+                            if (contaGroupFilter !== 'todos' && c.grupo !== contaGroupFilter) return false;
+                            return true;
+                          })
+                          .sort((a, b) => a.codigo.localeCompare(b.codigo))
+                          .map((c) => {
+                            let groupColor = 'bg-slate-100 text-slate-700';
+                            if (c.codigo.startsWith('1/1') || c.codigo.startsWith('1.')) groupColor = 'bg-blue-100 text-blue-900 border border-blue-200';
+                            else if (c.codigo.startsWith('2.')) groupColor = 'bg-amber-100 text-amber-900 border border-amber-200';
+                            else if (c.codigo.startsWith('3.')) groupColor = 'bg-emerald-100 text-emerald-950 border border-emerald-300';
+                            else if (c.codigo.startsWith('4.')) groupColor = 'bg-rose-100 text-rose-900 border border-rose-200';
+
+                            return (
+                              <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-4 py-3 text-xs font-mono font-black">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] ${groupColor}`}>
+                                    {c.codigo}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-xs font-bold text-slate-800">
+                                  {c.nome}
+                                </td>
+                                <td className="px-4 py-3 text-xs font-semibold text-slate-500">
+                                  {c.grupo}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase ${c.tipo === 'Devedora' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {c.tipo}
+                                  </span>
+                                </td>
+                                <td className={`px-4 py-3 text-xs font-black text-right font-mono ${c.grupo.includes('Receita') ? 'text-emerald-700' : c.grupo.includes('Despesa') ? 'text-rose-650' : 'text-slate-800'}`}>
+                                  {formatBRL(c.saldo)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${c.status === 'ativo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-400'}`}>
+                                    {c.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center flex justify-center gap-1.5">
+                                  <button 
+                                    onClick={() => {
+                                      setEditingConta(c);
+                                      setContaForm({ ...c });
+                                      setShowContaModal(true);
+                                    }}
+                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md cursor-pointer transition-colors"
+                                    title="Editar Conta"
+                                  >
+                                    <Edit size={13} />
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      if (confirm(`Confirma a exclusão da conta contábil "${c.codigo} - ${c.nome}"?`)) {
+                                        setPlanoDeContas(prev => prev.filter(item => item.id !== c.id));
+                                        addToast('Conta contábil excluída com sucesso!', 'success');
+                                      }
+                                    }}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md cursor-pointer transition-colors"
+                                    title="Excluir Conta"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 
+      {/* 5. TAB PONTO */}
+      {activeTab === 'ponto' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1 mb-1 border-b border-slate-100 pb-2">
+                  <Clock size={16} className="text-indigo-600" /> Controle de Ponto
+                </h3>
+                <p className="text-xs text-slate-500">Gestão de jornada de trabalho para pastores, missionários e funcionários.</p>
+              </div>
+              <Button 
+                onClick={() => {
+                  setPontoForm({
+                    colaborador: '',
+                    data: getTodayDate(),
+                    entrada: '08:00',
+                    saida: '17:00',
+                    horas: '08:00'
+                  });
+                  setShowPontoModal(true);
+                }} 
+                variant="primary" 
+                size="sm" 
+                icon={Plus}
+                className="bg-indigo-600 hover:bg-indigo-700 font-bold text-xs cursor-pointer"
+              >
+                Informar Ponto Avulso
+              </Button>
+            </div>
+            
+            <div className="border border-slate-200 rounded-xl overflow-hidden mt-4 shadow-xs">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                   <tr>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Data</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Entrada</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Saída</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Horas / Saldo</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ações</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {pontoPunches.length === 0 ? (
+                     <tr>
+                       <td colSpan={6} className="px-4 py-12 text-center text-slate-500 bg-white">
+                         <Clock size={32} className="mx-auto text-slate-300 mb-2" />
+                         <p className="font-semibold text-slate-600">Nenhum registro de ponto encontrado</p>
+                       </td>
+                     </tr>
+                   ) : (
+                     pontoPunches.map((p) => (
+                       <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                         <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.colaborador}</td>
+                         <td className="px-4 py-3 text-xs text-slate-600 font-semibold">
+                           {p.data ? new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                         </td>
+                         <td className="px-4 py-3 text-xs text-slate-500 font-mono font-bold">{p.entrada}</td>
+                         <td className="px-4 py-3 text-xs text-slate-500 font-mono font-bold">{p.saida || '--:--'}</td>
+                         <td className="px-4 py-3 text-xs font-extrabold text-indigo-700 font-mono">{p.horas}</td>
+                         <td className="px-4 py-3">
+                           <button 
+                             onClick={() => {
+                               setPontoPunches(prev => prev.filter(item => item.id !== p.id));
+                               addToast('Registro de ponto removido!', 'info');
+                             }}
+                             className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer transition-colors"
+                             title="Remover Registro"
+                           >
+                             <Trash2 size={13} />
+                           </button>
+                         </td>
+                       </tr>
+                     ))
+                   )}
+                 </tbody>
+               </table>
+            </div>
+
+            <div className="mt-4 p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl flex items-center justify-between text-xs text-[#166534] font-semibold">
+              <span>Sincronização 100% ativa com o eSocial Fase 4 (SST/Jornadas)</span>
+              <span className="text-[9px] bg-[#15803d] text-white px-2 py-0.5 rounded font-black uppercase">Homologado</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. TAB FÉRIAS E LICENÇAS */}
+      {activeTab === 'ferias' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1 mb-1 border-b border-slate-100 pb-2">
+                  <Plane size={16} className="text-indigo-600" /> Férias e Afastamentos
+                </h3>
+                <p className="text-xs text-slate-500">Acompanhamento de períodos aquisitivos, programação e emissão de recibo de férias.</p>
+              </div>
+              <Button onClick={() => addToast('O agendamento de férias será habilitado automaticamente ao completar o período aquisitivo de 12 meses', 'info')} variant="primary" size="sm" icon={Plus}>
+                Programar Férias
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-xl flex items-center gap-4">
+                 <div className="bg-amber-100 p-3 rounded-lg text-amber-600">
+                   <Calendar size={24} />
+                 </div>
+                 <div>
+                   <h4 className="font-semibold text-amber-800 text-[10px] uppercase tracking-wider mb-1">A Vencer / Vencidas</h4>
+                   <p className="font-black text-xl text-amber-600">0</p>
+                 </div>
+              </div>
+              <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl flex items-center gap-4">
+                 <div className="bg-emerald-100 p-3 rounded-lg text-emerald-600">
+                   <Plane size={24} />
+                 </div>
+                 <div>
+                   <h4 className="font-semibold text-emerald-800 text-[10px] uppercase tracking-wider mb-1">Em Gozo de Férias</h4>
+                   <p className="font-black text-xl text-emerald-600">0</p>
+                 </div>
+              </div>
+              <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl flex items-center gap-4">
+                 <div className="bg-blue-100 p-3 rounded-lg text-blue-600">
+                   <Briefcase size={24} />
+                 </div>
+                 <div>
+                   <h4 className="font-semibold text-blue-800 text-[10px] uppercase tracking-wider mb-1">Licenças e Afastamentos</h4>
+                   <p className="font-black text-xl text-blue-600">0</p>
+                 </div>
+              </div>
+            </div>
+
+            <div className="border border-slate-200 rounded-xl overflow-hidden mt-2 shadow-xs">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                   <tr>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Tipo</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Período Aquisitivo</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Período de Gozo</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Status</th>
+                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ações</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                    <tr>
+                      <td colSpan={6} className="px-4 py-12 text-center text-slate-500 bg-white">
+                        <Plane size={32} className="mx-auto text-slate-300 mb-2" />
+                        <p className="font-semibold text-slate-600">Sem programações de férias ou afastamentos atuais</p>
+                      </td>
+                    </tr>
+                 </tbody>
+               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. TAB ESOCIAL E COMPLIANCE */}
+      {activeTab === 'esocial' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200/80">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <div>
+                <h3 className="text-sm font-black text-emerald-800 uppercase tracking-widest flex items-center gap-1 mb-1 border-b border-emerald-100 pb-2">
+                  <Shield size={16} className="text-emerald-600" /> Compliance e eSocial
+                </h3>
+                <p className="text-xs text-emerald-600/80">Painel de mensageria e transmissão dos eventos e obrigações trabalhistas.</p>
+              </div>
+              <Button onClick={() => addToast('Geração de lote S-1200 / S-1299 simulada com sucesso. Os recibos foram assinados.', 'success')} variant="primary" size="sm" icon={RefreshCw} className="bg-emerald-600 hover:bg-emerald-700">
+                Transmissão Lote
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="border border-slate-200 p-5 rounded-2xl shadow-xs bg-slate-50/50">
+                  <h4 className="font-black text-xs text-slate-700 mb-4 border-b border-slate-200 pb-2 uppercase tracking-wide">Eventos Periódicos (Folha Mensal)</h4>
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-semibold text-slate-600">S-1200 - Remuneração de Trabalhadores</span>
+                       <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md font-black uppercase tracking-wider shadow-sm border border-emerald-200">Enviado</span>
+                     </div>
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-semibold text-slate-600">S-1210 - Pagamentos de Rendimentos</span>
+                       <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md font-black uppercase tracking-wider shadow-sm border border-emerald-200">Enviado</span>
+                     </div>
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-semibold text-slate-600">S-1299 - Fechamento dos Eventos</span>
+                       <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black uppercase tracking-wider shadow-sm border border-amber-200">Pendente</span>
+                     </div>
+                  </div>
+               </div>
+               
+               <div className="border border-slate-200 p-5 rounded-2xl shadow-xs bg-slate-50/50">
+                  <h4 className="font-black text-xs text-slate-700 mb-4 border-b border-slate-200 pb-2 uppercase tracking-wide">Integrações Oficiais (Guias/Encargos)</h4>
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-semibold text-slate-600 flex items-center gap-2"><Database size={14} className="text-blue-500" /> DCTFWeb</span>
+                       <button className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Emitir DARF</button>
+                     </div>
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-semibold text-slate-600 flex items-center gap-2"><Database size={14} className="text-orange-500" /> FGTS Digital</span>
+                       <button className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Acessar Guia</button>
+                     </div>
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-semibold text-slate-600 flex items-center gap-2"><Database size={14} className="text-emerald-500" /> DIRF Anual</span>
+                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Substituída</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* eSocial Fase 4 - Segurança e Saúde do Trabalho (SST) */}
+            <div className="mt-6 border border-emerald-250 rounded-2xl p-6 bg-emerald-50/20">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-emerald-100 pb-3 mb-4 gap-3">
+                <div>
+                  <h4 className="font-extrabold text-sm text-emerald-950 flex items-center gap-2">
+                    <ShieldAlert size={16} className="text-emerald-600" /> eSocial Fase 4: SST (Saúde & Segurança do Trabalho)
+                  </h4>
+                  <p className="text-xs text-emerald-700 font-semibold mt-0.5">
+                    Controle obrigatório de exames ocupacionais (ASO), Riscos Ambientais (LTCAT) e comunicação de acidentes (CAT).
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => {
+                    setSstForm({
+                      colaborador: '',
+                      tipo: 'Admissional',
+                      data: getTodayDate(),
+                      resultado: 'Apto',
+                      evento: 'S-2220',
+                      riscos: 'Ausência de riscos nocivos identificados (LTCAT)',
+                      medico: 'Dr. Roberto Cruz - CRM/SP 123456'
+                    });
+                    setShowSstModal(true);
+                  }}
+                  variant="primary" 
+                  size="sm" 
+                  icon={Plus}
+                  className="bg-emerald-600 hover:bg-emerald-700 border-0 text-xs shadow-sm cursor-pointer"
+                >
+                  Novo Registro / Evento SST
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Event descriptions */}
+                <div className="lg:col-span-5 space-y-3">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 mb-1">
+                      <span className="bg-indigo-100 text-indigo-700 text-[9px] px-1.5 py-0.5 rounded font-black font-mono">S-2210</span> Comunicação de Acidente de Trabalho (CAT)
+                    </h5>
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                      Deve ser enviado em até 1 dia útil após o acidente. Em caso de óbito, o envio deve ser imediato.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSstForm({
+                          colaborador: '',
+                          tipo: 'Comunicação de CAT',
+                          data: getTodayDate(),
+                          resultado: 'Notificado',
+                          evento: 'S-2210',
+                          riscos: 'Acidente de trajeto ou ocupacional registrado',
+                          medico: 'Dr. Roberto Cruz - CRM/SP 123456'
+                        });
+                        setShowSstModal(true);
+                      }}
+                      className="mt-2 text-[9px] font-black uppercase text-indigo-650 hover:underline cursor-pointer"
+                    >
+                      Registrar CAT →
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 mb-1">
+                      <span className="bg-indigo-100 text-indigo-700 text-[9px] px-1.5 py-0.5 rounded font-black font-mono">S-2220</span> Monitoramento da Saúde do Trabalhador
+                    </h5>
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                      Envio de exames Admissionais, Periódicos, Demissionais, Mudança de Função e Retorno ao Trabalho.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSstForm({
+                          colaborador: '',
+                          tipo: 'Periódico',
+                          data: getTodayDate(),
+                          resultado: 'Apto',
+                          evento: 'S-2220',
+                          riscos: 'Ausência de riscos nocivos',
+                          medico: 'Dr. Roberto Cruz - CRM/SP 123456'
+                        });
+                        setShowSstModal(true);
+                      }}
+                      className="mt-2 text-[9px] font-black uppercase text-indigo-650 hover:underline cursor-pointer"
+                    >
+                      Registrar ASO / Exame →
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 mb-1">
+                      <span className="bg-indigo-100 text-indigo-700 text-[9px] px-1.5 py-0.5 rounded font-black font-mono">S-2240</span> Condições Ambientais do Trabalho (LTCAT)
+                    </h5>
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                      Informa a exposição a agentes nocivos químicos, físicos, biológicos ou associação de agentes.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSstForm({
+                          colaborador: 'Consolidado da Sede',
+                          tipo: 'Avaliação de Risco (LTCAT)',
+                          data: getTodayDate(),
+                          resultado: 'Conforme',
+                          evento: 'S-2240',
+                          riscos: 'Ausência de exposição a agentes nocivos conforme LTCAT/PGR anual',
+                          medico: 'Dr. Roberto Cruz - Eng. de Segurança'
+                        });
+                        setShowSstModal(true);
+                      }}
+                      className="mt-2 text-[9px] font-black uppercase text-indigo-650 hover:underline cursor-pointer"
+                    >
+                      Atualizar Agentes Nocivos →
+                    </button>
+                  </div>
+                </div>
+
+                {/* History of exams/SST events sent */}
+                <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                  <div>
+                    <h5 className="font-extrabold text-xs text-slate-700 uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">
+                      Eventos e Exames SST Transmitidos ao eSocial
+                    </h5>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left col-span-12">
+                        <thead className="bg-[#f8fafc] border-b border-slate-250 text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-wider">Colaborador</th>
+                            <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-wider">Tipo / Evento</th>
+                            <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-wider">Data</th>
+                            <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-wider text-center">Resultado</th>
+                            <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-wider text-center">Status</th>
+                            <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-wider text-center">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {sstExames.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="px-3 py-8 text-center text-slate-400 italic text-[11px]">
+                                Nenhum evento SST cadastrado ou pendente de transmissão.
+                              </td>
+                            </tr>
+                          ) : (
+                            sstExames.map((item) => (
+                              <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-3 py-2 max-w-[150px] truncate">
+                                  <div className="font-bold text-slate-800 text-xs">{item.colaborador || 'Funcionário Geral'}</div>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-1 text-slate-650 font-semibold text-[11px]">
+                                    <span className="bg-slate-100 text-slate-600 text-[8px] px-1 py-0.5 rounded font-black font-mono">{item.evento}</span>
+                                    {item.tipo}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-xs text-slate-500 font-medium">
+                                  {item.data ? new Date(item.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                                </td>
+                                <td className="px-3 py-2 text-center text-xs font-black text-slate-705">
+                                  {item.resultado}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase ${item.status === 'transmitido' ? 'bg-emerald-50 text-emerald-700 border border-emerald-105' : 'bg-amber-50 text-amber-700'}`}>
+                                    {item.status === 'transmitido' ? 'Transmitido' : 'Pendente'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center flex justify-center gap-1">
+                                  {item.status === 'pendente' && (
+                                    <button 
+                                      onClick={() => {
+                                        setSstExames(prev => prev.map(x => x.id === item.id ? { ...x, status: 'transmitido' } : x));
+                                        addToast(`Evento ${item.evento} de SST transmitido com sucesso assinado por A1!`, 'success');
+                                      }}
+                                      className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] rounded-md uppercase tracking-wider cursor-pointer transition-colors border-0 animate-pulse"
+                                    >
+                                      Transmitir
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => {
+                                      setSstExames(prev => prev.filter(x => x.id !== item.id));
+                                      addToast('Evento SST excluído localmente.', 'info');
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-red-500 rounded cursor-pointer"
+                                    title="Excluir Ocupacional"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 p-3 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between col-span-12 w-full">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase">Consórcio de SST ativo com Clínicas Conveniadas</span>
+                    <span className="text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-black uppercase">XML automático via API</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex bg-blue-50 border border-blue-100 p-4 rounded-xl gap-3">
+              <Info className="text-blue-500 shrink-0" size={20} />
+              <p className="text-xs text-blue-800 leading-relaxed font-semibold">
+                O envio do eSocial deve ocorrer até o dia 15 do mês subsequente (folha), enquanto a DCTFWeb para emissão da DARF Previdenciária também vence no dia 15. A transmissão efetiva em ambiente de produção requer que o certificado digital modelo A1 esteja corretamente atrelado na área de <strong className="font-black hover:underline cursor-pointer">Configurações Gerais</strong> do sistema.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* 8. TAB RH */}
+      {activeTab === 'rh' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1 mb-1 border-b border-slate-100 pb-2">
+                  <UserPlus size={16} className="text-indigo-600" /> Desenvolvimento Humano / RH
+                </h3>
+                <p className="text-xs text-slate-500">Recrutamento, avaliações de desempenho, onboarding e treinamentos.</p>
+              </div>
+            </div>
+            
+            {/* Inner Tabs for RH */}
+            <div className="flex border-b border-slate-200 mb-6 space-x-6 overflow-x-auto hide-scrollbar">
+               <button 
+                 onClick={() => setRhActiveTab('recrutamento')}
+                 className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${rhActiveTab === 'recrutamento' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+               >
+                 Recrutamento
+               </button>
+               <button 
+                 onClick={() => setRhActiveTab('onboarding')}
+                 className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${rhActiveTab === 'onboarding' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+               >
+                 Onboarding
+               </button>
+               <button 
+                 onClick={() => setRhActiveTab('treinamento')}
+                 className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${rhActiveTab === 'treinamento' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+               >
+                 Treinamentos
+               </button>
+               <button 
+                 onClick={() => setRhActiveTab('desempenho')}
+                 className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${rhActiveTab === 'desempenho' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+               >
+                 Desempenho
+               </button>
+            </div>
+
+            {rhActiveTab === 'recrutamento' && (
+              <div className="animate-in fade-in space-y-6">
+                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-800">Vagas Abertas</h4>
+                    <p className="text-xs text-slate-500 mt-1">Gerencie processos seletivos e candidatos.</p>
+                  </div>
+                  <Button variant="primary" size="sm" icon={Plus}>Nova Vaga</Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-black uppercase tracking-wider">Ativa</span>
+                      <span className="text-xs text-slate-400 font-semibold">Cód: V-102</span>
+                    </div>
+                    <h5 className="font-bold text-slate-800 text-sm mb-1">Analista Administrativo</h5>
+                    <p className="text-xs text-slate-500 mb-4 line-clamp-2">Atuação no setor administrativo e financeiro da instituição.</p>
+                    <div className="flex justify-between border-t border-slate-100 pt-3">
+                      <span className="text-xs font-semibold text-slate-600"><Users size={14} className="inline mr-1 text-slate-400" /> 12 Candidatos</span>
+                      <button className="text-indigo-600 text-xs font-black hover:underline cursor-pointer">Ver Funil</button>
+                    </div>
+                  </div>
+                  <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-black uppercase tracking-wider">Pausada</span>
+                      <span className="text-xs text-slate-400 font-semibold">Cód: V-098</span>
+                    </div>
+                    <h5 className="font-bold text-slate-800 text-sm mb-1">Auxiliar de Limpeza</h5>
+                    <p className="text-xs text-slate-500 mb-4 line-clamp-2">Manutenção e conservação do templo e dependências.</p>
+                    <div className="flex justify-between border-t border-slate-100 pt-3">
+                      <span className="text-xs font-semibold text-slate-600"><Users size={14} className="inline mr-1 text-slate-400" /> 45 Candidatos</span>
+                      <button className="text-indigo-600 text-xs font-black hover:underline cursor-pointer">Ver Funil</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {rhActiveTab === 'onboarding' && (
+              <div className="animate-in fade-in space-y-6">
+                <div className="flex justify-between items-center bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                  <div>
+                    <h4 className="text-sm font-black text-blue-900">Integração de Novos Colaboradores</h4>
+                    <p className="text-xs text-blue-700/80 mt-1">Acompanhe as trilhas de admissão em andamento.</p>
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Cargo</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Progresso (Trilha)</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                          <UserPlus size={24} className="mx-auto text-slate-300 mb-2" />
+                          <p className="font-semibold text-slate-600">Nenhum onboarding em andamento</p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {rhActiveTab === 'treinamento' && (
+              <div className="animate-in fade-in space-y-6">
+                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-800">Catálogo de Treinamentos</h4>
+                    <p className="text-xs text-slate-500 mt-1">Capacitação institucional legal e de desenvolvimento.</p>
+                  </div>
+                  <Button variant="primary" size="sm" icon={Plus}>Novo Curso</Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-4 border border-slate-200 p-4 rounded-xl shadow-xs">
+                    <div className="bg-indigo-100 text-indigo-600 p-3 rounded-xl">
+                      <BookOpen size={24} />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-sm text-slate-800">Integração Institucional e Cultura</h5>
+                      <p className="text-xs text-slate-500 mt-0.5">Obrigatório para novos colaboradores.</p>
+                      <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-emerald-500 h-1.5 w-[85%]"></div>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider">85% Concluído pela equipe</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 border border-slate-200 p-4 rounded-xl shadow-xs">
+                    <div className="bg-orange-100 text-orange-600 p-3 rounded-xl">
+                      <ShieldAlert size={24} />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-sm text-slate-800">CIPA e Prevenção de Acidentes</h5>
+                      <p className="text-xs text-slate-500 mt-0.5">Renovação anual requerida (NR-05).</p>
+                      <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-orange-500 h-1.5 w-[40%]"></div>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider">40% Faltam realizar</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {rhActiveTab === 'desempenho' && (
+              <div className="animate-in fade-in space-y-6">
+                <div className="bg-emerald-50/50 p-5 rounded-xl border border-emerald-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 bg-emerald-600 text-white rounded-xl shadow-md shrink-0">
+                      <TrendingUp size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-emerald-900">Integração RH ↔ DP Ativa</h4>
+                      <p className="text-xs text-emerald-700/85 mt-1">
+                        Os resultados dos ciclos de avaliação já podem gerar sugestões automáticas de reajuste salarial ou promoção diretamente para a aprovação na folha do Departamento Pessoal.
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="secondary" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 whitespace-nowrap">
+                    Configurar Regras
+                  </Button>
+                </div>
+                
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ciclo</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Período</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Resumo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-slate-800 text-xs">Avaliação Desempenho H1</td>
+                        <td className="px-4 py-3 text-slate-600 text-xs">Jan - Jun 2026</td>
+                        <td className="px-4 py-3">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded font-black uppercase tracking-wider">Planejamento</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-500">0 avaliados</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-slate-800 text-xs">Pesquisa de Clima Organizacional</td>
+                        <td className="px-4 py-3 text-slate-600 text-xs">Nov 2025</td>
+                        <td className="px-4 py-3">
+                          <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-black uppercase tracking-wider">Concluído</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <div className="flex items-center gap-2">
+                             <span className="font-bold text-slate-700">82% Engajamento</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+          </div>
+        </div>
+      )}
+
+      {/* 9. JURÍDICO & COMPLIANCE TAB */}
+      {activeTab === 'juridico' && (
+        <div className="space-y-6 animate-entrance">
+          <div className="bg-white p-6 rounded-2.5xl border border-slate-200/80 shadow-xs">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5 mb-6">
+              <div>
+                <span className="text-[10px] bg-indigo-100/70 border border-indigo-200 text-indigo-700 font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  Compliance & Jurídico
+                </span>
+                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 mt-2">
+                  <Scale className="text-indigo-600" size={22} /> Controle de Contratos & Contencioso Trabalhista
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Gerenciamento preventivo e estratégico de contratos de trabalho, termos de voluntariado, termos clericais e acompanhamento de processos judiciais de RH.
+                </p>
+              </div>
+
+              {/* Quick statistics for Juridico */}
+              <div className="flex gap-4">
+                <div className="bg-slate-50 p-2.5 px-4 rounded-xl border border-slate-150">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Contratos Vigentes</span>
+                  <span className="text-sm font-black text-slate-700">{contratos.filter(c => c.status === 'ativo').length} ativos</span>
+                </div>
+                <div className="bg-amber-50 p-2.5 px-4 rounded-xl border border-amber-150">
+                  <span className="text-[9px] text-amber-500 font-bold uppercase block">Processos Ativos</span>
+                  <span className="text-sm font-black text-amber-700">{processos.filter(p => p.status === 'andamento').length} em curso</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Inner Subtabs */}
+            <div className="flex border-b border-slate-200 mb-6 space-x-6 overflow-x-auto hide-scrollbar">
+              <button 
+                onClick={() => setJuridicoActiveTab('contratos')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${juridicoActiveTab === 'contratos' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Contratos & Termos Aditivos
+              </button>
+              <button 
+                onClick={() => setJuridicoActiveTab('processos')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${juridicoActiveTab === 'processos' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Processos & Demandas Judiciais
+              </button>
+              <button 
+                onClick={() => setJuridicoActiveTab('base_juridica')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${juridicoActiveTab === 'base_juridica' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                Base de Apoio Jurídico & Prevenção
+              </button>
+            </div>
+
+            {/* 9a. SUBTAB CONTRATOS & TERMOS */}
+            {juridicoActiveTab === 'contratos' && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-150">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-2.5 top-2.5 text-slate-400" size={14} />
+                      <input 
+                        type="text"
+                        placeholder="Buscar contrato ou colaborador..."
+                        value={contratoSearch}
+                        onChange={(e) => setContratoSearch(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-700 outline-hidden"
+                      />
+                    </div>
+                    <select
+                      value={contratoStatusFilter}
+                      onChange={(e: any) => setContratoStatusFilter(e.target.value)}
+                      className="bg-white border border-slate-205 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 font-semibold cursor-pointer outline-hidden"
+                    >
+                      <option value="todos">Todos os Status</option>
+                      <option value="ativo">Vigente / Ativo</option>
+                      <option value="rascunho">Minuta / Rascunho</option>
+                      <option value="vencido">Vencido / Expirado</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      setEditingContrato(null);
+                      setContratoForm({
+                        colaborador_id: '',
+                        titulo: '',
+                        tipo: 'Contrato de Trabalho CLT',
+                        data_inicio: '',
+                        data_fim: '',
+                        valor: 0,
+                        status: 'ativo',
+                        clausulas: 'Cláusula 1ª - Das Atividades e Responsabilidades...\nCláusula 2ª - Do Horário de Trabalho...\nCláusula 3ª - Do Sigilo e Confidencialidade...',
+                        assinado_digital: true
+                      });
+                      setShowContratoModal(true);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg cursor-pointer flex items-center justify-center gap-2 shadow-sm border border-indigo-500 transition-colors"
+                  >
+                    <Plus size={14} /> Novo Contrato / Termo
+                  </button>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Título do Termo</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Tipo</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador / Parte</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Início Vigência</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right font-mono">Valor</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Status</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Assinatura Digital</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contratos
+                          .filter(c => {
+                            const term = contratoSearch.toLowerCase();
+                            const colab = colaboradores.find(col => col.id === c.colaborador_id);
+                            const colabNome = colab ? colab.nome.toLowerCase() : '';
+                            const matchesSearch = c.titulo.toLowerCase().includes(term) || colabNome.includes(term) || c.tipo.toLowerCase().includes(term);
+                            const matchesStatus = contratoStatusFilter === 'todos' || c.status === contratoStatusFilter;
+                            return matchesSearch && matchesStatus;
+                          })
+                          .map((c) => {
+                            const linkedColab = colaboradores.find(col => col.id === c.colaborador_id);
+                            return (
+                              <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-4 py-3 font-bold text-slate-800 text-xs">
+                                  {c.titulo}
+                                </td>
+                                <td className="px-4 py-3 text-slate-650 text-xs font-semibold">
+                                  {c.tipo}
+                                </td>
+                                <td className="px-4 py-3 text-xs">
+                                  {linkedColab ? (
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-indigo-650">{linkedColab.nome}</span>
+                                      <span className="text-[10px] text-slate-450 uppercase">{linkedColab.cargo || 'Funcionário'}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400 italic">Termo Geral / Coletivo</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-slate-600 text-xs font-mono">
+                                  {c.data_inicio ? new Date(c.data_inicio).toLocaleDateString('pt-BR') : '-'}
+                                  {c.data_fim && ` até ${new Date(c.data_fim).toLocaleDateString('pt-BR')}`}
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-700 font-mono text-xs font-black">
+                                  {c.valor > 0 ? formatBRL(c.valor) : <span className="text-slate-400 px-2 py-0.5 bg-slate-50 border border-slate-150 rounded text-[9px]">ISENTO</span>}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase tracking-wider ${
+                                    c.status === 'ativo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250/50' : 
+                                    c.status === 'rascunho' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 
+                                    'bg-rose-50 text-rose-700 border border-rose-200'
+                                  }`}>
+                                    {c.status === 'ativo' ? 'Vigente' : c.status === 'rascunho' ? 'Rascunho' : 'Expirado'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {c.assinado_digital ? (
+                                    <span className="text-xs text-emerald-605 font-bold flex items-center justify-center gap-1">
+                                      <CheckCircle size={12} /> Assinado por Token ICP
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">Assinatura Manual</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex gap-1.5 justify-center">
+                                    <button 
+                                      onClick={() => {
+                                        setEditingContrato(c);
+                                        setContratoForm({ ...c });
+                                        setShowContratoModal(true);
+                                      }}
+                                      className="p-1 px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 font-black text-[10px] rounded cursor-pointer transition-colors"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        const confirmed = window.confirm('Tem certeza que deseja excluir esse termo contratual?');
+                                        if (confirmed) {
+                                          setContratos(prev => prev.filter(item => item.id !== c.id));
+                                          addToast('Contrato excluído com sucesso!', 'warning');
+                                        }
+                                      }}
+                                      className="p-1 text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition-colors"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        }
+                        {contratos.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="p-8 text-center text-slate-400 italic text-xs">
+                              Nenhum contrato cadastrado ou localizado.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 9b. SUBTAB PROCESSOS JUDICIAIS / TRABALHISTAS */}
+            {juridicoActiveTab === 'processos' && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                {/* Visual Alert Banner for upcoming Hearings */}
+                {processos.filter(p => p.status === 'andamento' && p.proxima_audiencia).length > 0 && (
+                  <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-4 flex items-start gap-3">
+                    <ShieldAlert className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                    <div className="flex-1">
+                      <h4 className="text-xs font-black text-amber-900 uppercase tracking-wide">Agenda de Audiências Trabalhistas</h4>
+                      <p className="text-xs text-slate-650 mt-1">
+                        Há audiências agendadas na Justiça do Trabalho. Mantenha os prepostos instruídos e os documentos de contra-cheque, folha de ponto e Admissão arquivados e disponíveis.
+                      </p>
+                      
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {processos
+                          .filter(p => p.status === 'andamento' && p.proxima_audiencia)
+                          .map((p, ix) => (
+                            <span key={p.id || ix} className="text-[10px] bg-white border border-amber-250 text-slate-700 px-3 py-1 rounded-md font-bold">
+                              🔍 Proc. {p.numero} - Audiência de Instrução: <b className="text-amber-700">{p.proxima_audiencia}</b>
+                            </span>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-150">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="absolute left-2.5 top-2.5 text-slate-400" size={14} />
+                    <input 
+                      type="text"
+                      placeholder="Filtrar processos por número ou autor..."
+                      value={processoSearch}
+                      onChange={(e) => setProcessoSearch(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-700 outline-hidden"
+                    />
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      setEditingProcesso(null);
+                      setProcessoForm({
+                        colaborador_id: '',
+                        numero: '',
+                        tipo: 'trabalhista',
+                        titulo: '',
+                        autor: '',
+                        reu: 'Instituição Sede / Matriz',
+                        data_entrada: '',
+                        status: 'andamento',
+                        descricao: '',
+                        ultima_movimentacao: '',
+                        proxima_audiencia: '',
+                        valor_causa: 0
+                      });
+                      setShowProcessoModal(true);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-black rounded-lg cursor-pointer flex items-center justify-center gap-2 shadow-sm border border-indigo-550 transition-colors"
+                  >
+                    <Plus size={14} /> Cadastrar Processo Trabalhista / Cível
+                  </button>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">ID / Número Processo CNJ</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Tipo/Objeto</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Autor da Causa</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Data Distribuição</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Última Movimentação</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Valor Causa</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Status</th>
+                          <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {processos
+                          .filter(p => {
+                            const term = processoSearch.toLowerCase();
+                            return p.numero.toLowerCase().includes(term) || p.titulo.toLowerCase().includes(term) || p.autor.toLowerCase().includes(term);
+                          })
+                          .map((p) => {
+                            return (
+                              <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td className="px-4 py-3 text-xs font-black text-slate-800 font-mono">
+                                  {p.numero}
+                                </td>
+                                <td className="px-4 py-3 text-xs">
+                                  <div className="font-bold text-slate-705">{p.titulo}</div>
+                                  <div className="text-[10px] text-slate-400 uppercase font-semibold">{p.tipo === 'trabalhista' ? 'Trabalhista' : p.tipo === 'civel' ? 'Cível' : 'Outros'}</div>
+                                </td>
+                                <td className="px-4 py-3 text-xs font-semibold text-indigo-900">
+                                  {p.autor}
+                                </td>
+                                <td className="px-4 py-3 text-slate-500 text-xs font-medium">
+                                  {p.data_entrada ? new Date(p.data_entrada).toLocaleDateString('pt-BR') : '-'}
+                                </td>
+                                <td className="px-4 py-3 text-slate-600 text-xs">
+                                  <div className="line-clamp-1 italic text-slate-550 font-medium">"{p.ultima_movimentacao || 'Lançado no sistema'}"</div>
+                                  {p.proxima_audiencia && <div className="text-[10px] text-amber-600 font-black mt-0.5">Audiência: {p.proxima_audiencia}</div>}
+                                </td>
+                                <td className="px-4 py-3 text-right font-mono text-xs font-semibold text-slate-705">
+                                  {formatBRL(p.valor_causa)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider ${
+                                    p.status === 'andamento' ? 'bg-amber-50 text-amber-700 border border-amber-250/65' : 
+                                    p.status === 'acordo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 
+                                    'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  }`}>
+                                    {p.status === 'andamento' ? 'Instrução' : p.status === 'acordo' ? 'Conciliado' : 'Arquivado'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex gap-1.5 justify-center">
+                                    <button 
+                                      onClick={() => {
+                                        setEditingProcesso(p);
+                                        setProcessoForm({ ...p });
+                                        setShowProcessoModal(true);
+                                      }}
+                                      className="p-1 px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 font-black text-[10px] rounded cursor-pointer transition-colors"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        const confirmed = window.confirm('Excluir ficha processual do sistema?');
+                                        if (confirmed) {
+                                          setProcessos(prev => prev.filter(item => item.id !== p.id));
+                                          addToast('Ficha processual excluída!', 'info');
+                                        }
+                                      }}
+                                      className="p-1 text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition-colors"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        }
+                        {processos.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="p-8 text-center text-slate-400 italic text-xs">
+                              Nenhum processo judicial cadastrado ou em andamento.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 9c. SUBTAB BASE JURÍDICA &apoio */}
+            {juridicoActiveTab === 'base_juridica' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  
+                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl hover:shadow-md transition-all">
+                    <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl inline-block mb-3 border border-blue-150">
+                      <BookOpen size={18} />
+                    </span>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Contratos Admissão CLT</h4>
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      A admissão sob regime CLT exige a assinatura da Carteira de Trabalho Digital até o dia anterior ao início do serviço. Sempre verifique as convenções coletivas de salários mínimos profissionais e pisos locais.
+                    </p>
+                    <div className="mt-4 pt-3.5 border-t border-slate-200/80 flex justify-between items-center text-[10px] text-indigo-600 font-extrabold uppercase">
+                      <span>Art. 29 CLT Compliance</span>
+                      <span className="text-slate-450 text-[9px] font-semibold">Atualizado eSocial</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl hover:shadow-md transition-all">
+                    <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl inline-block mb-3 border border-emerald-150">
+                      <UserCheck size={18} />
+                    </span>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Lei do Trabalho Voluntário</h4>
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      Conforme a Lei nº 9.608/98, o trabalho voluntário eclesiástico deve possuir um Termo de Adesão assinado com regras rígidas, sob pena de restar caracterizado vínculo de trabalho de emprego convencional com multas severas.
+                    </p>
+                    <div className="mt-4 pt-3.5 border-t border-slate-200/80 flex justify-between items-center text-[10px] text-emerald-600 font-extrabold uppercase">
+                      <span>Lei Geral 9.608/1998</span>
+                      <span className="text-slate-450 text-[9px] font-semibold">Modelo Voluntariado</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl hover:shadow-md transition-all col-span-1 md:col-span-2 lg:col-span-1">
+                    <span className="p-2.5 bg-pink-50 text-pink-600 rounded-xl inline-block mb-3 border border-pink-150">
+                      <Shield size={18} />
+                    </span>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Imunidades do Clero / eSocial</h4>
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      O ministro de confissão religiosa (pastores, padres, clérigos) é segurado obrigatório da Previdência Social mas é isento de encargos patronais previdenciários e cota de 20%, desde que a atividade seja estritamente sacerdotal.
+                    </p>
+                    <div className="mt-4 pt-3.5 border-t border-slate-200/80 flex justify-between items-center text-[10px] text-pink-600 font-extrabold uppercase">
+                      <span>eSocial Categoria Código 701</span>
+                      <span className="text-slate-450 text-[9px] font-semibold">Clero & Estatutos</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div className="bg-indigo-50/55 border border-indigo-150 rounded-xl p-5">
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                    <Info size={16} className="text-indigo-600" /> Diretriz de Boas Práticas Preventivas GIPP
+                  </h4>
+                  <ul className="text-[11px] text-slate-600 space-y-2 list-disc pl-4 leading-relaxed font-medium">
+                    <li>Sempre colha a folha de ponto mensalmente por canais biométricos, folha física assinada ou sistema digital autorizado pelo MTE (Portaria 671).</li>
+                    <li>O controle integrado de pagamento no DP exporta e cruza dados das horas trabalhadas, protegendo o patrimônio corporativo contra questionamentos em 100% de precisão jurídica.</li>
+                    <li>Acordos judiciais amigáveis e homologações devem ser arquivados em conjunto com a ficha cadastral do eSocial do colaborador correspondente para consolidação na DCTFWeb.</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
       {/* --- MODAL ADD / EDIT COLABORADOR --- */}
       {showColabModal && createPortal(
@@ -3765,6 +5604,675 @@ const ModuleDPContabilidade = memo(() => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* --- MODAL ADD / EDIT CONTRATO JURIDICO --- */}
+      {showContratoModal && createPortal(
+        <InteractiveWindow
+          id="modal_contrato_juridico"
+          title={editingContrato ? 'Editar Termo Contratual' : 'Elaborar Novo Contrato de Pessoal'}
+          subtitle="Compliance Geral e Regulamento Trabalhista CLT & Voluntariado"
+          onClose={() => setShowContratoModal(false)}
+          icon={Scale}
+          headerBg="from-indigo-650 via-indigo-700 to-indigo-850"
+          defaultWidth={700}
+          defaultHeight={620}
+          footer={
+            <div className="flex justify-between items-center w-full">
+              <span className="text-[10px] text-slate-400 font-bold uppercase">
+                * Assegura validade jurídica aos arquivos de DP
+              </span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowContratoModal(false)}
+                  className="border border-slate-200 bg-white cursor-pointer text-xs"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={() => {
+                    if (!contratoForm.titulo) {
+                      addToast('Insira o título ou objeto do contrato!', 'error');
+                      return;
+                    }
+                    if (editingContrato) {
+                      setContratos(prev => prev.map(item => item.id === editingContrato.id ? { ...item, ...contratoForm } : item));
+                      addToast('Contrato alterado com sucesso!', 'success');
+                    } else {
+                      const newId = 'c_' + Math.random().toString(36).substr(2, 9);
+                      setContratos(prev => [{ id: newId, ...contratoForm }, ...prev]);
+                      addToast('Ficha de Contrato criada com sucesso!', 'success');
+                    }
+                    setShowContratoModal(false);
+                  }}
+                  className="shadow-sm cursor-pointer flex items-center gap-2 text-xs"
+                >
+                  Confirmar e Salvar
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Objeto / Título do Contrato</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: Contrato Admissão CLT, Prorrogação de Horas..."
+                  value={contratoForm.titulo}
+                  onChange={(e) => setContratoForm({ ...contratoForm, titulo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Tipo de Contrato / Termo</label>
+                <select
+                  value={contratoForm.tipo}
+                  onChange={(e) => setContratoForm({ ...contratoForm, tipo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-650 font-semibold cursor-pointer outline-hidden"
+                >
+                  <option value="Contrato de Trabalho CLT">Contrato de Trabalho CLT</option>
+                  <option value="Contrato de Prestação de Serviço">Contrato de Prestação de Serviço</option>
+                  <option value="Termo de Voluntariado">Termo de Voluntariado (Lei 9.608)</option>
+                  <option value="Termo de Compromisso de Estágio">Termo de Compromisso de Estágio</option>
+                  <option value="Acordo Coletivo de Trabalho">Acordo Coletivo de Trabalho</option>
+                  <option value="Estatuto de Ministro Religioso">Estatuto de Ministro Religioso (Clero)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Vincular Colaborador do DP (Opcional)</label>
+                <select
+                  value={contratoForm.colaborador_id}
+                  onChange={(e) => setContratoForm({ ...contratoForm, colaborador_id: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-650 font-semibold cursor-pointer outline-hidden"
+                >
+                  <option value="">--- Nenhum (Termo Geral / Coletivo) ---</option>
+                  {colaboradores.map((col: any) => (
+                    <option key={col.id} value={col.id}>{col.nome} ({col.cargo || 'DP'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Valor Mensal / Global (BRL)</label>
+                <input 
+                  type="number"
+                  placeholder="0.00"
+                  value={contratoForm.valor || ''}
+                  onChange={(e) => setContratoForm({ ...contratoForm, valor: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Início do Termo</label>
+                <input 
+                  type="date"
+                  value={contratoForm.data_inicio}
+                  onChange={(e) => setContratoForm({ ...contratoForm, data_inicio: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Fim do Termo (Opcional)</label>
+                <input 
+                  type="date"
+                  value={contratoForm.data_fim || ''}
+                  onChange={(e) => setContratoForm({ ...contratoForm, data_fim: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Status Atual</label>
+                <select
+                  value={contratoForm.status}
+                  onChange={(e) => setContratoForm({ ...contratoForm, status: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-650 font-bold cursor-pointer outline-hidden"
+                >
+                  <option value="ativo">Vigente / Ativo</option>
+                  <option value="rascunho">Minuta / Rascunho</option>
+                  <option value="vencido">Cancelado / Expirado</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 py-1">
+              <input 
+                type="checkbox"
+                id="check_assinado_digital"
+                checked={contratoForm.assinado_digital}
+                onChange={(e) => setContratoForm({ ...contratoForm, assinado_digital: e.target.checked })}
+                className="w-4 h-4 text-indigo-600 border-slate-305 rounded focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="check_assinado_digital" className="text-xs font-semibold text-slate-600 outline-hidden cursor-pointer select-none">
+                Este contrato foi assinado digitalmente por Token ICP / Assinatura Web?
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Cláusulas e Termos Legais</label>
+              <textarea 
+                rows={4}
+                value={contratoForm.clausulas}
+                onChange={(e) => setContratoForm({ ...contratoForm, clausulas: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-mono leading-relaxed"
+                placeholder="Insira as cláusulas contratuais correspondentes de amparo..."
+              />
+            </div>
+          </div>
+        </InteractiveWindow>
+      )}
+
+      {/* --- MODAL ADD / EDIT PROCESSO TRABALHISTA/CIVEL --- */}
+      {showProcessoModal && createPortal(
+        <InteractiveWindow
+          id="modal_processo_juridico"
+          title={editingProcesso ? 'Editar Ficha Processual' : 'Cadastrar Processo / Contencioso Trabalhista'}
+          subtitle="Controle Integrado de Demandas Judiciais e Prevenção de Passivos"
+          onClose={() => setShowProcessoModal(false)}
+          icon={Scale}
+          headerBg="from-rose-650 via-rose-700 to-rose-850"
+          defaultWidth={700}
+          defaultHeight={620}
+          footer={
+            <div className="flex justify-between items-center w-full">
+              <span className="text-[10px] text-rose-500 font-black uppercase">
+                ⚠️ Mantenha os históricos atualizados para a DCTFWeb
+              </span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowProcessoModal(false)}
+                  className="border border-slate-200 bg-white cursor-pointer text-xs"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={() => {
+                    if (!processoForm.numero || !processoForm.titulo) {
+                      addToast('Insira número único e o título do processo!', 'error');
+                      return;
+                    }
+                    if (editingProcesso) {
+                      setProcessos(prev => prev.map(item => item.id === editingProcesso.id ? { ...item, ...processoForm } : item));
+                      addToast('Ficha de processo alterada!', 'success');
+                    } else {
+                      const newId = 'p_' + Math.random().toString(36).substr(2, 9);
+                      setProcessos(prev => [{ id: newId, ...processoForm }, ...prev]);
+                      addToast('Andamento de Processo criado com sucesso!', 'success');
+                    }
+                    setShowProcessoModal(false);
+                  }}
+                  className="shadow-sm cursor-pointer flex items-center gap-2 text-xs bg-rose-600 border border-rose-500 hover:bg-rose-700"
+                >
+                  Salvar Ficha Processual
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Número Único do Processo (CNJ)</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: 0010245-89.2026.5.02.0001"
+                  value={processoForm.numero}
+                  onChange={(e) => setProcessoForm({ ...processoForm, numero: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Objeto Principal da Ação</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: Horas Extras, Equiparação Salarial..."
+                  value={processoForm.titulo}
+                  onChange={(e) => setProcessoForm({ ...processoForm, titulo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Autor da Causa (Reclamante)</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: Nome do Funcionário ou Orgão Fiscal"
+                  value={processoForm.autor}
+                  onChange={(e) => setProcessoForm({ ...processoForm, autor: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-indigo-900 outline-hidden font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Réu da Causa (Reclamado)</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: Instituição Sede / Matriz"
+                  value={processoForm.reu}
+                  onChange={(e) => setProcessoForm({ ...processoForm, reu: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Tipo de Processo</label>
+                <select
+                  value={processoForm.tipo}
+                  onChange={(e) => setProcessoForm({ ...processoForm, tipo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-650 font-semibold cursor-pointer outline-hidden"
+                >
+                  <option value="trabalhista">Justiça do Trabalho</option>
+                  <option value="civel">Justiça Comum / Cível</option>
+                  <option value="tributario">Administrativo / Tributário</option>
+                  <option value="outros">Outros Juízos</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Valor da Causa (BRL)</label>
+                <input 
+                  type="number"
+                  placeholder="0.00"
+                  value={processoForm.valor_causa || ''}
+                  onChange={(e) => setProcessoForm({ ...processoForm, valor_causa: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Status do Andamento</label>
+                <select
+                  value={processoForm.status}
+                  onChange={(e) => setProcessoForm({ ...processoForm, status: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-650 font-bold cursor-pointer outline-hidden"
+                >
+                  <option value="andamento">Fase de Instrução / Em Curso</option>
+                  <option value="acordo">Fechado em Acordo / Conciliação</option>
+                  <option value="arquivado">Julgado / Concluído e Arquivado</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Data de Distribuição</label>
+                <input 
+                  type="date"
+                  value={processoForm.data_entrada}
+                  onChange={(e) => setProcessoForm({ ...processoForm, data_entrada: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Próxima Audiência (Data/Hora)</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: 15/09/2026 13:30 (Opcional)"
+                  value={processoForm.proxima_audiencia}
+                  onChange={(e) => setProcessoForm({ ...processoForm, proxima_audiencia: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-amber-700 outline-hidden font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Última Movimentação Relevante</label>
+              <input 
+                type="text"
+                placeholder="Ex: Audiência de instrução designada para..."
+                value={processoForm.ultima_movimentacao}
+                onChange={(e) => setProcessoForm({ ...processoForm, ultima_movimentacao: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-semibold"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Histórico e Observações</label>
+              <textarea 
+                rows={3}
+                value={processoForm.descricao}
+                onChange={(e) => setProcessoForm({ ...processoForm, descricao: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-semibold leading-relaxed"
+                placeholder="Insira detalhes adicionais do andamento processual, prepostos ou advogados..."
+              />
+            </div>
+          </div>
+        </InteractiveWindow>
+      )}
+
+      {/* MODAL PLANO DE CONTAS */}
+      {showContaModal && (
+        <InteractiveWindow
+          title={editingConta ? "Editar Conta Contábil" : "Nova Conta Contábil"}
+          onClose={() => setShowContaModal(false)}
+          onSave={() => {
+            if (!contaForm.codigo || !contaForm.nome) {
+              addToast('Por favor, preencha o código e o nome da conta contábil.', 'error');
+              return;
+            }
+            if (editingConta) {
+              setPlanoDeContas(prev => prev.map(item => item.id === editingConta.id ? { ...item, ...contaForm } : item));
+              addToast('Conta contábil atualizada com sucesso!', 'success');
+            } else {
+              const novaObj = {
+                id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+                ...contaForm
+              };
+              setPlanoDeContas(prev => [...prev, novaObj]);
+              addToast('Conta contábil cadastrada com sucesso!', 'success');
+            }
+            setShowContaModal(false);
+          }}
+          saveLabel={editingConta ? "Salvar Alterações" : "Adicionar Conta"}
+        >
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Código de Classificação (Estrutural)</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: 1.1.01.002"
+                  value={contaForm.codigo}
+                  onChange={(e) => setContaForm({ ...contaForm, codigo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-black"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Grupo de Contas</label>
+                <select
+                  value={contaForm.grupo}
+                  onChange={(e) => setContaForm({ ...contaForm, grupo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-650 font-bold cursor-pointer outline-hidden"
+                >
+                  <option value="Ativo Circulante">Ativo Circulante</option>
+                  <option value="Ativo Não Circulante">Ativo Não Circulante</option>
+                  <option value="Passivo Circulante">Passivo Circulante</option>
+                  <option value="Receita Operacional">Receita Operacional</option>
+                  <option value="Despesa Operacional">Despesa Operacional</option>
+                  <option value="Gastos Administrativos">Gastos Administrativos</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Nome da Conta Contábil</label>
+              <input 
+                type="text"
+                placeholder="Ex: Caixa Geral da Sede / Dízimos e Ofertas"
+                value={contaForm.nome}
+                onChange={(e) => setContaForm({ ...contaForm, nome: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Natureza do Saldo</label>
+                <select
+                  value={contaForm.tipo}
+                  onChange={(e) => setContaForm({ ...contaForm, tipo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-650 font-semibold cursor-pointer outline-hidden"
+                >
+                  <option value="Devedora">Devedora</option>
+                  <option value="Credora">Credora</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Saldo Atual (BRL)</label>
+                <input 
+                  type="number"
+                  placeholder="0.00"
+                  value={contaForm.saldo || ''}
+                  onChange={(e) => setContaForm({ ...contaForm, saldo: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-black"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Estado de Funcionamento</label>
+                <select
+                  value={contaForm.status}
+                  onChange={(e) => setContaForm({ ...contaForm, status: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-650 font-bold cursor-pointer outline-hidden"
+                >
+                  <option value="ativo">Conta Ativa (Disponível)</option>
+                  <option value="inativo">Conta Inativa (Ocultar)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </InteractiveWindow>
+      )}
+
+      {/* MODAL EVENTO SST */}
+      {showSstModal && (
+        <InteractiveWindow
+          title="Emitir Registro de Saúde e Segurança (eSocial)"
+          onClose={() => setShowSstModal(false)}
+          onSave={() => {
+            if (!sstForm.colaborador || !sstForm.tipo) {
+              addToast('Selecione ou insira o nome do colaborador e o tipo de exame.', 'error');
+              return;
+            }
+            const novoObj = {
+              id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+              status: 'pendente',
+              ...sstForm
+            };
+            setSstExames(prev => [novoObj, ...prev]);
+            addToast('Registro de Saúde Ocupacional inserido na fila de envios.', 'success');
+            setShowSstModal(false);
+          }}
+          saveLabel="Adicionar na Fila"
+        >
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Nome do Colaborador / Sede</label>
+              <input 
+                type="text"
+                placeholder="Ex: Pastor Marcos Silva ou 'Consolidado da Sede'"
+                value={sstForm.colaborador}
+                onChange={(e) => setSstForm({ ...sstForm, colaborador: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Tipo de Atendimento / Evento</label>
+                <select
+                  value={sstForm.tipo}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    let ev = 'S-2220';
+                    let r = 'Ausência de riscos';
+                    if (val.includes('CAT')) { ev = 'S-2210'; r = 'Acidente registrado'; }
+                    else if (val.includes('LTCAT')) { ev = 'S-2240'; r = 'Fatores de risco detalhados no LTCAT'; }
+                    setSstForm({ ...sstForm, tipo: val, evento: ev, riscos: r });
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-650 font-bold cursor-pointer outline-hidden"
+                >
+                  <option value="Admissional">Exame Admissional (ASO)</option>
+                  <option value="Periódico">Exame Periódico (ASO)</option>
+                  <option value="Demissional">Exame Demissional (ASO)</option>
+                  <option value="Mudança de Função">Retorno ao Trabalho / Função</option>
+                  <option value="Comunicação de CAT">Comunicação de CAT (Acidente S-2210)</option>
+                  <option value="Avaliação de Risco (LTCAT)">Atualização LTCAT / Agentes Nocivos (S-2240)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Código do Evento eSocial</label>
+                <input 
+                  type="text"
+                  readOnly
+                  disabled
+                  value={sstForm.evento}
+                  className="w-full bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-500 font-bold font-mono outline-hidden select-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Data do Resultado / Exame</label>
+                <input 
+                  type="date"
+                  value={sstForm.data}
+                  onChange={(e) => setSstForm({ ...sstForm, data: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-semibold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Resultado do Exame / Status</label>
+                <select
+                  value={sstForm.resultado}
+                  onChange={(e) => setSstForm({ ...sstForm, resultado: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-650 font-bold cursor-pointer outline-hidden"
+                >
+                  <option value="Apto">Apto (Saúde Ocupacional OK)</option>
+                  <option value="Inapto">Inapto (Restrições Detectadas)</option>
+                  <option value="Conforme">Conforme (Inspeção Ambiental)</option>
+                  <option value="Notificado">Notificado (Evento CAT Aberto)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Médico Examinador ou Responsável</label>
+                <input 
+                  type="text"
+                  placeholder="Ex: Dr. Roberto Cruz - CRM/SP 123456"
+                  value={sstForm.medico}
+                  onChange={(e) => setSstForm({ ...sstForm, medico: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Descrição da Causa / Agentes Nocivos Detalhados</label>
+              <textarea 
+                rows={2}
+                value={sstForm.riscos}
+                onChange={(e) => setSstForm({ ...sstForm, riscos: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-medium leading-relaxed"
+                placeholder="Insira os agentes identificados (químicos, físicos, biológicos) ou causa do acidente..."
+              />
+            </div>
+          </div>
+        </InteractiveWindow>
+      )}
+
+      {/* MODAL CONTROLE DE PONTO */}
+      {showPontoModal && (
+        <InteractiveWindow
+          title="Informar Registro de Ponto Avulso"
+          onClose={() => setShowPontoModal(false)}
+          onSave={() => {
+            if (!pontoForm.colaborador || !pontoForm.data) {
+              addToast('Por favor, preencha o colaborador e a data do ponto.', 'error');
+              return;
+            }
+            // Calculate a beautiful hours string based on entrance/exit
+            const ent = pontoForm.entrada || "08:00";
+            const sai = pontoForm.saida || "17:00";
+            const [h1, m1] = ent.split(':').map(Number);
+            const [h2, m2] = sai.split(':').map(Number);
+            let diffMins = (h2 * 60 + m2) - (h1 * 60 + m1);
+            if (diffMins < 0) diffMins += 24 * 60; // handle wrap around
+            // subtract 1 hour for lunch if shift is larger than 6 hours
+            if (diffMins > 360) diffMins -= 60;
+            const diffHoursDecimal = diffMins / 60;
+            const formattedHours = `${String(Math.floor(diffHoursDecimal)).padStart(2, '0')}:${String(Math.round((diffHoursDecimal % 1) * 60)).padStart(2, '0')} (Regular)`;
+
+            const novoObj = {
+              id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+              colaborador: pontoForm.colaborador,
+              data: pontoForm.data,
+              entrada: ent,
+              saida: sai,
+              horas: formattedHours,
+              status: 'Regular'
+            };
+            setPontoPunches(prev => [novoObj, ...prev]);
+            addToast('Registro de ponto e jornada salvo e enviado ao eSocial Fase 4!', 'success');
+            setShowPontoModal(false);
+          }}
+          saveLabel="Salvar Registro"
+        >
+          <div className="space-y-4 py-2 text-left">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase">Nome do Colaborador (Obreiro, Pastor, Funcionário)</label>
+              <input 
+                type="text"
+                placeholder="Ex: Pastor Marcos Silva ou Pra. Débora Souza"
+                value={pontoForm.colaborador}
+                onChange={(e) => setPontoForm({ ...pontoForm, colaborador: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Data do Ponto</label>
+                <input 
+                  type="date"
+                  value={pontoForm.data}
+                  onChange={(e) => setPontoForm({ ...pontoForm, data: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Hora de Entrada</label>
+                <input 
+                  type="time"
+                  value={pontoForm.entrada}
+                  onChange={(e) => setPontoForm({ ...pontoForm, entrada: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Hora de Saída</label>
+                <input 
+                  type="time"
+                  value={pontoForm.saida}
+                  onChange={(e) => setPontoForm({ ...pontoForm, saida: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 text-[11px] text-slate-550 leading-relaxed">
+              <strong className="text-slate-700 block mb-0.5">Nota de Conformidade:</strong>
+              As horas de jornada informadas acima serão automaticamente auditadas com o layout do eSocial Fase 4 (SST/Jornadas de Trabalho e Descansos) gerando as assinaturas fiscais A1 necessárias.
+            </div>
+          </div>
+        </InteractiveWindow>
       )}
 
     </div>
