@@ -336,9 +336,8 @@ const ModuleConciliacaoBancaria = () => {
     // --- TELA DE CARREGAMENTO DO BANCO ---
     if (connectingPhase === 1 || connectingPhase === 2) {
         return (
-            <div className="h-full flex flex-col items-center justify-center animate-entrance bg-slate-50 rounded-[2.5rem] shadow-2xl border border-slate-200 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-5" style={{ backgroundColor: theme.primary }}></div>
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+            <div className="w-full min-h-[75vh] flex flex-col items-center justify-center animate-entrance relative">
+                <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundColor: theme.primary }}></div>
                 
                 {connectingPhase === 1 && (
                     <div className="relative z-10 flex flex-col items-center text-center max-w-sm w-full p-10 bg-white/80 backdrop-blur-xl rounded-[3rem] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
@@ -397,9 +396,9 @@ const ModuleConciliacaoBancaria = () => {
     }
 
     return (
-        <div className="h-full flex flex-col animate-entrance bg-slate-50 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-200 relative">
+        <div className="w-full flex flex-col space-y-6 animate-entrance relative">
             {/* Header Simulating Bank Internet Banking */}
-            <div className="px-8 py-5 flex justify-between items-center shadow-md relative z-20" style={{ backgroundColor: theme.primary, color: theme.text }}>
+            <div className="px-8 py-5 flex justify-between items-center shadow-md relative z-20 rounded-3xl" style={{ backgroundColor: theme.primary, color: theme.text }}>
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white rounded-xl shadow-inner flex items-center justify-center overflow-hidden p-1.5 shrink-0">
                         <img src={logoBanco} alt="Logo Banco" className="w-full h-full object-contain" onError={(e) => e.target.src = 'https://img.icons8.com/color/48/bank-building.png'} />
@@ -417,7 +416,7 @@ const ModuleConciliacaoBancaria = () => {
             </div>
 
             {/* Bank Menu */}
-            <div className="bg-white border-b border-slate-200 px-6 py-0 flex gap-6 overflow-x-auto custom-scrollbar shadow-sm relative z-10 shrink-0">
+            <div className="bg-white border border-slate-200 px-6 py-0 flex gap-6 overflow-x-auto custom-scrollbar shadow-sm relative z-10 shrink-0 rounded-2xl animate-fadeIn">
                 {[
                     { id: 1, label: 'Extrato & Conciliação', icon: FileText },
                     { id: 4, label: 'Validação Bancária', icon: CheckCircle },
@@ -437,10 +436,10 @@ const ModuleConciliacaoBancaria = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
+            <div className="flex-1 flex flex-col space-y-6">
                 
                 {/* Filtro Global do Módulo */}
-                <div className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 md:px-8 py-4 flex flex-wrap gap-4 items-center justify-between shadow-sm relative z-10 shrink-0">
+                <div className="bg-white border border-slate-200 px-6 md:px-8 py-4 flex flex-wrap gap-4 items-center justify-between shadow-sm relative z-10 shrink-0 rounded-2xl">
                     <div className="flex items-center gap-2 text-xs font-black text-slate-600 uppercase tracking-widest">
                         <Filter size={16} style={{ color: theme.primary }}/> Filtro Avançado
                     </div>
@@ -468,7 +467,7 @@ const ModuleConciliacaoBancaria = () => {
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
                     {tab === 1 && (
-                        <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn h-full flex flex-col">
+                        <div className="w-full space-y-6 animate-fadeIn h-full flex flex-col">
                             <div className="flex flex-wrap gap-4 shrink-0">
                                 <div className="flex-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4" style={{ borderLeftColor: theme.primary }}>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 flex justify-between">
@@ -518,7 +517,7 @@ const ModuleConciliacaoBancaria = () => {
                     )}
 
                     {tab === 2 && (
-                        <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn h-full flex flex-col">
+                        <div className="w-full space-y-6 animate-fadeIn h-full flex flex-col">
                             <div className="bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-2xl shadow-sm shrink-0">
                                 <h4 className="font-bold text-amber-800 flex items-center gap-2"><AlertTriangle size={18}/> Pagamentos Pendentes (DDA / Débito Autorizado)</h4>
                                 <p className="text-sm text-amber-700 mt-1 font-medium">Selecione e autorize o pagamento dos títulos abaixo. Esta ação fará a quitação imediata de todos os selecionados registando a data de hoje.</p>
@@ -566,7 +565,7 @@ const ModuleConciliacaoBancaria = () => {
                     )}
 
                     {tab === 4 && (
-                        <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn h-full flex flex-col">
+                        <div className="w-full space-y-6 animate-fadeIn h-full flex flex-col">
                             <div className="bg-indigo-50 border-l-4 border-indigo-500 p-5 rounded-r-2xl shadow-sm shrink-0">
                                 <h4 className="font-bold text-indigo-800 flex items-center gap-2"><CheckCircle size={18}/> Validação Bancária (Lançamentos Pendentes)</h4>
                                 <p className="text-sm text-indigo-700 mt-1 font-medium">Os registros em <b>PIX ou Transferência</b> podem ser validados de imediato. Os registros em <b>Dinheiro ou Cartão</b> devem aguardar a confirmação de depósito/liquidação na conta bancária.</p>
@@ -654,7 +653,7 @@ const ModuleConciliacaoBancaria = () => {
                     )}
 
                     {tab === 3 && (
-                        <div className="max-w-5xl mx-auto space-y-6 animate-scale-in">
+                        <div className="w-full space-y-6 animate-scale-in">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="bg-white p-6 rounded-3xl shadow-sm border-l-4 flex flex-col justify-center border border-slate-200" style={{ borderLeftColor: theme.primary }}>
                                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Saldo Real (Apurado)</p>
