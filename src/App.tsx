@@ -22,7 +22,7 @@ import {
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
-  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
+  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
 } from 'lucide-react';
 
@@ -81,6 +81,7 @@ import ModuleDPContabilidade from './components/ModuleDPContabilidade';
 import ModuleAuditoria from './components/ModuleAuditoria';
 import ModuleVisitantes from './components/ModuleVisitantes';
 import ModulePatrimonio from './components/ModulePatrimonio';
+import ModuleFrotas from './components/ModuleFrotas';
 import ModuleCelulas from './components/ModuleCelulas';
 import ModuleBoletim from './components/ModuleBoletim';
 import ModuleManualUsuario from './components/ModuleManualUsuario';
@@ -1633,7 +1634,7 @@ export const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [] };
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
@@ -2573,7 +2574,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                  );
              case 'usuario':
                  const gruposPermissoes = [
-                     { titulo: "Administrativo & Cadastros", opcoes: [ { id: 'access_membros', label: 'Gestão de Membros & Acessos do Portal' }, { id: 'access_visitantes', label: 'CRM de Visitantes & Consolidação' }, { id: 'access_igreja', label: 'Matriz, Filiais & Contas Bancárias' }, { id: 'access_patrimonio', label: 'Gestão de Patrimônio & Inventário' }, { id: 'access_celulas', label: 'Células e Grupos' }, { id: 'access_ministerios', label: 'Ministérios (Departamentos)' } ] },
+                     { titulo: "Administrativo & Cadastros", opcoes: [ { id: 'access_membros', label: 'Gestão de Membros & Acessos do Portal' }, { id: 'access_visitantes', label: 'CRM de Visitantes & Consolidação' }, { id: 'access_igreja', label: 'Matriz, Filiais & Contas Bancárias' }, { id: 'access_patrimonio', label: 'Gestão de Patrimônio & Inventário' }, { id: 'access_frotas', label: 'Controle de Frotas & Gastos' }, { id: 'access_celulas', label: 'Células e Grupos' }, { id: 'access_ministerios', label: 'Ministérios (Departamentos)' } ] },
                      { titulo: "Financeiro", opcoes: [ { id: 'access_fin_entradas', label: 'Entradas e Dízimos' }, { id: 'access_fin_saidas', label: 'Saídas e Despesas' }, { id: 'access_fin_analise', label: 'DRE, Relatórios & Conciliação Bancária' }, { id: 'access_fin_carnes', label: 'Gestão de Carnês & Engajamento' }, { id: 'access_fin_cadastros', label: 'Utilitários (Fornecedores/C. Custo)' } ] },
                      { titulo: "Secretaria & Módulos", opcoes: [ { id: 'access_sec_agenda', label: 'Secretaria Digital (Agenda/Tarefas/Whats)' }, { id: 'access_sec_certificados', label: 'Certificados, Estúdio de Carteirinhas & Credenciais' }, { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, { id: 'access_ebd', label: 'Gestão EBD' }, { id: 'access_gestao_cursos', label: 'EAD Cursos de Capacitação' }, { id: 'access_missoes', label: 'Missões (Missionários/Agências/Caixa)' } ] },
                      { titulo: "Comunicação, Mídia & IA", opcoes: [ { id: 'access_midia', label: 'Estúdio GIPP (Artes e Redes Sociais)' }, { id: 'access_boletim', label: 'Gestão do Boletim Digital' }, { id: 'access_email', label: 'Webmail Direto (Caixa de Entrada)' }, { id: 'access_ia', label: 'Assistente Pastoral IA' } ] },
@@ -5222,6 +5223,187 @@ export const PrintSystem = ({
         );
     }
 
+    // --- RELATÓRIO DE FROTAS ---
+    if (mode === 'rel_frotas') {
+        const { subType, veiculos = [], motoristas = [], despesas = [], multas = [], igreja } = data;
+        
+        let reportTitle = "Relatório Geral de Controle de Frotas";
+        if (subType === 'despesas') reportTitle = "Relatório Analítico de Despesas de Frota";
+        if (subType === 'multas') reportTitle = "Relatório de Infrações e Multas de Trânsito";
+        if (subType === 'veiculos') reportTitle = "Relatório de Inventário e Status de Veículos";
+
+        return (
+            <PageContainer title={reportTitle} subtitle="Sistema Integrado de Gestão Patrimonial e Frotas">
+                {/* Resumo cards */}
+                <div className="grid grid-cols-4 gap-4 mb-6 avoid-break bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                    <div className="text-center border-r border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Veículos</span>
+                        <p className="text-xl font-black text-slate-800 mt-1">{veiculos.length}</p>
+                    </div>
+                    <div className="text-center border-r border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Condutores Ativos</span>
+                        <p className="text-xl font-black text-indigo-700 mt-1">{motoristas.filter((m: any) => m.status === 'Ativo').length}</p>
+                    </div>
+                    <div className="text-center border-r border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total em Despesas</span>
+                        <p className="text-xl font-black text-emerald-700 mt-1">R$ {despesas.reduce((acc: number, d: any) => acc + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="text-center">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Multas Pendentes</span>
+                        <p className={`text-xl font-black mt-1 ${multas.filter((m: any) => m.status === 'Pendente').length > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                            {multas.filter((m: any) => m.status === 'Pendente' || m.status === 'Vencida').length}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Relatórios Condicionais por Tipo */}
+                {(!subType || subType === 'resumo' || subType === 'veiculos') && (
+                    <div className="mb-6 avoid-break">
+                        <h4 className="text-xs font-black uppercase text-indigo-950 border-b-2 border-indigo-200 pb-1.5 mb-3 flex items-center gap-2">
+                             Inventário e Status da Frota
+                        </h4>
+                        <table className="w-full text-left text-[10px] font-semibold border-collapse">
+                            <thead>
+                                <tr className="border-b-2 border-slate-350 bg-slate-100 text-slate-700">
+                                    <th className="p-2">Veículo / Modelo</th>
+                                    <th className="p-2">Placa / Ano</th>
+                                    <th className="p-2">Tipo</th>
+                                    <th className="p-2">Cor</th>
+                                    <th className="p-2">Vencs. IPVA / Licenc.</th>
+                                    <th className="p-2 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {veiculos.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="p-4 text-center text-slate-400 italic">Nenhum veículo registrado.</td>
+                                    </tr>
+                                ) : veiculos.map((v: any) => (
+                                    <tr key={v.id} className="border-b border-slate-200 hover:bg-slate-50/50">
+                                        <td className="p-2 font-bold text-slate-800">{v.marca} {v.modelo}</td>
+                                        <td className="p-2 font-mono font-bold text-slate-700">{v.placa} ({v.ano})</td>
+                                        <td className="p-2 text-slate-600">{v.tipo}</td>
+                                        <td className="p-2 text-slate-600">{v.cor}</td>
+                                        <td className="p-2 text-slate-605">IPVA: {v.data_ipva ? formatDateLocal(v.data_ipva) : 'N/D'} • Lic.: {v.data_licenciamento ? formatDateLocal(v.data_licenciamento) : 'N/D'}</td>
+                                        <td className="p-2 text-right">
+                                            <span className={`px-2 py-0.5 rounded font-black uppercase text-[8px] ${
+                                                v.status === 'Disponível' ? 'bg-emerald-100 text-emerald-800' :
+                                                v.status === 'Em Uso' ? 'bg-blue-100 text-blue-800' :
+                                                v.status === 'Em Manutenção' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800'
+                                            }`}>{v.status}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {(!subType || subType === 'resumo' || subType === 'despesas') && (
+                    <div className="mb-6 avoid-break pt-4">
+                        <h4 className="text-xs font-black uppercase text-emerald-950 border-b-2 border-emerald-200 pb-1.5 mb-3">
+                             Histórico de Despesas / Gastos Realizados
+                        </h4>
+                        <table className="w-full text-left text-[10px] font-semibold border-collapse">
+                            <thead>
+                                <tr className="border-b-2 border-slate-350 bg-slate-100 text-slate-700">
+                                    <th className="p-2">Data</th>
+                                    <th className="p-2">Veículo</th>
+                                    <th className="p-2">Tipo de Gasto</th>
+                                    <th className="p-2">Condutor / Motorista</th>
+                                    <th className="p-2">Descrição / Obs.</th>
+                                    <th className="p-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {despesas.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="p-4 text-center text-slate-400 italic">Nenhuma despesa registrada.</td>
+                                    </tr>
+                                ) : despesas.map((d: any) => {
+                                    const v = veiculos.find((ve: any) => ve.id === d.veiculo_id);
+                                    const m = motoristas.find((mo: any) => mo.id === d.motorista_id);
+                                    return (
+                                        <tr key={d.id} className="border-b border-slate-200">
+                                            <td className="p-2 text-slate-600">{formatDateLocal(d.data)}</td>
+                                            <td className="p-2 font-bold text-slate-800">{v ? `${v.modelo} (${v.placa})` : 'Veículo Excluído'}</td>
+                                            <td className="p-2">
+                                                <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-100 font-extrabold uppercase text-[8px]">{d.tipo}</span>
+                                            </td>
+                                            <td className="p-2 text-slate-700">{m ? m.nome : 'N/D'}</td>
+                                            <td className="p-2 text-slate-500 italic">{d.descricao || '-'}</td>
+                                            <td className="p-2 text-right font-black text-slate-900">R$ {(parseFloat(d.valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        </tr>
+                                    );
+                                })}
+                                {despesas.length > 0 && (
+                                    <tr className="bg-slate-50 border-t border-slate-300">
+                                        <td colSpan={5} className="p-2 text-right font-black text-slate-700">Total Acumulado de Despesas:</td>
+                                        <td className="p-2 text-right font-black text-emerald-700">R$ {despesas.reduce((acc: number, d: any) => acc + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {(!subType || subType === 'resumo' || subType === 'multas') && (
+                    <div className="mb-6 avoid-break pt-4">
+                        <h4 className="text-xs font-black uppercase text-rose-950 border-b-2 border-rose-200 pb-1.5 mb-3">
+                             Registro de Infrações e Multas
+                        </h4>
+                        <table className="w-full text-left text-[10px] font-semibold border-collapse">
+                            <thead>
+                                <tr className="border-b-2 border-slate-350 bg-slate-100 text-slate-700">
+                                    <th className="p-2">Data Ocorr.</th>
+                                    <th className="p-2">Veículo autuado</th>
+                                    <th className="p-2">Responsável (Condutor)</th>
+                                    <th className="p-2">Infração cometida</th>
+                                    <th className="p-2">Autuação / CNH</th>
+                                    <th className="p-2">Situação</th>
+                                    <th className="p-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {multas.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="p-4 text-center text-slate-400 italic">Nenhuma multa registrada.</td>
+                                    </tr>
+                                ) : multas.map((m: any) => {
+                                    const v = veiculos.find((ve: any) => ve.id === m.veiculo_id);
+                                    const mo = motoristas.find((dri: any) => dri.id === m.motorista_id);
+                                    return (
+                                        <tr key={m.id} className="border-b border-slate-200">
+                                            <td className="p-2 text-slate-600">{formatDateLocal(m.data_multa)}</td>
+                                            <td className="p-2 font-bold text-slate-800">{v ? `${v.modelo} (${v.placa})` : 'Veículo Excluído'}</td>
+                                            <td className="p-2 text-slate-800">{mo ? mo.nome : <span className="text-slate-400 italic">-</span>}</td>
+                                            <td className="p-2 text-slate-700">{m.infracao}</td>
+                                            <td className="p-2">Guia: <span className="font-mono font-bold text-slate-600">{m.auto_infracao || '-'}</span> <br/> {m.pontos ? `Pontos: ${m.pontos}` : ''}</td>
+                                            <td className="p-2">
+                                                <span className={`px-2 py-0.5 rounded font-black uppercase text-[8px] ${
+                                                    m.status === 'Paga' ? 'bg-emerald-100 text-emerald-800' :
+                                                    m.status === 'Pendente' ? 'bg-rose-100 text-rose-800 border border-rose-150' :
+                                                    m.status === 'Em Recurso' ? 'bg-amber-100 text-amber-800 border border-amber-150' : 'bg-slate-100 text-slate-800'
+                                                }`}>{m.status}</span>
+                                            </td>
+                                            <td className="p-2 text-right font-black text-rose-700">R$ {(parseFloat(m.valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        </tr>
+                                    );
+                                })}
+                                {multas.length > 0 && (
+                                    <tr className="bg-slate-50 border-t border-slate-300">
+                                        <td colSpan={6} className="p-2 text-right font-black text-slate-700">Soma das Penalidades Financeiras:</td>
+                                        <td className="p-2 text-right font-black text-rose-700">R$ {multas.reduce((acc: number, m: any) => acc + (parseFloat(m.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </PageContainer>
+        );
+    }
+
     // 5 - CADASTRO DA IGREJA
     if (mode === 'rel_igreja') {
         const { igreja } = data;
@@ -7193,8 +7375,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
         const defaultPlanos = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade']
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade', 'controle_frotas'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -7326,13 +7508,14 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {checkPlan('sobre') && <MenuItem id="sobre" icon={Info} label="Sobre o Sistema" />}
                 </div>
 
-                {(hasPermission('master') || hasPermission('access_membros') || hasPermission('access_visitantes') || hasPermission('access_igreja') || hasPermission('access_patrimonio') || hasPermission('access_celulas')) && (
+                {(hasPermission('master') || hasPermission('access_membros') || hasPermission('access_visitantes') || hasPermission('access_igreja') || hasPermission('access_patrimonio') || hasPermission('access_celulas') || hasPermission('access_frotas')) && (
                     <div>
                         <MenuGroup label="Administrativo" />
                         {hasPermission('access_membros') && checkPlan('cad_membro') && <MenuItem id="cad_membro" icon={Users} label="Membros (Rol)" />}
                         {hasPermission('access_visitantes') && checkPlan('visitantes') && <MenuItem id="visitantes" icon={HeartHandshake} label="Visitantes & CRM" />}
                         {hasPermission('access_igreja') && checkPlan('cad_igreja') && <MenuItem id="cad_igreja" icon={Building2} label="Igreja Sede & Filiais" />}
                         {hasPermission('access_patrimonio') && checkPlan('cad_patrimonio') && <MenuItem id="cad_patrimonio" icon={Package} label="Patrimônio Total" />}
+                        {hasPermission('access_frotas') && checkPlan('controle_frotas') && <MenuItem id="controle_frotas" icon={Car} label="Controle de Frotas" />}
                         {hasPermission('access_celulas') && checkPlan('cad_celula') && <MenuItem id="cad_celula" icon={Share2} label="Células e Grupos" />}
                         {hasPermission('master') && checkPlan('cad_usuario') && <MenuItem id="cad_usuario" icon={Shield} label="Usuários e Níveis" />}
                         {hasPermission('access_membros') && checkPlan('acessos_portal') && <MenuItem id="acessos_portal" icon={Key} label="Acessos do Portal" />}
@@ -10933,7 +11116,7 @@ const MemberPortalLayout = () => {
 };
 
 const AppLayout = () => {
-    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission } = useContext(ChurchContext);
+    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission, dismissedAnnouncement, setDismissedAnnouncement } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
 
     const handleVerificarPagamento = async () => {
@@ -11018,6 +11201,7 @@ const AppLayout = () => {
         'email_interno': { component: ModuleEmailAdmin, access: 'access_email' },
         'cad_igreja': { component: ModuleIgreja, access: 'access_igreja' },
         'cad_patrimonio': { component: ModulePatrimonio, access: 'access_patrimonio' },
+        'controle_frotas': { component: ModuleFrotas, access: 'access_frotas' },
         'cad_membro': { component: ModuleMembros, access: 'access_membros' },
         'cad_celula': { component: ModuleCelulas, access: 'access_celulas' },
         'visitantes': { component: ModuleVisitantes, access: 'access_visitantes' },
@@ -12319,7 +12503,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -12344,7 +12528,7 @@ export default function App() {
           // O Portal do Membro bypassa este filtro para poder recuperar o histórico legado sem congregacao_id.
           if (user && user.nivel !== 'master' && user.tipo !== 'membro') {
               const myBranch = user.congregacao_id || 'sede';
-              const tenantTables = ['membros', 'financeiro', 'carnes', 'celulas', 'agenda', 'tarefas', 'visitantes', 'patrimonio', 'ebd_turmas', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias'];
+              const tenantTables = ['membros', 'financeiro', 'carnes', 'celulas', 'agenda', 'tarefas', 'visitantes', 'patrimonio', 'ebd_turmas', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
               
               if (tenantTables.includes(key)) {
                   q = query(colRef, where('congregacao_id', '==', myBranch));
@@ -12751,7 +12935,7 @@ export default function App() {
               if (financialPerms.includes(perm)) return true;
           }
           if (role === 'ADMINISTRADOR') {
-              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual'];
+              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual'];
               if (adminPerms.includes(perm)) return true;
           }
           if (role === 'ADVOGADO') {
@@ -13296,7 +13480,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
+  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
 
   // --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
   const MobilePushCompatibilityCheck = () => {
