@@ -5231,30 +5231,62 @@ export const PrintSystem = ({
         if (subType === 'despesas') reportTitle = "Relatório Analítico de Despesas de Frota";
         if (subType === 'multas') reportTitle = "Relatório de Infrações e Multas de Trânsito";
         if (subType === 'veiculos') reportTitle = "Relatório de Inventário e Status de Veículos";
+        if (subType === 'manutencoes') reportTitle = "Relatório Consolidado de Manutenções por Veículo";
 
         return (
             <PageContainer title={reportTitle} subtitle="Sistema Integrado de Gestão Patrimonial e Frotas">
                 {/* Resumo cards */}
-                <div className="grid grid-cols-4 gap-4 mb-6 avoid-break bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-                    <div className="text-center border-r border-slate-200">
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Veículos</span>
-                        <p className="text-xl font-black text-slate-800 mt-1">{veiculos.length}</p>
+                {subType === 'manutencoes' ? (
+                    <div className="grid grid-cols-4 gap-4 mb-6 avoid-break bg-indigo-50/40 border border-indigo-200 p-4 rounded-2xl">
+                        <div className="text-center border-r border-indigo-200">
+                            <span className="text-[10px] font-black uppercase text-indigo-500 tracking-wider block">Período</span>
+                            <p className="text-[11px] font-bold text-slate-800 mt-1.5">
+                                {data.manutencoesFilters?.startDate ? `${data.manutencoesFilters.startDate.split('-').reverse().join('/')}` : 'Início'} 
+                                <span className="text-slate-400 font-normal"> até </span>
+                                {data.manutencoesFilters?.endDate ? `${data.manutencoesFilters.endDate.split('-').reverse().join('/')}` : 'Fim'}
+                            </p>
+                        </div>
+                        <div className="text-center border-r border-indigo-200">
+                            <span className="text-[10px] font-black uppercase text-indigo-500 tracking-wider block">Tipo de Serviço</span>
+                            <p className="text-xs font-black text-indigo-700 mt-1.5 uppercase">
+                                {data.manutencoesFilters?.tipoServico === 'todos' ? 'Todos' : data.manutencoesFilters?.tipoServico}
+                            </p>
+                        </div>
+                        <div className="text-center border-r border-indigo-200">
+                            <span className="text-[10px] font-black uppercase text-indigo-500 tracking-wider block">Estipulado Custo Acumulado Mín.</span>
+                            <p className="text-xs font-black text-slate-700 mt-1.5">
+                                {data.manutencoesFilters?.minCost ? `R$ ${Number(data.manutencoesFilters.minCost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem Mínimo'}
+                            </p>
+                        </div>
+                        <div className="text-center">
+                            <span className="text-[10px] font-black uppercase text-indigo-500 tracking-wider block">Investimento Total Geral</span>
+                            <p className="text-lg font-black text-emerald-750 mt-1">
+                                R$ {(data.manutencoesFilters?.totalCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                        </div>
                     </div>
-                    <div className="text-center border-r border-slate-200">
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Condutores Ativos</span>
-                        <p className="text-xl font-black text-indigo-700 mt-1">{motoristas.filter((m: any) => m.status === 'Ativo').length}</p>
+                ) : (
+                    <div className="grid grid-cols-4 gap-4 mb-6 avoid-break bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                        <div className="text-center border-r border-slate-200">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Veículos</span>
+                            <p className="text-xl font-black text-slate-800 mt-1">{veiculos.length}</p>
+                        </div>
+                        <div className="text-center border-r border-slate-200">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Condutores Ativos</span>
+                            <p className="text-xl font-black text-indigo-700 mt-1">{motoristas.filter((m: any) => m.status === 'Ativo').length}</p>
+                        </div>
+                        <div className="text-center border-r border-slate-200">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total em Despesas</span>
+                            <p className="text-xl font-black text-emerald-700 mt-1">R$ {despesas.reduce((acc: number, d: any) => acc + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="text-center">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Multas Pendentes</span>
+                            <p className={`text-xl font-black mt-1 ${multas.filter((m: any) => m.status === 'Pendente').length > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                                {multas.filter((m: any) => m.status === 'Pendente' || m.status === 'Vencida').length}
+                            </p>
+                        </div>
                     </div>
-                    <div className="text-center border-r border-slate-200">
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total em Despesas</span>
-                        <p className="text-xl font-black text-emerald-700 mt-1">R$ {despesas.reduce((acc: number, d: any) => acc + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    </div>
-                    <div className="text-center">
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Multas Pendentes</span>
-                        <p className={`text-xl font-black mt-1 ${multas.filter((m: any) => m.status === 'Pendente').length > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
-                            {multas.filter((m: any) => m.status === 'Pendente' || m.status === 'Vencida').length}
-                        </p>
-                    </div>
-                </div>
+                )}
 
                 {/* Relatórios Condicionais por Tipo */}
                 {(!subType || subType === 'resumo' || subType === 'veiculos') && (
@@ -5398,6 +5430,68 @@ export const PrintSystem = ({
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {subType === 'manutencoes' && (
+                    <div className="mb-6 avoid-break pt-4 animate-fadeIn">
+                        <h4 className="text-xs font-black uppercase text-indigo-950 border-b-2 border-indigo-200 pb-1.5 mb-4">
+                            Histórico Consolidado de Manutenções dos Veículos
+                        </h4>
+                        
+                        {!data.veiculosManutencao || data.veiculosManutencao.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 italic bg-slate-50 border border-slate-200 rounded-xl">
+                                Nenhuma manutenção encontrada com os filtros aplicados neste período.
+                            </div>
+                        ) : (
+                            data.veiculosManutencao.map((vm: any) => (
+                                <div key={vm.id} className="mb-6 bg-slate-50/50 border border-slate-200 rounded-2xl p-4 avoid-break shadow-sm">
+                                    <div className="flex justify-between items-center bg-indigo-50/30 p-2.5 rounded-xl border border-indigo-100/50 mb-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-xs font-black text-indigo-950 uppercase">{vm.marca} {vm.modelo} • <span className="font-mono font-bold text-slate-600">{vm.placa}</span></p>
+                                            <p className="text-[9px] text-slate-400 font-bold">
+                                                Ano: {vm.ano} • Cor: {vm.cor || '-'} • Status Atual: {vm.status}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">Acumulado Filtrado</span>
+                                            <span className="text-xs font-black text-indigo-800">R$ {vm.totalAcumulado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+
+                                    <table className="w-full text-left text-[10px] font-semibold border-collapse">
+                                        <thead>
+                                            <tr className="border-b-2 border-slate-300 bg-slate-100/60 text-slate-650">
+                                                <th className="p-2 w-[11%]">Data</th>
+                                                <th className="p-2 w-[22%]">Tipo de Serviço</th>
+                                                <th className="p-2 w-[16%]">Quilometragem</th>
+                                                <th className="p-2 w-[39%]">Descrição / Detalhes</th>
+                                                <th className="p-2 text-right w-[12%] font-black text-slate-700">Custo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {vm.logs.map((log: any) => (
+                                                <tr key={log.id} className="border-b border-slate-200 hover:bg-slate-50/80">
+                                                    <td className="p-2 text-slate-600 font-mono font-bold">{log.data ? log.data.split('-').reverse().join('/') : '-'}</td>
+                                                    <td className="p-2 font-bold text-slate-800">
+                                                        <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                                                            log.tipo === 'Manutenção Preventiva' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                                                        }`}>
+                                                            {log.tipo}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-2 text-slate-600 font-mono">
+                                                        {log.odometro ? `${log.odometro.toLocaleString('pt-BR')} KM` : '-'}
+                                                    </td>
+                                                    <td className="p-2 text-slate-500 italic whitespace-normal break-words">{log.descricao || '-'}</td>
+                                                    <td className="p-2 text-right font-black text-slate-850">R$ {parseFloat(log.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ))
+                        )}
                     </div>
                 )}
             </PageContainer>

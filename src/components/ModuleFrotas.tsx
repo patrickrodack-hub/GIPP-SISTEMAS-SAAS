@@ -88,6 +88,68 @@ const ModuleFrotas = () => {
     setPreviewOpen(true);
   };
 
+  const handlePrintMaintenanceReport = () => {
+    // Filtra veículos por congregação ativa no filtro da tela
+    const eligibleVehicles = veiculos.filter(v => {
+      if (congregacaoFilter !== 'todas') {
+        return v.congregacao_id === congregacaoFilter;
+      }
+      return true;
+    });
+
+    const minCostLimit = parseFloat(mReportMinCost) || 0;
+
+    // Mapeia veículos aos seus históricos de manutenção dentro dos filtros de datas e tipo de serviço
+    const veiculosManutencao = eligibleVehicles.map(veh => {
+      const logs = despesas.filter(d => {
+        if (d.veiculo_id !== veh.id) return false;
+        if (d.tipo !== 'Manutenção Preventiva' && d.tipo !== 'Manutenção Corretiva') return false;
+        if (mReportStartDate && d.data < mReportStartDate) return false;
+        if (mReportEndDate && d.data > mReportEndDate) return false;
+        if (mReportServiceType !== 'todos' && d.tipo !== mReportServiceType) return false;
+        return true;
+      });
+
+      const totalAcumulado = logs.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+
+      return {
+        ...veh,
+        logs: logs.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()),
+        totalAcumulado
+      };
+    }).filter(vm => {
+      // Retorna apenas se tiver o custo mínimo exigido e tiver manutenções no período
+      return vm.totalAcumulado >= minCostLimit && vm.logs.length > 0;
+    });
+
+    // Ordena pelo custo acumulado descendente de gasto para realçar investimentos maiores
+    veiculosManutencao.sort((a, b) => b.totalAcumulado - a.totalAcumulado);
+
+    const totalCost = veiculosManutencao.reduce((sum, item) => sum + item.totalAcumulado, 0);
+
+    setPrintData({
+      subType: 'manutencoes',
+      veiculos,
+      motoristas,
+      despesas,
+      multas,
+      igreja: db.igreja,
+      congregacoes: db.congregacoes,
+      manutencoesFilters: {
+        startDate: mReportStartDate,
+        endDate: mReportEndDate,
+        tipoServico: mReportServiceType,
+        minCost: minCostLimit,
+        totalCost
+      },
+      veiculosManutencao
+    });
+
+    setPrintMode('rel_frotas');
+    setPreviewOpen(true);
+    setMaintenanceReportModalOpen(false);
+  };
+
   // Tabs: 1: Painel Geral, 2: Veículos, 3: Motoristas, 4: Despesas, 5: Multas
   const [activeTab, setActiveTab] = useState<number>(1);
   const [congregacaoFilter, setCongregacaoFilter] = useState<string>('todas');
@@ -105,6 +167,13 @@ const ModuleFrotas = () => {
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [fineModalOpen, setFineModalOpen] = useState(false);
   const [maintenanceModalOpen, setMaintenanceModalOpen] = useState(false);
+  const [maintenanceReportModalOpen, setMaintenanceReportModalOpen] = useState(false);
+
+  // States for generating the consolidated maintenance report
+  const [mReportStartDate, setMReportStartDate] = useState(`${new Date().getFullYear()}-01-01`);
+  const [mReportEndDate, setMReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [mReportServiceType, setMReportServiceType] = useState('todos');
+  const [mReportMinCost, setMReportMinCost] = useState('');
 
   // Maintenance Log Modal status & forms
   const [selectedVehicleForMaintenance, setSelectedVehicleForMaintenance] = useState<Vehicle | null>(null);
@@ -832,6 +901,14 @@ const ModuleFrotas = () => {
             title="Visualizar/Imprimir Relatório de Multas"
           >
             <PrinterIcon size={14} /> Multas
+          </button>
+
+          <button
+            onClick={() => setMaintenanceReportModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-black rounded-xl shadow-sm cursor-pointer transition-all uppercase tracking-wider"
+            title="Consolidar e Imprimir Relatório de Manutenções"
+          >
+            <PrinterIcon size={14} /> Manutenções
           </button>
         </div>
       </div>
@@ -2543,6 +2620,109 @@ const ModuleFrotas = () => {
                 className="px-5 py-2.5 rounded-xl border-2 border-slate-200 hover:bg-slate-100 font-bold transition-all text-xs uppercase cursor-pointer"
               >
                 Fechar Painel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: FILTRAR E GERAR RELATÓRIO DE MANUTENÇÕES */}
+      {/* ==================================================================== */}
+      {maintenanceReportModalOpen && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[999] animate-fadeIn text-slate-800 font-sans">
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 w-full max-w-md border border-slate-200 shadow-2xl space-y-5">
+            <div className="flex justify-between items-start pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-850 flex items-center gap-2">
+                  <PrinterIcon className="text-violet-600" size={20} />
+                  Relatório de Manutenções
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Configure os filtros para consolidar o histórico completo por veículo no padrão de impressão do sistema.
+                </p>
+              </div>
+              <button 
+                onClick={() => setMaintenanceReportModalOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 cursor-pointer"
+              >
+                <X size={18}/>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* FILTRO 1: PERÍODO */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wide">Período Selecionado</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400 mb-1">Data Inicial</span>
+                    <input 
+                      type="date"
+                      value={mReportStartDate}
+                      onChange={e => setMReportStartDate(e.target.value)}
+                      className="w-full border-2 border-slate-200 focus:border-violet-500 bg-white rounded-xl px-3 py-2 outline-none font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400 mb-1">Data Final</span>
+                    <input 
+                      type="date"
+                      value={mReportEndDate}
+                      onChange={e => setMReportEndDate(e.target.value)}
+                      className="w-full border-2 border-slate-200 focus:border-violet-500 bg-white rounded-xl px-3 py-2 outline-none font-bold text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* FILTRO 2: TIPO DE SERVIÇO */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wide">Tipo de Serviço de Manutenção</label>
+                <select
+                  value={mReportServiceType}
+                  onChange={e => setMReportServiceType(e.target.value)}
+                  className="w-full border-2 border-slate-200 focus:border-violet-500 bg-white rounded-xl px-3 py-2.5 outline-none font-bold text-xs text-slate-700"
+                >
+                  <option value="todos">Todos os Serviços (Preventiva e Corretiva)</option>
+                  <option value="Manutenção Preventiva">Apenas Manutenção Preventiva</option>
+                  <option value="Manutenção Corretiva">Apenas Manutenção Corretiva</option>
+                </select>
+              </div>
+
+              {/* FILTRO 3: CUSTO TOTAL ACUMULADO */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wide">Custo Total Mínimo Filtrado (R$)</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2 text-xs text-slate-400 font-bold">R$</span>
+                  <input 
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 500,00 (deixe em branco ou 0 para todos)"
+                    value={mReportMinCost}
+                    onChange={e => setMReportMinCost(e.target.value)}
+                    className="w-full border-2 border-slate-200 focus:border-violet-500 bg-white rounded-xl pl-9 pr-3 py-2 outline-none font-black text-xs"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 font-semibold italic">Ignora veículos cujo total acumulado de manutenções no período seja inferior a este valor.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-slate-100">
+              <button 
+                type="button" 
+                onClick={() => setMaintenanceReportModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border-2 border-slate-200 hover:bg-slate-100 font-bold transition-all text-xs uppercase cursor-pointer text-slate-500 text-center"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                onClick={handlePrintMaintenanceReport}
+                className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-750 text-white rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-md shadow-violet-550/10 cursor-pointer text-center"
+              >
+                Gerar Relatório
               </button>
             </div>
           </div>
