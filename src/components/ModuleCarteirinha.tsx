@@ -7,7 +7,7 @@ import {
   Type as TypeIcon, Layers, Image as ImageIcon, Eye, EyeOff, Sparkles,
   FileText, RotateCcw, RotateCw, Smartphone, MonitorPlay, CheckCircle, Trash, Bold, Italic, Lock, Unlock, Phone, AlignLeft,
   AlignCenter, AlignRight, Shapes, Mail, Bell, FileDown, Search, Check, Crown, Star,
-  User, Users, Save, QrCode, Sliders, ArrowUp, ArrowDown, Copy
+  User, Users, Save, QrCode, Sliders, ArrowUp, ArrowDown, Copy, Sun, Moon
 } from 'lucide-react';
 
 import { 
@@ -121,6 +121,7 @@ const ModuleCarteirinha = () => {
   const { db, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
   
   // High-level controls
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [activeTab, setActiveTab] = useState<'editor' | 'batch_print' | 'projects'>('editor');
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [zoom, setZoom] = useState(0.85);
@@ -592,10 +593,10 @@ const ModuleCarteirinha = () => {
   const activeField = layout.fields.find(f => f.id === selectedFieldId);
 
   return (
-    <div className={`flex flex-col bg-slate-900 border border-slate-700 overflow-hidden relative transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[120] h-screen w-screen rounded-none' : 'h-[85vh] min-h-[650px] rounded-[2.5rem] shadow-2xl'}`}>
+    <div className={`flex flex-col ${themeMode === 'dark' ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-800'} overflow-hidden relative transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[120] h-screen w-screen rounded-none' : 'h-[85vh] min-h-[650px] rounded-[2.5rem] shadow-2xl'}`}>
       
       {/* 1. TOP CONTROL HEADER BAR */}
-      <div className="h-20 border-b border-slate-800 bg-slate-950 flex items-center justify-between px-6 shrink-0 z-30 shadow-lg">
+      <div className={`h-20 border-b ${themeMode === 'dark' ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'} flex items-center justify-between px-6 shrink-0 z-30 shadow-lg`}>
         <div className="flex items-center gap-4">
           <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg animate-pulse">
             <IdCard size={22} />
@@ -606,7 +607,7 @@ const ModuleCarteirinha = () => {
                 type="text" 
                 value={projectName} 
                 onChange={(e) => setProjectName(e.target.value)} 
-                className="bg-transparent font-black text-white text-sm border-b border-transparent focus:border-indigo-500 outline-none w-52 sm:w-64"
+                className={`bg-transparent font-black ${themeMode === 'dark' ? 'text-white' : 'text-slate-800'} text-sm border-b border-transparent focus:border-indigo-500 outline-none w-52 sm:w-64`}
                 placeholder="Nome do Modelo..." 
               />
               <button onClick={handleSaveModel} className="text-emerald-400 hover:text-emerald-300 p-1 rounded bg-emerald-950/40 border border-emerald-900/30" title="Salvar Modelo no Sistema">
@@ -629,7 +630,7 @@ const ModuleCarteirinha = () => {
 
           <div className="h-6 w-px bg-slate-850 mx-1"></div>
 
-          <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-bold font-mono text-slate-300">
+          <div className={`flex items-center gap-1.5 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-200 border-slate-300 text-slate-700'} px-3 py-1.5 rounded-xl border text-xs font-bold font-mono`}>
             <button onClick={() => setZoom(Math.max(0.2, zoom - 0.05))} className="hover:text-indigo-400"><Minus size={14}/></button>
             <span className="w-12 text-center text-[10px]">{(zoom * 100).toFixed(0)}%</span>
             <button onClick={() => setZoom(Math.min(1.6, zoom + 0.05))} className="hover:text-indigo-400"><Plus size={14}/></button>
@@ -638,17 +639,30 @@ const ModuleCarteirinha = () => {
 
         {/* GENERAL ACTIONS BAR */}
         <div className="flex items-center gap-2">
+          {/* THEME SELECTOR BUTTON */}
+          <button
+            onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+            className={`p-3 rounded-xl font-bold transition-all border ${
+              themeMode === 'dark'
+                ? 'bg-slate-900 hover:bg-slate-850 text-amber-400 border-slate-800'
+                : 'bg-slate-200 hover:bg-slate-300 text-amber-600 border-slate-300'
+            }`}
+            title={themeMode === 'dark' ? "Mudar para Tema Claro" : "Mudar para Tema Escuro"}
+          >
+            {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <button 
             onClick={() => setIsFullScreen(!isFullScreen)}
-            className="p-3 bg-slate-900 hover:bg-slate-850 text-indigo-400 hover:text-indigo-300 rounded-xl font-bold transition-all border border-slate-800"
+            className={`p-3 ${themeMode === 'dark' ? 'bg-slate-900 hover:bg-slate-850 border-slate-800' : 'bg-slate-200 hover:bg-slate-300 border-slate-300'} text-indigo-400 hover:text-indigo-300 rounded-xl font-bold transition-all border`}
             title={isFullScreen ? "Sair da Tela Cheia" : "Tela Cheia"}
           >
             {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
 
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-            <button onClick={() => setActiveTab('editor')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'editor' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>Design</button>
-            <button onClick={() => setActiveTab('batch_print')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'batch_print' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>Fila Impressão ({printQueue.length})</button>
+          <div className={`flex ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-200 border-slate-300'} p-1 rounded-xl border`}>
+            <button onClick={() => setActiveTab('editor')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'editor' ? 'bg-indigo-600 text-white' : themeMode === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-650 hover:text-slate-900'}`}>Design</button>
+            <button onClick={() => setActiveTab('batch_print')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'batch_print' ? 'bg-indigo-600 text-white' : themeMode === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-650 hover:text-slate-900'}`}>Fila Impressão ({printQueue.length})</button>
           </div>
         </div>
       </div>
@@ -660,9 +674,9 @@ const ModuleCarteirinha = () => {
         {activeTab === 'editor' && (
           <>
             {/* LEFT BAR: CONTROLS & LAYERS */}
-            <div className="w-72 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto custom-scrollbar text-slate-300">
-              <div className="p-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Elementos & Fundo</span>
+            <div className={`w-72 ${themeMode === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-600'} border-r flex flex-col shrink-0 overflow-y-auto custom-scrollbar`}>
+              <div className={`p-4 border-b ${themeMode === 'dark' ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-slate-50'} flex items-center justify-between`}>
+                <span className={`text-xs font-black uppercase tracking-widest ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Elementos & Fundo</span>
                 <Sliders size={14} className="text-indigo-400"/>
               </div>
 
@@ -806,7 +820,7 @@ const ModuleCarteirinha = () => {
             </div>
 
             {/* MAIN CANVAS AREA */}
-            <div ref={containerRef} className="flex-1 bg-slate-950 p-6 flex flex-col items-center justify-center overflow-auto relative select-none">
+            <div ref={containerRef} className={`flex-1 ${themeMode === 'dark' ? 'bg-slate-950' : 'bg-slate-200/50'} p-6 flex flex-col items-center justify-center overflow-auto relative select-none`}>
               
               <div className="absolute top-4 left-6 text-slate-500 text-[10px] font-sans font-bold uppercase tracking-widest flex items-center gap-2 z-10">
                 <Sparkles size={12} className="text-indigo-400"/>
@@ -814,17 +828,17 @@ const ModuleCarteirinha = () => {
               </div>
 
               {/* FLOATING QUICK EXPORT CONTROLS */}
-              <div className="absolute top-4 right-6 bg-slate-900/95 border border-slate-800 p-1.5 rounded-2xl flex items-center gap-1.5 shadow-xl z-20">
-                <button onClick={saveToLocalFiles} className="px-3.5 py-2 hover:bg-slate-800 text-sky-400 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all">
+              <div className={`absolute top-4 right-6 ${themeMode === 'dark' ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200'} border p-1.5 rounded-2xl flex items-center gap-1.5 shadow-xl z-20`}>
+                <button onClick={saveToLocalFiles} className={`px-3.5 py-2 ${themeMode === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-slate-100'} text-sky-500 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all`}>
                   <Download size={14}/> Baixar PNG
                 </button>
-                <button onClick={handleWhatsApp} className="px-3.5 py-2 hover:bg-slate-800 text-emerald-400 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all">
+                <button onClick={handleWhatsApp} className={`px-3.5 py-2 ${themeMode === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-slate-100'} text-emerald-500 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all`}>
                   <Phone size={14}/> Enviar Whats
                 </button>
-                <button onClick={openEmailModal} className="px-3.5 py-2 hover:bg-slate-800 text-pink-400 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all">
+                <button onClick={openEmailModal} className={`px-3.5 py-2 ${themeMode === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-slate-100'} text-pink-500 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all`}>
                   <Mail size={14}/> Email
                 </button>
-                <button onClick={openPushModal} className="px-3.5 py-2 hover:bg-slate-800 text-yellow-400 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all">
+                <button onClick={openPushModal} className={`px-3.5 py-2 ${themeMode === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-slate-100'} text-yellow-500 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all`}>
                   <Bell size={14}/> Push Portal
                 </button>
               </div>

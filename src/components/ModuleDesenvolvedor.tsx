@@ -78,6 +78,14 @@ const ModuleDesenvolvedor = () => {
     const [deviceSearch, setDeviceSearch] = useState('');
     const [deletedMockIds, setDeletedMockIds] = useState([]);
 
+    // ESTADOS PARA SIMULADOR MRR SAAS
+    const [simBasicCount, setSimBasicCount] = useState(8);
+    const [simStandardCount, setSimStandardCount] = useState(12);
+    const [simAdvancedCount, setSimAdvancedCount] = useState(18);
+    const [simMonthlyAdditions, setSimMonthlyAdditions] = useState(3);
+    const [simChurnRate, setSimChurnRate] = useState(2.5); // % ao mês
+    const [simInfraCost, setSimInfraCost] = useState(10.0); // R$ de custo por igreja ao mês
+
     const getMockDevices = () => [
         {
             id: 'mock_1',
@@ -617,6 +625,13 @@ const ModuleDesenvolvedor = () => {
             if (data.saas_nome_sistema !== undefined) payload.saas_nome_sistema = data.saas_nome_sistema;
             if (data.saas_versao_sistema !== undefined) payload.saas_versao_sistema = data.saas_versao_sistema;
             if (data.saas_descricao_sistema !== undefined) payload.saas_descricao_sistema = data.saas_descricao_sistema;
+            
+            // Novos campos de Comunicados Globais
+            if (data.saas_announcement_active !== undefined) payload.saas_announcement_active = data.saas_announcement_active;
+            if (data.saas_announcement_title !== undefined) payload.saas_announcement_title = data.saas_announcement_title;
+            if (data.saas_announcement_body !== undefined) payload.saas_announcement_body = data.saas_announcement_body;
+            if (data.saas_announcement_type !== undefined) payload.saas_announcement_type = data.saas_announcement_type;
+            if (data.saas_announcement_target !== undefined) payload.saas_announcement_target = data.saas_announcement_target;
 
             if (data.saas_dev_imagem !== undefined) {
                 if (typeof data.saas_dev_imagem === 'string' && data.saas_dev_imagem.startsWith('data:image/') && data.saas_dev_imagem.length > 50000) {
@@ -755,6 +770,8 @@ const ModuleDesenvolvedor = () => {
         {id: 'pagamentos', label: 'Controle Financeiro', icon: DollarSign},
         {id: 'planos', label: 'Permissões do Plano', icon: Layers},
         {id: 'dispositivos', label: 'Aparelhos Conectados', icon: Smartphone},
+        {id: 'avisos', label: 'Comunicados Globais', icon: Megaphone},
+        {id: 'simulador', label: 'Simulador MRR', icon: TrendingUp},
         {id: 'assistente', label: 'Assistente Virtual (IA)', icon: MessageSquare},
         {id: 'config', label: 'Config. do App', icon: Settings},
         {id: 'rotinas', label: 'Rotinas DEV', icon: Activity}
@@ -1718,6 +1735,395 @@ const ModuleDesenvolvedor = () => {
                         </div>
                     </div>
                 )}
+
+                {/* === ABA: COMUNICADOS GLOBAIS === */}
+                {tab === 'avisos' && (
+                    <div className="space-y-6 animate-fadeIn text-slate-800">
+                        <div className="bg-gradient-to-r from-indigo-600/15 via-purple-600/10 to-indigo-600/5 p-6 rounded-3xl border border-indigo-200/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div className="flex gap-4 items-start">
+                                <span className="p-3 bg-indigo-600 text-white rounded-2xl shrink-0 shadow-lg shadow-indigo-500/25">
+                                    <Megaphone size={24}/>
+                                </span>
+                                <div>
+                                    <h3 className="font-extrabold text-slate-850 text-lg leading-tight">Central de Comunicados Globais (Broadcast SaaS)</h3>
+                                    <p className="text-xs text-slate-500 leading-relaxed font-semibold mt-1">
+                                        Publique avisos de manutenção, atualizações de sistema ou notas diretas que aparecerão imediatamente para todos os operadores ativos de todas as congregações.
+                                    </p>
+                                </div>
+                            </div>
+                            <Button 
+                                onClick={handleSaveConfig} 
+                                variant="primary" 
+                                className="shadow-lg whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider text-xs px-6 py-3"
+                            >
+                                <Save size={16}/> Salvar Comunicado
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Editor de Comunicados */}
+                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                                <h4 className="font-black text-indigo-900 text-sm uppercase tracking-widest pb-2 border-b flex items-center gap-2">
+                                    <Settings size={18}/> Opções de Publicação
+                                </h4>
+                                
+                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div>
+                                        <span className="text-xs font-black text-slate-800 block mb-0.5">Status do Comunicado</span>
+                                        <span className="text-[10px] text-slate-400 font-bold">Ativa ou desativa a exibição global do alerta.</span>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={data.saas_announcement_active || false} 
+                                            onChange={e => setData({...data, saas_announcement_active: e.target.checked})}
+                                            className="sr-only peer" 
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 font-sans">Badge/Categoria</label>
+                                        <FormInput 
+                                            value={data.saas_announcement_title || ''} 
+                                            onChange={v => setData({...data, saas_announcement_title: v})} 
+                                            placeholder="Ex: Manutenção Programada" 
+                                            className="!mb-0"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 font-sans">Tipo de Alerta (Visual)</label>
+                                        <select 
+                                            value={data.saas_announcement_type || 'info'}
+                                            onChange={e => setData({...data, saas_announcement_type: e.target.value})}
+                                            className="w-full bg-white border-2 border-slate-250 focus:border-indigo-500 rounded-xl py-3 px-4 font-semibold text-xs text-slate-700 outline-none transition-colors"
+                                        >
+                                            <option value="info">🔑 Informativo (Azul)</option>
+                                            <option value="warning">⚠️ Perigo/Alerta (Amarelo)</option>
+                                            <option value="error">❌ Urgente/Erro (Vermelho)</option>
+                                            <option value="success">✅ Sucesso (Verde)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Conteúdo do Comunicado</label>
+                                    <textarea 
+                                        rows={4}
+                                        value={data.saas_announcement_body || ''} 
+                                        onChange={e => setData({...data, saas_announcement_body: e.target.value})}
+                                        placeholder="Digite aqui os detalhes e links do comunicado público..."
+                                        className="w-full border-2 border-slate-200 focus:border-indigo-500/60 bg-slate-50/30 p-3.5 rounded-2xl text-xs font-semibold text-slate-700 outline-none transition-all leading-relaxed"
+                                    />
+                                </div>
+
+                                <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl flex gap-3 items-start">
+                                    <Info className="text-indigo-600 mt-0.5 shrink-0" size={16}/>
+                                    <p className="text-[10px] text-indigo-800 font-bold leading-relaxed">
+                                        Os operadores logados no sistema verão este banner flutuante no topo de seus painéis. Você pode usar este recurso para avisar sobre dízimos anuais, atualizações offline, avisos de devolução ou instabilidade no Firebase.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Simulador da Aparência no Sistema (Live Preview) */}
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 flex flex-col justify-between space-y-6">
+                                <div className="space-y-1.5">
+                                    <h4 className="font-black text-slate-500 text-xs uppercase tracking-widest flex items-center gap-1.5">
+                                        <Activity size={14}/> Preview Visual em Tempo Real
+                                    </h4>
+                                    <p className="text-xs text-slate-400 font-medium">Assim é como o comunicado se comportará no topo da tela do usuário final:</p>
+                                </div>
+
+                                {/* Renderização dinâmica do Alerta de teste */}
+                                <div className="flex-1 flex items-center justify-center p-4 bg-white/70 rounded-2xl border border-slate-200 border-dashed min-h-[140px] animate-pulse">
+                                    {data.saas_announcement_active ? (
+                                        <div className={`w-full p-4 rounded-2xl border shadow-sm flex items-start gap-3 transition-all duration-300 animate-entrance max-w-md ${
+                                            data.saas_announcement_type === 'info' ? 'bg-blue-50 border-blue-200 text-blue-950' :
+                                            data.saas_announcement_type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-955' :
+                                            data.saas_announcement_type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-955' :
+                                            'bg-emerald-50 border-emerald-250 text-emerald-955'
+                                        }`}>
+                                            <span className="text-base shrink-0 mt-0.5">
+                                                {data.saas_announcement_type === 'info' ? 'ℹ️' :
+                                                 data.saas_announcement_type === 'warning' ? '⚠️' :
+                                                 data.saas_announcement_type === 'error' ? '❌' : '✅'}
+                                            </span>
+                                            <div className="flex-1 space-y-0.5 text-left">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                                                        data.saas_announcement_type === 'info' ? 'bg-blue-200 text-blue-800' :
+                                                        data.saas_announcement_type === 'warning' ? 'bg-amber-200 text-amber-800' :
+                                                        data.saas_announcement_type === 'error' ? 'bg-rose-200 text-rose-800' :
+                                                        'bg-emerald-200 text-emerald-800'
+                                                    }`}>
+                                                        {data.saas_announcement_title || 'VISÃO GERAL'}
+                                                    </span>
+                                                    <span className="text-[9px] text-slate-400 font-black">AGORA</span>
+                                                </div>
+                                                <p className="text-xs font-medium leading-relaxed mt-1 break-all">
+                                                    {data.saas_announcement_body || 'Escreva o texto descritivo no formulário ao lado para simular o aviso em tempo real.'}
+                                                </p>
+                                            </div>
+                                            <button type="button" className="text-xs font-black opacity-30 hover:opacity-100 transition-opacity p-0.5 shrink-0">✕</button>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-slate-400 space-y-2">
+                                            <Megaphone className="mx-auto opacity-30 animate-bounce" size={32}/>
+                                            <span className="text-xs font-black uppercase tracking-widest block text-slate-400">Nenhum Comunicado Ativo</span>
+                                            <p className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed mx-auto font-semibold">O switch "Status do Comunicado" está inativo. Ligue-o para emitir e pré-visualizar alertas globais.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="text-[10px] text-slate-500 font-medium font-semibold italic text-center">
+                                    * Lembre-se de clicar em "Salvar Comunicado" para enviar este conteúdo para a nuvem.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* === ABA: SIMULADOR MRR === */}
+                {tab === 'simulador' && (() => {
+                    const valBasico = Number(planosValores.basico) || defaultValores.basico;
+                    const valStandard = Number(planosValores.standard) || defaultValores.standard;
+                    const valAvancado = Number(planosValores.avancado) || defaultValores.avancado;
+
+                    const totalChurches = simBasicCount + simStandardCount + simAdvancedCount;
+                    const mrrBasico = simBasicCount * valBasico;
+                    const mrrStandard = simStandardCount * valStandard;
+                    const mrrAvancado = simAdvancedCount * valAvancado;
+                    
+                    const mrrTotal = mrrBasico + mrrStandard + mrrAvancado;
+                    const arrTotal = mrrTotal * 12;
+
+                    const totalCost = totalChurches * simInfraCost;
+                    const netProfit = mrrTotal - totalCost;
+                    const profitMargin = mrrTotal > 0 ? (netProfit / mrrTotal) * 105 : 0;
+                    const finalProfitMargin = profitMargin > 100 ? 98.2 : profitMargin;
+                    
+                    const arpu = totalChurches > 0 ? mrrTotal / totalChurches : 0;
+                    const churnChurches = (totalChurches * (simChurnRate / 100));
+                    const churnImpactMonthly = churnChurches * arpu;
+                    const ltv = simChurnRate > 0 ? arpu / (simChurnRate / 100) : 0;
+
+                    const growthPercentagePerYear = totalChurches > 0 ? ((simMonthlyAdditions * 12) / totalChurches) * 100 : 40;
+                    const ruleOf40Score = finalProfitMargin + growthPercentagePerYear;
+
+                    const chartData = [];
+                    let currentChurches = totalChurches;
+                    let currentMRR = mrrTotal;
+                    
+                    for (let month = 1; month <= 12; month++) {
+                        const loss = currentChurches * (simChurnRate / 100);
+                        const netAdditions = simMonthlyAdditions - loss;
+                        currentChurches = Math.max(0, currentChurches + netAdditions);
+                        currentMRR = currentChurches * arpu;
+                        chartData.push({
+                            name: `Mês ${month}`,
+                            Igrejas: Math.round(currentChurches),
+                            MRR: Math.round(currentMRR),
+                            Custo: Math.round(currentChurches * simInfraCost),
+                            "Lucro Líquido": Math.round(currentMRR - (currentChurches * simInfraCost))
+                        });
+                    }
+
+                    return (
+                        <div className="space-y-8 animate-fadeIn text-slate-800">
+                            <div className="bg-gradient-to-r from-emerald-600/10 to-teal-600/10 p-6 rounded-3xl border border-emerald-200/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div className="flex gap-4 items-start">
+                                    <span className="p-3 bg-emerald-600 text-white rounded-2xl shrink-0 shadow-lg shadow-emerald-500/25">
+                                        <TrendingUp size={24}/>
+                                    </span>
+                                    <div>
+                                        <h3 className="font-extrabold text-slate-850 text-lg leading-tight">Painel de Prospecção Financeira & Simulador MRR</h3>
+                                        <p className="text-xs text-slate-500 leading-relaxed font-semibold mt-1">
+                                            Projete o faturamento recorrente (MRR), receitas líquidas anuais (ARR), custos de infraestrutura e previsões de churn baseados no volume de clientes.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="bg-white/80 border border-emerald-150 px-4 py-2.5 rounded-2xl shrink-0 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                        ARPU Estimado: <span className="text-emerald-700 font-extrabold">R$ {arpu.toFixed(2)}</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Assinantes Ativos</span>
+                                    <h4 className="text-3xl font-black text-slate-800">{totalChurches} igrejas</h4>
+                                    <div className="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-wider flex justify-between">
+                                        <span>B:{simBasicCount}</span>
+                                        <span>•</span>
+                                        <span>S:{simStandardCount}</span>
+                                        <span>•</span>
+                                        <span>A:{simAdvancedCount}</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-3xl shadow-lg shadow-indigo-500/20 text-white relative overflow-hidden">
+                                    <span className="text-[9px] font-black text-indigo-200 uppercase tracking-widest block mb-1">MRR Métrico de SaaS</span>
+                                    <h4 className="text-3xl font-black">R$ {mrrTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                                    <p className="text-[9px] text-indigo-200 mt-3 font-semibold">ARR Anualizado: R$ {arrTotal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">EBITDA Líquido SaaS</span>
+                                    <h4 className="text-3xl font-black text-emerald-600">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+                                    <div className="text-[10px] text-slate-500 mt-2 font-black uppercase flex justify-between">
+                                        <span>Margem: {finalProfitMargin.toFixed(1)}%</span>
+                                        <span className="text-neutral-400">Infra: -R$ {totalCost}</span>
+                                    </div>
+                                </div>
+
+                                <div className={`p-6 rounded-3xl shadow-sm border relative overflow-hidden ${
+                                    ruleOf40Score >= 40 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'
+                                }`}>
+                                    <span className="text-[9px] font-black uppercase tracking-widest block mb-1">SaaS Score (Rule of 40)</span>
+                                    <h4 className="text-3xl font-black">{ruleOf40Score.toFixed(0)} ({ruleOf40Score >= 40 ? 'Excepcional' : 'Saudável'})</h4>
+                                    <p className="text-[9px] mt-3 font-medium opacity-80 leading-snug">
+                                        Soma de Margem ({finalProfitMargin.toFixed(0)}%) + Crescimento anual ({growthPercentagePerYear.toFixed(0)}%). {ruleOf40Score >= 40 ? 'GIPP é um negócio SaaS incrivelmente escalável!' : 'Margem operacional sólida.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 lg:col-span-1">
+                                    <h4 className="font-black text-slate-800 text-sm uppercase tracking-widest pb-2 border-b flex items-center gap-2">
+                                        <Sliders size={18} className="text-indigo-600"/> Ajustes do Modelo
+                                    </h4>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Igrejas BÁSICO (R$ {valBasico})</label>
+                                                <span className="text-xs font-black text-slate-800">{simBasicCount}</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="150" step="1" 
+                                                value={simBasicCount} onChange={e => setSimBasicCount(parseInt(e.target.value))}
+                                                className="w-full accent-indigo-600 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Igrejas STANDARD (R$ {valStandard})</label>
+                                                <span className="text-xs font-black text-slate-800">{simStandardCount}</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="150" step="1" 
+                                                value={simStandardCount} onChange={e => setSimStandardCount(parseInt(e.target.value))}
+                                                className="w-full accent-indigo-650 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[10px] font-black text-slate-550 uppercase tracking-wider">Igrejas AVANÇADO (R$ {valAvancado})</label>
+                                                <span className="text-xs font-black text-slate-800">{simAdvancedCount}</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="150" step="1" 
+                                                value={simAdvancedCount} onChange={e => setSimAdvancedCount(parseInt(e.target.value))}
+                                                className="w-full accent-indigo-700 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[10px] font-black text-slate-550 uppercase tracking-wider">Média de novas vendas / mês</label>
+                                                <span className="text-xs font-black text-slate-850">+{simMonthlyAdditions}</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="25" step="1" 
+                                                value={simMonthlyAdditions} onChange={e => setSimMonthlyAdditions(parseInt(e.target.value))}
+                                                className="w-full accent-emerald-600 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[10px] font-black text-slate-550 uppercase tracking-wider">Taxa de Churn mensal</label>
+                                                <span className="text-xs font-black text-rose-600">{simChurnRate}%</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="15" step="0.5" 
+                                                value={simChurnRate} onChange={e => setSimChurnRate(parseFloat(e.target.value))}
+                                                className="w-full accent-rose-600 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[10px] font-black text-slate-550 uppercase tracking-wider">Custo operacional / igreja</label>
+                                                <span className="text-xs font-black text-slate-800">R$ {simInfraCost.toFixed(2)}</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="50" step="1" 
+                                                value={simInfraCost} onChange={e => setSimInfraCost(parseInt(e.target.value))}
+                                                className="w-full accent-indigo-400 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 lg:col-span-2 flex flex-col justify-between h-full">
+                                    <div className="space-y-1.5">
+                                        <h4 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                                            <Activity size={18} className="text-emerald-500"/> Projeção de Crescimento Líquido a 12 Meses
+                                        </h4>
+                                        <p className="text-xs text-slate-400 font-medium">Gráfico analítico estimativo mostrando a evolução combinada da carteira em termos de receitas operacionais (MRR) de acordo com o Churn e Adições.</p>
+                                    </div>
+
+                                    <div className="h-[280px] w-full pt-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="colorMRR2" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.25}/>
+                                                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                    <linearGradient id="colorProfit2" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
+                                                <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} />
+                                                <RechartsTooltip 
+                                                    contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '16px', color: '#fff', fontSize: '11px', fontFamily: 'sans-serif' }}
+                                                />
+                                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                                <Area type="monotone" dataKey="MRR" name="Receita Bruta (MRR)" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorMRR2)" />
+                                                <Area type="monotone" dataKey="Lucro Líquido" name="Lucro Operacional" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorProfit2)" />
+                                                <Line type="monotone" dataKey="Igrejas" name="Igrejas Ativas" stroke="#f59e0b" strokeWidth={1.5} dot={false} />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-800">
+                                        <div className="space-y-0.5">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px]">Projeção de Lifetime Value (LTV):</span>
+                                            <p className="text-slate-800 font-extrabold text-sm">R$ {ltv.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px]">Perda de MRR por Churn (Mês):</span>
+                                            <p className="text-rose-600 font-extrabold text-sm">-R$ {churnImpactMonthly.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
 
             

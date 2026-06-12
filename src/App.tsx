@@ -11071,6 +11071,46 @@ const AppLayout = () => {
             )}
 
             <main className="flex-1 p-6 md:p-10 h-screen overflow-y-auto custom-scrollbar relative z-10">
+                {/* BANNER DE COMUNICADO GLOBAL (SaaS BROADCAST) */}
+                {db?.igreja?.saas_announcement_active && !dismissedAnnouncement && (
+                    <div className={`p-4 mb-6 rounded-3xl border shadow-sm flex items-start gap-4 transition-all duration-300 animate-fadeIn relative overflow-hidden shrink-0 print:hidden ${
+                        db.igreja.saas_announcement_type === 'info' ? 'bg-blue-50/95 border-blue-200 text-blue-900 shadow-blue-500/5' :
+                        db.igreja.saas_announcement_type === 'warning' ? 'bg-amber-50/95 border-amber-200 text-amber-900 shadow-amber-500/5' :
+                        db.igreja.saas_announcement_type === 'error' ? 'bg-rose-50/95 border-rose-200 text-rose-900 shadow-rose-500/5' :
+                        'bg-emerald-50/95 border-emerald-250 text-emerald-950 shadow-emerald-500/5'
+                    }`}>
+                        <span className="text-xl shrink-0 mt-0.5">
+                            {db.igreja.saas_announcement_type === 'info' ? 'ℹ️' :
+                             db.igreja.saas_announcement_type === 'warning' ? '⚠️' :
+                             db.igreja.saas_announcement_type === 'error' ? '❌' : '✅'}
+                        </span>
+                        <div className="flex-1 space-y-0.5 text-left pr-8">
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg ${
+                                    db.igreja.saas_announcement_type === 'info' ? 'bg-blue-150 text-blue-800' :
+                                    db.igreja.saas_announcement_type === 'warning' ? 'bg-amber-150 text-amber-850' :
+                                    db.igreja.saas_announcement_type === 'error' ? 'bg-rose-150 text-rose-850' :
+                                    'bg-emerald-150 text-emerald-850'
+                                }`}>
+                                    {db.igreja.saas_announcement_title || 'COMUNICADO DO DESENVOLVEDOR'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-extrabold uppercase">Aviso Importante</span>
+                            </div>
+                            <p className="text-xs font-bold leading-relaxed mt-1">
+                                {db.igreja.saas_announcement_body}
+                            </p>
+                        </div>
+                        <button 
+                            type="button"
+                            onClick={() => setDismissedAnnouncement(true)}
+                            className="absolute top-3.5 right-3.5 p-1.5 rounded-lg hover:bg-black/5 text-slate-400 hover:text-slate-700 transition-colors"
+                            title="Ocultar comunicado"
+                        >
+                            <X size={14}/>
+                        </button>
+                    </div>
+                )}
+
                 {/* Cabeçalho Flutuante com Central de Notificações e Botão do Menu Lateral */}
                 <div className="sticky top-0 z-[60] flex justify-between md:justify-end items-center gap-3 mb-6 print:hidden">
                     {!sidebarOpen && (
@@ -11307,6 +11347,7 @@ export default function App() {
   const [view, setView] = useState('login');
   const [loginMode, setLoginMode] = useState('admin');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [db, setDbState] = useState(() => {

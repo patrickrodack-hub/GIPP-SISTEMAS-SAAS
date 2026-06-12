@@ -78,7 +78,14 @@ const ModuleDPContabilidade = memo(() => {
     funcoes_anteriores: '',
     ministerios_ativos: '',
     perfil_acesso: 'visualizador_comum',
-    documentos: []
+    documentos: [],
+    beneficio_auxilio_moradia: 0,
+    beneficio_vale_transporte: 0,
+    beneficio_vale_refeicao: 0,
+    beneficio_ajuda_custo: 0,
+    beneficio_plano_saude: 0,
+    ferias_lista: [],
+    historico_salarial: []
   });
 
   // Import from Members list states
@@ -218,7 +225,22 @@ const ModuleDPContabilidade = memo(() => {
 
       if (isNew) {
         const generatedId = `colab_${Date.now()}`;
-        const newRecord = { ...payload, id: generatedId, created_at: new Date().toISOString() };
+        // Create an initial salary entry if a salary is set
+        const initialSal = parseFloat(colabForm.salario_base) || 0;
+        const initialHistory = initialSal > 0 ? [{
+          id: `adj_${Date.now()}`,
+          data: new Date().toISOString().split('T')[0],
+          anterior: 0,
+          novo: initialSal,
+          motivo: 'Salário inicial contratado'
+        }] : [];
+        
+        const newRecord = { 
+          ...payload, 
+          id: generatedId, 
+          created_at: new Date().toISOString(),
+          historico_salarial: initialHistory
+        };
         
         // Firestore save if online
         if (dbFirestore && appId) {
@@ -232,6 +254,21 @@ const ModuleDPContabilidade = memo(() => {
         updatedList = [...colaboradores, newRecord];
         addToast('Colaborador cadastrado com sucesso!', 'success');
       } else {
+        // Salary change tracking
+        const oldSal = parseFloat(editingColab.salario_base) || 0;
+        const newSal = parseFloat(payload.salario_base) || 0;
+        if (oldSal !== newSal) {
+          const updatedHist = [...(colabForm.historico_salarial || [])];
+          updatedHist.push({
+            id: `adj_${Date.now()}`,
+            data: new Date().toISOString().split('T')[0],
+            anterior: oldSal,
+            novo: newSal,
+            motivo: 'Ajuste ou readequação de base salarial/prebenda'
+          });
+          payload.historico_salarial = updatedHist;
+        }
+
         const updatedRecord = { ...payload, id: editingColab.id, updated_at: new Date().toISOString() };
         
         if (dbFirestore && appId) {
@@ -573,6 +610,23 @@ const ModuleDPContabilidade = memo(() => {
           valor: sal 
         }
       ];
+
+      // Auto-inject benefits configured in profile
+      if (c.beneficio_auxilio_moradia && parseFloat(c.beneficio_auxilio_moradia) > 0) {
+        proventos.push({ descricao: 'Auxílio Moradia (Eclesiástico)', valor: parseFloat(c.beneficio_auxilio_moradia) });
+      }
+      if (c.beneficio_vale_transporte && parseFloat(c.beneficio_vale_transporte) > 0) {
+        proventos.push({ descricao: 'Vale Transporte (VT)', valor: parseFloat(c.beneficio_vale_transporte) });
+      }
+      if (c.beneficio_vale_refeicao && parseFloat(c.beneficio_vale_refeicao) > 0) {
+        proventos.push({ descricao: 'Vale Refeição (VR)', valor: parseFloat(c.beneficio_vale_refeicao) });
+      }
+      if (c.beneficio_ajuda_custo && parseFloat(c.beneficio_ajuda_custo) > 0) {
+        proventos.push({ descricao: 'Ajuda de Custo Ministerial', valor: parseFloat(c.beneficio_ajuda_custo) });
+      }
+      if (c.beneficio_plano_saude && parseFloat(c.beneficio_plano_saude) > 0) {
+        proventos.push({ descricao: 'Cota de Plano de Saúde', valor: parseFloat(c.beneficio_plano_saude) });
+      }
 
       const descontos = [];
       
@@ -1579,7 +1633,14 @@ const ModuleDPContabilidade = memo(() => {
       funcoes_anteriores: '',
       ministerios_ativos: '',
       perfil_acesso: 'visualizador_comum',
-      documentos: []
+      documentos: [],
+      beneficio_auxilio_moradia: 0,
+      beneficio_vale_transporte: 0,
+      beneficio_vale_refeicao: 0,
+      beneficio_ajuda_custo: 0,
+      beneficio_plano_saude: 0,
+      ferias_lista: [],
+      historico_salarial: []
     });
     setEditingColab(null);
     setModalSubTab('contrato');
@@ -1615,7 +1676,14 @@ const ModuleDPContabilidade = memo(() => {
       funcoes_anteriores: colab.funcoes_anteriores || '',
       ministerios_ativos: colab.ministerios_ativos || '',
       perfil_acesso: colab.perfil_acesso || 'visualizador_comum',
-      documentos: colab.documentos || []
+      documentos: colab.documentos || [],
+      beneficio_auxilio_moradia: colab.beneficio_auxilio_moradia || 0,
+      beneficio_vale_transporte: colab.beneficio_vale_transporte || 0,
+      beneficio_vale_refeicao: colab.beneficio_vale_refeicao || 0,
+      beneficio_ajuda_custo: colab.beneficio_ajuda_custo || 0,
+      beneficio_plano_saude: colab.beneficio_plano_saude || 0,
+      ferias_lista: colab.ferias_lista || [],
+      historico_salarial: colab.historico_salarial || []
     });
     setEditingColab(colab);
     setModalSubTab('contrato');
@@ -1627,7 +1695,10 @@ const ModuleDPContabilidade = memo(() => {
   const [newAddValue, setNewAddValue] = useState('');
   const [tempDocName, setTempDocName] = useState('');
   const [tempDocType, setTempDocType] = useState('Contrato');
-  const [modalSubTab, setModalSubTab] = useState<'contrato' | 'banco' | 'igreja' | 'documentos'>('contrato');
+  const [modalSubTab, setModalSubTab] = useState<'contrato' | 'banco' | 'igreja' | 'documentos' | 'beneficios' | 'ferias' | 'historico_salarial'>('contrato');
+  const [tempVacationStart, setTempVacationStart] = useState('');
+  const [tempVacationEnd, setTempVacationEnd] = useState('');
+  const [tempVacationType, setTempVacationType] = useState('Férias CLT');
 
   // Print system helper for general tables
   const handlePrintReports = (reportType: string) => {
@@ -1976,6 +2047,9 @@ const ModuleDPContabilidade = memo(() => {
                   c.tipo === 'prestador' ? { color: 'text-amber-700 bg-amber-50 border-amber-100', label: 'Prestador de Serviço' } :
                   { color: 'text-slate-600 bg-slate-50 border-slate-100', label: 'Colaborador Orgânico' };
 
+                const todayStr = new Date().toISOString().split('T')[0];
+                const activeVacation = (c.ferias_lista || []).find((v: any) => todayStr >= v.inicio && todayStr <= v.fim);
+
                 return (
                   <div key={c.id} className={`bg-white p-5 rounded-2xl border shadow-xs flex flex-col justify-between hover:border-slate-350 transition-colors group ${isDeletedSec ? 'border-dashed border-slate-300 opacity-90' : 'border-slate-200/80'}`}>
                     <div>
@@ -1987,6 +2061,11 @@ const ModuleDPContabilidade = memo(() => {
                           <h4 className="text-sm font-black text-slate-800 mt-2 block break-all">
                             {c.nome}
                           </h4>
+                          {activeVacation && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-[8px] font-black uppercase tracking-wider animate-pulse">
+                              🌴 {activeVacation.tipo}
+                            </span>
+                          )}
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
                             {safeText(c.cargo, 'Sem Função')} • {getCongregacaoNome(c.congregacao_id)}
                           </p>
@@ -2882,7 +2961,40 @@ const ModuleDPContabilidade = memo(() => {
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              <Paperclip size={14} /> Acesso & Documentos ({(colabForm.documentos || []).length})
+              <Paperclip size={14} /> Anexos ({(colabForm.documentos || []).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalSubTab('beneficios')}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                modalSubTab === 'beneficios'
+                  ? 'border-indigo-650 text-indigo-650'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Sparkles size={14} className="text-amber-500" /> Benefícios Recorrentes
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalSubTab('ferias')}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                modalSubTab === 'ferias'
+                  ? 'border-indigo-650 text-indigo-650'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Calendar size={14} className="text-emerald-500" /> Férias & Afastamentos
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalSubTab('historico_salarial')}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                modalSubTab === 'historico_salarial'
+                  ? 'border-indigo-650 text-indigo-650'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <TrendingUp size={14} className="text-indigo-500" /> Auditoria Salarial
             </button>
           </div>
 
@@ -3250,6 +3362,273 @@ const ModuleDPContabilidade = memo(() => {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 5: BENEFÍCIOS RECORRENTES */}
+            {modalSubTab === 'beneficios' && (
+              <div className="space-y-4 animate-entrance">
+                <div className="p-4 bg-amber-50/40 border border-amber-200/50 rounded-2xl flex items-start gap-3">
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-200 rounded-xl text-amber-650 shrink-0 select-none">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider mb-1">
+                      Gestão de Benefícios Recorrentes
+                    </h4>
+                    <p className="text-[11px] text-slate-600 font-bold leading-relaxed">
+                      Os valores fixados aqui serão ativados e adicionados como <strong>proventos adicionais automáticos</strong> toda vez que você gerar a folha de pagamento de um mês para este colaborador.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2.5xl space-y-4">
+                  <div className="border-b border-slate-205 pb-2 mb-2">
+                    <h5 className="text-[10px] font-black text-slate-400 shortcut-label uppercase tracking-widest">Plano Mensal de Adições & Benefícios</h5>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                    <FormInput 
+                      label="Auxílio Moradia Clerical / Habitação (R$)" 
+                      placeholder="Valor fixo mensal" 
+                      value={colabForm.beneficio_auxilio_moradia || ''}
+                      onChange={(val: any) => setColabForm({...colabForm, beneficio_auxilio_moradia: val})}
+                    />
+                    <FormInput 
+                      label="Vale Transporte (VT) Pago (R$)" 
+                      placeholder="Valor fixo mensal" 
+                      value={colabForm.beneficio_vale_transporte || ''}
+                      onChange={(val: any) => setColabForm({...colabForm, beneficio_vale_transporte: val})}
+                    />
+                    <FormInput 
+                      label="Vale Refeição / Alimentação (VR/VA) (R$)" 
+                      placeholder="Valor fixo mensal" 
+                      value={colabForm.beneficio_vale_refeicao || ''}
+                      onChange={(val: any) => setColabForm({...colabForm, beneficio_vale_refeicao: val})}
+                    />
+                    <FormInput 
+                      label="Ajuda de Custo Ministerial / Social (R$)" 
+                      placeholder="Valor fixo mensal" 
+                      value={colabForm.beneficio_ajuda_custo || ''}
+                      onChange={(val: any) => setColabForm({...colabForm, beneficio_ajuda_custo: val})}
+                    />
+                    <div className="md:col-span-2">
+                      <FormInput 
+                        label="Cota de Plano de Saúde ou Subsídio Médico (R$)" 
+                        placeholder="Valor fixo mensal" 
+                        value={colabForm.beneficio_plano_saude || ''}
+                        onChange={(val: any) => setColabForm({...colabForm, beneficio_plano_saude: val})}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 6: FÉRIAS & AFASTAMENTOS */}
+            {modalSubTab === 'ferias' && (
+              <div className="space-y-4 animate-entrance">
+                <div className="p-4 bg-emerald-50/40 border border-emerald-200/55 rounded-2xl flex items-start gap-3">
+                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-200 rounded-xl text-emerald-650 shrink-0 select-none">
+                    <Calendar size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider mb-1">
+                      Escalas de Férias e Licenças
+                    </h4>
+                    <p className="text-[11px] text-slate-600 font-bold leading-relaxed">
+                      Gerencie e agende os períodos de recesso e afastamento remunerado ou especial. Colaboradores ativamente afastados exibirão um status visual na listagem principal.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Form to insert quick holiday/leave */}
+                <div className="p-4 bg-white border border-slate-205 rounded-2xl space-y-3 shadow-inner bg-slate-50/10">
+                  <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex justify-between items-center">
+                    <span>Agendar Nova Vigência</span>
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Data de Início</label>
+                      <input 
+                        type="date" 
+                        value={tempVacationStart}
+                        onChange={(e) => setTempVacationStart(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 md:p-2.5 text-xs font-bold text-slate-700 outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Data de Término</label>
+                      <input 
+                        type="date" 
+                        value={tempVacationEnd}
+                        onChange={(e) => setTempVacationEnd(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 md:p-2.5 text-xs font-bold text-slate-700 outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Tipo de Vigência</label>
+                      <select
+                        value={tempVacationType}
+                        onChange={(e) => setTempVacationType(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-705 outline-hidden focus:border-indigo-500 cursor-pointer"
+                      >
+                        <option value="Férias Regulares">Férias Regulares</option>
+                        <option value="Recesso Pastoral">Recesso Pastoral</option>
+                        <option value="Licença Comunidade">Licença Comunidade</option>
+                        <option value="Licença Saúde">Licença Saúde</option>
+                        <option value="Licença Maternidade/Paternidade">Licença Maternidade/Paternidade</option>
+                        <option value="Licença de Casamento (Gala)">Licença de Casamento (Gala)</option>
+                        <option value="Afastamento sem Remuneração">Afastamento sem Vencimento</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!tempVacationStart || !tempVacationEnd) {
+                          addToast('As datas de vigência são obrigatórias.', 'warning');
+                          return;
+                        }
+                        if (new Date(tempVacationStart) > new Date(tempVacationEnd)) {
+                          addToast('A data de término não pode ser anterior ao início.', 'error');
+                          return;
+                        }
+                        const newVac = {
+                          id: `vac_${Date.now()}`,
+                          inicio: tempVacationStart,
+                          fim: tempVacationEnd,
+                          tipo: tempVacationType,
+                          criado: new Date().toISOString().split('T')[0]
+                        };
+                        setColabForm({
+                          ...colabForm,
+                          ferias_lista: [...(colabForm.ferias_lista || []), newVac]
+                        });
+                        setTempVacationStart('');
+                        setTempVacationEnd('');
+                        addToast(`Período de "${tempVacationType}" registrado na lista! Lembre-se de salvar a ficha.`, 'success');
+                      }}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/10 cursor-pointer transition-colors"
+                    >
+                      Registrar Vigência
+                    </button>
+                  </div>
+                </div>
+
+                {/* List vacation history */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Períodos na Ficha ({(colabForm.ferias_lista || []).length})</label>
+                  {(colabForm.ferias_lista || []).length === 0 ? (
+                    <div className="text-center p-6 border border-dashed border-slate-205 rounded-2xl bg-slate-50/40">
+                      <p className="text-[11px] text-slate-400 font-bold">Nenhum recesso ou afastamento agendado para o colaborador.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
+                      {[...(colabForm.ferias_lista || [])].reverse().map((vac: any) => {
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const isActive = todayStr >= vac.inicio && todayStr <= vac.fim;
+                        const isPast = todayStr > vac.fim;
+                        return (
+                          <div key={vac.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className={`p-2.5 rounded-xl ${isActive ? 'bg-emerald-50 text-emerald-700 font-extrabold border border-emerald-100 animate-pulse' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50/60 text-indigo-700'}`}>
+                                <Calendar size={14} />
+                              </div>
+                              <div className="overflow-hidden">
+                                <span className={`inline-block text-[8px] font-black px-1.5 py-0.2 rounded uppercase mb-0.5 ${isActive ? 'bg-emerald-100 text-emerald-800' : isPast ? 'bg-slate-200 text-slate-500' : 'bg-indigo-50 text-indigo-700'}`}>
+                                  {isActive ? '🌴 Ativo Agora' : isPast ? 'Arquivado / Passado' : 'Agendado'}
+                                </span>
+                                <p className="text-xs font-black text-slate-700 truncate">{vac.tipo}</p>
+                                <p className="text-[10px] text-slate-400 font-black">
+                                  {new Date(vac.inicio + 'T12:00:00').toLocaleDateString('pt-BR')} &rarr; {new Date(vac.fim + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setColabForm({
+                                  ...colabForm,
+                                  ferias_lista: (colabForm.ferias_lista || []).filter((v: any) => v.id !== vac.id)
+                                });
+                                addToast('Vigência deletada da ficha.', 'info');
+                              }}
+                              className="p-1 px-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                              title="Remover Período"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 7: HISTÓRICO SALARIAL / AUDITORIA */}
+            {modalSubTab === 'historico_salarial' && (
+              <div className="space-y-4 animate-entrance">
+                <div className="p-4 bg-indigo-50/40 border border-indigo-200/50 rounded-2xl flex items-start gap-3">
+                  <div className="p-2.5 bg-indigo-500/10 border border-indigo-200 rounded-xl text-indigo-650 shrink-0 select-none">
+                    <TrendingUp size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
+                      Linha do Tempo de Revisão Salarial (Auditoria)
+                    </h4>
+                    <p className="text-[11px] text-slate-600 font-bold leading-relaxed">
+                      Painel automatizado de conformidade. Registros automáticos e transparentes são gerados para auditoria fiscal sempre que a base salarial sofrer alteração na ficha principal.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Histórico de Alterações de Salário ({(colabForm.historico_salarial || []).length})</label>
+                  {(colabForm.historico_salarial || []).length === 0 ? (
+                    <div className="text-center p-6 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 animate-entrance">
+                      <p className="text-[11px] text-slate-400 font-bold">Nenhum evento de reajuste detectado. O salário atual representa o valor de contratação.</p>
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-2xl bg-white divide-y divide-slate-100 max-h-[220px] overflow-y-auto pr-1">
+                      {[...(colabForm.historico_salarial || [])].reverse().map((hist: any, index: number) => {
+                        const percent = hist.anterior > 0 ? ((hist.novo - hist.anterior) / hist.anterior) * 100 : 0;
+                        return (
+                          <div key={hist.id || index} className="p-3.5 hover:bg-slate-50/40 transition-colors flex items-center justify-between">
+                            <div>
+                              <p className="text-[10px] text-indigo-650 font-black font-mono">
+                                {hist.data ? new Date(hist.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                              </p>
+                              <p className="text-xs font-black text-slate-700 mt-0.5">{hist.motivo}</p>
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold mt-1">
+                                <span>De: {formatBRL(hist.anterior)}</span>
+                                <span className="text-slate-350">&rarr;</span>
+                                <span className="text-emerald-600 font-extrabold">Para: {formatBRL(hist.novo)}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              {percent > 0 ? (
+                                <span className="inline-block text-[10px] font-black bg-emerald-50 border border-emerald-250 text-emerald-700 px-2.5 py-0.5 rounded-lg">
+                                  +{percent.toFixed(1)}% Ajuste
+                                </span>
+                              ) : percent < 0 ? (
+                                <span className="inline-block text-[10px] font-black bg-rose-50 border border-rose-220 text-rose-700 px-2.5 py-0.5 rounded-lg">
+                                  {percent.toFixed(1)}% Redução
+                                </span>
+                              ) : (
+                                <span className="inline-block text-[10px] font-black bg-slate-50 border border-slate-200 text-slate-500 px-2.5 py-0.5 rounded-lg">
+                                  Registrado
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -7,7 +7,7 @@ import {
   Type as TypeIcon, Layers, Image as ImageIcon, Smile, Clock, Eye, EyeOff, Shield, ShieldCheck, Inbox, ArrowUp, ArrowDown, Sparkles,
   FileText, RefreshCw, Smartphone, MonitorPlay, CheckCircle, Trash, PenTool, Bold, Italic, Underline, Lock, Unlock, Phone, AlignLeft,
   AlignCenter, AlignRight, Shapes, Mail, Bell, FileDown, Eye as EyeIcon, EyeOff as EyeOffIcon, Search, ZoomIn, ZoomOut, Check, Heart, Trophy, Crown, Star, Flame,
-  FileSpreadsheet, Sparkle, User, Users, Compass, HelpCircle, Save, Printer
+  FileSpreadsheet, Sparkle, User, Users, Compass, HelpCircle, Save, Printer, Sun, Moon
 } from 'lucide-react';
 
 import { 
@@ -173,6 +173,7 @@ const ModuleRedeSocial = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // --- ESTADOS DO EDITOR ---
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [activeMenu, setActiveMenu] = useState('templates'); // 'templates', 'size', 'text', 'shapes', 'bg', 'layers', 'saved'
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTemplate, setSearchTemplate] = useState('');
@@ -709,10 +710,10 @@ const ModuleRedeSocial = () => {
   const selectedElement = elements.find(el => el.id === selectedId);
 
   return (
-    <div className={`flex flex-col animate-entrance bg-white text-slate-800 border border-slate-200 overflow-hidden relative transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[120] h-screen w-screen rounded-none' : 'h-[85vh] min-h-[650px] rounded-[2rem] shadow-2xl'}`}>
+    <div className={`flex flex-col animate-entrance ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100 border-slate-800' : 'bg-white text-slate-800 border-slate-200'} border overflow-hidden relative transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[120] h-screen w-screen rounded-none' : 'h-[85vh] min-h-[650px] rounded-[2rem] shadow-2xl'}`}>
       
       {/* 1. TOP HEADER BAR */}
-      <div className="h-20 border-b border-slate-200 bg-slate-900 text-slate-100 flex items-center justify-between px-6 shrink-0 z-20 shadow-md">
+      <div className={`h-20 border-b ${themeMode === 'dark' ? 'border-slate-800 bg-slate-950 text-slate-100' : 'border-slate-200 bg-white text-slate-800'} flex items-center justify-between px-6 shrink-0 z-20 shadow-md`}>
         <div className="flex items-center gap-4">
           <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-md animate-pulse">
             <PaletteComp size={22} />
@@ -723,7 +724,7 @@ const ModuleRedeSocial = () => {
                 type="text" 
                 value={projectName} 
                 onChange={(e) => setProjectName(e.target.value)} 
-                className="bg-transparent font-black text-white text-base border-b border-transparent focus:border-indigo-500 outline-none w-56 truncate"
+                className={`bg-transparent font-black ${themeMode === 'dark' ? 'text-white' : 'text-slate-800'} text-base border-b border-transparent focus:border-indigo-500 outline-none w-56 truncate`}
                 placeholder="Nome do Projeto..." 
               />
               <button onClick={saveProject} className="text-slate-400 hover:text-emerald-400 p-1 rounded-lg" title="Salvar Projeto">
@@ -745,7 +746,7 @@ const ModuleRedeSocial = () => {
 
           <div className="h-6 w-px bg-slate-800 mx-2"></div>
 
-          <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold font-mono">
+          <div className={`flex items-center gap-1.5 ${themeMode === 'dark' ? 'bg-slate-800 border-slate-705 text-white' : 'bg-slate-200 border-slate-300 text-slate-700'} px-3 py-1.5 rounded-xl border text-xs font-bold font-mono`}>
             <button onClick={() => setZoom(Math.max(0.1, zoom - 0.05))} className="hover:text-indigo-400"><Minus size={14}/></button>
             <span className="w-12 text-center text-[11px]">{(zoom * 100).toFixed(0)}%</span>
             <button onClick={() => setZoom(Math.min(1.5, zoom + 0.05))} className="hover:text-indigo-400"><Plus size={14}/></button>
@@ -754,15 +755,28 @@ const ModuleRedeSocial = () => {
 
         {/* DIRETÓRIOS EXPORT DE REDE SOCIAL */}
         <div className="flex items-center gap-2">
+          {/* THEME SELECTOR BUTTON */}
+          <button
+            onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+            className={`p-3 rounded-xl font-bold transition-transform hover:scale-105 border ${
+              themeMode === 'dark'
+                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700'
+                : 'bg-slate-200 hover:bg-slate-300 text-amber-600 border-slate-300'
+            }`}
+            title={themeMode === 'dark' ? "Mudar para Tema Claro" : "Mudar para Tema Escuro"}
+          >
+            {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <button 
             onClick={() => setIsFullScreen(!isFullScreen)}
-            className="p-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 hover:text-indigo-300 rounded-xl font-bold transition-transform hover:scale-105"
+            className={`p-3 ${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-200 hover:bg-slate-300'} text-indigo-400 hover:text-indigo-300 rounded-xl font-bold transition-transform hover:scale-105`}
             title={isFullScreen ? "Sair da Tela Cheia" : "Focar em Tela Cheia"}
           >
             {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
 
-          <Button onClick={handlePrint} variant="ghost" className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-3.5 rounded-xl text-xs font-bold border-0">
+          <Button onClick={handlePrint} variant="ghost" className={`${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'} py-3 px-3.5 rounded-xl text-xs font-bold border-0`}>
             <Printer size={16} className="text-indigo-400"/>
             <span className="hidden leading-none lg:inline ml-1.5">Imprimir</span>
           </Button>
@@ -778,7 +792,7 @@ const ModuleRedeSocial = () => {
               <Download size={14}/>
               Publicar
             </button>
-            <div className="absolute right-0 mt-2 w-52 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className={`absolute right-0 mt-2 w-52 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50`}>
               <button onClick={() => exportDirectImage('png')} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 transition-colors flex items-center gap-2">
                 <FileDown size={14} className="text-sky-400"/> Baixar Imagem (PNG)
               </button>
@@ -798,10 +812,10 @@ const ModuleRedeSocial = () => {
       </div>
 
       {/* 2. MAIN CONTAINER BODY WORKSPACE */}
-      <div className="flex-1 flex overflow-hidden bg-slate-900">
+      <div className={`flex-1 flex overflow-hidden ${themeMode === 'dark' ? 'bg-slate-900' : 'bg-slate-100'}`}>
         
         {/* LADO A: SELETOR DE MENUS ICONES (VERTICAL) */}
-        <div className="w-20 bg-slate-950 flex flex-col items-center py-6 gap-2.5 shrink-0 z-20 border-r border-slate-800">
+        <div className={`w-20 ${themeMode === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-250'} flex flex-col items-center py-6 gap-2.5 shrink-0 z-20 border-r`}>
           {[
             { id: 'templates', icon: LayoutTemplate, label: 'Modelos' },
             { id: 'size', icon: Maximize, label: 'Tamanhos' },
@@ -814,7 +828,7 @@ const ModuleRedeSocial = () => {
             <button 
               key={menu.id} 
               onClick={() => { setActiveMenu(menu.id); setSelectedId(null); }}
-              className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${activeMenu === menu.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+              className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${activeMenu === menu.id ? 'bg-indigo-600 text-white shadow-lg' : themeMode === 'dark' ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
             >
               <menu.icon size={20} className="mb-1"/>
               <span className="text-[9px] font-bold uppercase tracking-wider">{menu.label}</span>
@@ -823,9 +837,9 @@ const ModuleRedeSocial = () => {
         </div>
 
         {/* LADO B: SUBBARRA CONFIGURAÇÕES DO MENU SELECIONADO */}
-        <div className="w-72 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar">
-          <div className="p-5 border-b border-slate-800">
-            <h3 className="font-black text-slate-200 uppercase tracking-widest text-xs">
+        <div className={`w-72 ${themeMode === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'} border-r flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar`}>
+          <div className={`p-5 border-b ${themeMode === 'dark' ? 'border-slate-800' : 'border-slate-205'}`}>
+            <h3 className={`font-black uppercase tracking-widest text-xs ${themeMode === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>
               {activeMenu === 'templates' && 'Modelos Prontos'}
               {activeMenu === 'size' && 'Tamanhos de Tela'}
               {activeMenu === 'text' && 'Lançar Textos'}
@@ -1136,7 +1150,7 @@ const ModuleRedeSocial = () => {
         {/* LADO C: ÁREA DO CANVAS CENTRAL WORKSPACE */}
         <div 
           ref={containerRef}
-          className="flex-1 bg-slate-950/80 relative overflow-auto flex cursor-crosshair custom-scrollbar p-8"
+          className={`flex-1 ${themeMode === 'dark' ? 'bg-slate-950/80' : 'bg-slate-200/50'} relative overflow-auto flex cursor-crosshair custom-scrollbar p-8`}
           onMouseMove={handleDrag}
           onMouseUp={stopDrag}
           onMouseLeave={stopDrag}
@@ -1247,25 +1261,25 @@ const ModuleRedeSocial = () => {
         </div>
 
         {/* LADO D: BARRA DE PROPRIEDADES DO ELEMENTO SELECIONADO (DIREITA) */}
-        <div className="w-80 bg-slate-950 border-l border-slate-800 flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar">
+        <div className={`w-80 ${themeMode === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'} border-l flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar`}>
           {selectedElement ? (
             <div className="p-5 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 className="font-extrabold text-white text-xs uppercase tracking-widest flex items-center gap-1.5">
+              <div className={`flex items-center justify-between border-b ${themeMode === 'dark' ? 'border-slate-800' : 'border-slate-200'} pb-3`}>
+                <h3 className={`font-extrabold ${themeMode === 'dark' ? 'text-white' : 'text-slate-800'} text-xs uppercase tracking-widest flex items-center gap-1.5`}>
                   <Settings size={14} className="text-indigo-400"/>
                   Parâmetros
                 </h3>
-                <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-400 font-extrabold px-2 py-0.5 rounded uppercase">
+                <span className={`text-[9px] ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'} border px-2 py-0.5 rounded uppercase`}>
                   {selectedElement.type}
                 </span>
               </div>
 
               {/* LOCK/UNLOCK STATUS */}
-              <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-3">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Bloquear Elemento</span>
+              <div className={`flex items-center justify-between ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'} rounded-xl p-3 border`}>
+                <span className={`text-[10px] font-black ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wider`}>Bloquear Elemento</span>
                 <button 
                   onClick={() => updateElement(selectedElement.id, { locked: !selectedElement.locked })}
-                  className={`p-2 rounded-xl border transition-all ${selectedElement.locked ? 'bg-red-950/20 border-red-800 text-red-500' : 'bg-slate-950 border-slate-700 text-slate-400 hover:text-white'}`}
+                  className={`p-2 rounded-xl border transition-all ${selectedElement.locked ? 'bg-red-950/20 border-red-800 text-red-500' : themeMode === 'dark' ? 'bg-slate-950 border-slate-700 text-slate-400 hover:text-white' : 'bg-white border-slate-250 text-slate-500 hover:text-slate-800'}`}
                 >
                   {selectedElement.locked ? <Lock size={14}/> : <Unlock size={14}/>}
                 </button>
