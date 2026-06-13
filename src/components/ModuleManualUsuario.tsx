@@ -1785,7 +1785,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP v8.1.0 (Versão Completa) estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino de qualidade (EBD dominical e cursos teológicos EAD) e na ministração estruturada e litúrgica de ordem pastoral.
+            O GIPP v8.3.0 (Versão Completa) estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino de qualidade (EBD dominical e cursos teológicos EAD) e na ministração estruturada e litúrgica de ordem pastoral.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1826,6 +1826,75 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                 Idealizado para a formação sólida de obreiros locais. Siga os módulos pedagógicos estruturados e realize os quizes de fixação teológica compostos por perguntas desafiadoras sobre a doutrina e apologética. Ao atingir a média de aproveitamento ideal, o certificado HD é confeccionado em tempo de execução.
               </p>
             </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'amparo_legal',
+      title: '12. Proteção Constitucional & Liberdade Religiosa (Amparo Legal)',
+      shortTitle: 'Amparo Constitucional',
+      icon: ShieldAlert,
+      category: 'Geral',
+      content: (
+        <div className="space-y-6">
+          <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
+            O GIPP disponibiliza a visualização e impressão da Declaração de Amparo Legal com as garantias fundamentais da República Federativa do Brasil, que asseguram o pleno funcionamento e a liberdade de culto e de expressão de todas as igrejas e organizações religiosas do país.
+          </p>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 shadow-xs relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+            <span className="text-[10px] font-black tracking-widest text-amber-700 uppercase bg-amber-100 px-3 py-1 rounded-full inline-block border border-amber-250 mb-3">CONSTITUIÇÃO FEDERAL DE 1988</span>
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Artigo 5º, Inciso VI (Liberdade de Culto)
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed pl-3 italic font-serif">
+                  "É inviolável a liberdade de consciência e de crença, sendo assegurado o livre exercício dos cultos religiosos e garantida, na forma da lei, a proteção aos locais de culto e a suas liturgias."
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Artigo 5º, Inciso VIII (Objeção de Consciência)
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed pl-3 italic font-serif">
+                  "Ninguém será privado de direitos por motivo de crença religiosa ou de convicção filosófica ou política, salvo se as invocar para eximir-se de obrigação legal a todos imposta e recusar-se a cumprir prestação alternativa, fixada em lei."
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Artigo 19º, Inciso I (Laicidade do Estado & Não Embaraço)
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed pl-3 italic font-serif">
+                  "É vedado à União, aos Estados, ao Distrito Federal e aos Municípios: I - estabelecer cultos religiosos ou igrejas, subvencioná-los, embaraçar-lhes o funcionamento ou manter com eles ou seus representantes relações de dependência ou aliança, ressalvada, na forma da lei, a colaboração de interesse público."
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-emerald-50 border border-emerald-150 rounded-3xl p-6 shadow-xs">
+            <span className="text-[10px] font-black tracking-widest text-emerald-700 uppercase bg-emerald-100 px-3 py-1 rounded-full inline-block border border-emerald-200 mb-3">PROTEÇÃO AO CÓDIGO CIVIL (LEI 10.825/2003)</span>
+            <div className="space-y-2">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Autonomia das Organizações Religiosas (Art. 44, §1º)
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed italic font-serif">
+                "São livres a criação, a organização, a estruturação interna e o funcionamento das organizações religiosas, sendo vedado ao poder público negar-lhes reconhecimento ou registro dos atos constitutivos e de caráter necessário ao seu funcionamento."
+              </p>
+              <p className="text-[10px] text-emerald-800 font-bold leading-relaxed pt-2">
+                * Nota Interpretativa: Esta legislação blinda expressamente as igrejas contra quaisquer embaraços administrativos ou intromissões estatais sobre suas doutrinas, estruturas hierárquicas, credos confessados e condutas litúrgicas internas.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 text-slate-100 rounded-3xl p-6 shadow-lg border border-slate-800">
+            <h4 className="text-xs font-black text-indigo-400 uppercase tracking-wider mb-2">Utilização Pastoral e Administrativa</h4>
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              Esta declaração formal protege a liberdade evangélica/protestante e é disponibilizada no <strong className="text-white">Módulo Principal de Cadastro</strong> da Igreja. A liderança pastoral e operacional pode abrir o termo a qualquer momento para consultas, e também gerar impressões físicas detalhadas contendo o timbre, selos e certificações contidas na base do GIPP para resguardar as atividades da congregação.
+            </p>
           </div>
         </div>
       )

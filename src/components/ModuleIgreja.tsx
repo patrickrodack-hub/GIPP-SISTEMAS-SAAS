@@ -19,7 +19,7 @@ import {
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
-  LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
+  LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize, Scale,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
 } from 'lucide-react';
@@ -142,6 +142,89 @@ const ModuleIgreja = () => {
             <item.icon size={18}/> {item.label}
         </button>
     );
+
+    const handlePrintDocument = () => {
+        const printContent = document.getElementById('constitucional-document');
+        if (!printContent) return;
+        
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+        
+        const docObj = iframe.contentWindow?.document || iframe.contentDocument;
+        if (!docObj) return;
+        
+        docObj.write(`
+            <html>
+                <head>
+                    <title>Declaração de Amparo Constitucional</title>
+                    <style>
+                        body { font-family: 'Inter', sans-serif; background-color: white; color: #1e293b; padding: 20px; }
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    </style>
+                    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div style="font-family: 'Inter', sans-serif;">
+                        ${printContent.innerHTML}
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            setTimeout(function() {
+                                window.parent.document.body.removeChild(window.frameElement);
+                            }, 500);
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        docObj.close();
+    };
+
+    const handleExportPDF = () => {
+        const element = document.getElementById('constitucional-document');
+        if (!element) return;
+        
+        addToast("Gerando PDF oficial de alta resolução...", "info");
+        
+        html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        }).then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            
+            pdf.save(`Declaracao_Amparo_CF88_${data.nome ? data.nome.replace(/\\s+/g, '_') : 'Igreja'}.pdf`);
+            addToast("PDF baixado com sucesso!", "success");
+        }).catch(e => {
+            console.error(e);
+            addToast("Erro ao gerar arquivo PDF.", "error");
+        });
+    };
 
     const handleSave = async () => {
         try {
@@ -825,7 +908,5 @@ const ModuleIgreja = () => {
         </div>
     );
 };
-
-// --- NOVO: MÓDULO EXCLUSIVO DO DESENVOLVEDOR ---
 
 export default ModuleIgreja;

@@ -20,7 +20,7 @@ import {
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
-  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
+  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
@@ -85,6 +85,8 @@ import ModuleFrotas from './components/ModuleFrotas';
 import ModuleCelulas from './components/ModuleCelulas';
 import ModuleBoletim from './components/ModuleBoletim';
 import ModuleManualUsuario from './components/ModuleManualUsuario';
+import ModuleAmparoLegal from './components/ModuleAmparoLegal';
+import ModuleRegistroSoftware from './components/ModuleRegistroSoftware';
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
 // ----------------------------
 
@@ -6572,7 +6574,7 @@ export const PrintSystem = ({
                     <div className="space-y-4">
                         <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-250 pb-2 flex justify-between items-center">
                             <span>Demonstrativo Contábil • Folha Analítica Consolidada de Pessoal</span>
-                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 8.1.0 Platinum Enterprise v8</span>
+                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 8.3.0 Platinum Enterprise v9</span>
                         </h2>
                         
                         {/* Parameters summary description */}
@@ -7468,9 +7470,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade', 'controle_frotas'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'dp_contabilidade']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -7480,6 +7482,12 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     PLAN_MODULES[pKey] = [...db.igreja.planos_config[pKey]];
                     if (!PLAN_MODULES[pKey].includes('manual')) {
                         PLAN_MODULES[pKey].push('manual');
+                    }
+                    if (!PLAN_MODULES[pKey].includes('amparo_legal')) {
+                        PLAN_MODULES[pKey].push('amparo_legal');
+                    }
+                    if (!PLAN_MODULES[pKey].includes('registro_software')) {
+                        PLAN_MODULES[pKey].push('registro_software');
                     }
                     if (pKey === 'avancado' && !PLAN_MODULES[pKey].includes('gestao_cursos')) {
                         PLAN_MODULES[pKey].push('gestao_cursos');
@@ -7500,6 +7508,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         changelog: 'group-hover:text-fuchsia-500',
         sobre: 'group-hover:text-teal-500',
         manual: 'group-hover:text-indigo-500',
+        amparo_legal: 'group-hover:text-amber-600',
+        registro_software: 'group-hover:text-indigo-600',
         cad_membro: 'group-hover:text-indigo-500',
         visitantes: 'group-hover:text-rose-500',
         cad_igreja: 'group-hover:text-amber-500',
@@ -7598,6 +7608,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     <MenuGroup label="Principal" />
                     {checkPlan('dashboard') && <MenuItem id="dashboard" icon={LayoutDashboard} label="Visão Geral" />}
                     {checkPlan('manual') && <MenuItem id="manual" icon={BookOpen} label="Manual do Usuário" />}
+                    {checkPlan('amparo_legal') && <MenuItem id="amparo_legal" icon={Scale} label="Amparo Constitucional" />}
+                    {checkPlan('registro_software') && <MenuItem id="registro_software" icon={ShieldCheck} label="Registro do Software" />}
                     {checkPlan('changelog') && <MenuItem id="changelog" icon={History} label="Atualizações" />}
                     {checkPlan('sobre') && <MenuItem id="sobre" icon={Info} label="Sobre o Sistema" />}
                 </div>
@@ -11325,6 +11337,8 @@ const AppLayout = () => {
         'lixeira': { component: ModuleLixeira, access: 'access_lixeira' },
         'sobre': { component: ModuleSobre, access: 'public' },
         'manual': { component: ModuleManualUsuario, access: 'public' },
+        'amparo_legal': { component: ModuleAmparoLegal, access: 'public' },
+        'registro_software': { component: ModuleRegistroSoftware, access: 'public' },
         'portal_pastor': { component: ModulePortalPastor, access: 'public' },
         'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
         'config_visual': { component: ModuleConfigVisual, access: 'access_config_visual' },
@@ -11546,7 +11560,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
                         <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>{saasSettings?.saas_versao_sistema || "Versão 8.1.0 (Versão Completa)"}</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 8.3.0 (Versão Completa)"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -13725,7 +13739,7 @@ export default function App() {
                         </div>
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-1 rounded-md border border-[#bbf7d0]">GIPP v8.1.0 - Versão Completa</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-1 rounded-md border border-[#bbf7d0]">GIPP v8.3.0 - Versão Completa</p>
                         </div>
                     </div>
                     <div>
