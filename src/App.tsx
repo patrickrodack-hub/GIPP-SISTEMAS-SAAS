@@ -9130,7 +9130,7 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
                                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Destino / Categoria</label>
                                             <select 
                                                 value={novaOferta.categoria}
-                                                onChange={(e) => setNovaOferta({...novaOferta, categoria: (e.target.value || "").toUpperCase()})}
+                                                onChange={(e) => setNovaOferta({...novaOferta, categoria: e.target.value || ""})}
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-4 text-slate-700 font-black focus:border-[#10b981] outline-none shadow-sm cursor-pointer"
                                             >
                                                 <option value="Dízimo">Dízimo Mensal</option>
