@@ -22,6 +22,30 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+const parseTimeToMinutes = (t: string) => {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+const isSundayOrHoliday = (dateStr: string) => {
+  if (!dateStr) return false;
+  const dateObj = new Date(dateStr + 'T12:00:00');
+  return dateObj.getDay() === 0; // 0 matches Sunday
+};
+
+const getDaysInMonth = (monthStr: string): Date[] => {
+  if (!monthStr) return [];
+  const [year, month] = monthStr.split('-').map(Number);
+  const date = new Date(year, month - 1, 1);
+  const dates: Date[] = [];
+  while (date.getMonth() === month - 1) {
+    dates.push(new Date(date));
+    date.setDate(date.getDate() + 1);
+  }
+  return dates;
+};
+
 const ModuleDPContabilidade = memo(() => {
   const { 
     db, 
@@ -195,24 +219,83 @@ const ModuleDPContabilidade = memo(() => {
       try { return JSON.parse(saved); } catch (e) { }
     }
     return [
-      { id: 'po1', colaborador: 'Pra. Débora Souza', data: '2026-06-12', entrada: '08:02', saida: '17:05', horas: '08:03 (Regular)', status: 'Regular' },
-      { id: 'po2', colaborador: 'Ev. Carlos Eduardo', data: '2026-06-12', entrada: '07:55', saida: '17:01', horas: '08:06 (Regular)', status: 'Regular' },
-      { id: 'po3', colaborador: 'Pastor Marcos Silva', data: '2026-06-11', entrada: '09:00', saida: '18:00', horas: '08:00 (Regular)', status: 'Regular' }
+      { id: 'po1', colaborador_id: 'c1', colaborador: 'Pra. Débora Souza', data: '2026-06-12', entrada: '08:02', alm_saida: '12:00', alm_retorno: '13:00', saida: '17:05', horas_trabalhadas: 8.08, horas_extras: 0.08, status: 'Regular', inconsistente: false, justificativa: '', atestado_anexo: '' },
+      { id: 'po2', colaborador_id: 'c2', colaborador: 'Ev. Carlos Eduardo', data: '2026-06-12', entrada: '07:55', alm_saida: '12:05', alm_retorno: '13:00', saida: '17:01', horas_trabalhadas: 8.1, horas_extras: 0.1, status: 'Regular', inconsistente: false, justificativa: '', atestado_anexo: '' },
+      { id: 'po3', colaborador_id: 'c3', colaborador: 'Pastor Marcos Silva', data: '2026-06-11', entrada: '08:58', alm_saida: '12:00', alm_retorno: '13:00', saida: '18:30', horas_trabalhadas: 8.5, horas_extras: 0.5, status: 'Horas Extras', inconsistente: false, justificativa: '', atestado_anexo: '' },
+      { id: 'po4', colaborador_id: 'c2', colaborador: 'Ev. Carlos Eduardo', data: '2026-06-07', entrada: '08:00', alm_saida: '12:00', alm_retorno: '13:00', saida: '14:00', horas_trabalhadas: 5.0, horas_extras: 5.0, status: '100% Extras (DSR)', inconsistente: false, justificativa: '', atestado_anexo: '' },
+      { id: 'po5', colaborador_id: 'c4', colaborador: 'Cooperadora Sâmia Reis', data: '2026-06-10', entrada: '08:15', alm_saida: '', alm_retorno: '', saida: '17:00', horas_trabalhadas: 7.75, horas_extras: 0, status: 'Inconsistente', inconsistente: true, alerta: 'Falta de marcação do intervalo de almoço!', justificativa: '', atestado_anexo: '' },
+      { id: 'po6', colaborador_id: 'c1', colaborador: 'Pra. Débora Souza', data: '2026-06-09', entrada: '', alm_saida: '', alm_retorno: '', saida: '', horas_trabalhadas: 0, horas_extras: 0, status: 'Justificado', inconsistente: false, justificativa: 'Consulta Odontológica', atestado_anexo: 'atestado_odontologia.pdf' }
     ];
   });
 
+  const [pontoEscalas, setPontoEscalas] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_ponto_escalas');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'esc1', colaborador_id: 'c1', colaborador: 'Pra. Débora Souza', tipo_escala: 'Fixo (Seg-Sex)', carga_horaria: '44h Semanais', entrada: '08:00', saida: '17:00', folga_semanal: 'Sábado & Domingo' },
+      { id: 'esc2', colaborador_id: 'c2', colaborador: 'Ev. Carlos Eduardo', tipo_escala: 'Fixo (Seg-Sex)', carga_horaria: '44h Semanais', entrada: '08:00', saida: '17:00', folga_semanal: 'Sábado & Domingo' },
+      { id: 'esc3', colaborador_id: 'c3', colaborador: 'Pastor Marcos Silva', tipo_escala: 'Administrativa (Seg-Qui)', carga_horaria: '32h Semanais', entrada: '09:00', saida: '18:00', folga_semanal: 'Sexta-Feira' },
+      { id: 'esc4', colaborador_id: 'c4', colaborador: 'Cooperadora Sâmia Reis', tipo_escala: 'Alternado (12x36)', carga_horaria: 'Escala Recreativa Kids', entrada: '08:00', saida: '20:00', folga_semanal: 'DSR Alternado' }
+    ];
+  });
+
+  const [pontoAtestados, setPontoAtestados] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_ponto_atestados');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 'at1', colaborador: 'Pra. Débora Souza', colaborador_id: 'c1', data_envio: '2026-06-09', data_ausencia: '2026-06-09', motivo: 'Atestado Médico - Consulta Odontológica', arquivo: 'atestado_odontologia.pdf', status: 'Aprovado', validador: 'RH GIPP' },
+      { id: 'at2', colaborador: 'Ev. Carlos Eduardo', colaborador_id: 'c2', data_envio: '2026-06-11', data_ausencia: '2026-06-11', motivo: 'Abono - Serviço Ministerial Externo', arquivo: 'solicitacao_abono_externo.pdf', status: 'Pendente', validador: '' }
+    ];
+  });
+
+  const [pontoConfigs, setPontoConfigs] = useState<any>(() => {
+    const saved = localStorage.getItem('gipp_ponto_configs');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return {
+      almocoPadraoMinutos: 60,
+      horasExtrasModo: 'folha', // 'folha' ou 'banco' (banco de horas)
+      horasExtrasLimiteDiario: 2.0
+    };
+  });
+
+  const [pontoSubTab, setPontoSubTab] = useState<'jornadas' | 'escalas' | 'justificativas' | 'integracao' | 'relatorios'>('jornadas');
+
   const [showPontoModal, setShowPontoModal] = useState(false);
+  const [editingPonto, setEditingPonto] = useState<any>(null);
   const [pontoForm, setPontoForm] = useState<any>({
+    colaborador_id: '',
     colaborador: '',
     data: getTodayDate(),
     entrada: '08:00',
+    alm_saida: '12:00',
+    alm_retorno: '13:00',
     saida: '17:00',
-    horas: '08:00'
+    justificativa: '',
+    atestado_anexo: '',
+    banco_ou_folha: 'folha'
   });
 
   useEffect(() => {
     localStorage.setItem('gipp_ponto_punches', JSON.stringify(pontoPunches));
   }, [pontoPunches]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_ponto_escalas', JSON.stringify(pontoEscalas));
+  }, [pontoEscalas]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_ponto_atestados', JSON.stringify(pontoAtestados));
+  }, [pontoAtestados]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_ponto_configs', JSON.stringify(pontoConfigs));
+  }, [pontoConfigs]);
   
   // State for references
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -863,6 +946,157 @@ const ModuleDPContabilidade = memo(() => {
     } else {
       addToast(`Todos os contracheques para os colaboradores ativos já estavam gerados no mês ${selectedMonth}.`, 'info');
     }
+  };
+
+  // Synchronize employee punctuality (clock-in) registers with current month's payroll slips
+  const handleSyncPontoWithFolha = async () => {
+    const activeStaffs = colaboradores.filter((c: any) => c.status === 'ativo' && !c.deleted);
+    if (activeStaffs.length === 0) {
+      addToast('Não há colaboradores ativos para sincronizar.', 'warning');
+      return;
+    }
+
+    let updatedCount = 0;
+    let notFoundCount = 0;
+    const updatedFolhas = [...folhas];
+
+    for (const c of activeStaffs) {
+      // Find matching punch registers for the selected month
+      const punches = pontoPunches.filter((p: any) => p.colaborador_id === c.id && p.data?.startsWith(selectedMonth));
+      
+      let ex50 = 0;
+      let ex100 = 0;
+      let faltas = 0;
+
+      punches.forEach((p: any) => {
+        if (p.horas_extras > 0) {
+          if (p.status?.includes('100%') || isSundayOrHoliday(p.data)) {
+            ex100 += p.horas_extras;
+          } else {
+            ex50 += p.horas_extras;
+          }
+        }
+        if (p.status === 'Falta' && !p.justificativa) {
+          faltas++;
+        }
+      });
+
+      const baseHourly = (parseFloat(c.salario_base) || 0) / 220;
+      const baseDaily = (parseFloat(c.salario_base) || 0) / 30;
+
+      const valEx50 = Math.round((ex50 * baseHourly * 1.5) * 100) / 100;
+      const valEx100 = Math.round((ex100 * baseHourly * 2.0) * 100) / 100;
+      const valFaltas = Math.round((faltas * baseDaily) * 100) / 100;
+
+      // Find individual payroll slip
+      const slipIdx = updatedFolhas.findIndex((f: any) => f.colaborador_id === c.id && f.mes_referencia === selectedMonth);
+      if (slipIdx === -1) {
+        notFoundCount++;
+        continue;
+      }
+
+      const f = updatedFolhas[slipIdx];
+      let proventos = [...(f.proventos || [])];
+      let descontos = [...(f.descontos || [])];
+
+      // Update or remove Horas Extras 50%
+      proventos = proventos.filter((x: any) => x.descricao !== 'Horas Extras 50% (Ref: Ponto)');
+      if (valEx50 > 0) {
+        proventos.push({ descricao: 'Horas Extras 50% (Ref: Ponto)', valor: valEx50 });
+      }
+
+      // Update or remove Horas Extras 100%
+      proventos = proventos.filter((x: any) => x.descricao !== 'Horas Extras 100% (Ref: Ponto)');
+      if (valEx100 > 0) {
+        proventos.push({ descricao: 'Horas Extras 100% (Ref: Ponto)', valor: valEx100 });
+      }
+
+      // Update or remove Desconto de Faltas
+      descontos = descontos.filter((x: any) => x.descricao !== 'Desconto de Faltas (Ref: Ponto)');
+      if (valFaltas > 0) {
+        descontos.push({ descricao: 'Desconto de Faltas (Ref: Ponto)', valor: valFaltas });
+      }
+
+      const totProv = proventos.reduce((acc, item) => acc + item.valor, 0);
+      const totDesc = descontos.reduce((acc, item) => acc + item.valor, 0);
+      const valLiq = Math.max(0, totProv - totDesc);
+
+      const updatedSlip = {
+        ...f,
+        proventos,
+        descontos,
+        valor_liquido: valLiq,
+        updated_at: new Date().toISOString()
+      };
+
+      if (dbFirestore && appId) {
+        try {
+          await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dp_folhas', f.id), updatedSlip);
+        } catch (fErr) {
+          console.warn("Firestore sync update error:", fErr);
+        }
+      }
+
+      updatedFolhas[slipIdx] = updatedSlip;
+      updatedCount++;
+    }
+
+    setDbState((prev: any) => ({
+      ...prev,
+      dp_folhas: updatedFolhas
+    }));
+
+    if (updatedCount > 0) {
+      if (notFoundCount > 0) {
+        addToast(`Sincronização concluída! ${updatedCount} contracheques atualizados. ${notFoundCount} colaboradores ainda não possuem contracheque gerado para este mês.`, 'success');
+      } else {
+        addToast(`Sincronização concluída com sucesso! Os contracheques de todos os colaboradores ativos foram atualizados com base no espelho de ponto.`, 'success');
+      }
+    } else {
+      addToast(`Nenhum contracheque foi atualizado. Certifique-se de gerar os contracheques do mês na aba "Folha de Pagamento" antes de sincronizar.`, 'warning');
+    }
+  };
+
+  // Export employee punctuality (clock-in) registers of the selected month as CSV
+  const handleExportCSV = () => {
+    if (pontoPunches.length === 0) {
+      addToast('Não há registros de ponto para exportar.', 'warning');
+      return;
+    }
+
+    // Build CSV Content
+    const headers = ['ID', 'Colaborador', 'Data', 'Entrada', 'Almoço Saída', 'Almoço Retorno', 'Saída', 'Horas Trabalhadas', 'Horas Extras', 'Status', 'Inconsistente', 'Alerta', 'Justificativa'];
+    const rows = pontoPunches.map((p: any) => [
+      p.id || '',
+      p.colaborador || '',
+      p.data || '',
+      p.entrada || '',
+      p.alm_saida || '',
+      p.alm_retorno || '',
+      p.saida || '',
+      p.horas_trabalhadas !== undefined ? Number(p.horas_trabalhadas).toFixed(2) : '0.00',
+      p.horas_extras !== undefined ? Number(p.horas_extras).toFixed(2) : '0.00',
+      p.status || 'Regular',
+      p.inconsistente ? 'Sim' : 'Não',
+      p.alerta || '',
+      p.justificativa || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\r\n');
+
+    // Download CSV
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `espelho_ponto_registros_${selectedMonth || 'total'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast('Espelho de ponto detalhado exportado com sucesso em CSV!', 'success');
   };
 
   // Delete Individual Pay slip
@@ -3653,86 +3887,874 @@ const ModuleDPContabilidade = memo(() => {
       {activeTab === 'ponto' && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-              <div>
-                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1 mb-1 border-b border-slate-100 pb-2">
-                  <Clock size={16} className="text-indigo-600" /> Controle de Ponto
-                </h3>
-                <p className="text-xs text-slate-500">Gestão de jornada de trabalho para pastores, missionários e funcionários.</p>
-              </div>
-              <Button 
-                onClick={() => {
-                  setPontoForm({
-                    colaborador: '',
-                    data: getTodayDate(),
-                    entrada: '08:00',
-                    saida: '17:00',
-                    horas: '08:00'
-                  });
-                  setShowPontoModal(true);
-                }} 
-                variant="primary" 
-                size="sm" 
-                icon={Plus}
-                className="bg-indigo-600 hover:bg-indigo-700 font-bold text-xs cursor-pointer"
-              >
-                Informar Ponto Avulso
-              </Button>
-            </div>
             
-            <div className="border border-slate-200 rounded-xl overflow-hidden mt-4 shadow-xs">
-               <table className="w-full text-sm text-left">
-                 <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
-                   <tr>
-                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
-                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Data</th>
-                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Entrada</th>
-                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Saída</th>
-                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Horas / Saldo</th>
-                     <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ações</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {pontoPunches.length === 0 ? (
-                     <tr>
-                       <td colSpan={6} className="px-4 py-12 text-center text-slate-500 bg-white">
-                         <Clock size={32} className="mx-auto text-slate-300 mb-2" />
-                         <p className="font-semibold text-slate-600">Nenhum registro de ponto encontrado</p>
-                       </td>
-                     </tr>
-                   ) : (
-                     pontoPunches.map((p) => (
-                       <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                         <td className="px-4 py-3 text-xs font-bold text-slate-800">{p.colaborador}</td>
-                         <td className="px-4 py-3 text-xs text-slate-600 font-semibold">
-                           {p.data ? new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
-                         </td>
-                         <td className="px-4 py-3 text-xs text-slate-500 font-mono font-bold">{p.entrada}</td>
-                         <td className="px-4 py-3 text-xs text-slate-500 font-mono font-bold">{p.saida || '--:--'}</td>
-                         <td className="px-4 py-3 text-xs font-extrabold text-indigo-700 font-mono">{p.horas}</td>
-                         <td className="px-4 py-3">
-                           <button 
-                             onClick={() => {
-                               setPontoPunches(prev => prev.filter(item => item.id !== p.id));
-                               addToast('Registro de ponto removido!', 'info');
-                             }}
-                             className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer transition-colors"
-                             title="Remover Registro"
-                           >
-                             <Trash2 size={13} />
-                           </button>
-                         </td>
-                       </tr>
-                     ))
-                   )}
-                 </tbody>
-               </table>
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                  <Clock size={16} className="text-indigo-600" /> Controle de Ponto & Ocupacional
+                </h3>
+                <p className="text-xs text-slate-500">Gestão integrada de escalas, jornadas de trabalho, atestados e transmissão automática de SST ao eSocial Fase 4.</p>
+              </div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button 
+                  onClick={() => {
+                    setPontoForm({
+                      id: '',
+                      colaborador_id: colaboradores[0]?.id || '',
+                      colaborador: colaboradores[0]?.nome || '',
+                      data: getTodayDate(),
+                      entrada: '08:00',
+                      alm_saida: '12:00',
+                      alm_retorno: '13:00',
+                      saida: '17:00',
+                      justificativa: '',
+                      atestado_anexo: '',
+                      banco_ou_folha: 'folha',
+                      tipo_registro: 'trabalhado'
+                    });
+                    setEditingPonto(null);
+                    setShowPontoModal(true);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} /> Lançar Batida / Ausência
+                </button>
+              </div>
             </div>
 
-            <div className="mt-4 p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl flex items-center justify-between text-xs text-[#166534] font-semibold">
-              <span>Sincronização 100% ativa com o eSocial Fase 4 (SST/Jornadas)</span>
-              <span className="text-[9px] bg-[#15803d] text-white px-2 py-0.5 rounded font-black uppercase">Homologado</span>
+            {/* Sub-Tabs Navigator */}
+            <div className="flex border-b border-slate-200 mb-6 gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              <button 
+                onClick={() => setPontoSubTab('jornadas')}
+                className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'jornadas' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+              >
+                <Clock size={14} /> Registrar Jornadas ({pontoPunches.length})
+              </button>
+              <button 
+                onClick={() => setPontoSubTab('escalas')}
+                className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'escalas' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+              >
+                <Calendar size={14} /> Escalas & Folgas
+              </button>
+              <button 
+                onClick={() => setPontoSubTab('justificativas')}
+                className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'justificativas' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+              >
+                <FileText size={14} /> Justificativas & Atestados ({(pontoAtestados).length})
+              </button>
+              <button 
+                onClick={() => setPontoSubTab('integracao')}
+                className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'integracao' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+              >
+                <RefreshCw size={14} /> Integração Folha
+              </button>
+              <button 
+                onClick={() => setPontoSubTab('relatorios')}
+                className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'relatorios' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+              >
+                <TrendingUp size={14} /> Relatórios & Alertas
+              </button>
             </div>
+
+            {/* SUBTAB 1 - JORNADAS DE TRABALHO */}
+            {pontoSubTab === 'jornadas' && (
+              <div className="space-y-4">
+                {/* Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-150">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={13} />
+                    <input 
+                      type="text" 
+                      placeholder="Buscar por colaborador..."
+                      value={colabSearch}
+                      onChange={(e) => setColabSearch(e.target.value)}
+                      className="w-full bg-white border border-slate-200 p-2 pl-8.5 rounded-lg text-xs outline-hidden font-semibold text-slate-700"
+                    />
+                  </div>
+                  <div>
+                    <select 
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs outline-hidden font-semibold text-slate-700"
+                    >
+                      {Array.from(availableMonths).map((m: any) => (
+                        <option key={m} value={m}>{m.split('-')[1]}/{m.split('-')[0]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] uppercase font-bold text-slate-500 whitespace-nowrap">Exibir:</label>
+                    <button 
+                      onClick={() => setColabStatusFilter(colabStatusFilter === 'todos' ? 'ativo' : 'todos')}
+                      className={`text-[10px] uppercase font-black px-2 py-1 rounded border transition-all ${colabStatusFilter === 'todos' ? 'bg-slate-200 text-slate-700 border-slate-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`}
+                    >
+                      {colabStatusFilter === 'todos' ? 'Todos' : 'Somente Inconsistentes'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Table Layout */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Data</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Entrada</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Almoço (S/R)</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Saída</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Trabalhado</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Extras</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ocupação / Status</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pontoPunches
+                        .filter((p: any) => {
+                          const matchesSearch = p.colaborador?.toLowerCase().includes(colabSearch.toLowerCase());
+                          const matchesMonth = p.data?.startsWith(selectedMonth);
+                          const matchesInconsistencies = colabStatusFilter === 'todos' ? true : p.inconsistente;
+                          return matchesSearch && matchesMonth && matchesInconsistencies;
+                        })
+                        .length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="px-4 py-12 text-center text-slate-500 bg-white">
+                            <Clock size={32} className="mx-auto text-slate-300 mb-2 animate-bounce" />
+                            <p className="font-semibold text-slate-600">Nenhum registro de ponto encontrado para a pesquisa</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Altere os filtros acima ou lance uma nova batida / ausência de obreiro.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        pontoPunches
+                          .filter((p: any) => {
+                            const matchesSearch = p.colaborador?.toLowerCase().includes(colabSearch.toLowerCase());
+                            const matchesMonth = p.data?.startsWith(selectedMonth);
+                            const matchesInconsistencies = colabStatusFilter === 'todos' ? true : p.inconsistente;
+                            return matchesSearch && matchesMonth && matchesInconsistencies;
+                          })
+                          .map((p: any) => (
+                            <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50/70 transition-colors ${p.inconsistente ? 'bg-amber-50/30' : ''}`}>
+                              <td className="px-4 py-3 text-xs font-bold text-slate-800">
+                                {p.colaborador}
+                                {p.inconsistente && (
+                                  <span className="block text-[8px] text-amber-600 font-extrabold uppercase mt-0.5 flex items-center gap-0.5">
+                                    <AlertCircle size={9} /> {p.alerta}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-600 font-bold whitespace-nowrap">
+                                {p.data ? new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-505 font-mono font-bold">
+                                {p.entrada || '--:--'}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-500 font-mono">
+                                {p.alm_saida ? `${p.alm_saida} - ${p.alm_retorno}` : <span className="text-slate-300 font-semibold text-[10px]">Sem intervalo</span>}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-505 font-mono font-bold">
+                                {p.saida || '--:--'}
+                              </td>
+                              <td className="px-4 py-3 text-xs font-bold text-slate-700 font-mono">
+                                {p.horas_trabalhadas ? `${p.horas_trabalhadas.toFixed(2)}h` : '0.00h'}
+                              </td>
+                              <td className="px-4 py-3 text-xs font-mono">
+                                {p.horas_extras > 0 ? (
+                                  <span className="text-emerald-700 font-extrabold flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 w-fit">
+                                    <ArrowUpRight size={10} /> +{p.horas_extras.toFixed(2)}h
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 font-semibold">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                                  p.status === 'Inconsistente' ? 'bg-amber-100 border-amber-300 text-amber-800' :
+                                  p.status === 'Justificado' ? 'bg-blue-100 border-blue-300 text-blue-800' :
+                                  p.status === 'Falta' ? 'bg-rose-100 border-rose-300 text-rose-800' :
+                                  p.status?.includes('Extras') ? 'bg-emerald-100 border-emerald-350 text-emerald-800 animate-pulse' :
+                                  'bg-slate-100 border-slate-300 text-slate-600'
+                                }`}>
+                                  {p.status}
+                                </span>
+                                {p.justificativa && (
+                                  <span className="block text-[9px] text-slate-450 italic mt-0.5 font-bold truncate max-w-[150px]">
+                                    Motivo: {p.justificativa}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="inline-flex gap-1">
+                                  <button 
+                                    onClick={() => {
+                                      setEditingPonto(p);
+                                      setPontoForm({
+                                        id: p.id,
+                                        colaborador_id: p.colaborador_id || '',
+                                        colaborador: p.colaborador,
+                                        data: p.data,
+                                        entrada: p.entrada || '08:00',
+                                        alm_saida: p.alm_saida || '12:00',
+                                        alm_retorno: p.alm_retorno || '13:00',
+                                        saida: p.saida || '17:00',
+                                        justificativa: p.justificativa || '',
+                                        atestado_anexo: p.atestado_anexo || '',
+                                        banco_ou_folha: p.horas_extras > 0 && pontoConfigs.horasExtrasModo === 'banco' ? 'banco' : 'folha',
+                                        tipo_registro: p.status === 'Falta' ? 'falta' : p.status === 'Justificado' ? 'atestado' : 'trabalhado'
+                                      });
+                                      setShowPontoModal(true);
+                                    }}
+                                    className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-md cursor-pointer transition-colors"
+                                    title="Editar Batida"
+                                  >
+                                    <Edit size={13} />
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      setPontoPunches(prev => prev.filter(item => item.id !== p.id));
+                                      addToast('Registro de ponto removido!', 'info');
+                                    }}
+                                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer transition-colors"
+                                    title="Remover Registro"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-between items-center bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                  <span className="text-[11px] text-slate-600 font-semibold flex items-center gap-1">
+                    <Shield size={12} className="text-emerald-600" /> Sincronização eSocial Fase 4 (SST/Jornadas de Trabalho e Descansos) homologada e ativa.
+                  </span>
+                  <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded font-black uppercase">Homologado</span>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 2 - ESCALAS E FOLGAS */}
+            {pontoSubTab === 'escalas' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50/50 border border-indigo-150 p-4 rounded-xl flex items-start gap-3 text-left">
+                  <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
+                  <div>
+                    <h4 className="text-xs font-black text-indigo-900 uppercase">Configuração de Turnos Fiscais & Descanso Semanal Obrigatório</h4>
+                    <p className="text-[11px] text-indigo-705 leading-relaxed mt-0.5">
+                      Conforme determina a regulamentação brasileira das entidades eclesiásticas e terceiro setor, o GIPP impõe o controle preventivo para garantir no mínimo 1 folga semanal de 24 horas (Descanso Semanal Remunerado - DSR) para cada trabalhador contratado ou obreiro com jornada reconhecida.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs mt-4">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Tipo de Escala</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Carga Horária</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Jornada Padrão</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Folga Semanal Regulamentar (DSR)</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pontoEscalas.map((esc) => (
+                        <tr key={esc.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 text-xs font-bold text-slate-800">{esc.colaborador}</td>
+                          <td className="px-4 py-3 text-xs text-slate-600 font-semibold">
+                            <span className="bg-indigo-50 text-indigo-700 font-extrabold px-2 py-0.5 border border-indigo-150 rounded text-[10px]">
+                              {esc.tipo_escala}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-500 font-mono font-bold">{esc.carga_horaria}</td>
+                          <td className="px-4 py-3 text-xs text-slate-500 font-mono font-bold">{esc.entrada} - {esc.saida}</td>
+                          <td className="px-4 py-3 text-xs text-emerald-700 font-bold">{esc.folga_semanal}</td>
+                          <td className="px-4 py-3 text-right">
+                            <button 
+                              onClick={() => {
+                                const novaF = prompt(`Qual o novo dia/formato de folga semanal (DSR) de ${esc.colaborador}?`, esc.folga_semanal);
+                                if (novaF !== null) {
+                                  setPontoEscalas(prev => prev.map(item => item.id === esc.id ? { ...item, folga_semanal: novaF } : item));
+                                  addToast('Escala de folga atualizada com sucesso!', 'success');
+                                }
+                              }}
+                              className="px-2.5 py-1 text-[10px] bg-slate-100 border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg cursor-pointer transition-all font-bold"
+                            >
+                              Alterar Escala
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 3 - JUSTIFICATIVAS E ATESTADOS */}
+            {pontoSubTab === 'justificativas' && (
+              <div className="space-y-4 text-left">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  {/* Left Column - Submit Justification Form */}
+                  <div className="md:col-span-1 bg-slate-50 p-5 rounded-2xl border border-slate-205 flex flex-col justify-between h-fit gap-4">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 pb-2 border-b border-slate-200 flex items-center gap-1">
+                        <Upload size={14} className="text-indigo-600" /> Enviar Atestado / Abono
+                      </h4>
+                      <p className="text-[10px] text-slate-500 leading-relaxed mb-4">
+                        Faça o lançamento preventivo de ausências por motivo de saúde ou representações missionárias. Após aprovação da gestão, as faltas correspondentes não gerarão descontos na folha de pagamento.
+                      </p>
+
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase font-bold text-slate-500">Colaborador</label>
+                          <select 
+                            id="ponto_atestado_colab" 
+                            className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs"
+                          >
+                            <option value="">Selecione...</option>
+                            {colaboradores.length > 0 ? (
+                              colaboradores.filter((c:any) => !c.deleted).map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.nome}</option>
+                              ))
+                            ) : (
+                              pontoEscalas.map((e: any) => (
+                                <option key={e.id} value={e.id}>{e.colaborador}</option>
+                              ))
+                            )}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase font-bold text-slate-500">Data de Ausência</label>
+                          <input 
+                            id="ponto_atestado_data" 
+                            type="date" 
+                            defaultValue={getTodayDate()}
+                            className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold text-slate-700" 
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase font-bold text-slate-500">Motivo do Afastamento</label>
+                          <input 
+                            id="ponto_atestado_motivo" 
+                            type="text" 
+                            placeholder="Ex: Atestado de Gripe, Doação de Sangue"
+                            className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold" 
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase font-bold text-slate-505">Anexar Comprovante / PDF</label>
+                          <input 
+                            id="ponto_atestado_file" 
+                            type="file" 
+                            title="Selecione o arquivo de atestado do obreiro"
+                            className="w-full text-[10px] text-slate-500 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer" 
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        const colSelect = document.getElementById('ponto_atestado_colab') as HTMLSelectElement;
+                        const dataVal = document.getElementById('ponto_atestado_data') as HTMLInputElement;
+                        const motivoVal = document.getElementById('ponto_atestado_motivo') as HTMLInputElement;
+                        const fileVal = document.getElementById('ponto_atestado_file') as HTMLInputElement;
+
+                        if (!colSelect.value || !motivoVal.value) {
+                          addToast('Preencha os campos de colaborador e motivo do atestado.', 'error');
+                          return;
+                        }
+
+                        const selectedName = colSelect.options[colSelect.selectedIndex].text;
+                        const fileName = fileVal?.files?.[0]?.name || 'atestado_simulado.pdf';
+
+                        const novoAt = {
+                          id: `at_${Date.now()}`,
+                          colaborador_id: colSelect.value,
+                          colaborador: selectedName,
+                          data_envio: getTodayDate(),
+                          data_ausencia: dataVal.value,
+                          motivo: motivoVal.value,
+                          arquivo: fileName,
+                          status: 'Pendente',
+                          validador: ''
+                        };
+
+                        setPontoAtestados(prev => [novoAt, ...prev]);
+                        
+                        // also automatically insert punch marked as justified so there are no default deductions
+                        const punchId = `po_at_${Date.now()}`;
+                        setPontoPunches(prev => [
+                          {
+                            id: punchId,
+                            colaborador_id: colSelect.value,
+                            colaborador: selectedName,
+                            data: dataVal.value,
+                            entrada: '',
+                            alm_saida: '',
+                            alm_retorno: '',
+                            saida: '',
+                            horas_trabalhadas: 0,
+                            horas_extras: 0,
+                            status: 'Justificado',
+                            inconsistente: false,
+                            justificativa: motivoVal.value,
+                            atestado_anexo: fileName
+                          },
+                          ...prev
+                        ]);
+
+                        addToast('Atestado enviado com sucesso! Aguarde validação do RH.', 'success');
+                        
+                        // Reset simple inputs
+                        motivoVal.value = '';
+                        if (fileVal) fileVal.value = '';
+                      }}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer mt-2"
+                    >
+                      <Plus size={12} /> Salvar e Enviar Atestado / Abono
+                    </button>
+                  </div>
+
+                  {/* Right Column - Atestados Table Grid */}
+                  <div className="md:col-span-2 space-y-4">
+                    <h4 className="text-xs font-black text-[#1e293b] uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                      Registro Histórico de Justificativas para Auditoria eSocial
+                    </h4>
+
+                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
+                          <tr>
+                            <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
+                            <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider">Ausência / Envio</th>
+                            <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider">Justificativa</th>
+                            <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider">Documento</th>
+                            <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-right">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pontoAtestados.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                                Nenhum atestado ou justificativa de abono pendente.
+                              </td>
+                            </tr>
+                          ) : (
+                            pontoAtestados.map((at) => (
+                              <tr key={at.id} className="border-b border-slate-100 font-sans text-xs">
+                                <td className="px-4 py-3 font-bold text-slate-800">{at.colaborador}</td>
+                                <td className="px-4 py-3 text-slate-650">
+                                  <span className="font-semibold block">{new Date(at.data_ausencia + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                                  <span className="text-[9px] text-slate-400 font-mono block">Enviado: {new Date(at.data_envio + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                                </td>
+                                <td className="px-4 py-3 text-slate-600 font-semibold">{at.motivo}</td>
+                                <td className="px-4 py-3 font-mono text-[10px] text-indigo-600 font-bold max-w-[120px] truncate flex items-center gap-1 mt-1.5">
+                                  <Paperclip size={10} /> {at.arquivo}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                                    at.status === 'Aprovado' ? 'bg-[#f0fdf4] text-emerald-800 border-emerald-250' : 
+                                    at.status === 'Rejeitado' ? 'bg-rose-50 text-rose-850 border-rose-200' : 
+                                    'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                                  }`}>
+                                    {at.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right whitespace-nowrap">
+                                  {at.status === 'Pendente' ? (
+                                    <div className="inline-flex gap-1">
+                                      <button 
+                                        onClick={() => {
+                                          setPontoAtestados(prev => prev.map(item => item.id === at.id ? { ...item, status: 'Aprovado', validador: 'RH GIPP' } : item));
+                                          
+                                          // check if corresponding punct exist to set status "Justificado"
+                                          setPontoPunches(prev => prev.map(p => 
+                                            (p.colaborador_id === at.colaborador_id && p.data === at.data_ausencia) 
+                                              ? { ...p, status: 'Justificado', justificativa: at.motivo, atestado_anexo: at.arquivo } 
+                                              : p
+                                          ));
+
+                                          addToast('Atestado odontológico/médico validado e aceito pelo RH com sucesso!', 'success');
+                                        }}
+                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 cursor-pointer"
+                                        title="Aprovar Comprovante"
+                                      >
+                                        <Check size={11} />
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setPontoAtestados(prev => prev.map(item => item.id === at.id ? { ...item, status: 'Rejeitado' } : item));
+                                          
+                                          // set back to Falta
+                                          setPontoPunches(prev => prev.map(p => 
+                                            (p.colaborador_id === at.colaborador_id && p.data === at.data_ausencia) 
+                                              ? { ...p, status: 'Falta', justificativa: '', atestado_anexo: '', inconsistente: false } 
+                                              : p
+                                          ));
+
+                                          addToast('Envio rejeitado. Ausência será marcada como falta não justificada no contracheque.', 'warning');
+                                        }}
+                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded border border-rose-200 cursor-pointer"
+                                        title="Rejeitar Comprovante"
+                                      >
+                                        <X size={11} />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 font-semibold">{at.validador || 'Processado'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 4 - INTEGRAÇÃO COM FOLHA DE PAGAMENTO */}
+            {pontoSubTab === 'integracao' && (
+              <div className="space-y-4 text-left">
+                <div className="bg-emerald-50/55 border border-emerald-200 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black text-emerald-900 uppercase flex items-center gap-1">
+                      <Sparkles size={14} className="text-emerald-600" /> Sincronização em Tempo Real de Horas e Descontos Ocupacionais
+                    </h4>
+                    <p className="text-[11px] text-emerald-705 leading-relaxed max-w-4xl">
+                      Nosso núcleo contábil lê e faz a correspondência automática entre as marcações auditadas e a folha do mês de referência. Horas extras acima de 8h diárias são geradas (50% nos dias normais e 100% aos domingos/DSR). Faltas sem justificativas médicas devidamente validadas aplicam o desconto de 1 dia de salário base na competência atual.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={handleSyncPontoWithFolha}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+                  >
+                    <RefreshCw size={13} className="animate-spin" /> Sincronizar Controle de Ponto com Folha
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">
+                    Informativos Provisórios por Colaborador • Competência: {selectedMonth.split('-')[1]}/{selectedMonth.split('-')[0]}
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {colaboradores.filter((c: any) => !c.deleted && c.status === 'ativo').map((c: any) => {
+                      const punches = pontoPunches.filter((p: any) => p.colaborador_id === c.id && p.data?.startsWith(selectedMonth));
+                      
+                      let ex50 = 0;
+                      let ex100 = 0;
+                      let faltas = 0;
+
+                      punches.forEach((p: any) => {
+                        if (p.horas_extras > 0) {
+                          if (p.status?.includes('100%') || isSundayOrHoliday(p.data)) {
+                            ex100 += p.horas_extras;
+                          } else {
+                            ex50 += p.horas_extras;
+                          }
+                        }
+                        if (p.status === 'Falta' && !p.justificativa) {
+                          faltas++;
+                        }
+                      });
+
+                      const baseHourly = (parseFloat(c.salario_base) || 0) / 220;
+                      const baseDaily = (parseFloat(c.salario_base) || 0) / 30;
+
+                      const valEx50 = ex50 * baseHourly * 1.5;
+                      const valEx100 = ex100 * baseHourly * 2.0;
+                      const valFaltas = faltas * baseDaily;
+
+                      const totalProventosPonto = valEx50 + valEx100;
+                      const hasSlip = (folhas || []).some((f: any) => f.colaborador_id === c.id && f.mes_referencia === selectedMonth);
+
+                      return (
+                        <div key={c.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-indigo-200 transition-all">
+                          <div>
+                            <div className="flex justify-between items-start mb-2.5">
+                              <div>
+                                <h5 className="font-bold text-xs text-slate-800">{c.nome}</h5>
+                                <p className="text-[10px] text-slate-450 uppercase font-black">{c.cargo || 'Obreiro'} • Salário: {formatBRL(c.salario_base || 0)}</p>
+                              </div>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${hasSlip ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-100 border-slate-205 text-slate-500'}`}>
+                                {hasSlip ? 'Contracheque Gerado' : 'Sem Contracheque'}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 py-2 border-y border-dashed border-slate-200 mb-3 text-[11px] font-mono">
+                              <div className="text-left">
+                                <span className="block text-[8px] uppercase font-bold text-slate-400">H. Extras 50%</span>
+                                <strong className="text-slate-700">{ex50.toFixed(1)}h</strong>
+                                <span className="block text-[9px] text-[#059669] font-semibold">+{formatBRL(valEx50)}</span>
+                              </div>
+                              <div className="text-left">
+                                <span className="block text-[8px] uppercase font-bold text-slate-400">H. Extras 100%</span>
+                                <strong className="text-slate-700">{ex100.toFixed(1)}h</strong>
+                                <span className="block text-[9px] text-[#059669] font-semibold">+{formatBRL(valEx100)}</span>
+                              </div>
+                              <div className="text-left">
+                                <span className="block text-[8px] uppercase font-bold text-slate-400">Faltas N/Just.</span>
+                                <strong className="text-[#dc2626] font-bold">{faltas} d</strong>
+                                <span className="block text-[9px] text-[#dc2626] font-bold">-{formatBRL(valFaltas)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center mt-1 text-[10px] font-semibold">
+                            <span className="text-slate-500">Saldo Líquido Adicional:</span>
+                            <span className={`font-black uppercase ${totalProventosPonto - valFaltas >= 0 ? 'text-[#059669]' : 'text-rose-600'}`}>
+                              {totalProventosPonto - valFaltas >= 0 ? '+' : ''}{formatBRL(totalProventosPonto - valFaltas)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 5 - RELATÓRIOS E ALERTAS */}
+            {pontoSubTab === 'relatorios' && (
+              <div className="space-y-6 text-left">
+                {/* Visual Widgets Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-black uppercase text-xs">Extras 50%</span>
+                    <h5 className="text-2xl font-black text-slate-800 mt-2 font-mono">
+                      {pontoPunches.filter((p: any) => p.horas_extras > 0 && !(p.status?.includes('100%') || isSundayOrHoliday(p.data)) && p.data?.startsWith(selectedMonth)).reduce((acc, p) => acc + p.horas_extras, 0).toFixed(1)}h
+                    </h5>
+                    <p className="text-[10px] text-slate-500 mt-1">Total de horas adicionais úteis no mês atual.</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-black uppercase text-xs">Extras DSR (100%)</span>
+                    <h5 className="text-2xl font-black text-slate-800 mt-2 font-mono">
+                      {pontoPunches.filter((p: any) => p.horas_extras > 0 && (p.status?.includes('100%') || isSundayOrHoliday(p.data)) && p.data?.startsWith(selectedMonth)).reduce((acc, p) => acc + p.horas_extras, 0).toFixed(1)}h
+                    </h5>
+                    <p className="text-[10px] text-slate-500 mt-1">Total trabalhado aos domingos e feriados religiosos.</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-black uppercase text-xs">Faltas do Mês</span>
+                    <h5 className="text-2xl font-black text-rose-600 mt-2 font-mono">
+                      {pontoPunches.filter((p: any) => p.status === 'Falta' && !p.justificativa && p.data?.startsWith(selectedMonth)).length}
+                    </h5>
+                    <p className="text-[10px] text-slate-500 mt-1">Dias de faltas sem justificativas regulamentadas.</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-black uppercase text-xs">Atestados de Saúde</span>
+                    <h5 className="text-2xl font-black text-indigo-600 mt-2 font-mono">
+                      {pontoAtestados.filter(at => at.status === 'Aprovado' && at.data_ausencia?.startsWith(selectedMonth)).length}
+                    </h5>
+                    <p className="text-[10px] text-slate-500 mt-1">Casos médicos abonados e salvaguardados pelo RH.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Graphical overview */}
+                  <div className="md:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4 flex justify-between items-center">
+                      <span>Projeção de Horas Extras e Abscessos (Mês Atual)</span>
+                      <button 
+                        onClick={handleExportCSV}
+                        className="bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        <Download size={11} /> Exportar CSV Completo
+                      </button>
+                    </h4>
+
+                    {/* Simple dynamic bar summary for visual demonstration */}
+                    <div className="space-y-4 pt-1 text-xs">
+                      {colaboradores.filter((c: any) => !c.deleted && c.status === 'ativo').map((c: any) => {
+                        const punches = pontoPunches.filter((p: any) => p.colaborador_id === c.id && p.data?.startsWith(selectedMonth));
+                        const totExtra = punches.reduce((acc, p) => acc + (p.horas_extras || 0), 0);
+                        const percent = Math.min(100, (totExtra / 20) * 100); // base limit of 20 hours a month
+
+                        return (
+                          <div key={c.id} className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-slate-700">{c.nome}</span>
+                              <span className="font-mono text-[11px] font-extrabold text-slate-600">{totExtra.toFixed(1)} Horas Extras</span>
+                            </div>
+                            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                              <div 
+                                style={{ width: `${percent}%` }}
+                                className={`h-full rounded-full ${totExtra > pontoConfigs.horasExtrasLimiteDiario * 10 ? 'bg-rose-500' : 'bg-indigo-600'}`}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Active Inconsistency & Limit Alerts Panel */}
+                  <div className="md:col-span-1 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                    <h4 className="text-xs font-black text-[#dc2626] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <ShieldAlert size={14} className="text-[#dc2626]" /> Central de Inconsistências & Alertas
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">
+                      A auditoria do GIPP detecta instantaneamente marcações suspeitas, batidas esquecidas ou horas extras que desrespeitam o teto limite recomendado pelo regulamento do terceiro setor.
+                    </p>
+
+                    <div className="space-y-2.5">
+                      {pontoPunches.filter((p: any) => p.inconsistente && p.data?.startsWith(selectedMonth)).map((p: any) => (
+                        <div key={p.id} className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] leading-relaxed flex items-start gap-2">
+                          <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-amber-850 block">{p.colaborador}</strong>
+                            <p className="text-amber-705 text-[10px] mt-0.5">{p.alerta}</p>
+                            <span className="text-[9px] text-slate-400 block mt-1">Data correspondente: {new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Overtime Limit Warning */}
+                      {colaboradores.map((c: any) => {
+                        const punches = pontoPunches.filter((p: any) => p.colaborador_id === c.id && p.data?.startsWith(selectedMonth));
+                        const highExtras = punches.filter((p: any) => p.horas_extras > pontoConfigs.horasExtrasLimiteDiario);
+                        if (highExtras.length > 0) {
+                          return (
+                            <div key={`alert_${c.id}`} className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-[11px] leading-relaxed flex items-start gap-2">
+                              <ShieldAlert size={14} className="text-rose-600 shrink-0 mt-0.5" />
+                              <div>
+                                <strong className="text-rose-850 block">{c.nome}</strong>
+                                <p className="text-rose-705 text-[10px] mt-0.5">Jornada extra acima do limite regulamentar contábil/fiscal de {pontoConfigs.horasExtrasLimiteDiario}h por dia.</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      {pontoPunches.filter(p => p.inconsistente).length === 0 && (
+                        <p className="text-slate-400 text-center text-[11px] py-4">
+                          Auditado com sucesso! Nenhuma inconsistência fiscal identificada na competência.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Printable Section Option */}
+                <div className="border border-indigo-150 p-6 rounded-2xl bg-[#faf5ff] border-indigo-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <h5 className="font-bold text-xs text-indigo-900 uppercase flex items-center gap-1.5">
+                      <Printer size={14} className="text-indigo-600" /> Folha de Ponto Ocupacional Pronta para Impressão Manual ou Assinatura
+                    </h5>
+                    <p className="text-[11px] text-indigo-705 max-w-4xl leading-relaxed">
+                      Emita a folha de ponto mensal de qualquer trabalhador ativa em segundos! Você pode emitir a <strong>Folha Preenchida</strong> (com todos os registros e saldos automatizados) ou a <strong>Folha em Branco</strong> (para preenchimento de manuscrito e assinaturas holísticas para pregações avulsas nos cultos locais).
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        const colSelected = prompt("Selecione qual Colaborador deseja imprimir:\n" + pontoEscalas.map((e, index) => `${index+1}. ${e.colaborador}`).join('\n'));
+                        if (colSelected) {
+                          const idx = Number(colSelected) - 1;
+                          if (pontoEscalas[idx]) {
+                            const emp = pontoEscalas[idx];
+                            const days = getDaysInMonth(selectedMonth);
+                            const printableRows = days.map((dayDate: Date) => {
+                              const dStr = dayDate.toISOString().split('T')[0];
+                              const p = pontoPunches.find(p => p.colaborador_id === emp.colaborador_id && p.data === dStr);
+                              return {
+                                dia: dayDate.getDate(),
+                                diaSemana: dayDate.toLocaleDateString('pt-BR', { weekday: 'short' }),
+                                entrada: p ? p.entrada || '' : '',
+                                alm_saida: p ? p.alm_saida || '' : '',
+                                alm_retorno: p ? p.alm_retorno || '' : '',
+                                saida: p ? p.saida || '' : '',
+                                assinatura: p ? (p.status === 'Justificado' ? `JUSTIFICADO: ${p.justificativa}` : 'Eletrônico') : ''
+                              };
+                            });
+
+                            // Setup global printable printData
+                            setPrintMode(true);
+                            setPrintData({
+                              tipo: 'Ponto',
+                              colaborador: emp.colaborador,
+                              escala: emp.tipo_escala,
+                              mes: selectedMonth,
+                              rows: printableRows,
+                              modo: 'preenchido'
+                            });
+                            // Open Preview
+                            setPreviewOpen(true);
+                          } else {
+                            addToast('Opção inválida selecionada.', 'error');
+                          }
+                        }
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] uppercase. tracking-wider px-3 py-2 rounded-xl cursor-pointer transition-all"
+                    >
+                      Imprimir Preenchida
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const colSelected = prompt("Selecione qual Colaborador deseja imprimir em branco:\n" + pontoEscalas.map((e, index) => `${index+1}. ${e.colaborador}`).join('\n'));
+                        if (colSelected) {
+                          const idx = Number(colSelected) - 1;
+                          if (pontoEscalas[idx]) {
+                            const emp = pontoEscalas[idx];
+                            const days = getDaysInMonth(selectedMonth);
+                            const printableRows = days.map((dayDate: Date) => {
+                              return {
+                                dia: dayDate.getDate(),
+                                diaSemana: dayDate.toLocaleDateString('pt-BR', { weekday: 'short' }),
+                                entrada: '__________________',
+                                alm_saida: '__________',
+                                alm_retorno: '__________',
+                                saida: '__________________',
+                                assinatura: '___________________________'
+                              };
+                            });
+
+                            // Setup global printable printData
+                            setPrintMode(true);
+                            setPrintData({
+                              tipo: 'Ponto',
+                              colaborador: emp.colaborador,
+                              escala: emp.tipo_escala,
+                              mes: selectedMonth,
+                              rows: printableRows,
+                              modo: 'em_branco'
+                            });
+                            // Open Preview
+                            setPreviewOpen(true);
+                          } else {
+                            addToast('Opção inválida selecionada.', 'error');
+                          }
+                        }
+                      }}
+                      className="bg-slate-700 hover:bg-slate-800 text-white font-bold text-[10px] uppercase tracking-wider px-3 py-2 rounded-xl cursor-pointer transition-all"
+                    >
+                      Imprimir em Branco
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -5971,7 +6993,7 @@ const ModuleDPContabilidade = memo(() => {
       )}
 
       {/* MODAL PLANO DE CONTAS */}
-      {showContaModal && (
+      {showContaModal && createPortal(
         <InteractiveWindow
           title={editingConta ? "Editar Conta Contábil" : "Nova Conta Contábil"}
           onClose={() => setShowContaModal(false)}
@@ -6073,11 +7095,12 @@ const ModuleDPContabilidade = memo(() => {
               </div>
             </div>
           </div>
-        </InteractiveWindow>
+        </InteractiveWindow>,
+        document.body
       )}
 
       {/* MODAL EVENTO SST */}
-      {showSstModal && (
+      {showSstModal && createPortal(
         <InteractiveWindow
           title="Emitir Registro de Saúde e Segurança (eSocial)"
           onClose={() => setShowSstModal(false)}
@@ -6193,96 +7216,373 @@ const ModuleDPContabilidade = memo(() => {
               />
             </div>
           </div>
-        </InteractiveWindow>
+        </InteractiveWindow>,
+        document.body
       )}
 
       {/* MODAL CONTROLE DE PONTO */}
-      {showPontoModal && (
-        <InteractiveWindow
-          title="Informar Registro de Ponto Avulso"
-          onClose={() => setShowPontoModal(false)}
-          onSave={() => {
-            if (!pontoForm.colaborador || !pontoForm.data) {
-              addToast('Por favor, preencha o colaborador e a data do ponto.', 'error');
-              return;
-            }
-            // Calculate a beautiful hours string based on entrance/exit
-            const ent = pontoForm.entrada || "08:00";
-            const sai = pontoForm.saida || "17:00";
-            const [h1, m1] = ent.split(':').map(Number);
-            const [h2, m2] = sai.split(':').map(Number);
-            let diffMins = (h2 * 60 + m2) - (h1 * 60 + m1);
-            if (diffMins < 0) diffMins += 24 * 60; // handle wrap around
-            // subtract 1 hour for lunch if shift is larger than 6 hours
-            if (diffMins > 360) diffMins -= 60;
-            const diffHoursDecimal = diffMins / 60;
-            const formattedHours = `${String(Math.floor(diffHoursDecimal)).padStart(2, '0')}:${String(Math.round((diffHoursDecimal % 1) * 60)).padStart(2, '0')} (Regular)`;
-
-            const novoObj = {
-              id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
-              colaborador: pontoForm.colaborador,
-              data: pontoForm.data,
-              entrada: ent,
-              saida: sai,
-              horas: formattedHours,
-              status: 'Regular'
-            };
-            setPontoPunches(prev => [novoObj, ...prev]);
-            addToast('Registro de ponto e jornada salvo e enviado ao eSocial Fase 4!', 'success');
-            setShowPontoModal(false);
-          }}
-          saveLabel="Salvar Registro"
-        >
-          <div className="space-y-4 py-2 text-left">
-            <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-400 font-bold uppercase">Nome do Colaborador (Obreiro, Pastor, Funcionário)</label>
-              <input 
-                type="text"
-                placeholder="Ex: Pastor Marcos Silva ou Pra. Débora Souza"
-                value={pontoForm.colaborador}
-                onChange={(e) => setPontoForm({ ...pontoForm, colaborador: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden"
-              />
+      {showPontoModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setShowPontoModal(false)}></div>
+          
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-205 z-10 animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-br from-indigo-700 via-indigo-800 to-indigo-900 text-white flex justify-between items-center relative">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-200 tracking-wider">Mapeamento de Jornada Ocupacional</span>
+                <h4 className="font-extrabold text-base font-[Outfit]">{editingPonto ? 'Editar Registro de Ponto' : 'Lançar Novo Ponto / Jornada'}</h4>
+              </div>
+              <button 
+                onClick={() => setShowPontoModal(false)} 
+                className="bg-white/10 hover:bg-rose-600 transition-colors p-1.5 rounded-lg cursor-pointer"
+              >
+                <X size={16} />
+              </button>
             </div>
+            
+            {/* Form */}
+            <div className="p-6 md:p-8 space-y-4 overflow-y-auto flex-1 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Tipo de Lançamento</label>
+                  <select 
+                    value={pontoForm.tipo_registro}
+                    onChange={(e) => setPontoForm({ ...pontoForm, tipo_registro: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden cursor-pointer"
+                  >
+                    <option value="trabalhado">Jornada Trabalhada (Com Batidas)</option>
+                    <option value="falta">Falta Sem Justificativa</option>
+                    <option value="atestado">Ausência por Atestado Médico</option>
+                    <option value="abono">Abono ou Missão Externa</option>
+                  </select>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Membro / Colaborador</label>
+                  <select 
+                    value={pontoForm.colaborador_id}
+                    onChange={(e) => {
+                      const matched = colaboradores.find((c: any) => c.id === e.target.value);
+                      setPontoForm({ 
+                        ...pontoForm, 
+                        colaborador_id: e.target.value,
+                        colaborador: matched ? matched.nome : e.target.value
+                      });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden cursor-pointer"
+                  >
+                    <option value="">Selecione...</option>
+                    {colaboradores.filter((c:any) => !c.deleted).map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.nome} ({c.cargo})</option>
+                    ))}
+                    <option value="outro">-- Outro / Digitar Nome --</option>
+                  </select>
+                </div>
+              </div>
+
+              {pontoForm.colaborador_id === 'outro' && (
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Digitar Nome Completo</label>
+                  <input 
+                    type="text"
+                    placeholder="Ex: Pastor Roberto de Oliveira"
+                    value={pontoForm.colaborador}
+                    onChange={(e) => setPontoForm({ ...pontoForm, colaborador: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1.5">
-                <label className="block text-[10px] text-slate-400 font-bold uppercase">Data do Ponto</label>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Data do Registro</label>
                 <input 
                   type="date"
                   value={pontoForm.data}
                   onChange={(e) => setPontoForm({ ...pontoForm, data: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-hidden font-semibold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-semibold"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] text-slate-400 font-bold uppercase">Hora de Entrada</label>
-                <input 
-                  type="time"
-                  value={pontoForm.entrada}
-                  onChange={(e) => setPontoForm({ ...pontoForm, entrada: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-bold"
-                />
-              </div>
+              {pontoForm.tipo_registro === 'trabalhado' ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-150">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] text-slate-500 font-black uppercase">1. Entrada</label>
+                      <input 
+                        type="time"
+                        value={pontoForm.entrada}
+                        onChange={(e) => setPontoForm({ ...pontoForm, entrada: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-755 font-mono font-bold outline-hidden"
+                      />
+                    </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] text-slate-400 font-bold uppercase">Hora de Saída</label>
-                <input 
-                  type="time"
-                  value={pontoForm.saida}
-                  onChange={(e) => setPontoForm({ ...pontoForm, saida: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-705 font-mono outline-hidden font-bold"
-                />
+                    <div className="space-y-1">
+                      <label className="block text-[9px] text-slate-500 font-black uppercase flex items-center gap-0.5">2. Alm. Saída</label>
+                      <input 
+                        type="time"
+                        value={pontoForm.alm_saida}
+                        onChange={(e) => setPontoForm({ ...pontoForm, alm_saida: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-755 font-mono font-bold outline-hidden"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] text-slate-500 font-black uppercase flex items-center gap-0.5">3. Alm. Retorno</label>
+                      <input 
+                        type="time"
+                        value={pontoForm.alm_retorno}
+                        onChange={(e) => setPontoForm({ ...pontoForm, alm_retorno: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-755 font-mono font-bold outline-hidden"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] text-slate-555 font-black uppercase font-bold text-slate-800">4. Saída Final</label>
+                      <input 
+                        type="time"
+                        value={pontoForm.saida}
+                        onChange={(e) => setPontoForm({ ...pontoForm, saida: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-700 font-mono font-bold outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase">Destinação das Horas Extras</label>
+                      <select 
+                        value={pontoForm.banco_ou_folha}
+                        onChange={(e) => setPontoForm({ ...pontoForm, banco_ou_folha: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-755 font-bold outline-hidden cursor-pointer"
+                      >
+                        <option value="folha">Pagar em Folha de Pagamento</option>
+                        <option value="banco">Acumular no Banco de Horas</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase">Observação / Justificativa</label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: Esquecimento de almoço registrado em papel"
+                        value={pontoForm.justificativa}
+                        onChange={(e) => setPontoForm({ ...pontoForm, justificativa: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 p-4 bg-[#f8fafc] border border-slate-200 rounded-2xl">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] text-slate-500 font-bold uppercase">Histórico / Descrição da Justificativa</label>
+                    <input 
+                      type="text"
+                      placeholder={
+                        pontoForm.tipo_registro === 'falta' ? 'Ex: Ausência injustificada na escala ministerial dízimo local' :
+                        pontoForm.tipo_registro === 'atestado' ? 'Ex: Atestado Odonto homologado' :
+                        'Ex: Abono - Representação em Evento eclesiástico'
+                      }
+                      value={pontoForm.justificativa}
+                      onChange={(e) => setPontoForm({ ...pontoForm, justificativa: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 outline-hidden font-semibold"
+                    />
+                  </div>
+
+                  {(pontoForm.tipo_registro === 'atestado' || pontoForm.tipo_registro === 'abono') && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-550 font-bold uppercase">Nome do PDF de Comprovação</label>
+                      <input 
+                        type="text"
+                        placeholder="Ex: atestado_folha_marcos.pdf"
+                        value={pontoForm.atestado_anexo || 'atestado_marcos.pdf'}
+                        onChange={(e) => setPontoForm({ ...pontoForm, atestado_anexo: e.target.value })}
+                        className="w-full bg-white border border-slate-205 rounded-lg p-2.5 text-xs text-slate-705 outline-hidden font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 text-[11px] text-slate-550 leading-relaxed">
+                <strong className="text-slate-700 block mb-0.5">Auditoria e eSocial Fase 4:</strong>
+                As horas salvas serão submetidas ao robô contábil para processamento automático.
               </div>
             </div>
+            
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3.5">
+              <button 
+                onClick={() => setShowPontoModal(false)}
+                className="bg-white border border-slate-250 text-slate-600 hover:bg-slate-100 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  let nameSelected = pontoForm.colaborador;
+                  let selectedID = pontoForm.colaborador_id;
+                  
+                  if (selectedID && selectedID !== 'outro') {
+                    const matchedC = colaboradores.find((c: any) => c.id === selectedID);
+                    if (matchedC) {
+                      nameSelected = matchedC.nome;
+                    }
+                  } else {
+                    selectedID = `c_${Date.now()}`;
+                  }
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 text-[11px] text-slate-550 leading-relaxed">
-              <strong className="text-slate-700 block mb-0.5">Nota de Conformidade:</strong>
-              As horas de jornada informadas acima serão automaticamente auditadas com o layout do eSocial Fase 4 (SST/Jornadas de Trabalho e Descansos) gerando as assinaturas fiscais A1 necessárias.
+                  if (!nameSelected || !pontoForm.data) {
+                    addToast('Por favor, defina o colaborador e a data do registro.', 'error');
+                    return;
+                  }
+
+                  const isSun = isSundayOrHoliday(pontoForm.data);
+                  let entMins = parseTimeToMinutes(pontoForm.entrada);
+                  let extMins = parseTimeToMinutes(pontoForm.saida);
+                  let almOutMins = parseTimeToMinutes(pontoForm.alm_saida);
+                  let almInMins = parseTimeToMinutes(pontoForm.alm_retorno);
+
+                  if (pontoForm.tipo_registro === 'falta') {
+                    const novoPunch = {
+                      id: editingPonto ? editingPonto.id : `po_${Date.now()}`,
+                      colaborador_id: selectedID,
+                      colaborador: nameSelected,
+                      data: pontoForm.data,
+                      entrada: '',
+                      alm_saida: '',
+                      alm_retorno: '',
+                      saida: '',
+                      horas_trabalhadas: 0,
+                      horas_extras: 0,
+                      status: 'Falta',
+                      inconsistente: false,
+                      justificativa: pontoForm.justificativa,
+                      atestado_anexo: ''
+                    };
+                    if (editingPonto) {
+                      setPontoPunches((prev: any) => prev.map((item: any) => item.id === editingPonto.id ? novoPunch : item));
+                    } else {
+                      setPontoPunches((prev: any) => [novoPunch, ...prev]);
+                    }
+                    addToast('Falta injustificada salva com sucesso. Será descontada automaticamente na sincronização!', 'warning');
+                    setShowPontoModal(false);
+                    return;
+                  }
+
+                  if (pontoForm.tipo_registro === 'atestado' || pontoForm.tipo_registro === 'abono') {
+                    const novoPunch = {
+                      id: editingPonto ? editingPonto.id : `po_${Date.now()}`,
+                      colaborador_id: selectedID,
+                      colaborador: nameSelected,
+                      data: pontoForm.data,
+                      entrada: '',
+                      alm_saida: '',
+                      alm_retorno: '',
+                      saida: '',
+                      horas_trabalhadas: 0,
+                      horas_extras: 0,
+                      status: 'Justificado',
+                      inconsistente: false,
+                      justificativa: pontoForm.justificativa || 'Atestado homologado',
+                      atestado_anexo: pontoForm.atestado_anexo || 'comprovante.pdf'
+                    };
+                    if (editingPonto) {
+                      setPontoPunches((prev: any) => prev.map((item: any) => item.id === editingPonto.id ? novoPunch : item));
+                    } else {
+                      setPontoPunches((prev: any) => [novoPunch, ...prev]);
+                    }
+                    addToast('Ausência com justificativa registrada e aceita pelo RH!', 'success');
+                    setShowPontoModal(false);
+                    return;
+                  }
+
+                  let totalWorkedMins = 0;
+                  let inconsistente = false;
+                  let alerta = '';
+
+                  if (!pontoForm.entrada || !pontoForm.saida) {
+                    inconsistente = true;
+                    alerta = 'Batida incompleta: Falta Entrada ou Saída!';
+                  } else {
+                    if (pontoForm.alm_saida && pontoForm.alm_retorno) {
+                      const p1 = almOutMins - entMins;
+                      const p2 = extMins - almInMins;
+                      if (p1 < 0 || p2 < 0) {
+                        inconsistente = true;
+                        alerta = 'Almoço inconsistente com horário principal!';
+                        totalWorkedMins = Math.max(0, extMins - entMins - 60);
+                      } else {
+                        totalWorkedMins = p1 + p2;
+                      }
+                    } else {
+                      const span = extMins - entMins;
+                      if (span < 0) {
+                        inconsistente = true;
+                        alerta = 'Entrada após o horário de saída!';
+                        totalWorkedMins = 0;
+                      } else {
+                        totalWorkedMins = span > 360 ? span - 60 : span;
+                        if (span > 360) {
+                          alerta = 'Intervalo de almoço deduzido de 1h automaticamente.';
+                        }
+                      }
+                    }
+                  }
+
+                  const workedHoursDecimal = totalWorkedMins / 60;
+                  let extraHours = 0;
+                  let statusLabel = 'Regular';
+
+                  if (isSun) {
+                    extraHours = workedHoursDecimal;
+                    statusLabel = '100% Extras (DSR)';
+                  } else {
+                    if (workedHoursDecimal > 8) {
+                      extraHours = workedHoursDecimal - 8;
+                      statusLabel = 'Horas Extras';
+                    }
+                  }
+
+                  if (extraHours > pontoConfigs.horasExtrasLimiteDiario) {
+                    addToast(`Atenção contábil: Colaborador acumulou mais de ${pontoConfigs.horasExtrasLimiteDiario}h extras diárias permissíveis!`, 'warning');
+                  }
+
+                  const novoPunch = {
+                    id: editingPonto ? editingPonto.id : `po_${Date.now()}`,
+                    colaborador_id: selectedID,
+                    colaborador: nameSelected,
+                    data: pontoForm.data,
+                    entrada: pontoForm.entrada,
+                    alm_saida: pontoForm.alm_saida,
+                    alm_retorno: pontoForm.alm_retorno,
+                    saida: pontoForm.saida,
+                    horas_trabalhadas: workedHoursDecimal,
+                    horas_extras: extraHours,
+                    status: inconsistente ? 'Inconsistente' : statusLabel,
+                    inconsistente,
+                    alerta,
+                    justificativa: pontoForm.justificativa,
+                    atestado_anexo: pontoForm.atestado_anexo
+                  };
+
+                  if (editingPonto) {
+                    setPontoPunches((prev: any) => prev.map((item: any) => item.id === editingPonto.id ? novoPunch : item));
+                    addToast('Registro de ponto de colaborador atualizado!', 'success');
+                  } else {
+                    setPontoPunches((prev: any) => [novoPunch, ...prev]);
+                    addToast('Nova jornada gravada com sucesso nas folhas de ponto!', 'success');
+                  }
+                  setShowPontoModal(false);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-2.5 rounded-xl cursor-pointer transition-colors shadow-sm"
+              >
+                Gravar Batida
+              </button>
             </div>
           </div>
-        </InteractiveWindow>
+        </div>,
+        document.body
       )}
 
     </div>
