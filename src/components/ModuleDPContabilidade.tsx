@@ -264,7 +264,9 @@ const ModuleDPContabilidade = memo(() => {
     };
   });
 
-  const [pontoSubTab, setPontoSubTab] = useState<'jornadas' | 'escalas' | 'justificativas' | 'integracao' | 'relatorios'>('jornadas');
+  const [pontoSubTab, setPontoSubTab] = useState<'jornadas' | 'planilha' | 'escalas' | 'justificativas' | 'integracao' | 'relatorios'>('jornadas');
+  const [planilhaColabId, setPlanilhaColabId] = useState<string>('');
+  const [gridEntries, setGridEntries] = useState<{[dateStr: string]: any}>({});
 
   const [showPontoModal, setShowPontoModal] = useState(false);
   const [editingPonto, setEditingPonto] = useState<any>(null);
@@ -296,6 +298,150 @@ const ModuleDPContabilidade = memo(() => {
   useEffect(() => {
     localStorage.setItem('gipp_ponto_configs', JSON.stringify(pontoConfigs));
   }, [pontoConfigs]);
+
+  // RH / Human Development States
+  const [vagas, setVagas] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_rh_vagas');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'v1', titulo: 'Analista Administrativo', codigo: 'V-102', status: 'ativa', depto: 'Administração', descricao: 'Atuação no setor administrativo e financeiro da instituição.', depto_contas: 'Administrativo', candidatosCount: 12 },
+      { id: 'v2', titulo: 'Auxiliar de Limpeza', codigo: 'V-098', status: 'pausada', depto: 'Serviços Gerais', descricao: 'Manutenção e conservação do templo e dependências.', depto_contas: 'Operacional', candidatosCount: 45 },
+      { id: 'v3', titulo: 'Coordenador Pedagógico EBD', codigo: 'V-105', status: 'ativa', depto: 'Educação', descricao: 'Coordenação e planejamento de disciplinas e treinamentos da Escola Bíblica.', depto_contas: 'Ministerial', candidatosCount: 4 }
+    ];
+  });
+
+  const [candidatos, setCandidatos] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_rh_candidatos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'cand1', vagaId: 'v1', nome: 'Mariana Ramos Santos', email: 'mari@ramos.com', status: 'Entrevista', qualificacao: 'Excelente experiência em fluxo de caixa', dataInscricao: '2026-05-10' },
+      { id: 'cand2', vagaId: 'v1', nome: 'Felipe Augusto Dias', email: 'felipe@dias.com', status: 'Triagem', qualificacao: 'Formação em Gestão Financeira', dataInscricao: '2026-05-12' },
+      { id: 'cand3', vagaId: 'v1', nome: 'Giselle Monteiro', email: 'giselle@monteiro.com', status: 'Aprovado', qualificacao: 'Selecionada para onboarding', dataInscricao: '2026-05-08' },
+      { id: 'cand4', vagaId: 'v2', nome: 'Antônio Ferreira', email: 'antonio@email.com', status: 'Entrevista', qualificacao: 'Disponibilidade imediata', dataInscricao: '2026-04-20' },
+      { id: 'cand5', vagaId: 'v2', nome: 'Sebastião Carlos', email: 'sebastiao@email.com', status: 'Dispensado', qualificacao: 'Não reside próximo', dataInscricao: '2026-04-18' }
+    ];
+  });
+
+  const [onboardings, setOnboardings] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_rh_onboardings');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'o1', colaboradorNome: 'Giselle Monteiro', cargoOriginal: 'Analista Administrativo', progresso: 50, dataInicio: '2026-06-01', tarefas: [
+        { id: 't1', titulo: 'Assinatura do Contrato de Trabalho', concluida: true },
+        { id: 't2', titulo: 'Treinamento de Integração Institucional', concluida: false },
+        { id: 't3', titulo: 'Apresentação aos Departamentos', concluida: false },
+        { id: 't4', titulo: 'Exame Admissional Realizado', concluida: true }
+      ]},
+      { id: 'o2', colaboradorNome: 'Mateus Oliveira', cargoOriginal: 'Sonoplasta Geral', progresso: 75, dataInicio: '2026-06-05', tarefas: [
+        { id: 't5', titulo: 'Termo de Voluntariado Assinado', concluida: true },
+        { id: 't6', titulo: 'Treinamento Técnico de Som', concluida: true },
+        { id: 't7', titulo: 'Cultura Sede & Ministérios', concluida: true },
+        { id: 't8', titulo: 'Primeiro culto acompanhado', concluida: false }
+      ]}
+    ];
+  });
+
+  const [treinamentos, setTreinamentos] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_rh_treinamentos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'tr1', titulo: 'Integração Institucional e Cultura', descricao: 'Obrigatório para novos colaboradores.', progresso: 85, instrutor: 'Pr. Marcos Silva', cargaHoraria: 8, status: 'Ativo' },
+      { id: 'tr2', titulo: 'CIPA e Prevenção de Acidentes', descricao: 'Renovação anual requerida (NR-05).', progresso: 40, instrutor: 'Dr. Roberto Cruz (SST)', cargaHoraria: 16, status: 'Ativo' },
+      { id: 'tr3', titulo: 'LGPD no Âmbito Eclesiástico', descricao: 'Treinamento de proteção de dados de membros do dízimo.', progresso: 10, instrutor: 'Dra. Amanda Souza', cargaHoraria: 4, status: 'Planejado' }
+    ];
+  });
+
+  const [desempenhoCiclos, setDesempenhoCiclos] = useState<any[]>(() => {
+    const saved = localStorage.getItem('gipp_rh_desempenho_ciclos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'd1', ciclo: 'Avaliação Desempenho H1 2026', periodo: 'Jan - Jun 2026', status: 'Planejamento', resumo: 'Escala de feedbacks para toda equipe pastoral e de apoio.', avaliadosCount: 0, taxaParticipacao: 0 },
+      { id: 'd2', ciclo: 'Pesquisa de Clima Organizacional', periodo: 'Nov 2025', status: 'Concluído', resumo: 'Mensuração anual de engajamento e bem-estar.', avaliadosCount: 15, taxaParticipacao: 82 }
+    ];
+  });
+
+  // Modal and Form States for RH Tab
+  const [showVagaModal, setShowVagaModal] = useState(false);
+  const [editingVaga, setEditingVaga] = useState<any>(null);
+  const [vagaForm, setVagaForm] = useState<any>({
+    titulo: '',
+    codigo: '',
+    depto: 'Administração',
+    status: 'ativa',
+    descricao: ''
+  });
+
+  const [selectedVagaFunil, setSelectedVagaFunil] = useState<any>(null);
+  const [showCandidatoModal, setShowCandidatoModal] = useState(false);
+  const [editingCandidato, setEditingCandidato] = useState<any>(null);
+  const [candidatoForm, setCandidatoForm] = useState<any>({
+    nome: '',
+    email: '',
+    status: 'Triagem',
+    qualificacao: ''
+  });
+
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [selectedOnboardingDetail, setSelectedOnboardingDetail] = useState<any>(null);
+  const [onboardingForm, setOnboardingForm] = useState<any>({
+    colaboradorNome: '',
+    cargoOriginal: '',
+    dataInicio: getTodayDate(),
+    tarefasCustom: 'Assinatura do Contrato\nIntegração de Cultura\nEntrega de Equipamentos\nExame de Saúde'
+  });
+
+  const [showTreinamentoModal, setShowTreinamentoModal] = useState(false);
+  const [editingTreinamento, setEditingTreinamento] = useState<any>(null);
+  const [treinamentoForm, setTreinamentoForm] = useState<any>({
+    titulo: '',
+    descricao: '',
+    progresso: 0,
+    instrutor: '',
+    cargaHoraria: '',
+    status: 'Ativo'
+  });
+
+  const [showDesempenhoModal, setShowDesempenhoModal] = useState(false);
+  const [editingDesempenho, setEditingDesempenho] = useState<any>(null);
+  const [desempenhoForm, setDesempenhoForm] = useState<any>({
+    ciclo: '',
+    periodo: '',
+    status: 'Planejamento',
+    resumo: '',
+    avaliadosCount: 0,
+    taxaParticipacao: 0
+  });
+
+  // Persists RH States
+  useEffect(() => {
+    localStorage.setItem('gipp_rh_vagas', JSON.stringify(vagas));
+  }, [vagas]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_rh_candidatos', JSON.stringify(candidatos));
+  }, [candidatos]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_rh_onboardings', JSON.stringify(onboardings));
+  }, [onboardings]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_rh_treinamentos', JSON.stringify(treinamentos));
+  }, [treinamentos]);
+
+  useEffect(() => {
+    localStorage.setItem('gipp_rh_desempenho_ciclos', JSON.stringify(desempenhoCiclos));
+  }, [desempenhoCiclos]);
   
   // State for references
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -448,6 +594,291 @@ const ModuleDPContabilidade = memo(() => {
     });
     return Array.from(months).sort().reverse();
   }, [folhas]);
+
+  // Synchronize Spreadsheet selected coworker default
+  useEffect(() => {
+    if (colaboradores && colaboradores.length > 0 && !planilhaColabId) {
+      setPlanilhaColabId(colaboradores[0]?.id || '');
+    }
+  }, [colaboradores, planilhaColabId]);
+
+  // Synchronize timesheet spreadsheet grid entries
+  useEffect(() => {
+    if (!planilhaColabId || !selectedMonth) return;
+    
+    const days = getDaysInMonth(selectedMonth);
+    const newGrid: {[dataStr: string]: any} = {};
+    
+    days.forEach((dayDate: Date) => {
+      const y = dayDate.getFullYear();
+      const m = String(dayDate.getMonth() + 1).padStart(2, '0');
+      const d = String(dayDate.getDate()).padStart(2, '0');
+      const dStr = `${y}-${m}-${d}`;
+      
+      const existing = pontoPunches.find((p: any) => p.colaborador_id === planilhaColabId && p.data === dStr);
+      
+      if (existing) {
+        newGrid[dStr] = {
+          id: existing.id,
+          entrada: existing.entrada || '',
+          alm_saida: existing.alm_saida || '',
+          alm_retorno: existing.alm_retorno || '',
+          saida: existing.saida || '',
+          tipo_registro: existing.status === 'Falta' ? 'falta' : 
+                         existing.status === 'Justificado' ? 'atestado' : 
+                         isSundayOrHoliday(dStr) ? 'folga' : 'trabalhado',
+          status: existing.status || 'Regular',
+          justificativa: existing.justificativa || '',
+          atestado_anexo: existing.atestado_anexo || ''
+        };
+      } else {
+        const isSun = isSundayOrHoliday(dStr);
+        newGrid[dStr] = {
+          id: `temp_${dStr}_${planilhaColabId}`,
+          entrada: '',
+          alm_saida: '',
+          alm_retorno: '',
+          saida: '',
+          tipo_registro: isSun ? 'folga' : 'pendente',
+          status: isSun ? '100% Extras (DSR)' : 'Não Batido',
+          justificativa: '',
+          atestado_anexo: ''
+        };
+      }
+    });
+    
+    setGridEntries(newGrid);
+  }, [planilhaColabId, selectedMonth, pontoPunches]);
+
+  // Helper calculation for individual row hours
+  const calculateRowWorkedHours = (row: any) => {
+    if (!row.entrada || !row.saida) return 0;
+    
+    const entMins = parseTimeToMinutes(row.entrada);
+    const extMins = parseTimeToMinutes(row.saida);
+    const almOutMins = parseTimeToMinutes(row.alm_saida);
+    const almInMins = parseTimeToMinutes(row.alm_retorno);
+    
+    let totalWorkedMins = 0;
+    
+    if (row.alm_saida && row.alm_retorno) {
+      const p1 = almOutMins - entMins;
+      const p2 = extMins - almInMins;
+      if (p1 < 0 || p2 < 0) {
+        totalWorkedMins = Math.max(0, extMins - entMins - 60);
+      } else {
+        totalWorkedMins = p1 + p2;
+      }
+    } else {
+      const span = extMins - entMins;
+      if (span < 0) {
+        totalWorkedMins = 0;
+      } else {
+        totalWorkedMins = span > 360 ? span - 60 : span;
+      }
+    }
+    
+    return totalWorkedMins / 60;
+  };
+
+  // Live Summary computed state of active grid
+  const spreadsheetSummary = useMemo(() => {
+    let totalExtras = 0;
+    let totalNegativas = 0;
+    let totalFaltas = 0;
+    let totalAtestados = 0;
+    let totalTrabalhados = 0;
+    
+    Object.entries(gridEntries).forEach(([dateStr, row]: [string, any]) => {
+      const isSun = isSundayOrHoliday(dateStr);
+      
+      if (row.tipo_registro === 'falta') {
+        totalFaltas += 1;
+        totalNegativas += 8;
+      } else if (row.tipo_registro === 'atestado') {
+        totalAtestados += 1;
+      } else if (row.tipo_registro === 'folga') {
+        if (row.entrada && row.saida) {
+          const workedHours = calculateRowWorkedHours(row);
+          totalExtras += workedHours;
+        }
+      } else if (row.tipo_registro === 'trabalhado' || (row.entrada && row.saida)) {
+        totalTrabalhados += 1;
+        const workedHours = calculateRowWorkedHours(row);
+        
+        if (isSun) {
+          totalExtras += workedHours;
+        } else {
+          if (workedHours > 8) {
+            totalExtras += (workedHours - 8);
+          } else if (workedHours < 8) {
+            totalNegativas += (8 - workedHours);
+          }
+        }
+      }
+    });
+    
+    return {
+      totalExtras,
+      totalNegativas,
+      totalFaltas,
+      totalAtestados,
+      totalTrabalhados
+    };
+  }, [gridEntries]);
+
+  // Handle cell typing directly on sheet
+  const handleGridCellChange = (dateStr: string, field: string, value: string) => {
+    setGridEntries(prev => {
+      const updatedRow = { ...prev[dateStr], [field]: value };
+      
+      if (field === 'tipo_registro') {
+        if (value === 'falta') {
+          updatedRow.entrada = '';
+          updatedRow.alm_saida = '';
+          updatedRow.alm_retorno = '';
+          updatedRow.saida = '';
+          updatedRow.status = 'Falta';
+        } else if (value === 'atestado') {
+          updatedRow.entrada = '';
+          updatedRow.alm_saida = '';
+          updatedRow.alm_retorno = '';
+          updatedRow.saida = '';
+          updatedRow.status = 'Justificado';
+        } else if (value === 'folga') {
+          updatedRow.entrada = '';
+          updatedRow.alm_saida = '';
+          updatedRow.alm_retorno = '';
+          updatedRow.saida = '';
+          updatedRow.status = 'DSR / Folga';
+        } else if (value === 'trabalhado') {
+          const coEscala = pontoEscalas.find((e: any) => e.colaborador_id === planilhaColabId);
+          updatedRow.entrada = updatedRow.entrada || coEscala?.entrada || '08:00';
+          updatedRow.alm_saida = updatedRow.alm_saida || '12:00';
+          updatedRow.alm_retorno = updatedRow.alm_retorno || '13:00';
+          updatedRow.saida = updatedRow.saida || coEscala?.saida || '17:00';
+          updatedRow.status = 'Regular';
+        } else if (value === 'pendente') {
+          updatedRow.entrada = '';
+          updatedRow.alm_saida = '';
+          updatedRow.alm_retorno = '';
+          updatedRow.saida = '';
+          updatedRow.status = 'Não Batido';
+        }
+      }
+      
+      return { ...prev, [dateStr]: updatedRow };
+    });
+  };
+
+  // Perform Auto fill standard times on weekdays
+  const handleAutoFillPlanilha = () => {
+    const coEscala = pontoEscalas.find((e: any) => e.colaborador_id === planilhaColabId);
+    const defEnt = coEscala?.entrada || '08:00';
+    const defSai = coEscala?.saida || '17:00';
+    
+    setGridEntries(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(dateStr => {
+        const isSun = isSundayOrHoliday(dateStr);
+        if (!isSun && (!updated[dateStr].entrada || !updated[dateStr].saida) && updated[dateStr].tipo_registro !== 'falta' && updated[dateStr].tipo_registro !== 'atestado' && updated[dateStr].tipo_registro !== 'folga') {
+          updated[dateStr] = {
+            ...updated[dateStr],
+            entrada: defEnt,
+            alm_saida: '12:00',
+            alm_retorno: '13:00',
+            saida: defSai,
+            tipo_registro: 'trabalhado',
+            status: 'Regular'
+          };
+        }
+      });
+      return updated;
+    });
+    addToast('Horários padrão autopreenchidos com base na escala!', 'success');
+  };
+
+  // Bulk save changes to persistent state in DB
+  const handleSavePlanilhaToDB = () => {
+    if (!planilhaColabId) {
+      addToast('Erro: Selecione um colaborador válido.', 'error');
+      return;
+    }
+    
+    const matchedColab = colaboradores.find((c: any) => c.id === planilhaColabId);
+    const colabNome = matchedColab ? matchedColab.nome : 'Colaborador';
+    
+    // Extract non-overlapping entries
+    const cleanPunches = pontoPunches.filter((p: any) => !(p.colaborador_id === planilhaColabId && p.data?.startsWith(selectedMonth)));
+    
+    const saveList: any[] = [];
+    
+    Object.entries(gridEntries).forEach(([dateStr, row]: [string, any]) => {
+      if (row.tipo_registro === 'pendente') {
+        return; // skip unsaved blank rows
+      }
+      
+      const isSun = isSundayOrHoliday(dateStr);
+      let workedHours = 0;
+      let extraHours = 0;
+      let statusLabel = 'Regular';
+      let inconsistente = false;
+      let alerta = '';
+      
+      if (row.tipo_registro === 'falta') {
+        statusLabel = 'Falta';
+      } else if (row.tipo_registro === 'atestado') {
+        statusLabel = 'Justificado';
+      } else if (row.tipo_registro === 'folga') {
+        statusLabel = 'Folga';
+        if (row.entrada && row.saida) {
+          workedHours = calculateRowWorkedHours(row);
+          extraHours = workedHours;
+          statusLabel = '100% Extras (DSR)';
+        }
+      } else if (row.tipo_registro === 'trabalhado') {
+        if (!row.entrada || !row.saida) {
+          inconsistente = true;
+          alerta = 'Batida incompleta na folha rápida.';
+          statusLabel = 'Inconsistente';
+        } else {
+          workedHours = calculateRowWorkedHours(row);
+          if (isSun) {
+            extraHours = workedHours;
+            statusLabel = '100% Extras (DSR)';
+          } else {
+            if (workedHours > 8) {
+              extraHours = workedHours - 8;
+              statusLabel = 'Horas Extras';
+            } else {
+              statusLabel = 'Regular';
+            }
+          }
+        }
+      }
+      
+      saveList.push({
+        id: String(row.id).startsWith('temp_') ? `po_${Date.now()}_${Math.random().toString(36).substr(2, 5)}` : row.id,
+        colaborador_id: planilhaColabId,
+        colaborador: colabNome,
+        data: dateStr,
+        entrada: row.entrada || '',
+        alm_saida: row.alm_saida || '',
+        alm_retorno: row.alm_retorno || '',
+        saida: row.saida || '',
+        horas_trabalhadas: workedHours,
+        horas_extras: extraHours,
+        status: statusLabel,
+        inconsistente,
+        alerta,
+        justificativa: row.justificativa || '',
+        atestado_anexo: row.atestado_anexo || ''
+      });
+    });
+    
+    setPontoPunches([...saveList, ...cleanPunches]);
+    addToast(`Planilha de pontualidade de "${colabNome}" consolidada no servidor!`, 'success');
+  };
 
   // Helper: Format values to BRLcurrency
   const formatBRL = (val: any) => {
@@ -1097,6 +1528,262 @@ const ModuleDPContabilidade = memo(() => {
     link.click();
     document.body.removeChild(link);
     addToast('Espelho de ponto detalhado exportado com sucesso em CSV!', 'success');
+  };
+
+  // --- RH HANDLERS & OPERATIONS ---
+
+  // Vacancy Handlers
+  const handleSaveVaga = () => {
+    if (!vagaForm.titulo || !vagaForm.codigo) {
+      addToast('O título e o código da vaga são obrigatórios.', 'error');
+      return;
+    }
+
+    if (editingVaga) {
+      setVagas(prev => prev.map(v => v.id === editingVaga.id ? { ...v, ...vagaForm } : v));
+      addToast(`Vaga "${vagaForm.titulo}" atualizada com sucesso!`, 'success');
+    } else {
+      const newVaga = {
+        id: `v_${Date.now()}`,
+        ...vagaForm,
+        candidatosCount: 0
+      };
+      setVagas(prev => [...prev, newVaga]);
+      addToast(`Nova vaga de "${vagaForm.titulo}" cadastrada e aberta!`, 'success');
+    }
+    setShowVagaModal(false);
+    setEditingVaga(null);
+  };
+
+  const handleDeleteVaga = (vagaId: string) => {
+    if (window.confirm('Deseja realmente remover esta vaga? Todos os candidatos associados precisarão ser remanejados.')) {
+      setVagas(prev => prev.filter(v => v.id !== vagaId));
+      setCandidatos(prev => prev.filter(cand => cand.vagaId !== vagaId));
+      addToast('Vaga excluída com sucesso.', 'info');
+      if (selectedVagaFunil && selectedVagaFunil.id === vagaId) {
+        setSelectedVagaFunil(null);
+      }
+    }
+  };
+
+  // Candidate Handlers
+  const handleSaveCandidato = () => {
+    if (!candidatoForm.nome || !candidatoForm.email) {
+      addToast('Nome e e-mail do candidato são obrigatórios.', 'error');
+      return;
+    }
+
+    if (editingCandidato) {
+      setCandidatos(prev => prev.map(c => c.id === editingCandidato.id ? { ...c, ...candidatoForm } : v => v));
+      addToast(`Candidato "${candidatoForm.nome}" atualizado!`, 'success');
+    } else {
+      const newCand = {
+        id: `cand_${Date.now()}`,
+        vagaId: selectedVagaFunil.id,
+        nome: candidatoForm.nome,
+        email: candidatoForm.email,
+        status: candidatoForm.status || 'Triagem',
+        qualificacao: candidatoForm.qualificacao,
+        dataInscricao: getTodayDate()
+      };
+      setCandidatos(prev => [...prev, newCand]);
+      addToast(`Candidato "${candidatoForm.nome}" adicionado com sucesso!`, 'success');
+    }
+    setShowCandidatoModal(false);
+    setEditingCandidato(null);
+  };
+
+  const handleDeleteCandidato = (candId: string) => {
+    if (window.confirm('Tem certeza de que deseja remover este candidato?')) {
+      setCandidatos(prev => prev.filter(c => c.id !== candId));
+      addToast('Candidato removido do processo.', 'info');
+    }
+  };
+
+  const handlePromoveCandidatoAoOnboarding = (cand: any) => {
+    const matchedVaga = vagas.find(v => v.id === cand.vagaId);
+    if (!matchedVaga) return;
+
+    // Create Onboarding
+    const onboardId = `o_${Date.now()}`;
+    const defaultTarefas = [
+      { id: `t1_${onboardId}`, titulo: 'Assinatura do Contrato de Trabalho / Voluntariado', concluida: false },
+      { id: `t2_${onboardId}`, titulo: 'Treinamento de Integração Institucional e Cultura', concluida: false },
+      { id: `t3_${onboardId}`, titulo: 'Apresentação presencial à equipe e liderança', concluida: false },
+      { id: `t4_${onboardId}`, titulo: 'Exceder acessos nos portais (GIPP e Comunidade)', concluida: false }
+    ];
+
+    const newOnboarding = {
+      id: onboardId,
+      colaboradorNome: cand.nome,
+      cargoOriginal: matchedVaga.titulo,
+      progresso: 0,
+      dataInicio: getTodayDate(),
+      tarefas: defaultTarefas
+    };
+
+    setOnboardings(prev => [...prev, newOnboarding]);
+    // Move candidate's status to Aprovado
+    setCandidatos(prev => prev.map(c => c.id === cand.id ? { ...c, status: 'Aprovado' } : c));
+    addToast(`Onboarding para "${cand.nome}" iniciado com sucesso na trilha de ${matchedVaga.titulo}!`, 'success');
+    setSelectedVagaFunil(null); // Close pipeline view
+    setRhActiveTab('onboarding'); // Go to onboarding
+  };
+
+  // Onboarding Handlers
+  const handleSaveOnboarding = () => {
+    if (!onboardingForm.colaboradorNome || !onboardingForm.cargoOriginal) {
+      addToast('Nome do colaborador e cargo são campos requeridos.', 'error');
+      return;
+    }
+
+    const tasksList = onboardingForm.tarefasCustom
+      .split('\n')
+      .map((t: string) => t.trim())
+      .filter((t: string) => t.length > 0)
+      .map((t: string, idx: number) => ({
+        id: `tCustom_${Date.now()}_${idx}`,
+        titulo: t,
+        concluida: false
+      }));
+
+    const newOnboarding = {
+      id: `o_${Date.now()}`,
+      colaboradorNome: onboardingForm.colaboradorNome,
+      cargoOriginal: onboardingForm.cargoOriginal,
+      progresso: 0,
+      dataInicio: onboardingForm.dataInicio || getTodayDate(),
+      tarefas: tasksList.length > 0 ? tasksList : [
+        { id: `t_${Date.now()}_1`, titulo: 'Assinatura de Documentos', concluida: false },
+        { id: `t_${Date.now()}_2`, titulo: 'Sessão de Orientação da Igreja', concluida: false }
+      ]
+    };
+
+    setOnboardings(prev => [...prev, newOnboarding]);
+    addToast(`Trilha de onboarding aberta com sucesso para "${onboardingForm.colaboradorNome}"!`, 'success');
+    setShowOnboardingModal(false);
+  };
+
+  const handleToggleTarefaOnboarding = (onboardId: string, taskId: string) => {
+    setOnboardings(prev => prev.map(o => {
+      if (o.id !== onboardId) return o;
+      const updatedTarefas = o.tarefas.map((t: any) => t.id === taskId ? { ...t, concluida: !t.concluida } : t);
+      const total = updatedTarefas.length;
+      const completed = updatedTarefas.filter((t: any) => t.concluida).length;
+      const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      const updatedOnboarding = {
+        ...o,
+        tarefas: updatedTarefas,
+        progresso: progress
+      };
+      
+      if (selectedOnboardingDetail && selectedOnboardingDetail.id === onboardId) {
+        setSelectedOnboardingDetail(updatedOnboarding);
+      }
+
+      return updatedOnboarding;
+    }));
+  };
+
+  const handleDeleteOnboarding = (oId: string) => {
+    if (window.confirm('Deseja excluir esta jornada de onboarding?')) {
+      setOnboardings(prev => prev.filter(o => o.id !== oId));
+      addToast('Onboarding excluído.', 'info');
+      setSelectedOnboardingDetail(null);
+    }
+  };
+
+  const handleFinalizeOnboarding = (onboard: any) => {
+    if (window.confirm(`Deseja efetivar "${onboard.colaboradorNome}" no quadro de colaboradores ativos?`)) {
+      // Simulate adding a full clt record or simply updating
+      const newColab = {
+        id: `c_${Date.now()}`,
+        nome: onboard.colaboradorNome,
+        cpf: '000.000.000-00',
+        rg: '00.000.000-0',
+        tipo: 'funcionario',
+        cargo: onboard.cargoOriginal,
+        salario_base: 3200,
+        banco_nome: 'Itaú Unibanco',
+        banco_agencia: '0123',
+        banco_conta: '45678-9',
+        status: 'ativo',
+        deleted: false,
+        created_at: new Date().toISOString()
+      };
+      
+      // Let's add directly to dbState colaboradores if available
+      setDbState((prev: any) => ({
+        ...prev,
+        colaboradores: [...(prev.colaboradores || []), newColab]
+      }));
+
+      setOnboardings(prev => prev.filter(o => o.id !== onboard.id));
+      addToast(`Parabéns! "${onboard.colaboradorNome}" concluído com 100% e admitido oficialmente como colaborador ativo!`, 'success');
+      setSelectedOnboardingDetail(null);
+    }
+  };
+
+  // Trainings
+  const handleSaveTreinamento = () => {
+    if (!treinamentoForm.titulo || !treinamentoForm.instrutor) {
+      addToast('Preencha ao menos o título e instrutor do curso.', 'error');
+      return;
+    }
+
+    if (editingTreinamento) {
+      setTreinamentos(prev => prev.map(t => t.id === editingTreinamento.id ? { ...t, ...treinamentoForm } : t));
+      addToast(`Treinamento "${treinamentoForm.titulo}" atualizado!`, 'success');
+    } else {
+      const newTr = {
+        id: `tr_${Date.now()}`,
+        ...treinamentoForm,
+        progresso: Number(treinamentoForm.progresso) || 0
+      };
+      setTreinamentos(prev => [...prev, newTr]);
+      addToast(`Curso "${treinamentoForm.titulo}" inserido no catálogo!`, 'success');
+    }
+    setShowTreinamentoModal(false);
+    setEditingTreinamento(null);
+  };
+
+  const handleDeleteTreinamento = (trId: string) => {
+    if (window.confirm('Remover esse treinamento do catálogo?')) {
+      setTreinamentos(prev => prev.filter(t => t.id !== trId));
+      addToast('Curso excluído.', 'info');
+    }
+  };
+
+  // Performance Cycles
+  const handleSaveDesempenho = () => {
+    if (!desempenhoForm.ciclo || !desempenhoForm.periodo) {
+      addToast('O nome do ciclo de avaliação e o período são obrigatórios.', 'error');
+      return;
+    }
+
+    if (editingDesempenho) {
+      setDesempenhoCiclos(prev => prev.map(d => d.id === editingDesempenho.id ? { ...d, ...desempenhoForm } : d));
+      addToast(`Ciclo de avaliação "${desempenhoForm.ciclo}" atualizado!`, 'success');
+    } else {
+      const newD = {
+        id: `d_${Date.now()}`,
+        ...desempenhoForm,
+        avaliadosCount: Number(desempenhoForm.avaliadosCount) || 0,
+        taxaParticipacao: Number(desempenhoForm.taxaParticipacao) || 0
+      };
+      setDesempenhoCiclos(prev => [...prev, newD]);
+      addToast(`Novo ciclo de avaliação "${desempenhoForm.ciclo}" planejado com sucesso!`, 'success');
+    }
+    setShowDesempenhoModal(false);
+    setEditingDesempenho(null);
+  };
+
+  const handleDeleteDesempenho = (dId: string) => {
+    if (window.confirm('Excluir este ciclo de avaliação? Os registros históricos serão excluídos.')) {
+      setDesempenhoCiclos(prev => prev.filter(d => d.id !== dId));
+      addToast('Ciclo de avaliação excluído do histórico.', 'info');
+    }
   };
 
   // Delete Individual Pay slip
@@ -3932,6 +4619,12 @@ const ModuleDPContabilidade = memo(() => {
                 <Clock size={14} /> Registrar Jornadas ({pontoPunches.length})
               </button>
               <button 
+                onClick={() => setPontoSubTab('planilha')}
+                className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'planilha' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+              >
+                <FileSpreadsheet size={14} /> Planilha de Ponto (Mensal)
+              </button>
+              <button 
                 onClick={() => setPontoSubTab('escalas')}
                 className={`py-2 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${pontoSubTab === 'escalas' ? 'border-indigo-600 text-indigo-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
               >
@@ -4134,6 +4827,287 @@ const ModuleDPContabilidade = memo(() => {
                     <Shield size={12} className="text-emerald-600" /> Sincronização eSocial Fase 4 (SST/Jornadas de Trabalho e Descansos) homologada e ativa.
                   </span>
                   <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded font-black uppercase">Homologado</span>
+                </div>
+              </div>
+            )}
+
+            {pontoSubTab === 'planilha' && (
+              <div className="space-y-4">
+                {/* Spreadsheet Top Control Panel */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-col">
+                      <label className="text-[10px] font-black uppercase text-slate-500 mb-1">Colaborador</label>
+                      <select
+                        value={planilhaColabId}
+                        onChange={(e) => setPlanilhaColabId(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
+                      >
+                        {colaboradores.filter((c: any) => !c.deleted).map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.nome} ({c.cargo || 'Funcional'})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label className="text-[10px] font-black uppercase text-slate-500 mb-1">Mês de Referência</label>
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
+                      >
+                        {availableMonths.map((m: any) => (
+                          <option key={m} value={m}>{m.split('-').reverse().join('/')}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAutoFillPlanilha}
+                      className="bg-white hover:bg-slate-100 border border-slate-250 text-slate-700 font-bold text-xs px-3 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer text-left"
+                      title="Preenche automaticamente todos os dias de semana com os horários padrão da escala"
+                    >
+                      <Sparkles size={14} className="text-amber-500 animate-pulse" /> Autopreencher Escala
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSavePlanilhaToDB}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Check size={14} /> Salvar Planilha do Mês
+                    </button>
+                  </div>
+                </div>
+
+                {/* Summation Summary Cards Dashboard */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-sans">
+                  <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] font-black uppercase text-slate-400">Dias Trabalhados</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-xl font-black text-slate-800">{spreadsheetSummary.totalTrabalhados}</span>
+                      <span className="text-[10px] text-slate-400 font-semibold">dias</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] font-black uppercase text-rose-500">Total Faltas</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-xl font-black text-rose-600">{spreadsheetSummary.totalFaltas}</span>
+                      <span className="text-[10px] text-rose-400 font-semibold">faltas</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] font-black uppercase text-blue-500">Atestados Médicos</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-xl font-black text-blue-600">{spreadsheetSummary.totalAtestados}</span>
+                      <span className="text-[10px] text-blue-400 font-semibold">abonos</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] font-black uppercase text-emerald-600">Total Horas Extras</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-xl font-black text-emerald-600">+{spreadsheetSummary.totalExtras.toFixed(1)}</span>
+                      <span className="text-[10px] text-emerald-500 font-semibold font-sans">horas</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] font-black uppercase text-amber-600">Saldo Negativo</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-xl font-black text-amber-600">-{spreadsheetSummary.totalNegativas.toFixed(1)}</span>
+                      <span className="text-[10px] text-amber-500 font-semibold font-sans">horas</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct Typing Worksheet Table */}
+                <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <FileSpreadsheet size={15} className="text-indigo-600" /> Folha de Apontamento Individual Rápido
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-semibold">
+                      Digite os horários diretamente na planilha. Linhas com cor diferente indicam finais de semana ou abonos.
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/70 border-b border-slate-150 text-[10px] font-black uppercase text-slate-500">
+                          <th className="py-2.5 px-3 w-28">Dia / Semana</th>
+                          <th className="py-2.5 px-3 w-36">Tipo Registro</th>
+                          <th className="py-2.5 px-3 text-center">Entrada</th>
+                          <th className="py-2.5 px-3 text-center">Saída Alm.</th>
+                          <th className="py-2.5 px-3 text-center">Ret. Alm.</th>
+                          <th className="py-2.5 px-3 text-center">Saída</th>
+                          <th className="py-2.5 px-3 text-center w-24">Hrs Trab.</th>
+                          <th className="py-2.5 px-3 text-center w-24">Crédito/Déb.</th>
+                          <th className="py-2.5 px-3 min-w-44">Justificativa / Motivo de Ausência</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(gridEntries)
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([dateStr, row]: [string, any]) => {
+                            const isSun = isSundayOrHoliday(dateStr);
+                            const [y, m, d] = dateStr.split('-');
+                            const dObj = new Date(Number(y), Number(m)-1, Number(d));
+                            const weekdayLabel = dObj.toLocaleDateString('pt-BR', { weekday: 'short' });
+                            
+                            // Format worked/extra hours
+                            let workedHoursStr = '--:--';
+                            let balanceStr = '0.0h';
+                            let balanceClass = 'text-slate-450';
+                            
+                            if (row.tipo_registro === 'trabalhado' || (row.entrada && row.saida)) {
+                              const hrs = calculateRowWorkedHours(row);
+                              workedHoursStr = `${hrs.toFixed(1)}h`;
+                              if (isSun) {
+                                balanceStr = `+${hrs.toFixed(1)}h`;
+                                balanceClass = 'text-emerald-600 font-extrabold';
+                              } else {
+                                if (hrs > 8) {
+                                  balanceStr = `+${(hrs - 8).toFixed(1)}h`;
+                                  balanceClass = 'text-emerald-600 font-extrabold';
+                                } else if (hrs < 8) {
+                                  balanceStr = `-${(8 - hrs).toFixed(1)}h`;
+                                  balanceClass = 'text-rose-600 font-extrabold';
+                                } else {
+                                  balanceStr = 'Salvo';
+                                  balanceClass = 'text-slate-500';
+                                }
+                              }
+                            } else if (row.tipo_registro === 'falta') {
+                              workedHoursStr = '0h';
+                              balanceStr = '-8.0h';
+                              balanceClass = 'text-rose-600 font-extrabold';
+                            } else if (row.tipo_registro === 'atestado') {
+                              workedHoursStr = '0h';
+                              balanceStr = 'Abonado';
+                              balanceClass = 'text-blue-600 font-bold';
+                            } else if (row.tipo_registro === 'folga') {
+                              workedHoursStr = '0h';
+                              balanceStr = 'Folga';
+                              balanceClass = 'text-slate-400';
+                            }
+
+                            // Define row accent colors
+                            let rowBg = 'hover:bg-slate-50/50';
+                            if (isSun) rowBg = 'bg-amber-50/20 hover:bg-amber-50/40 text-amber-900';
+                            else if (row.tipo_registro === 'falta') rowBg = 'bg-rose-50/20 hover:bg-rose-50/40';
+                            else if (row.tipo_registro === 'atestado') rowBg = 'bg-blue-50/20 hover:bg-blue-50/40';
+
+                            return (
+                              <tr key={dateStr} className={`border-b border-slate-100 text-xs transition-colors ${rowBg}`}>
+                                <td className="py-1 px-3 font-semibold text-slate-700">
+                                  <span className="font-extrabold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded mr-1 text-[10px]">
+                                    {d}
+                                  </span>
+                                  <span className="capitalize">{weekdayLabel}</span>
+                                </td>
+                                
+                                <td className="py-1 px-2">
+                                  <select
+                                    value={row.tipo_registro}
+                                    onChange={(e) => handleGridCellChange(dateStr, 'tipo_registro', e.target.value)}
+                                    className="bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 text-[11px] font-semibold w-full outline-none focus:bg-white cursor-pointer"
+                                  >
+                                    <option value="pendente">Não Batido/Vazio</option>
+                                    <option value="trabalhado">Trabalhado (Regular)</option>
+                                    <option value="falta">Falta (Descontar)</option>
+                                    <option value="atestado">Atestado / Abono</option>
+                                    <option value="folga">DSR / Folga Semanal</option>
+                                  </select>
+                                </td>
+
+                                <td className="py-1 px-1 text-center">
+                                  <input
+                                    type="time"
+                                    value={row.entrada}
+                                    disabled={row.tipo_registro === 'falta' || row.tipo_registro === 'atestado' || row.tipo_registro === 'folga'}
+                                    onChange={(e) => handleGridCellChange(dateStr, 'entrada', e.target.value)}
+                                    className="bg-transparent border border-transparent hover:border-slate-350 focus:border-indigo-500 focus:bg-white rounded px-1 px-1.5 py-1 text-xs text-center outline-none w-20 font-semibold disabled:opacity-50"
+                                  />
+                                </td>
+
+                                <td className="py-1 px-1 text-center">
+                                  <input
+                                    type="time"
+                                    value={row.alm_saida}
+                                    disabled={row.tipo_registro === 'falta' || row.tipo_registro === 'atestado' || row.tipo_registro === 'folga'}
+                                    onChange={(e) => handleGridCellChange(dateStr, 'alm_saida', e.target.value)}
+                                    className="bg-transparent border border-transparent hover:border-slate-355 focus:border-indigo-500 focus:bg-white rounded px-1 px-1.5 py-1 text-xs text-center outline-none w-20 font-semibold disabled:opacity-50"
+                                  />
+                                </td>
+
+                                <td className="py-1 px-1 text-center">
+                                  <input
+                                    type="time"
+                                    value={row.alm_retorno}
+                                    disabled={row.tipo_registro === 'falta' || row.tipo_registro === 'atestado' || row.tipo_registro === 'folga'}
+                                    onChange={(e) => handleGridCellChange(dateStr, 'alm_retorno', e.target.value)}
+                                    className="bg-transparent border border-transparent hover:border-slate-355 focus:border-indigo-500 focus:bg-white rounded px-1 px-1.5 py-1 text-xs text-center outline-none w-20 font-semibold disabled:opacity-50"
+                                  />
+                                </td>
+
+                                <td className="py-1 px-1 text-center">
+                                  <input
+                                    type="time"
+                                    value={row.saida}
+                                    disabled={row.tipo_registro === 'falta' || row.tipo_registro === 'atestado' || row.tipo_registro === 'folga'}
+                                    onChange={(e) => handleGridCellChange(dateStr, 'saida', e.target.value)}
+                                    className="bg-transparent border border-transparent hover:border-slate-355 focus:border-indigo-500 focus:bg-white rounded px-1 px-1.5 py-1 text-xs text-center outline-none w-20 font-semibold disabled:opacity-50"
+                                  />
+                                </td>
+
+                                <td className="py-1 px-2 text-center font-bold text-slate-750">
+                                  {workedHoursStr}
+                                </td>
+
+                                <td className={`py-1 px-2 text-center font-bold ${balanceClass}`}>
+                                  {balanceStr}
+                                </td>
+
+                                <td className="py-1 px-3">
+                                  <input
+                                    type="text"
+                                    value={row.justificativa}
+                                    disabled={row.tipo_registro === 'folga' || row.tipo_registro === 'pendente'}
+                                    onChange={(e) => handleGridCellChange(dateStr, 'justificativa', e.target.value)}
+                                    placeholder={
+                                      row.tipo_registro === 'falta' ? 'Motivo da Falta...' : 
+                                      row.tipo_registro === 'atestado' ? 'Nº do CID / Clinica...' : 
+                                      'Anotação de atraso/compensação...'
+                                    }
+                                    className="bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-500 focus:bg-white rounded px-2 py-0.5 text-xs outline-none w-full font-medium text-slate-600 disabled:opacity-50 placeholder:text-slate-350"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50/50 gap-2">
+                    <span className="text-[10px] text-slate-450 font-semibold flex items-center gap-1.5">
+                      <ShieldAlert size={12} className="text-indigo-650" /> Transmissão direta para o portal de ponto consolidada e monitoramento de horas negativas ativo.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSavePlanilhaToDB}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-5 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Check size={14} /> Fechar e Gravar Planilha Mensal
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -5144,36 +6118,78 @@ const ModuleDPContabilidade = memo(() => {
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
                   <div>
                     <h4 className="text-sm font-black text-slate-800">Vagas Abertas</h4>
-                    <p className="text-xs text-slate-500 mt-1">Gerencie processos seletivos e candidatos.</p>
+                    <p className="text-xs text-slate-500 mt-1">Gerencie processos seletivos, pipeline e triagem de candidatos.</p>
                   </div>
-                  <Button variant="primary" size="sm" icon={Plus}>Nova Vaga</Button>
+                  <Button 
+                    variant="primary" 
+                    size="sm" 
+                    icon={Plus} 
+                    onClick={() => {
+                      setEditingVaga(null);
+                      setVagaForm({
+                        titulo: '',
+                        codigo: `V-${Math.floor(Math.random() * 100) + 100}`,
+                        depto: 'Administração',
+                        status: 'ativa',
+                        descricao: ''
+                      });
+                      setShowVagaModal(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    Nova Vaga
+                  </Button>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-black uppercase tracking-wider">Ativa</span>
-                      <span className="text-xs text-slate-400 font-semibold">Cód: V-102</span>
-                    </div>
-                    <h5 className="font-bold text-slate-800 text-sm mb-1">Analista Administrativo</h5>
-                    <p className="text-xs text-slate-500 mb-4 line-clamp-2">Atuação no setor administrativo e financeiro da instituição.</p>
-                    <div className="flex justify-between border-t border-slate-100 pt-3">
-                      <span className="text-xs font-semibold text-slate-600"><Users size={14} className="inline mr-1 text-slate-400" /> 12 Candidatos</span>
-                      <button className="text-indigo-600 text-xs font-black hover:underline cursor-pointer">Ver Funil</button>
-                    </div>
-                  </div>
-                  <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-black uppercase tracking-wider">Pausada</span>
-                      <span className="text-xs text-slate-400 font-semibold">Cód: V-098</span>
-                    </div>
-                    <h5 className="font-bold text-slate-800 text-sm mb-1">Auxiliar de Limpeza</h5>
-                    <p className="text-xs text-slate-500 mb-4 line-clamp-2">Manutenção e conservação do templo e dependências.</p>
-                    <div className="flex justify-between border-t border-slate-100 pt-3">
-                      <span className="text-xs font-semibold text-slate-600"><Users size={14} className="inline mr-1 text-slate-400" /> 45 Candidatos</span>
-                      <button className="text-indigo-600 text-xs font-black hover:underline cursor-pointer">Ver Funil</button>
-                    </div>
-                  </div>
+                  {vagas.map((v: any) => {
+                    const cCount = candidatos.filter(c => c.vagaId === v.id).length;
+                    return (
+                      <div key={v.id} className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs flex flex-col justify-between hover:border-indigo-200 transition-colors">
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className={`text-[10px] px-2 py-1 rounded font-black uppercase tracking-wider ${v.status === 'ativa' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                              {v.status === 'ativa' ? 'Ativa' : 'Pausada'}
+                            </span>
+                            <span className="text-xs text-slate-400 font-semibold">Cód: {v.codigo}</span>
+                          </div>
+                          <h5 className="font-bold text-slate-800 text-sm mb-1">{v.titulo}</h5>
+                          <p className="text-xs text-slate-400 font-semibold mb-2">{v.depto}</p>
+                          <p className="text-xs text-slate-500 mb-4 line-clamp-2">{v.descricao || 'Atividade geral e operacional'}</p>
+                        </div>
+                        <div className="flex justify-between items-center border-t border-slate-100 pt-3 mt-2">
+                          <span className="text-xs font-semibold text-slate-600">
+                            <Users size={14} className="inline mr-1 text-slate-450" /> {cCount} Candidatos
+                          </span>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                setEditingVaga(v);
+                                setVagaForm({
+                                  titulo: v.titulo,
+                                  codigo: v.codigo,
+                                  depto: v.depto,
+                                  status: v.status,
+                                  descricao: v.descricao
+                                });
+                                setShowVagaModal(true);
+                              }}
+                              className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                            >
+                              Editar
+                            </button>
+                            <span className="text-slate-300">|</span>
+                            <button 
+                              onClick={() => setSelectedVagaFunil(v)}
+                              className="text-indigo-600 text-xs font-black hover:underline cursor-pointer"
+                            >
+                              Ver Funil
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -5183,26 +6199,79 @@ const ModuleDPContabilidade = memo(() => {
                 <div className="flex justify-between items-center bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                   <div>
                     <h4 className="text-sm font-black text-blue-900">Integração de Novos Colaboradores</h4>
-                    <p className="text-xs text-blue-700/80 mt-1">Acompanhe as trilhas de admissão em andamento.</p>
+                    <p className="text-xs text-blue-700/80 mt-1">Acompanhe as trilhas administrativas, contratuais, teológicas e técnicas em andamento.</p>
                   </div>
+                  <Button 
+                    variant="primary" 
+                    size="sm" 
+                    icon={Plus}
+                    onClick={() => {
+                      setOnboardingForm({
+                        colaboradorNome: '',
+                        cargoOriginal: '',
+                        dataInicio: getTodayDate(),
+                        tarefasCustom: 'Assinatura do Contrato de Trabalho\nTreinamento de Integração\nFamiliarização com departamentos\nExame Clínico Ocupacional Admissional'
+                      });
+                      setShowOnboardingModal(true);
+                    }}
+                    className="cursor-pointer text-xs font-bold"
+                  >
+                    Adicionar Onboarding
+                  </Button>
                 </div>
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
                       <tr>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Colaborador</th>
-                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Cargo</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Cargo Previsto</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider font-mono">Início</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Progresso (Trilha)</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
-                          <UserPlus size={24} className="mx-auto text-slate-300 mb-2" />
-                          <p className="font-semibold text-slate-600">Nenhum onboarding em andamento</p>
-                        </td>
-                      </tr>
+                      {onboardings.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                            <UserPlus size={24} className="mx-auto text-slate-300 mb-2" />
+                            <p className="font-semibold text-slate-600">Nenhum onboarding em andamento.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        onboardings.map((o: any) => (
+                          <tr key={o.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3 text-xs font-bold text-slate-700">{o.colaboradorNome}</td>
+                            <td className="px-4 py-3 text-xs text-slate-600">{o.cargoOriginal}</td>
+                            <td className="px-4 py-3 text-xs text-slate-500 font-mono">{o.dataInicio}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2 font-mono">
+                                <span className="text-[10px] font-bold text-slate-500 w-8">{o.progresso}%</span>
+                                <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                  <div 
+                                    className={`h-1.5 rounded-full transition-all duration-305 ${o.progresso === 100 ? 'bg-emerald-500' : 'bg-indigo-650'}`}
+                                    style={{ width: `${o.progresso}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs flex gap-3">
+                              <button 
+                                onClick={() => setSelectedOnboardingDetail(o)}
+                                className="text-indigo-650 font-black hover:underline cursor-pointer"
+                              >
+                                {o.progresso === 100 ? 'Efetivar Admitido' : 'Ver Checklist'}
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteOnboarding(o.id)}
+                                className="text-rose-500 font-semibold hover:underline cursor-pointer"
+                              >
+                                Excluir
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -5214,37 +6283,87 @@ const ModuleDPContabilidade = memo(() => {
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
                   <div>
                     <h4 className="text-sm font-black text-slate-800">Catálogo de Treinamentos</h4>
-                    <p className="text-xs text-slate-500 mt-1">Capacitação institucional legal e de desenvolvimento.</p>
+                    <p className="text-xs text-slate-500 mt-1">Capacitação institucional legal e de desenvolvimento corporativo.</p>
                   </div>
-                  <Button variant="primary" size="sm" icon={Plus}>Novo Curso</Button>
+                  <Button 
+                    variant="primary" 
+                    size="sm" 
+                    icon={Plus}
+                    onClick={() => {
+                      setEditingTreinamento(null);
+                      setTreinamentoForm({
+                        titulo: '',
+                        descricao: '',
+                        progresso: 0,
+                        instrutor: '',
+                        cargaHoraria: '',
+                        status: 'Ativo'
+                      });
+                      setShowTreinamentoModal(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    Novo Curso
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-4 border border-slate-200 p-4 rounded-xl shadow-xs">
-                    <div className="bg-indigo-100 text-indigo-600 p-3 rounded-xl">
-                      <BookOpen size={24} />
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-sm text-slate-800">Integração Institucional e Cultura</h5>
-                      <p className="text-xs text-slate-500 mt-0.5">Obrigatório para novos colaboradores.</p>
-                      <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-emerald-500 h-1.5 w-[85%]"></div>
+                  {treinamentos.map((tr: any) => (
+                    <div key={tr.id} className="border border-slate-200 p-4 bg-white rounded-xl shadow-xs flex flex-col justify-between hover:border-slate-350 transition-colors">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-3 rounded-xl ${tr.status === 'Ativo' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-505'}`}>
+                          <BookOpen size={24} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wide ${tr.status === 'Ativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                              {tr.status}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono font-semibold">{tr.cargaHoraria}h C.Horária</span>
+                          </div>
+                          <h5 className="font-bold text-sm text-slate-800 mt-1 truncate">{tr.titulo}</h5>
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{tr.descricao || 'Nenhuma descrição fornecida.'}</p>
+                          <p className="text-[10px] font-bold text-slate-400 mt-1">Instrutor: <span className="text-slate-600">{tr.instrutor}</span></p>
+                          
+                          <div className="mt-4">
+                            <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold mb-1">
+                              <span>Progresso / Participação</span>
+                              <span className="text-slate-700">{tr.progresso}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div className="bg-indigo-600 h-1.5 transition-all duration-300" style={{ width: `${tr.progresso}%` }}></div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider">85% Concluído pela equipe</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 border border-slate-200 p-4 rounded-xl shadow-xs">
-                    <div className="bg-orange-100 text-orange-600 p-3 rounded-xl">
-                      <ShieldAlert size={24} />
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-sm text-slate-800">CIPA e Prevenção de Acidentes</h5>
-                      <p className="text-xs text-slate-500 mt-0.5">Renovação anual requerida (NR-05).</p>
-                      <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-orange-500 h-1.5 w-[40%]"></div>
+                      
+                      <div className="flex justify-end gap-2 border-t border-slate-100 pt-2.5 mt-4">
+                        <button 
+                          onClick={() => {
+                            setEditingTreinamento(tr);
+                            setTreinamentoForm({
+                              titulo: tr.titulo,
+                              descricao: tr.descricao,
+                              progresso: tr.progresso,
+                              instrutor: tr.instrutor,
+                              cargaHoraria: tr.cargaHoraria,
+                              status: tr.status
+                            });
+                            setShowTreinamentoModal(true);
+                          }}
+                          className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                        >
+                          Editar Curso
+                        </button>
+                        <span className="text-slate-200">|</span>
+                        <button 
+                          onClick={() => handleDeleteTreinamento(tr.id)}
+                          className="text-xs font-semibold text-rose-500 hover:underline cursor-pointer"
+                        >
+                          Remover
+                        </button>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider">40% Faltam realizar</p>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -5263,42 +6382,82 @@ const ModuleDPContabilidade = memo(() => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="secondary" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 whitespace-nowrap">
-                    Configurar Regras
+                  <Button 
+                    size="sm" 
+                    variant="primary" 
+                    icon={Plus} 
+                    onClick={() => {
+                      setEditingDesempenho(null);
+                      setDesempenhoForm({
+                        ciclo: '',
+                        periodo: `${getTodayDate().split('-')[0]} Ano Ref`,
+                        status: 'Planejamento',
+                        resumo: '',
+                        avaliadosCount: 0,
+                        taxaParticipacao: 0
+                      });
+                      setShowDesempenhoModal(true);
+                    }}
+                    className="cursor-pointer text-xs"
+                  >
+                    Novo Ciclo
                   </Button>
                 </div>
                 
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-[#f8fafc] border-b border-slate-200 text-slate-600">
                       <tr>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ciclo</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Período</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider font-mono">Part./Avaliados</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Resumo</th>
+                        <th className="px-4 py-3 font-semibold text-xs text-right uppercase tracking-wider">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-slate-800 text-xs">Avaliação Desempenho H1</td>
-                        <td className="px-4 py-3 text-slate-600 text-xs">Jan - Jun 2026</td>
-                        <td className="px-4 py-3">
-                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded font-black uppercase tracking-wider">Planejamento</span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-500">0 avaliados</td>
-                      </tr>
-                      <tr className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-slate-800 text-xs">Pesquisa de Clima Organizacional</td>
-                        <td className="px-4 py-3 text-slate-600 text-xs">Nov 2025</td>
-                        <td className="px-4 py-3">
-                          <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-black uppercase tracking-wider">Concluído</span>
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <div className="flex items-center gap-2">
-                             <span className="font-bold text-slate-700">82% Engajamento</span>
-                          </div>
-                        </td>
-                      </tr>
+                      {desempenhoCiclos.map((d: any) => (
+                        <tr key={d.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 font-medium text-slate-800 text-xs">{d.ciclo}</td>
+                          <td className="px-4 py-3 text-slate-600 text-xs font-semibold">{d.periodo}</td>
+                          <td className="px-4 py-3 text-xs text-slate-505 font-mono">
+                            {d.avaliadosCount > 0 ? `${d.taxaParticipacao}% (${d.avaliadosCount} avaliados)` : 'Sem respostas'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[10px] px-2 py-1 rounded font-black uppercase tracking-wider ${d.status === 'Concluído' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                              {d.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">{d.resumo || 'Sem observações'}</td>
+                          <td className="px-4 py-3 text-xs text-right space-x-3">
+                            <button 
+                              onClick={() => {
+                                setEditingDesempenho(d);
+                                setDesempenhoForm({
+                                  ciclo: d.ciclo,
+                                  periodo: d.periodo,
+                                  status: d.status,
+                                  resumo: d.resumo,
+                                  avaliadosCount: d.avaliadosCount,
+                                  taxaParticipacao: d.taxaParticipacao
+                                });
+                                setShowDesempenhoModal(true);
+                              }}
+                              className="text-indigo-600 font-black hover:underline cursor-pointer"
+                            >
+                              Editar
+                            </button>
+                            <span className="text-slate-200">|</span>
+                            <button 
+                              onClick={() => handleDeleteDesempenho(d.id)}
+                              className="text-rose-500 font-semibold hover:underline cursor-pointer"
+                            >
+                              Excluir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -7579,6 +8738,580 @@ const ModuleDPContabilidade = memo(() => {
               >
                 Gravar Batida
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL VAGA (RECRUTAMENTO) */}
+      {showVagaModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setShowVagaModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 z-10 animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 bg-gradient-to-br from-indigo-700 via-indigo-800 to-indigo-900 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-200 tracking-wider">Recrutamento e Seleção</span>
+                <h4 className="font-extrabold text-base font-[Outfit]">{editingVaga ? 'Editar Vaga Cadastrada' : 'Anunciar Nova Vaga de Trabalho'}</h4>
+              </div>
+              <button onClick={() => setShowVagaModal(false)} className="bg-white/10 hover:bg-rose-600 transition-colors p-1.5 rounded-lg cursor-pointer text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Título do Cargo / Vaga</label>
+                <input 
+                  type="text" 
+                  value={vagaForm.titulo} 
+                  onChange={(e) => setVagaForm({ ...vagaForm, titulo: e.target.value })}
+                  placeholder="Ex: Auxiliar de Comunicação" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Código da Vaga</label>
+                  <input 
+                    type="text" 
+                    value={vagaForm.codigo} 
+                    onChange={(e) => setVagaForm({ ...vagaForm, codigo: e.target.value })}
+                    placeholder="Ex: V-106" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Departamento</label>
+                  <select 
+                    value={vagaForm.depto} 
+                    onChange={(e) => setVagaForm({ ...vagaForm, depto: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  >
+                    <option value="Administração">Administração</option>
+                    <option value="Serviços Gerais">Serviços Gerais</option>
+                    <option value="Secretaria Geral">Secretaria Geral</option>
+                    <option value="Pastoral / Ministerial">Pastoral / Ministerial</option>
+                    <option value="Comunicação & TI">Comunicação & TI</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Status Inicial</label>
+                <select 
+                  value={vagaForm.status} 
+                  onChange={(e) => setVagaForm({ ...vagaForm, status: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                >
+                  <option value="ativa">Ativa (Recebendo Candidatos)</option>
+                  <option value="pausada">Pausada (Triagem Interna)</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Requisitos e Descrição Curta</label>
+                <textarea 
+                  value={vagaForm.descricao} 
+                  onChange={(e) => setVagaForm({ ...vagaForm, descricao: e.target.value })}
+                  placeholder="Descreva as qualificações, carga horária e salário simulado..." 
+                  rows={4}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold outline-none resize-none"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3">
+              <button onClick={() => setShowVagaModal(false)} className="bg-white border border-slate-250 text-slate-650 hover:bg-slate-100 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer">
+                Cancelar
+              </button>
+              <button onClick={handleSaveVaga} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-2.5 rounded-xl cursor-pointer">
+                Salvar Vaga
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL FUNIL DE CANDIDATOS */}
+      {selectedVagaFunil && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setSelectedVagaFunil(null)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-205 z-10 animate-in zoom-in-95 duration-150 flex flex-col max-h-[85vh]">
+            <div className="px-6 py-4 bg-gradient-to-br from-indigo-800 via-indigo-900 to-slate-900 text-white flex justify-between items-center shrink-0">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-300 tracking-wider">Visualizador de Funil de Recrutamento</span>
+                <h4 className="font-extrabold text-base font-[Outfit]">{selectedVagaFunil.titulo} ({selectedVagaFunil.codigo})</h4>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    setEditingCandidato(null);
+                    setCandidatoForm({
+                      nome: '',
+                      email: '',
+                      status: 'Triagem',
+                      qualificacao: ''
+                    });
+                    setShowCandidatoModal(true);
+                  }}
+                  className="bg-emerald-600 font-bold text-[11px] text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-emerald-700 transition-colors"
+                >
+                  <Plus size={14} /> Novo Candidato
+                </button>
+                <button onClick={() => setSelectedVagaFunil(null)} className="bg-white/10 hover:bg-rose-600 transition-colors p-1.5 rounded-lg cursor-pointer text-white">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-[400px] text-left shrink-0">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-full align-top">
+                {['Triagem', 'Entrevista', 'Aprovado', 'Dispensado'].map((colStatus) => {
+                  const filteredCands = candidatos.filter(c => c.vagaId === selectedVagaFunil.id && c.status === colStatus);
+                  return (
+                    <div key={colStatus} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col gap-2 min-h-[350px]">
+                      <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-1">
+                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">{colStatus}</span>
+                        <span className="text-[10px] bg-slate-200 font-bold px-2 py-0.5 rounded-full text-slate-600 font-mono">
+                          {filteredCands.length}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2.5 overflow-y-auto flex-1 hide-scrollbar">
+                        {filteredCands.length === 0 ? (
+                          <div className="text-center font-semibold text-[10px] text-slate-400 py-10">Vazio</div>
+                        ) : (
+                          filteredCands.map((cand: any) => (
+                            <div key={cand.id} className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs hover:border-indigo-300 transition-all">
+                              <h6 className="font-extrabold text-slate-800 text-xs truncate">{cand.nome}</h6>
+                              <p className="text-[10px] text-slate-450 mt-0.5 font-semibold truncate font-mono">{cand.email}</p>
+                              {cand.qualificacao && (
+                                <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed bg-slate-50 p-1.5 rounded border border-slate-100 italic">
+                                  "{cand.qualificacao}"
+                                </p>
+                              )}
+                              
+                              <div className="flex flex-col gap-1.5 mt-3 border-t border-slate-100 pt-2 shrink-0">
+                                <label className="text-[9px] font-mono text-slate-400 font-bold block">Mudar Status:</label>
+                                <div className="flex flex-wrap gap-1">
+                                  {['Triagem', 'Entrevista', 'Aprovado', 'Dispensado'].filter(s => s !== colStatus).map((targetStatus) => (
+                                    <button 
+                                      key={targetStatus}
+                                      onClick={() => {
+                                        setCandidatos(prev => prev.map(c => c.id === cand.id ? { ...c, status: targetStatus } : c));
+                                        addToast(`Candidato "${cand.nome}" movido para ${targetStatus}!`, 'info');
+                                      }}
+                                      className="text-[8px] font-bold bg-slate-100 border border-slate-200 py-0.5 px-1.5 rounded hover:bg-slate-200 hover:text-slate-700 transition-colors"
+                                    >
+                                      {targetStatus}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {colStatus === 'Aprovado' && (
+                                <button 
+                                  onClick={() => handlePromoveCandidatoAoOnboarding(cand)}
+                                  className="w-full mt-2 bg-indigo-600 text-white font-black text-[9px] py-1.5 rounded-lg hover:bg-indigo-700 transition cursor-pointer"
+                                >
+                                  🚀 Iniciar Onboarding
+                                </button>
+                              )}
+
+                              <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-100 text-[9px] font-semibold text-slate-450 font-mono">
+                                <span>Inscrito: {cand.dataInscricao}</span>
+                                <button 
+                                  onClick={() => handleDeleteCandidato(cand.id)}
+                                  className="text-rose-500 hover:underline cursor-pointer"
+                                >
+                                  Excluir
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center shrink-0">
+              <p className="text-[10px] text-slate-400 font-bold">Aprovando um candidato, o botão para lançar o Onboarding e integrá-lo será liberado.</p>
+              <button onClick={() => setSelectedVagaFunil(null)} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-5 py-2 rounded-xl cursor-pointer">
+                Fechar Pipeline
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL ADICIONAR NOVO CANDIDATO */}
+      {showCandidatoModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[99999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setShowCandidatoModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 z-10 animate-in zoom-in-95 duration-150 flex flex-col">
+            <div className="px-5 py-3.5 bg-slate-100 border-b border-light-200 flex justify-between items-center">
+              <h5 className="font-extrabold text-sm text-slate-800">Novo Candidato</h5>
+              <button onClick={() => setShowCandidatoModal(false)} className="bg-slate-205 hover:bg-rose-100 transition-colors p-1 rounded-lg">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4 text-left">
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Nome Completo do Candidato</label>
+                <input 
+                  type="text" 
+                  value={candidatoForm.nome} 
+                  onChange={(e) => setCandidatoForm({ ...candidatoForm, nome: e.target.value })}
+                  placeholder="Ex: Amanda Ferreira" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Endereço de E-mail</label>
+                <input 
+                  type="email" 
+                  value={candidatoForm.email} 
+                  onChange={(e) => setCandidatoForm({ ...candidatoForm, email: e.target.value })}
+                  placeholder="Ex: amanda@gmail.com" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Qualificações / Notas Iniciais</label>
+                <textarea 
+                  value={candidatoForm.qualificacao} 
+                  onChange={(e) => setCandidatoForm({ ...candidatoForm, qualificacao: e.target.value })}
+                  placeholder="Ex: Graduação em RH, ótimas referências ministeriais..." 
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none resize-none"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-150 flex justify-end gap-2.5">
+              <button onClick={() => setShowCandidatoModal(false)} className="bg-white border border-slate-250 text-slate-650 px-4 py-2 rounded-xl text-xs font-bold">
+                Cancelar
+              </button>
+              <button onClick={handleSaveCandidato} className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs">
+                Adicionar Candidato
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL NOVO ONBOARDING (CADASTRO MANUAL) */}
+      {showOnboardingModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setShowOnboardingModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 z-10 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 bg-gradient-to-br from-indigo-700 via-indigo-800 to-indigo-900 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-200 tracking-wider">Onboarding Manual</span>
+                <h4 className="font-extrabold text-base">Criar Nova Trilha de Onboarding</h4>
+              </div>
+              <button onClick={() => setShowOnboardingModal(false)} className="bg-white/10 hover:bg-rose-600 p-1.5 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase font-mono">Nome do Novo Colaborador / Membro</label>
+                <input 
+                  type="text" 
+                  value={onboardingForm.colaboradorNome} 
+                  onChange={(e) => setOnboardingForm({ ...onboardingForm, colaboradorNome: e.target.value })}
+                  placeholder="Ex: Fernando Souza de Oliveira" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Cargo Relacionado</label>
+                <input 
+                  type="text" 
+                  value={onboardingForm.cargoOriginal} 
+                  onChange={(e) => setOnboardingForm({ ...onboardingForm, cargoOriginal: e.target.value })}
+                  placeholder="Ex: Zelador Geral Sede" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Quadro de tarefas personalizadas (Uma por linha)</label>
+                <textarea 
+                  value={onboardingForm.tarefasCustom} 
+                  onChange={(e) => setOnboardingForm({ ...onboardingForm, tarefasCustom: e.target.value })}
+                  rows={5}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-mono outline-none"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3">
+              <button onClick={() => setShowOnboardingModal(false)} className="bg-white border text-xs text-slate-600 font-bold px-4 py-2.5 rounded-xl cursor-pointer">
+                Cancelar
+              </button>
+              <button onClick={handleSaveOnboarding} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-2.5 rounded-xl cursor-pointer">
+                Iniciar Trilha de Onboarding
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL DETALHES CHECKLIST ONBOARDING */}
+      {selectedOnboardingDetail && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setSelectedOnboardingDetail(null)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 z-10 flex flex-col">
+            <div className="px-6 py-4 bg-[#1e293b] text-white flex justify-between items-center">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-300 tracking-wider">Mapeamento de Integração Individual</span>
+                <h4 className="font-extrabold text-base truncate font-[Outfit]">{selectedOnboardingDetail.colaboradorNome}</h4>
+              </div>
+              <button onClick={() => setSelectedOnboardingDetail(null)} className="bg-white/10 hover:bg-rose-600 p-1.5 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-left">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Cargo em Processo de Admissão</span>
+                <span className="text-sm font-black text-slate-700">{selectedOnboardingDetail.cargoOriginal}</span>
+                <span className="text-[10px] text-slate-500 font-semibold block mt-1 font-mono">Iniciado em: {selectedOnboardingDetail.dataInicio}</span>
+                
+                <div className="mt-3.5">
+                  <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold mb-1 uppercase font-mono">
+                    <span>Progresso global</span>
+                    <span>{selectedOnboardingDetail.progresso}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div className="bg-indigo-650 h-2 transition-all duration-300" style={{ width: `${selectedOnboardingDetail.progresso}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <label className="block text-[11px] text-slate-400 font-black uppercase tracking-wider mb-2">Checklist de Integração / eSocial:</label>
+                <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 hide-scrollbar">
+                  {selectedOnboardingDetail.tarefas.map((t: any) => (
+                    <div 
+                      key={t.id} 
+                      onClick={() => handleToggleTarefaOnboarding(selectedOnboardingDetail.id, t.id)}
+                      className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl cursor-pointer select-none"
+                    >
+                      <div className={`p-1 rounded-md border ${t.concluida ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
+                        {t.concluida ? <Check size={12} strokeWidth={4} /> : <div className="w-3 h-3"></div>}
+                      </div>
+                      <span className={`text-xs ${t.concluida ? 'line-through text-slate-400 font-medium' : 'text-slate-700 font-semibold'}`}>
+                        {t.titulo}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedOnboardingDetail.progresso === 100 && (
+                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl mt-4 animate-in fade-in">
+                  <h6 className="text-xs font-black text-emerald-800 flex items-center gap-1.5 uppercase tracking-wide">
+                    <CheckCircle size={14} /> Integração 100% Concluída
+                  </h6>
+                  <p className="text-[10px] text-emerald-700 leading-relaxed mt-1">
+                    Todos os pré-requisitos, termos e treinamentos do eSocial foram cumpridos. Você já pode efetivar o colaborador na base ativa de funcionários ordinários.
+                  </p>
+                  <button 
+                    onClick={() => handleFinalizeOnboarding(selectedOnboardingDetail)}
+                    className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-2 rounded-xl transition cursor-pointer"
+                  >
+                    Efetivar Colaborador na Base Ativa!
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-between items-center text-[10px] text-slate-405 font-bold">
+              <span>Clique em uma tarefa para marcar como concluída/pendente.</span>
+              <button onClick={() => setSelectedOnboardingDetail(null)} className="bg-white border rounded px-4 py-2 font-black text-slate-600 cursor-pointer text-xs">Fechar</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL ADICIONAR / EDITAR TREINAMENTO */}
+      {showTreinamentoModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setShowTreinamentoModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 z-10 flex flex-col">
+            <div className="px-6 py-4 bg-gradient-to-br from-indigo-700 to-indigo-900 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-300 tracking-wider">Cursos Corporativos & Normas do eSocial</span>
+                <h4 className="font-extrabold text-base">{editingTreinamento ? 'Editar Treinamento' : 'Novo Curso no Catálogo'}</h4>
+              </div>
+              <button onClick={() => setShowTreinamentoModal(false)} className="bg-white/10 hover:bg-rose-600 p-1.5 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-left">
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase font-mono">Nome / Tema do Treinamento</label>
+                <input 
+                  type="text" 
+                  value={treinamentoForm.titulo} 
+                  onChange={(e) => setTreinamentoForm({ ...treinamentoForm, titulo: e.target.value })}
+                  placeholder="Ex: Direção defensiva no translado de membros" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Instrutor / Palestrante</label>
+                  <input 
+                    type="text" 
+                    value={treinamentoForm.instrutor} 
+                    onChange={(e) => setTreinamentoForm({ ...treinamentoForm, instrutor: e.target.value })}
+                    placeholder="Ex: Dra. Amanda Souza" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Carga Horária (horas)</label>
+                  <input 
+                    type="number" 
+                    value={treinamentoForm.cargaHoraria} 
+                    onChange={(e) => setTreinamentoForm({ ...treinamentoForm, cargaHoraria: e.target.value })}
+                    placeholder="Ex: 8" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">% Conclusão / Progresso</label>
+                  <input 
+                    type="number" 
+                    value={treinamentoForm.progresso} 
+                    onChange={(e) => setTreinamentoForm({ ...treinamentoForm, progresso: e.target.value })}
+                    placeholder="Ex: 50" 
+                    max={100}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Status Atual</label>
+                  <select 
+                    value={treinamentoForm.status} 
+                    onChange={(e) => setTreinamentoForm({ ...treinamentoForm, status: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <option value="Ativo">Ativo (Em Curso)</option>
+                    <option value="Planejado">Planejado (Futuro)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase font-mono">Descrição e Finalidade</label>
+                <textarea 
+                  value={treinamentoForm.descricao} 
+                  onChange={(e) => setTreinamentoForm({ ...treinamentoForm, descricao: e.target.value })}
+                  placeholder="Finalidade do treinamento e certificação válida..." 
+                  rows={2}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold outline-none resize-none font-mono"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3">
+              <button onClick={() => setShowTreinamentoModal(false)} className="bg-white border rounded px-4 py-2.5 font-bold text-xs text-slate-655 cursor-pointer">Cancelar</button>
+              <button onClick={handleSaveTreinamento} className="bg-indigo-600 text-white px-5 py-2.5 font-black text-xs rounded-xl cursor-pointer">Salvar Curso</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL ADICIONAR / EDITAR CICLO DESEMPENHO */}
+      {showDesempenhoModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="absolute inset-0 z-0" onClick={() => setShowDesempenhoModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 z-10 flex flex-col">
+            <div className="px-6 py-4 bg-gradient-to-br from-indigo-700 to-indigo-900 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[9px] font-black uppercase text-indigo-305 tracking-wider">Avaliação do Clima e Liderança</span>
+                <h4 className="font-extrabold text-base">{editingDesempenho ? 'Editar Ciclo Desempenho' : 'Novo Ciclo de Avaliações'}</h4>
+              </div>
+              <button onClick={() => setShowDesempenhoModal(false)} className="bg-white/10 hover:bg-rose-600 p-1.5 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-left">
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase font-mono">Título do Ciclo ou Pesquisa</label>
+                <input 
+                  type="text" 
+                  value={desempenhoForm.ciclo} 
+                  onChange={(e) => setDesempenhoForm({ ...desempenhoForm, ciclo: e.target.value })}
+                  placeholder="Ex: Avaliação de Clima Organizacional 2026/02" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Período Referência</label>
+                  <input 
+                    type="text" 
+                    value={desempenhoForm.periodo} 
+                    onChange={(e) => setDesempenhoForm({ ...desempenhoForm, periodo: e.target.value })}
+                    placeholder="Ex: Nov 2026" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Status do Ciclo</label>
+                  <select 
+                    value={desempenhoForm.status} 
+                    onChange={(e) => setDesempenhoForm({ ...desempenhoForm, status: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <option value="Planejamento">Planejamento</option>
+                    <option value="Em Andamento">Em Andamento</option>
+                    <option value="Concluído">Concluído</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Quantidade de Respondentes / Avaliados</label>
+                  <input 
+                    type="number" 
+                    value={desempenhoForm.avaliadosCount} 
+                    onChange={(e) => setDesempenhoForm({ ...desempenhoForm, avaliadosCount: e.target.value })}
+                    placeholder="Ex: 5" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase">Taxa de Participação (%)</label>
+                  <input 
+                    type="number" 
+                    value={desempenhoForm.taxaParticipacao} 
+                    onChange={(e) => setDesempenhoForm({ ...desempenhoForm, taxaParticipacao: e.target.value })}
+                    placeholder="Ex: 85" 
+                    max={100}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase">Resumo da Avaliação / Observação</label>
+                <textarea 
+                  value={desempenhoForm.resumo} 
+                  onChange={(e) => setDesempenhoForm({ ...desempenhoForm, resumo: e.target.value })}
+                  placeholder="Escrita da finalidade e das áreas a serem avaliadas..." 
+                  rows={2}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold outline-none resize-none font-mono"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3">
+              <button onClick={() => setShowDesempenhoModal(false)} className="bg-white border rounded px-4 py-2.5 font-bold text-xs text-slate-600 cursor-pointer">Cancelar</button>
+              <button onClick={handleSaveDesempenho} className="bg-indigo-600 text-white px-5 py-2.5 font-black text-xs rounded-xl cursor-pointer">Salvar Ciclo</button>
             </div>
           </div>
         </div>,
