@@ -19,7 +19,8 @@ const CATEGORIAS_PERMISSOES = [
       { id: 'access_igreja', label: 'Sede & Congregações' },
       { id: 'access_patrimonio', label: 'Patrimônio & Bens' },
       { id: 'access_celulas', label: 'Células & Redes' },
-      { id: 'access_ministerios', label: 'Ministérios & Deptos' }
+      { id: 'access_ministerios', label: 'Ministérios & Deptos' },
+      { id: 'access_frotas', label: 'Controle de Frotas' }
     ]
   },
   {
@@ -62,14 +63,16 @@ const CATEGORIAS_PERMISSOES = [
   },
   {
     titulo: "Configurações Globais & Proteção",
-    desc: "Ajustes de sistema, governança, auditoria e lixeira",
+    desc: "Ajustes de sistema, governança, auditoria, proteção jurídica e amparos",
     icon: Lock,
     opcoes: [
       { id: 'access_config_sistema', label: 'Ajustes Administrativos' },
       { id: 'access_config_visual', label: 'Personalização de Temas' },
       { id: 'access_config_backup', label: 'Backup Geral de Dados' },
       { id: 'access_auditoria', label: 'Auditoria & Logs' },
-      { id: 'access_lixeira', label: 'Lixeira do Sistema' }
+      { id: 'access_lixeira', label: 'Lixeira do Sistema' },
+      { id: 'access_amparo_legal', label: 'Amparo Constitucional' },
+      { id: 'access_registro_software', label: 'Registro do Software' }
     ]
   }
 ];
@@ -154,15 +157,15 @@ const ModuleUsuarios = memo(() => {
   const handleFuncaoChange = (val: string) => {
     let perms = [...(formData.permissoes || [])];
     if (val === 'PASTOR PRESIDENTE' || val === 'PASTOR AUXILIAR') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual'];
+      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
     } else if (val === 'SECRETARIO') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual'];
+      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
     } else if (val === 'TESOUREIRO' || val === 'CONTADOR') {
       perms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_sec_relatorios', 'access_manual'];
     } else if (val === 'ADMINISTRADOR') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual'];
+      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
     } else if (val === 'ADVOGADO') {
-      perms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual'];
+      perms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
     } else if (val === 'LIDER DE DEPARTAMENTO') {
       perms = ['access_ministerios', 'access_sec_agenda', 'access_manual'];
     } else if (val === 'AUXILIAR') {
@@ -382,7 +385,7 @@ const ModuleUsuarios = memo(() => {
                           </span>
                         ) : (
                           <span className="text-xs text-slate-500 font-bold">
-                            <b>{operator.permissoes?.length || 0} de 26</b> módulos concedidos
+                            <b>{operator.permissoes?.length || 0} de 31</b> módulos concedidos
                           </span>
                         )}
                       </td>
@@ -583,7 +586,7 @@ const ModuleUsuarios = memo(() => {
                   <div className="space-y-6">
                     <div className="flex items-center gap-2">
                       <Lock size={16} className="text-indigo-500"/>
-                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Painel Modular de Permissões de Acesso (26 Módulos)</h4>
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Painel Modular de Permissões de Acesso (31 Módulos)</h4>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8">

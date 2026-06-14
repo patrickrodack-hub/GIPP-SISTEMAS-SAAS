@@ -61,6 +61,7 @@ import ModuleCertificados from './components/ModuleCertificados';
 import ModuleEBD from './components/ModuleEBD';
 import ModuleGestaoCursos from './components/ModuleGestaoCursos';
 import ModuleRedeSocial from './components/ModuleRedeSocial';
+import ModuleConfiguracoesGerais from './components/ModuleConfiguracoesGerais';
 import ModuleConfiguracoesSistemas, { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
 import ModuleConfigVisual from './components/ModuleConfigVisual';
 import ModuleBackup from './components/ModuleBackup';
@@ -2580,7 +2581,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                      { titulo: "Financeiro", opcoes: [ { id: 'access_fin_entradas', label: 'Entradas e Dízimos' }, { id: 'access_fin_saidas', label: 'Saídas e Despesas' }, { id: 'access_fin_analise', label: 'DRE, Relatórios & Conciliação Bancária' }, { id: 'access_fin_carnes', label: 'Gestão de Carnês & Engajamento' }, { id: 'access_fin_cadastros', label: 'Utilitários (Fornecedores/C. Custo)' } ] },
                      { titulo: "Secretaria & Módulos", opcoes: [ { id: 'access_sec_agenda', label: 'Secretaria Digital (Agenda/Tarefas/Whats)' }, { id: 'access_sec_certificados', label: 'Certificados, Estúdio de Carteirinhas & Credenciais' }, { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, { id: 'access_ebd', label: 'Gestão EBD' }, { id: 'access_gestao_cursos', label: 'EAD Cursos de Capacitação' }, { id: 'access_missoes', label: 'Missões (Missionários/Agências/Caixa)' } ] },
                      { titulo: "Comunicação, Mídia & IA", opcoes: [ { id: 'access_midia', label: 'Estúdio GIPP (Artes e Redes Sociais)' }, { id: 'access_boletim', label: 'Gestão do Boletim Digital' }, { id: 'access_email', label: 'Webmail Direto (Caixa de Entrada)' }, { id: 'access_ia', label: 'Assistente Pastoral IA' } ] },
-                     { titulo: "Configurações Avançadas", opcoes: [ { id: 'access_config_sistema', label: 'Configurações de Sistemas' }, { id: 'access_config_visual', label: 'Personalização Visual' }, { id: 'access_config_backup', label: 'Backup Geral de Dados' }, { id: 'access_auditoria', label: 'Auditoria & Logs' }, { id: 'access_lixeira', label: 'Lixeira Virtual' } ] }
+                     { titulo: "Configurações Avançadas", opcoes: [ { id: 'access_config_sistema', label: 'Configurações Gerais' }, { id: 'access_config_visual', label: 'Personalização Visual' }, { id: 'access_config_backup', label: 'Backup Geral de Dados' }, { id: 'access_auditoria', label: 'Auditoria & Logs' }, { id: 'access_lixeira', label: 'Lixeira Virtual' } ] }
                  ];
                  const togglePermissao = (permId) => { const atuais = data.permissoes || []; if (atuais.includes(permId)) { setData({ ...data, permissoes: atuais.filter(p => p !== permId) }); } else { setData({ ...data, permissoes: [...atuais, permId] }); } };
                  const toggleAllInGroup = (opcoes) => { const atuais = data.permissoes || []; const todosIds = opcoes.map(o => o.id); const todosPresentes = todosIds.every(id => atuais.includes(id)); if (todosPresentes) { setData({ ...data, permissoes: atuais.filter(id => !todosIds.includes(id)) }); } else { const novos = [...new Set([...atuais, ...todosIds])]; setData({ ...data, permissoes: novos }); } };
@@ -7608,8 +7609,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     <MenuGroup label="Principal" />
                     {checkPlan('dashboard') && <MenuItem id="dashboard" icon={LayoutDashboard} label="Visão Geral" />}
                     {checkPlan('manual') && <MenuItem id="manual" icon={BookOpen} label="Manual do Usuário" />}
-                    {checkPlan('amparo_legal') && <MenuItem id="amparo_legal" icon={Scale} label="Amparo Constitucional" />}
-                    {checkPlan('registro_software') && <MenuItem id="registro_software" icon={ShieldCheck} label="Registro do Software" />}
+                    {hasPermission('access_amparo_legal') && checkPlan('amparo_legal') && <MenuItem id="amparo_legal" icon={Scale} label="Amparo Constitucional" />}
+                    {hasPermission('access_registro_software') && checkPlan('registro_software') && <MenuItem id="registro_software" icon={ShieldCheck} label="Registro do Software" />}
                     {checkPlan('changelog') && <MenuItem id="changelog" icon={History} label="Atualizações" />}
                     {checkPlan('sobre') && <MenuItem id="sobre" icon={Info} label="Sobre o Sistema" />}
                 </div>
@@ -7670,7 +7671,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                 {(hasPermission('master') || hasPermission('access_config_sistema') || hasPermission('access_config_visual') || hasPermission('access_config_backup') || hasPermission('access_auditoria') || hasPermission('access_lixeira')) && (
                     <div>
                         <MenuGroup label="Sistema Avançado" />
-                        {hasPermission('access_config_sistema') && checkPlan('config_sistema') && <MenuItem id="config_sistema" icon={Settings} label="Configurações do Sistema" />}
+                        {hasPermission('access_config_sistema') && checkPlan('config_sistema') && <MenuItem id="config_sistema" icon={Settings} label="Configurações Gerais" />}
                         {hasPermission('access_config_visual') && checkPlan('config_visual') && <MenuItem id="config_visual" icon={Palette} label="Personalização Visual" />}
                         {hasPermission('access_config_backup') && checkPlan('config_backup') && <MenuItem id="config_backup" icon={Database} label="Backup Geral" />}
                         {hasPermission('access_auditoria') && checkPlan('auditoria') && <MenuItem id="auditoria" icon={ShieldCheck} label="Auditoria & Logs" />}
@@ -11337,12 +11338,12 @@ const AppLayout = () => {
         'lixeira': { component: ModuleLixeira, access: 'access_lixeira' },
         'sobre': { component: ModuleSobre, access: 'public' },
         'manual': { component: ModuleManualUsuario, access: 'public' },
-        'amparo_legal': { component: ModuleAmparoLegal, access: 'public' },
-        'registro_software': { component: ModuleRegistroSoftware, access: 'public' },
+        'amparo_legal': { component: ModuleAmparoLegal, access: 'access_amparo_legal' },
+        'registro_software': { component: ModuleRegistroSoftware, access: 'access_registro_software' },
         'portal_pastor': { component: ModulePortalPastor, access: 'public' },
         'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
         'config_visual': { component: ModuleConfigVisual, access: 'access_config_visual' },
-        'config_sistema': { component: ModuleConfiguracoesSistemas, access: 'access_config_sistema' },
+        'config_sistema': { component: ModuleConfiguracoesGerais, access: 'access_config_sistema' },
         'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
@@ -13031,11 +13032,11 @@ export default function App() {
       if (user.funcao_administrativa) {
           const role = user.funcao_administrativa.toUpperCase();
           if (role === 'PASTOR PRESIDENTE' || role === 'PASTOR AUXILIAR') {
-              const pastorPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual'];
+              const pastorPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
               if (pastorPerms.includes(perm)) return true;
           }
           if (role === 'SECRETARIO') {
-              const secPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual'];
+              const secPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (secPerms.includes(perm)) return true;
           }
           if (role === 'TESOUREIRO' || role === 'CONTADOR') {
@@ -13043,11 +13044,11 @@ export default function App() {
               if (financialPerms.includes(perm)) return true;
           }
           if (role === 'ADMINISTRADOR') {
-              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual'];
+              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (adminPerms.includes(perm)) return true;
           }
           if (role === 'ADVOGADO') {
-              const lawyerPerms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual'];
+              const lawyerPerms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (lawyerPerms.includes(perm)) return true;
           }
           if (role === 'LIDER DE DEPARTAMENTO') {

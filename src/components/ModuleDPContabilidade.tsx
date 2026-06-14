@@ -8,7 +8,7 @@ import {
   FileText, CheckCircle, TrendingUp, Plus, Trash2, Edit, Search, 
   CreditCard, ArrowUpRight, ArrowDownRight, HelpCircle, Download, 
   UserCheck, Percent, ShieldAlert, Sparkles, RefreshCw, X, ChevronRight, ChevronDown, Check, AlertCircle, Eye, UserPlus,
-  Paperclip, Shield, Clock, Plane, Info, Database, BookOpen, Scale, Upload, FileSpreadsheet
+  Paperclip, Shield, ShieldCheck, Clock, Plane, Info, Database, BookOpen, Scale, Upload, FileSpreadsheet
 } from 'lucide-react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell, Tooltip as RechartsTooltip
@@ -204,6 +204,663 @@ const ModuleDPContabilidade = memo(() => {
     riscos: 'Ausência de riscos nocivos identificados (LTCAT)',
     medico: 'Dr. Roberto Cruz - CRM/SP 123456'
   });
+
+  const [showDarfModal, setShowDarfModal] = useState(false);
+  const [showFgtsModal, setShowFgtsModal] = useState(false);
+  const [showDirfModal, setShowDirfModal] = useState(false);
+
+  const [darfForm, setDarfForm] = useState<any>({
+    razaoSocial: 'INSTITUIÇÃO SEDE / MATRIZ GIPP',
+    cnpj: '12.345.678/0001-99',
+    periodoApuracao: '31/05/2026',
+    codigoReceita: '5065-01',
+    referencia: 'ESOCIAL-2026-05',
+    vencimento: '20/06/2026',
+    valorPrincipal: 3560.00,
+    multa: 0.00,
+    juros: 0.00,
+    totais: 3560.00,
+    status: 'Pendente'
+  });
+
+  const [fgtsForm, setFgtsForm] = useState<any>({
+    razaoSocial: 'INSTITUIÇÃO SEDE / MATRIZ GIPP',
+    cnpj: '12.345.678/0001-99',
+    competencia: '05/2026',
+    vencimento: '15/06/2026',
+    qtdTrabalhadores: 4,
+    valorFGTS: 3600.00,
+    encargos: 0.00,
+    totais: 3600.00,
+    status: 'Pendente'
+  });
+
+  const handlePrintDarf = (darfData: any) => {
+    addToast("Gerando visualização da Guia DARF para impressão física...", "info");
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    
+    const docObj = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!docObj) return;
+
+    docObj.write(`
+      <html>
+        <head>
+          <title>DARF Previdenciária - ${darfData.periodoApuracao || '05/2026'}</title>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; background-color: white; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              @page { size: portrait; margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="max-w-3xl mx-auto border-4 border-black p-5 text-sm">
+            <div class="flex justify-between border-b-4 border-black pb-4 mb-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-green-800 rounded-full flex flex-col items-center justify-center text-white font-extrabold text-[8px] text-center border-2 border-yellow-400">
+                  <span class="leading-none text-[6px]">REPÚBLICA</span>
+                  <span class="leading-none text-[6px]">FEDERATIVA</span>
+                  <span class="leading-none text-[7px] text-yellow-300">BRASIL</span>
+                </div>
+                <div>
+                  <h1 class="font-black text-sm uppercase leading-tight">Ministério da Fazenda</h1>
+                  <h2 class="font-bold text-xs uppercase text-gray-700 leading-tight">Secretaria da Receita Federal do Brasil</h2>
+                  <p class="text-[10px] text-gray-500 font-mono mt-0.5">Documento de Arrecadação de Receitas Federais</p>
+                </div>
+              </div>
+              <div class="text-right border-l border-gray-350 pl-4 flex flex-col justify-center">
+                <span class="font-black text-2xl uppercase tracking-widest text-green-905">DARF</span>
+                <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Documento Tributário</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3 mb-4">
+              <div class="col-span-8 border-2 border-black p-3 font-mono rounded">
+                <label class="block text-[8px] font-black text-gray-600 uppercase mb-1">01. Nome da Fonte Pagadora / Razão Social</label>
+                <div class="font-black text-base text-gray-900 leading-tight">${darfData.razaoSocial || 'INSTITUIÇÃO SEDE / MATRIZ GIPP'}</div>
+                <div class="text-[10px] text-gray-500 mt-2 font-sans">
+                  <strong>Órgão Geral Eclesiástico</strong> | Telefone: (11) 3345-2121 | Contabilidade Integrada
+                </div>
+              </div>
+              <div class="col-span-4 grid grid-rows-4 gap-2 font-mono">
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">02. PERÍODO DE APURAÇÃO</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${darfData.periodoApuracao || '31/05/2026'}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">03. NÚMERO DO CNPJ</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${darfData.cnpj || '12.345.678/0001-99'}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">04. CÓDIGO DA RECEITA</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${darfData.codigoReceita || '5065-01'}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">05. NÚMERO DE REFERÊNCIA</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${darfData.referencia || 'ESOCIAL-2026-05'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3 mb-4">
+              <div class="col-span-8 border-2 border-black p-4 space-y-3 flex flex-col justify-between rounded">
+                <div>
+                  <h3 class="font-black text-xs text-green-800 uppercase tracking-wider mb-1">Avisos e Instruções Importantes:</h3>
+                  <p class="text-[10px] leading-relaxed text-gray-600 font-sans">
+                    Guia gerada automaticamente através do subsistema de integração com a DCTFWeb e eSocial. 
+                    O pagamento preferencial deve ser realizado via Pix, escaneando o QR Code abaixo, para compensação bancária e baixa automática em até 5 minutos nas bases de dados da União.
+                  </p>
+                  <p class="text-[10px] leading-relaxed text-gray-500 font-sans mt-2">
+                    Caso ocorra atraso nas contribuições previdenciárias e fiscais, configure juros e multas atualizados na aba financeira para posterior reemissão deste documento administrativo.
+                  </p>
+                </div>
+                <div class="bg-gray-100 p-2.5 rounded border border-dashed border-gray-400 text-[9px] text-gray-600 font-mono">
+                  SINCRE-DCTFWEB Lote eSocial #44.2026.0592 | Chave Digital GIPP: 3491-GIP-98DF-9284-E5C
+                </div>
+              </div>
+              <div class="col-span-4 grid grid-rows-5 gap-2 font-mono">
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">06. DATA DE VENCIMENTO</label>
+                  <div class="font-black text-sm text-right text-red-600 mt-0.5">${darfData.vencimento || '20/06/2026'}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">07. VALOR DO PRINCIPAL</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfData.valorPrincipal || 3560)}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">08. VALOR DA MULTA</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfData.multa || 0)}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-600">09. VALOR DOS JUROS E/OU ENCARGOS</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfData.juros || 0)}</div>
+                </div>
+                <div class="border-2 border-black p-1.5 bg-green-50 rounded">
+                  <label class="block text-[7px] font-black text-green-900">10. VALOR TOTAL</label>
+                  <div class="font-black text-base text-right text-green-950 mt-0.5">
+                    ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                      Number(darfData.valorPrincipal || 0) + Number(darfData.multa || 0) + Number(darfData.juros || 0)
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-2 border-black p-4 bg-gray-50 flex items-center justify-between gap-6 rounded mb-4">
+              <div class="flex-1">
+                <div class="text-xs font-black uppercase text-green-900 mb-1 flex items-center gap-1.5">
+                  ⚡ RECEITA FEDERAL - PAGAMENTO COM PIX (DCTFWEB COMPENSAÇÃO DIRETA)
+                </div>
+                <p class="text-[10px] text-gray-600 leading-tight">
+                  Aponte a câmera do seu aplicativo bancário preferido para o QR Code ao lado. A compensação no eSocial é instantânea! Chave única Pix de repasse governamental.
+                </p>
+                <div class="mt-2 text-[8px] font-mono select-all bg-white p-1.5 rounded border overflow-x-auto text-gray-500 whitespace-nowrap">
+                  00020101021226850014br.gov.bcb.pix2563receitafederal.gov.br/darf/esocial?txid=12543-982026053560abc
+                </div>
+              </div>
+              <div class="w-24 h-24 bg-white border border-gray-300 p-1 flex">
+                <svg viewBox="0 0 100 100" class="w-full h-full text-black">
+                  <rect width="100" height="100" fill="white" />
+                  <rect x="5" y="5" width="25" height="25" fill="black" />
+                  <rect x="10" y="10" width="15" height="15" fill="white" />
+                  <rect x="13" y="13" width="9" height="9" fill="black" />
+                  
+                  <rect x="70" y="5" width="25" height="25" fill="black" />
+                  <rect x="75" y="10" width="15" height="15" fill="white" />
+                  <rect x="78" y="13" width="9" height="9" fill="black" />
+                  
+                  <rect x="5" y="70" width="25" height="25" fill="black" />
+                  <rect x="10" y="75" width="15" height="15" fill="white" />
+                  <rect x="13" y="78" width="9" height="9" fill="black" />
+                  
+                  <rect x="35" y="35" width="30" height="30" fill="black" />
+                  <rect x="40" y="40" width="20" height="20" fill="white" />
+                  <rect x="45" y="45" width="10" height="10" fill="black" />
+                  
+                  <rect x="35" y="10" width="5" height="10" fill="black" />
+                  <rect x="50" y="5" width="10" height="5" fill="black" />
+                  <rect x="45" y="20" width="5" height="5" fill="black" />
+                  <rect x="10" y="35" width="10" height="5" fill="black" />
+                  <rect x="25" y="45" width="5" height="15" fill="black" />
+                  <rect x="15" y="55" width="10" height="5" fill="black" />
+                  <rect x="75" y="35" width="15" height="5" fill="black" />
+                  <rect x="85" y="45" width="5" height="10" fill="black" />
+                  <rect x="70" y="55" width="10" height="5" fill="black" />
+                  <rect x="35" y="75" width="5" height="15" fill="black" />
+                  <rect x="50" y="85" width="15" height="5" fill="black" />
+                  <rect x="45" y="70" width="10" height="5" fill="black" />
+                  <rect x="75" y="75" width="15" height="5" fill="black" />
+                  <rect x="85" y="80" width="10" height="10" fill="black" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="mt-8 flex flex-col items-center">
+              <div class="font-mono text-center text-xs tracking-widest font-bold mb-1.5">
+                856400000355 600002102026 062012543981 123456780007
+              </div>
+              <div class="flex items-center justify-center bg-white p-2 border-2 border-black w-full">
+                <svg viewBox="0 0 400 35" class="w-full h-8">
+                  <rect width="400" height="35" fill="white" />
+                  <g fill="black">
+                    <rect x="10" y="0" width="3" height="35" />
+                    <rect x="15" y="0" width="1" height="35" />
+                    <rect x="18" y="0" width="4" height="35" />
+                    <rect x="24" y="0" width="2" height="35" />
+                    <rect x="30" y="0" width="1" height="35" />
+                    <rect x="35" y="0" width="5" height="35" />
+                    <rect x="42" y="0" width="2" height="35" />
+                    <rect x="46" y="0" width="3" height="35" />
+                    <rect x="52" y="0" width="1" height="35" />
+                    <rect x="56" y="0" width="4" height="35" />
+                    <rect x="62" y="0" width="2" height="35" />
+                    <rect x="66" y="0" width="3" height="35" />
+                    <rect x="72" y="0" width="1" height="35" />
+                    <rect x="76" y="0" width="5" height="35" />
+                    <rect x="83" y="0" width="2" height="35" />
+                    <rect x="90" y="0" width="1" height="35" />
+                    <rect x="95" y="0" width="3" height="35" />
+                    <rect x="102" y="0" width="2" height="35" />
+                    <rect x="108" y="0" width="4" height="35" />
+                    <rect x="114" y="0" width="1" height="35" />
+                    <rect x="120" y="0" width="3" height="35" />
+                    <rect x="125" y="0" width="2" height="35" />
+                    <rect x="131" y="0" width="4" height="35" />
+                    <rect x="137" y="0" width="1" height="35" />
+                    <rect x="141" y="0" width="5" height="35" />
+                    <rect x="148" y="0" width="2" height="35" />
+                    <rect x="154" y="0" width="3" height="35" />
+                    <rect x="160" y="0" width="1" height="35" />
+                    <rect x="164" y="0" width="4" height="35" />
+                    <rect x="170" y="0" width="2" height="35" />
+                    <rect x="176" y="0" width="3" height="35" />
+                    <rect x="182" y="0" width="1" height="35" />
+                    <rect x="186" y="0" width="5" height="35" />
+                    <rect x="193" y="0" width="2" height="35" />
+                    <rect x="198" y="0" width="4" height="35" />
+                    <rect x="204" y="0" width="1" height="35" />
+                    <rect x="210" y="0" width="3" height="35" />
+                    <rect x="215" y="0" width="2" height="35" />
+                    <rect x="221" y="0" width="4" height="35" />
+                    <rect x="227" y="0" width="1" height="35" />
+                    <rect x="231" y="0" width="5" height="35" />
+                    <rect x="238" y="0" width="2" height="35" />
+                    <rect x="244" y="0" width="3" height="35" />
+                    <rect x="250" y="0" width="1" height="35" />
+                    <rect x="254" y="0" width="4" height="35" />
+                    <rect x="270" y="0" width="2" height="35" />
+                    <rect x="276" y="0" width="3" height="35" />
+                    <rect x="282" y="0" width="1" height="35" />
+                    <rect x="286" y="0" width="5" height="35" />
+                    <rect x="293" y="0" width="2" height="35" />
+                    <rect x="298" y="0" width="4" height="35" />
+                    <rect x="304" y="0" width="1" height="35" />
+                    <rect x="310" y="0" width="3" height="35" />
+                    <rect x="315" y="0" width="2" height="35" />
+                    <rect x="321" y="0" width="4" height="35" />
+                    <rect x="327" y="0" width="1" height="35" />
+                    <rect x="331" y="0" width="5" height="35" />
+                    <rect x="338" y="0" width="2" height="35" />
+                    <rect x="344" y="0" width="3" height="35" />
+                    <rect x="350" y="0" width="1" height="35" />
+                    <rect x="354" y="0" width="4" height="35" />
+                    <rect x="360" y="0" width="2" height="35" />
+                    <rect x="366" y="0" width="3" height="35" />
+                    <rect x="372" y="0" width="1" height="35" />
+                    <rect x="376" y="0" width="5" height="35" />
+                    <rect x="383" y="0" width="2" height="35" />
+                    <rect x="390" y="0" width="5" height="35" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => { window.frameElement.remove(); }, 1500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    
+    docObj.close();
+  };
+
+  const handlePrintFgts = (fgtsData: any) => {
+    addToast("Gerando visualização do FGTS Digital para impressão física...", "info");
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    
+    const docObj = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!docObj) return;
+
+    docObj.write(`
+      <html>
+        <head>
+          <title>FGTS Digital - Competência ${fgtsData.competencia || '05/2026'}</title>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; background-color: white; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              @page { size: portrait; margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="max-w-3xl mx-auto border-4 border-orange-500 p-5 text-sm">
+            <div class="flex justify-between border-b-4 border-orange-500 pb-4 mb-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-orange-600 rounded-full flex flex-col items-center justify-center text-white font-extrabold text-[10px] text-center border-2 border-white">
+                  <span class="leading-none text-[8px] tracking-wide">FGTS</span>
+                  <span class="leading-none text-[8px] text-orange-250 font-bold">DIGITAL</span>
+                </div>
+                <div>
+                  <h1 class="font-black text-sm uppercase leading-tight text-orange-950">Ministério do Trabalho e Emprego</h1>
+                  <h2 class="font-bold text-xs uppercase text-gray-700 leading-tight">Fundo de Garantia do Tempo de Serviço</h2>
+                  <p class="text-[10px] text-gray-500 font-mono mt-0.5">GFD - Guia do FGTS Digital (Recolhimento Mensal)</p>
+                </div>
+              </div>
+              <div class="text-right border-l border-gray-305 pl-4 flex flex-col justify-center">
+                <span class="font-black text-xl uppercase tracking-widest text-orange-600">GFD</span>
+                <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Via de Recolhimento</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3 mb-4">
+              <div class="col-span-8 border-2 border-gray-300 p-3 font-mono rounded">
+                <label class="block text-[8px] font-black text-gray-500 uppercase mb-1">CÉDULA DE IDENTIFICAÇÃO DO EMPREGADOR</label>
+                <div class="font-black text-base text-gray-900 leading-tight">${fgtsData.razaoSocial || 'INSTITUIÇÃO SEDE / MATRIZ GIPP'}</div>
+                <div class="text-[10px] text-gray-600 mt-2 font-sans">
+                  <strong>CNPJ do Cadastro Geral:</strong> ${fgtsData.cnpj || '12.345.678/0001-99'}
+                </div>
+              </div>
+              <div class="col-span-4 grid grid-rows-3 gap-2 font-mono">
+                <div class="border-2 border-gray-300 p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-500">COMPETÊNCIA DE APURAÇÃO</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${fgtsData.competencia || '05/2026'}</div>
+                </div>
+                <div class="border-2 border-gray-300 p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-500">DATA MÁXIMA DE VENCIMENTO</label>
+                  <div class="font-black text-sm text-right text-red-600 mt-0.5">${fgtsData.vencimento || '15/06/2026'}</div>
+                </div>
+                <div class="border-2 border-gray-300 p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-500">COLABORADORES ATIVOS</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${fgtsData.qtdTrabalhadores || '4'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3 mb-4">
+              <div class="col-span-8 border-2 border-gray-300 p-4 space-y-3 flex flex-col justify-between rounded">
+                <div>
+                  <h3 class="font-black text-xs text-orange-700 uppercase tracking-wider mb-1">Instruções aos Operadores Eclesiásticos:</h3>
+                  <p class="text-[10px] leading-relaxed text-gray-600 font-sans">
+                    Esta guia unificada foi emitida via barramento oficial do FGTS Digital. O pagamento deve ser processado exclusivamente via PIX (QR Code). Não há necessidade de emissão de convênios bancários ou boletos adicionais.
+                  </p>
+                  <p class="text-[10px] leading-relaxed text-gray-500 font-sans mt-2">
+                    As contas individuais de FGTS dos colaboradores serão individualizadas e creditadas de forma instantânea junto à Caixa Econômica Federal após a correspondente quitação desta guia.
+                  </p>
+                </div>
+                <div class="bg-orange-50 p-2.5 rounded border border-dashed border-orange-250 text-[9px] text-orange-850 font-mono">
+                  Identificador FGTSD Lote #982 | Autenticação Eletrônica: FGTSD-9284-FJS9-12543-MK2
+                </div>
+              </div>
+              <div class="col-span-4 grid grid-rows-3 gap-2 font-mono">
+                <div class="border-2 border-gray-300 p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-500">VALOR DO FGTS RECOLHIDO</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fgtsData.valorFGTS || 3600)}</div>
+                </div>
+                <div class="border-2 border-gray-300 p-1.5 rounded">
+                  <label class="block text-[7px] font-black text-gray-500">MULTAS E ENCARGOS ADICIONAIS</label>
+                  <div class="font-bold text-sm text-right mt-0.5">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fgtsData.encargos || 0)}</div>
+                </div>
+                <div class="border-2 border-orange-500 p-1.5 bg-orange-50 rounded">
+                  <label class="block text-[7px] font-black text-orange-900">TOTAL A RECOLHER</label>
+                  <div class="font-black text-base text-right text-orange-950 mt-0.5">
+                    ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                      Number(fgtsData.valorFGTS || 0) + Number(fgtsData.encargos || 0)
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-2 border-orange-300 p-4 bg-orange-50/50 flex items-center justify-between gap-6 rounded mb-4">
+              <div class="flex-1">
+                <div class="text-xs font-black uppercase text-orange-900 mb-1 flex items-center gap-1.5">
+                  ⚡ MINISTÉRIO DO TRABALHO - RECOLHIMENTO AUTOMÁTICO VIA PIX
+                </div>
+                <p class="text-[10px] text-gray-600 leading-tight">
+                  Utilize o aplicativo bancário preferido para fazer o pagamento via PIX através do QR Code. A compensação é instantânea na Caixa Econômica Federal para liberação dos saldos vinculados dos trabalhadores.
+                </p>
+                <div class="mt-2 text-[8px] font-mono select-all bg-white p-1.5 rounded border border-orange-200 overflow-x-auto text-gray-500 whitespace-nowrap">
+                  00020101021226850014br.gov.bcb.fgtsdigital.gov.br/receita/fgtspix?txid=fgtslote9823600abc
+                </div>
+              </div>
+              <div class="w-24 h-24 bg-white border border-gray-300 p-1 flex">
+                <svg viewBox="0 0 100 100" class="w-full h-full text-black">
+                  <rect width="100" height="100" fill="white" />
+                  <rect x="5" y="5" width="25" height="25" fill="black" />
+                  <rect x="10" y="10" width="15" height="15" fill="white" />
+                  <rect x="13" y="13" width="9" height="9" fill="black" />
+                  
+                  <rect x="70" y="5" width="25" height="25" fill="black" />
+                  <rect x="75" y="10" width="15" height="15" fill="white" />
+                  <rect x="78" y="13" width="9" height="9" fill="black" />
+                  
+                  <rect x="5" y="70" width="25" height="25" fill="black" />
+                  <rect x="10" y="75" width="15" height="15" fill="white" />
+                  <rect x="13" y="78" width="9" height="9" fill="black" />
+                  
+                  <rect x="35" y="35" width="30" height="30" fill="black" />
+                  <rect x="40" y="40" width="20" height="20" fill="white" />
+                  <rect x="45" y="45" width="10" height="10" fill="black" />
+                  
+                  <rect x="35" y="10" width="5" height="10" fill="black" />
+                  <rect x="50" y="5" width="10" height="5" fill="black" />
+                  <rect x="45" y="20" width="5" height="5" fill="black" />
+                  <rect x="10" y="35" width="10" height="5" fill="black" />
+                  <rect x="25" y="45" width="5" height="15" fill="black" />
+                  <rect x="15" y="55" width="10" height="5" fill="black" />
+                  <rect x="75" y="35" width="15" height="5" fill="black" />
+                  <rect x="85" y="45" width="5" height="10" fill="black" />
+                  <rect x="70" y="55" width="10" height="5" fill="black" />
+                  <rect x="35" y="75" width="5" height="15" fill="black" />
+                  <rect x="50" y="85" width="15" height="5" fill="black" />
+                  <rect x="45" y="70" width="10" height="5" fill="black" />
+                  <rect x="75" y="75" width="15" height="5" fill="black" />
+                  <rect x="85" y="80" width="10" height="10" fill="black" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="mt-8 flex flex-col items-center">
+              <div class="font-mono text-center text-xs tracking-widest font-bold mb-1.5">
+                858200000360 000002102026 052012543981 982360012345
+              </div>
+              <div class="flex items-center justify-center bg-white p-2 border-2 border-black w-full">
+                <svg viewBox="0 0 400 35" class="w-full h-8">
+                  <rect width="400" height="35" fill="white" />
+                  <g fill="black">
+                    <rect x="10" y="0" width="3" height="35" />
+                    <rect x="15" y="0" width="2" height="35" />
+                    <rect x="19" y="0" width="1" height="35" />
+                    <rect x="24" y="0" width="4" height="35" />
+                    <rect x="30" y="0" width="2" height="35" />
+                    <rect x="35" y="0" width="5" height="35" />
+                    <rect x="42" y="0" width="1" height="35" />
+                    <rect x="46" y="0" width="4" height="35" />
+                    <rect x="52" y="0" width="2" height="35" />
+                    <rect x="56" y="0" width="3" height="35" />
+                    <rect x="62" y="0" width="1" height="35" />
+                    <rect x="66" y="0" width="5" height="35" />
+                    <rect x="73" y="0" width="2" height="35" />
+                    <rect x="79" y="0" width="3" height="35" />
+                    <rect x="85" y="0" width="1" height="35" />
+                    <rect x="89" y="0" width="4" height="35" />
+                    <rect x="95" y="0" width="2" height="35" />
+                    <!-- custom simulated barcode line blocks -->
+                    <rect x="100" y="0" width="3" height="35" />
+                    <rect x="105" y="0" width="1" height="35" />
+                    <rect x="109" y="0" width="4" height="35" />
+                    <rect x="115" y="0" width="2" height="35" />
+                    <rect x="121" y="0" width="1" height="35" />
+                    <rect x="125" y="0" width="5" height="35" />
+                    <rect x="132" y="0" width="2" height="35" />
+                    <rect x="136" y="0" width="3" height="35" />
+                    <rect x="142" y="0" width="1" height="35" />
+                    <rect x="146" y="0" width="4" height="35" />
+                    <rect x="152" y="0" width="2" height="35" />
+                    <rect x="158" y="0" width="3" height="35" />
+                    <rect x="164" y="0" width="1" height="35" />
+                    <rect x="168" y="0" width="5" height="35" />
+                    <rect x="175" y="0" width="2" height="35" />
+                    <rect x="181" y="0" width="3" height="35" />
+                    <rect x="187" y="0" width="1" height="35" />
+                    <rect x="191" y="0" width="4" height="35" />
+                    <rect x="197" y="0" width="2" height="35" />
+                    <rect x="203" y="0" width="3" height="35" />
+                    <rect x="209" y="0" width="1" height="35" />
+                    <rect x="213" y="0" width="5" height="35" />
+                    <rect x="220" y="0" width="2" height="35" />
+                    <rect x="225" y="0" width="4" height="35" />
+                    <rect x="231" y="0" width="1" height="35" />
+                    <rect x="235" y="0" width="3" height="35" />
+                    <rect x="241" y="0" width="2" height="35" />
+                    <rect x="245" y="0" width="5" height="35" />
+                    <rect x="252" y="0" width="1" height="35" />
+                    <rect x="256" y="0" width="4" height="35" />
+                    <rect x="262" y="0" width="2" height="35" />
+                    <rect x="268" y="0" width="3" height="35" />
+                    <rect x="274" y="0" width="1" height="35" />
+                    <rect x="278" y="0" width="5" height="35" />
+                    <rect x="285" y="0" width="2" height="35" />
+                    <rect x="290" y="0" width="3" height="35" />
+                    <rect x="296" y="0" width="1" height="35" />
+                    <rect x="300" y="0" width="4" height="35" />
+                    <rect x="306" y="0" width="2" height="35" />
+                    <rect x="312" y="0" width="3" height="35" />
+                    <rect x="318" y="0" width="1" height="35" />
+                    <rect x="322" y="0" width="5" height="35" />
+                    <rect x="330" y="0" width="2" height="35" />
+                    <rect x="335" y="0" width="4" height="35" />
+                    <rect x="341" y="0" width="1" height="35" />
+                    <rect x="345" y="0" width="3" height="35" />
+                    <rect x="351" y="0" width="2" height="35" />
+                    <rect x="355" y="0" width="5" height="35" />
+                    <rect x="363" y="0" width="1" height="35" />
+                    <rect x="367" y="0" width="4" height="35" />
+                    <rect x="373" y="0" width="2" height="35" />
+                    <rect x="379" y="0" width="3" height="35" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => { window.frameElement.remove(); }, 1500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    
+    docObj.close();
+  };
+
+  const handlePrintDirf = () => {
+    addToast("Gerando comprovante oficial de substituição de DIRF...", "info");
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    
+    const docObj = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!docObj) return;
+
+    docObj.write(`
+      <html>
+        <head>
+          <title>Certidão de Substituição da DIRF - Receita Federal</title>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 40px; background-color: white; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              @page { size: portrait; margin: 15mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="max-w-3xl mx-auto border-2 border-emerald-600 p-8 text-slate-800 rounded-lg shadow-xs relative">
+            <div class="absolute top-8 right-8 text-right">
+              <span class="text-[9px] bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold px-3 py-1 rounded uppercase tracking-wider">
+                CERTIDÃO ELETRÔNICA
+              </span>
+            </div>
+            
+            <div class="flex items-center gap-6 border-b border-slate-200 pb-6 mb-6">
+              <div class="w-16 h-16 bg-emerald-750 bg-emerald-700 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm flex flex-col justify-center">
+                <span class="font-extrabold text-[14px]">RFB</span>
+              </div>
+              <div>
+                <h1 class="text-sm font-black uppercase text-emerald-950 tracking-wider">Ministério da Fazenda</h1>
+                <h2 class="text-xs font-bold text-slate-700 uppercase">Secretaria Especial da Receita Federal do Brasil</h2>
+                <p class="text-[10px] text-slate-500 font-medium">Declaração do Imposto sobre a Renda Retido na Fonte (DIRF)</p>
+              </div>
+            </div>
+
+            <div class="text-center bg-emerald-50/50 border border-emerald-200 p-4 rounded-xl mb-6">
+              <h3 class="text-sm font-black text-emerald-900 uppercase tracking-widest mb-1">
+                COMPROVANTE DE DISPENSA E SUBSTITUIÇÃO DA OBRIGAÇÃO
+              </h3>
+              <p class="text-[10px] text-emerald-800 font-mono font-bold">
+                Instrução Normativa RFB nº 2.043/2011 e nº 2.181/2024
+              </p>
+            </div>
+
+            <div class="space-y-4 text-xs font-sans leading-relaxed text-slate-700">
+              <p>
+                A <strong>Secretaria Especial da Receita Federal do Brasil</strong> CERTIFICA que a entidade identificada abaixo cumpriu integralmente os requisitos legais de prestação de informações e encontra-se <strong>DISPENSADA</strong> da entrega anual da declaração DIRF física/geradora, tendo em vista a sua <strong>EFETIVA SUBSTITUIÇÃO</strong> pelos lançamentos digitais centralizados no barramento do <strong>eSocial</strong> e na apuração mensal da <strong>DCTFWeb</strong>.
+              </p>
+
+              <div class="bg-gray-50 border border-slate-200 rounded-xl p-5 font-mono text-[11px] text-slate-800 space-y-2">
+                <div><span class="text-[9px] font-bold text-slate-400 block uppercase">NOME DO CONTRIBUINTE / ENTIDADE</span> <strong class="text-xs text-slate-900">INSTITUIÇÃO SEDE / MATRIZ GIPP</strong></div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div><span class="text-[9px] font-bold text-slate-400 block uppercase">CNPJ</span> <strong class="text-slate-900">12.345.678/0001-99</strong></div>
+                  <div><span class="text-[9px] font-bold text-slate-400 block uppercase">REGIME DE APURAÇÃO</span> <strong class="text-slate-900">TEMPLO DE QUALQUER CULTO</strong></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div><span class="text-[9px] font-bold text-slate-400 block uppercase">SITUAÇÃO DA DIRF ANUAL</span> <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-black text-[10px]">SUBSTITUÍDA PELO ESOCIAL</span></div>
+                  <div><span class="text-[9px] font-bold text-slate-400 block uppercase">DATA DE VALIDAÇÃO</span> <strong class="text-slate-900">14/06/2026</strong></div>
+                </div>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-800 mb-1">Dispositivos de Validação e Base Legal:</h4>
+                <ul class="list-disc pl-5 space-y-1 text-[11px] text-slate-600 font-medium">
+                  <li>Os rendimentos do trabalho e as respectivas retenções na fonte decorrentes da folha ministerial foram tempestivamente informados através dos eventos periódicos transmitidos (eSocial S-1200 / S-1210).</li>
+                  <li>As obrigações de retenção previdenciária e imposto de renda incidentes foram consolidadas e recolhidas na centralizada DARF Previdenciária via DCTFWeb.</li>
+                  <li>Inexistem pendências de processamento ou inconformidades fiscais registradas no portal e-CAC da Receita Federal relativas aos anos calendários vigentes.</li>
+                </ul>
+              </div>
+
+              <div class="border-t border-slate-100 pt-5 mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="text-center md:text-left space-y-1">
+                  <div class="text-[10px] text-slate-400 font-mono font-bold">CÓDIGO DE AUTORIZAÇÃO / REFERÊNCIA:</div>
+                  <div class="text-xs font-mono font-black text-slate-700 bg-slate-100 px-2 py-1 rounded">RFB-DIRFSUB-2026-9173A-H90</div>
+                </div>
+                <div class="text-center md:text-right">
+                  <div class="text-[10px] text-slate-400 font-black uppercase mb-1">Assinatura Eletrônica eSocial</div>
+                  <p class="text-[11px] text-emerald-700 font-bold font-mono">✓ CERTIFICADO DIGITAL ICP-BRASIL DE AUTORIDADE RFB</p>
+                  <p class="text-[9px] text-slate-400 mt-0.5">Assinado eletronicamente por autoridade certificadora credenciada.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 border-t border-dashed border-slate-200 pt-4 text-center">
+              <p class="text-[9px] text-slate-400 font-mono leading-relaxed">
+                Este documento é uma via oficial impressa gerada pelo Portal Consubstanciado do do DP. Para verificar a integridade da assinatura, consulte o portal de assinaturas digitais da Receita Federal com o código acima.
+              </p>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => { window.frameElement.remove(); }, 1500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    
+    docObj.close();
+  };
 
   useEffect(() => {
     localStorage.setItem('gipp_dp_plano_contas', JSON.stringify(planoDeContas));
@@ -5845,15 +6502,18 @@ const ModuleDPContabilidade = memo(() => {
                   <div className="space-y-4">
                      <div className="flex items-center justify-between">
                        <span className="text-xs font-semibold text-slate-600 flex items-center gap-2"><Database size={14} className="text-blue-500" /> DCTFWeb</span>
-                       <button className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Emitir DARF</button>
+                       <button onClick={() => setShowDarfModal(true)} className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Emitir DARF</button>
                      </div>
                      <div className="flex items-center justify-between">
                        <span className="text-xs font-semibold text-slate-600 flex items-center gap-2"><Database size={14} className="text-orange-500" /> FGTS Digital</span>
-                       <button className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Acessar Guia</button>
+                       <button onClick={() => setShowFgtsModal(true)} className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Acessar Guia</button>
                      </div>
                      <div className="flex items-center justify-between">
                        <span className="text-xs font-semibold text-slate-600 flex items-center gap-2"><Database size={14} className="text-emerald-500" /> DIRF Anual</span>
-                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Substituída</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded font-black uppercase tracking-wider">Substituída</span>
+                          <button onClick={() => setShowDirfModal(true)} className="text-indigo-600 text-[10px] font-black uppercase tracking-wider hover:underline cursor-pointer">Acessar Comprovante</button>
+                        </div>
                      </div>
                   </div>
                </div>
@@ -9312,6 +9972,841 @@ const ModuleDPContabilidade = memo(() => {
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3">
               <button onClick={() => setShowDesempenhoModal(false)} className="bg-white border rounded px-4 py-2.5 font-bold text-xs text-slate-600 cursor-pointer">Cancelar</button>
               <button onClick={handleSaveDesempenho} className="bg-indigo-600 text-white px-5 py-2.5 font-black text-xs rounded-xl cursor-pointer">Salvar Ciclo</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL EMISSÃO DARF PREVIDENCIÁRIA */}
+      {showDarfModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="absolute inset-0" onClick={() => setShowDarfModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl h-[90vh] flex flex-col relative z-10 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-3xl text-slate-700">
+              <div>
+                <h3 className="text-base font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="text-emerald-600" size={18} /> Geração e Emissão - DARF Previdenciária
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Ajuste os valores, guias e simule o pagamento ou envie para impressão.</p>
+              </div>
+              <button 
+                onClick={() => setShowDarfModal(false)}
+                className="bg-slate-200/60 hover:bg-rose-500 hover:text-white p-2 rounded-full text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Painel Ajuste de Variáveis (Left col) */}
+              <div className="lg:col-span-4 space-y-4 border-r border-slate-100 pr-0 lg:pr-6">
+                <h4 className="font-bold text-xs text-slate-700 uppercase tracking-widest border-b pb-1">Ajuste de Parâmetros</h4>
+                
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Razão Social do Templo</label>
+                  <input 
+                    type="text" 
+                    value={darfForm.razaoSocial}
+                    onChange={(e) => setDarfForm({ ...darfForm, razaoSocial: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs text-slate-800 font-bold outline-hidden font-sans"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Período Apuração</label>
+                    <input 
+                      type="text" 
+                      value={darfForm.periodoApuracao}
+                      onChange={(e) => setDarfForm({ ...darfForm, periodoApuracao: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Vencimento</label>
+                    <input 
+                      type="text" 
+                      value={darfForm.vencimento}
+                      onChange={(e) => setDarfForm({ ...darfForm, vencimento: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Cód da Receita</label>
+                    <input 
+                      type="text" 
+                      value={darfForm.codigoReceita}
+                      onChange={(e) => setDarfForm({ ...darfForm, codigoReceita: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">CNPJ Emissor</label>
+                    <input 
+                      type="text" 
+                      value={darfForm.cnpj}
+                      onChange={(e) => setDarfForm({ ...darfForm, cnpj: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-3 border-t">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Valor Principal (R$)</label>
+                    <input 
+                      type="number" 
+                      value={darfForm.valorPrincipal}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setDarfForm({ ...darfForm, valorPrincipal: val, totais: val + darfForm.multa + darfForm.juros });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs text-indigo-700 font-black outline-hidden font-sans"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Multa (R$)</label>
+                      <input 
+                        type="number" 
+                        value={darfForm.multa}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setDarfForm({ ...darfForm, multa: val, totais: darfForm.valorPrincipal + val + darfForm.juros });
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-850 font-bold outline-hidden font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase">Juros (R$)</label>
+                      <input 
+                        type="number" 
+                        value={darfForm.juros}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setDarfForm({ ...darfForm, juros: val, totais: darfForm.valorPrincipal + darfForm.multa + val });
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-850 font-bold outline-hidden font-sans"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-3">
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-805 text-xs">
+                    <div className="flex gap-2 items-start">
+                      <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Geração SINCRE Ativa:</strong> Esta DARF engloba contribuições previdenciárias apuradas na folha de pagamento do eSocial. Devedor primário cadastrado no CNPJ mencionado.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-805 text-xs">
+                    <label className="block text-[10px] font-black text-indigo-500 uppercase">Status do Documento</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`w-2.5 h-2.5 rounded-full ${darfForm.status === 'Pago' ? 'bg-emerald-500' : 'bg-amber-500 anim-pulse'}`}></span>
+                      <strong className="text-sm font-black uppercase tracking-wider">{darfForm.status}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visualização de Visual Realística (Right col) */}
+              <div className="lg:col-span-8 bg-slate-100 p-6 rounded-2xl flex flex-col justify-center overflow-x-auto min-w-[550px]">
+                <div className="bg-white border-2 border-black p-5 shadow-lg max-w-2xl mx-auto w-full text-[10px] text-black">
+                  
+                  {/* Cabeçalho */}
+                  <div className="flex justify-between border-b-2 border-black pb-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-800 rounded-full flex flex-col items-center justify-center text-white font-black text-[5px] text-center border">
+                        <span className="leading-none select-none">REPÚBLICA</span>
+                        <span className="leading-none select-none uppercase text-yellow-300">BRASIL</span>
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-[11px] uppercase leading-tight">Ministério da Fazenda</h4>
+                        <p className="font-bold text-[9px] text-gray-700 leading-tight">Secretaria da Receita Federal do Brasil</p>
+                        <p className="text-[8px] text-gray-500 font-mono">Documento de Arrecadação de Receitas Federais</p>
+                      </div>
+                    </div>
+                    <div className="text-right border-l pl-3 flex flex-col justify-center">
+                      <span className="font-black text-xl uppercase tracking-widest text-emerald-950 font-mono">DARF</span>
+                      <span className="text-[7px] text-gray-505 font-bold uppercase">DCTFWeb Integrada</span>
+                    </div>
+                  </div>
+
+                  {/* Detalhes Identificação e Valores */}
+                  <div className="grid grid-cols-12 gap-2 mb-3">
+                    <div className="col-span-8 border border-black p-2 font-mono">
+                      <label className="block text-[7px] font-bold text-gray-500 uppercase">01. Razão Social Fontes Pagadoras</label>
+                      <div className="font-black text-xs text-gray-950 uppercase leading-tight">{darfForm.razaoSocial}</div>
+                      <div className="text-[7.5px] text-gray-505 mt-1.5 font-sans leading-none">
+                        Guia Única de Contribuição Previdenciária Integrada GIPP Sede
+                      </div>
+                    </div>
+                    <div className="col-span-4 grid grid-rows-4 gap-1.5 font-mono text-slate-700">
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">02. PERÍODO APURAÇÃO</label>
+                        <div className="font-extrabold text-xs text-right leading-none">{darfForm.periodoApuracao}</div>
+                      </div>
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">03. NÚMERO DO CNPJ</label>
+                        <div className="font-extrabold text-xs text-right leading-none">{darfForm.cnpj}</div>
+                      </div>
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">04. CÓD COMPREV</label>
+                        <div className="font-extrabold text-xs text-right leading-none">{darfForm.codigoReceita}</div>
+                      </div>
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">05. REF DE CONTROLE</label>
+                        <div className="font-extrabold text-xs text-right leading-none">{darfForm.referencia}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Linha 2 de Detalhes */}
+                  <div className="grid grid-cols-12 gap-2 mb-3">
+                    <div className="col-span-8 border border-black p-3 space-y-2 flex flex-col justify-between">
+                      <div>
+                        <h5 className="font-black text-[8px] text-green-800 uppercase tracking-wider mb-1 leading-none">Instruções para Liquidação Automática:</h5>
+                        <p className="text-[7.5px] leading-snug text-gray-505 font-sans">
+                          Efetue o pagamento através do QR Code PIX abaixo. A Receita Federal fará a baixa de forma automática, dispensando o envio de comprovantes ao departamento pessoal ou contabilidade do Ministério.
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 px-2 py-1.5 rounded border border-dashed text-[7px] text-gray-600 font-mono leading-none">
+                        Assinatura Digital de Autenticidade: GIPP-SINCRE-2026-A1FF-924
+                      </div>
+                    </div>
+                    <div className="col-span-4 grid grid-rows-5 gap-1 font-mono text-slate-700">
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">06. DATA VENCIMENTO</label>
+                        <div className="font-extrabold text-[11px] text-right text-red-655 leading-none">{darfForm.vencimento}</div>
+                      </div>
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">07. VALOR PRINCIPAL</label>
+                        <div className="font-semibold text-xs text-right leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfForm.valorPrincipal)}</div>
+                      </div>
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">08. VALOR DA MULTA</label>
+                        <div className="font-semibold text-xs text-right leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfForm.multa)}</div>
+                      </div>
+                      <div className="border border-black p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">09. JUROS DE MORA</label>
+                        <div className="font-semibold text-xs text-right leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfForm.juros)}</div>
+                      </div>
+                      <div className="border border-black p-1 bg-green-50">
+                        <label className="block text-[6px] font-black text-green-900">10. VALOR TOTAL</label>
+                        <div className="font-black text-xs text-right text-green-950 leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(darfForm.totais)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Code Pix e Chave Copia e Cola */}
+                  <div className="border border-black p-3 bg-slate-50 flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="text-[8.5px] font-black text-green-800 leading-none mb-1">⚡ PAGAMENTO EXCLUSIVO VIA PIX</div>
+                      <p className="text-[7.5px] text-gray-650 leading-tight">
+                        Seu banco confirmará a adimplência em tempo real e registrará a quitação do eSocial. Rápido e imune a fraudes.
+                      </p>
+                      <div className="mt-1 text-[7px] font-mono select-all bg-white p-1 rounded border overflow-x-auto text-gray-500 whitespace-nowrap leading-none">
+                        00020101021226850014br.gov.bcb.pix2563receitafederal.gov.br/darf/esocial?txid=12543-982026053560abc
+                      </div>
+                    </div>
+                    <div className="w-16 h-16 bg-white border p-0.5 flex shrink-0">
+                      <svg viewBox="0 0 100 100" className="w-full h-full text-black">
+                        <rect width="100" height="100" fill="white" />
+                        <rect x="5" y="5" width="25" height="25" fill="black" />
+                        <rect x="10" y="10" width="15" height="15" fill="white" />
+                        <rect x="13" y="13" width="9" height="9" fill="black" />
+                        <rect x="70" y="5" width="25" height="25" fill="black" />
+                        <rect x="75" y="10" width="15" height="15" fill="white" />
+                        <rect x="78" y="13" width="9" height="9" fill="black" />
+                        <rect x="5" y="70" width="25" height="25" fill="black" />
+                        <rect x="10" y="75" width="15" height="15" fill="white" />
+                        <rect x="13" y="78" width="9" height="9" fill="black" />
+                        <rect x="35" y="35" width="30" height="30" fill="black" />
+                        <rect x="40" y="40" width="20" height="20" fill="white" />
+                        <rect x="45" y="45" width="10" height="10" fill="black" />
+                        <rect x="35" y="10" width="5" height="10" fill="black" />
+                        <rect x="50" y="5" width="10" height="5" fill="black" />
+                        <rect x="75" y="35" width="15" height="5" fill="black" />
+                        <rect x="35" y="75" width="5" height="15" fill="black" />
+                        <rect x="50" y="85" width="15" height="5" fill="black" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Código de barras simulado */}
+                  <div className="mt-4 flex flex-col items-center">
+                    <div className="font-mono text-center text-[8px] tracking-widest font-black leading-none mb-1">
+                      856400000355 600002102026 062012543981 123456780007
+                    </div>
+                    <div className="flex items-center justify-center bg-white p-1 border border-black w-full max-w-sm">
+                      <svg viewBox="0 0 400 20" className="w-full h-4">
+                        <rect width="400" height="20" fill="white" />
+                        <g fill="black">
+                          <rect x="10" y="0" width="3" height="20" />
+                          <rect x="15" y="0" width="1" height="20" />
+                          <rect x="18" y="0" width="4" height="20" />
+                          <rect x="24" y="0" width="2" height="20" />
+                          <rect x="30" y="0" width="1" height="20" />
+                          <rect x="35" y="0" width="5" height="20" />
+                          <rect x="42" y="0" width="2" height="20" />
+                          <rect x="46" y="0" width="3" height="20" />
+                          <rect x="52" y="0" width="1" height="20" />
+                          <rect x="56" y="0" width="4" height="20" />
+                          <rect x="62" y="0" width="2" height="20" />
+                          <rect x="66" y="0" width="3" height="20" />
+                          <rect x="72" y="0" width="1" height="20" />
+                          <rect x="76" y="0" width="5" height="20" />
+                          <rect x="83" y="0" width="2" height="20" />
+                          <rect x="90" y="0" width="1" height="20" />
+                          <rect x="95" y="0" width="3" height="20" />
+                          <rect x="102" y="0" width="2" height="20" />
+                          <rect x="108" y="0" width="4" height="20" />
+                          <rect x="114" y="0" width="1" height="20" />
+                          <rect x="120" y="0" width="3" height="20" />
+                          <rect x="125" y="0" width="2" height="20" />
+                          <rect x="131" y="0" width="4" height="20" />
+                          <rect x="137" y="0" width="1" height="20" />
+                          <rect x="141" y="0" width="5" height="20" />
+                          <rect x="148" y="0" width="2" height="20" />
+                          <rect x="154" y="0" width="3" height="20" />
+                          <rect x="160" y="0" width="1" height="20" />
+                          <rect x="164" y="0" width="4" height="20" />
+                          <rect x="170" y="0" width="2" height="20" />
+                          <rect x="176" y="0" width="3" height="20" />
+                          <rect x="182" y="0" width="1" height="20" />
+                          <rect x="186" y="0" width="5" height="20" />
+                          <rect x="193" y="0" width="2" height="20" />
+                          <rect x="198" y="0" width="4" height="20" />
+                          <rect x="231" y="0" width="5" height="20" />
+                          <rect x="238" y="0" width="2" height="20" />
+                          <rect x="244" y="0" width="3" height="20" />
+                          <rect x="270" y="0" width="2" height="20" />
+                          <rect x="276" y="0" width="3" height="20" />
+                          <rect x="282" y="0" width="1" height="20" />
+                          <rect x="310" y="0" width="3" height="20" />
+                          <rect x="315" y="0" width="2" height="20" />
+                          <rect x="321" y="0" width="4" height="20" />
+                          <rect x="331" y="0" width="5" height="20" />
+                          <rect x="338" y="0" width="2" height="20" />
+                          <rect x="344" y="0" width="3" height="20" />
+                          <rect x="350" y="0" width="1" height="20" />
+                          <rect x="354" y="0" width="4" height="20" />
+                          <rect x="376" y="0" width="5" height="20" />
+                          <rect x="383" y="0" width="2" height="20" />
+                          <rect x="390" y="0" width="5" height="20" />
+                        </g>
+                      </svg>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3 rounded-b-3xl">
+              <div>
+                {darfForm.status !== 'Pago' && (
+                  <Button 
+                    onClick={() => {
+                      setDarfForm({ ...darfForm, status: 'Pago' });
+                      setTransactions(prev => [
+                        { id: 'darft', data: getTodayDate(), descricao: 'PAGTO DARF PREVIDENCIÁRIA RECOLHIMENTO', valor: darfForm.totais, tipo: 'saida', status: 'conciliado', conciliadoCom: 'DARF Previdenciária Pix Emissor' },
+                        ...prev
+                      ]);
+                      addToast('Pagamento eletrônico processado com sucesso! Guia liquidada via Pix e integrada às bases oficiais da Receita Federal.', 'success');
+                    }}
+                    variant="primary" 
+                    icon={Check}
+                    className="bg-emerald-600 hover:bg-emerald-700 pointer font-bold"
+                  >
+                    Efetuar Lançamento e Pagamento (Pix)
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={() => setShowDarfModal(false)} variant="secondary">Fechar</Button>
+                <Button 
+                  onClick={() => handlePrintDarf(darfForm)} 
+                  variant="primary" 
+                  icon={Printer}
+                  className="bg-indigo-600 hover:bg-indigo-700 pointer"
+                >
+                  Imprimir DARF
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL ACESSAR GUIA FGTS DIGITAL */}
+      {showFgtsModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="absolute inset-0" onClick={() => setShowFgtsModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl h-[90vh] flex flex-col relative z-10 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-3xl text-slate-700">
+              <div>
+                <h3 className="text-base font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="text-orange-600" size={18} /> Geração e Emissão - Guia do FGTS Digital (GFD)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Configure os encargos de recolhimento mensal e emita a guia Pix unificada.</p>
+              </div>
+              <button 
+                onClick={() => setShowFgtsModal(false)}
+                className="bg-slate-200/60 hover:bg-rose-500 hover:text-white p-2 rounded-full text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Painel Edição de Variáveis (Left col) */}
+              <div className="lg:col-span-4 space-y-4 border-r border-slate-100 pr-0 lg:pr-6">
+                <h4 className="font-bold text-xs text-slate-700 uppercase tracking-widest border-b pb-1">Ajuste de Parâmetros</h4>
+                
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Razão Social do Empregador</label>
+                  <input 
+                    type="text" 
+                    value={fgtsForm.razaoSocial}
+                    onChange={(e) => setFgtsForm({ ...fgtsForm, razaoSocial: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs text-slate-800 font-bold outline-hidden font-sans"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Competência</label>
+                    <input 
+                      type="text" 
+                      value={fgtsForm.competencia}
+                      onChange={(e) => setFgtsForm({ ...fgtsForm, competencia: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Vencimento</label>
+                    <input 
+                      type="text" 
+                      value={fgtsForm.vencimento}
+                      onChange={(e) => setFgtsForm({ ...fgtsForm, vencimento: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Quantidade Trabalhadores</label>
+                    <input 
+                      type="number" 
+                      value={fgtsForm.qtdTrabalhadores}
+                      onChange={(e) => setFgtsForm({ ...fgtsForm, qtdTrabalhadores: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-sans"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">CNPJ Empregador</label>
+                    <input 
+                      type="text" 
+                      value={fgtsForm.cnpj}
+                      onChange={(e) => setFgtsForm({ ...fgtsForm, cnpj: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-800 font-bold outline-hidden font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-3 border-t">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Valor Líquido FGTS (R$)</label>
+                    <input 
+                      type="number" 
+                      value={fgtsForm.valorFGTS}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setFgtsForm({ ...fgtsForm, valorFGTS: val, totais: val + fgtsForm.encargos });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs text-orange-700 font-black outline-hidden font-sans"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Multas / Acréscimos (R$)</label>
+                    <input 
+                      type="number" 
+                      value={fgtsForm.encargos}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setFgtsForm({ ...fgtsForm, encargos: val, totais: fgtsForm.valorFGTS + val });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 p-2 text-xs text-slate-850 font-bold outline-hidden font-sans"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-3">
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-805 text-xs">
+                    <div className="flex gap-2 items-start">
+                      <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Novo FGTS Digital:</strong> Vigente a partir de 01/03/2024. O pagamento é realizado exclusivamente via Pix. O vencimento deslocou para o dia 20 do mês subsequente por lei, reforce prazos.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-orange-805 text-xs">
+                    <label className="block text-[10px] font-black text-orange-500 uppercase">Status do Documento</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`w-2.5 h-2.5 rounded-full ${fgtsForm.status === 'Pago' ? 'bg-emerald-500' : 'bg-amber-500 anim-pulse'}`}></span>
+                      <strong className="text-sm font-black uppercase tracking-wider">{fgtsForm.status}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visualização de Visual Realística (Right col) */}
+              <div className="lg:col-span-8 bg-slate-100 p-6 rounded-2xl flex flex-col justify-center overflow-x-auto min-w-[550px]">
+                <div className="bg-white border-2 border-orange-500 p-5 shadow-lg max-w-2xl mx-auto w-full text-[10px] text-black">
+                  
+                  {/* Cabeçalho */}
+                  <div className="flex justify-between border-b-2 border-orange-500 pb-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-600 rounded-full flex flex-col items-center justify-center text-white font-black text-[6px] text-center border">
+                        <span className="leading-none select-none">FGTS</span>
+                        <span className="leading-none select-none uppercase text-orange-205 font-bold">DIGITAL</span>
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-[11px] uppercase leading-tight text-orange-950">Ministério do Trabalho e Emprego</h4>
+                        <p className="font-bold text-[9px] text-gray-700 leading-tight">Fundo de Garantia de Tempo de Serviço</p>
+                        <p className="text-[8px] text-gray-500 font-mono">GFD - Guia de Recolhimento do FGTS Digital</p>
+                      </div>
+                    </div>
+                    <div className="text-right border-l pl-3 flex flex-col justify-center">
+                      <span className="font-black text-xl uppercase tracking-widest text-orange-600 font-mono">GFD</span>
+                      <span className="text-[7px] text-gray-500 font-bold uppercase">Competência {fgtsForm.competencia}</span>
+                    </div>
+                  </div>
+
+                  {/* Detalhes Identificação e Valores */}
+                  <div className="grid grid-cols-12 gap-2 mb-3">
+                    <div className="col-span-8 border border-gray-300 p-2 font-mono">
+                      <label className="block text-[7px] font-bold text-gray-500 uppercase">Razão Social do Empregador GIPP Sede</label>
+                      <div className="font-black text-xs text-gray-950 uppercase leading-tight">{fgtsForm.razaoSocial}</div>
+                      <div className="text-[7.5px] text-gray-505 mt-1.5 font-sans leading-none flex items-center">
+                        Cadastro Geral de Obreiros e Funcionários CLT do Ministério
+                      </div>
+                    </div>
+                    <div className="col-span-4 grid grid-rows-3 gap-1.5 font-mono text-slate-700">
+                      <div className="border border-gray-300 p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">COMPETÊNCIA DE APURAÇÃO</label>
+                        <div className="font-extrabold text-xs text-right leading-none">{fgtsForm.competencia}</div>
+                      </div>
+                      <div className="border border-gray-300 p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">LIMITE DE VENCIMENTO</label>
+                        <div className="font-extrabold text-xs text-right leading-none text-red-600">{fgtsForm.vencimento}</div>
+                      </div>
+                      <div className="border border-gray-300 p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">QTD TRABALHADORES</label>
+                        <div className="font-extrabold text-xs text-right leading-none">{fgtsForm.qtdTrabalhadores}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Linha 2 de Detalhes */}
+                  <div className="grid grid-cols-12 gap-2 mb-3">
+                    <div className="col-span-8 border border-gray-300 p-3 space-y-2 flex flex-col justify-between">
+                      <div>
+                        <h5 className="font-black text-[8px] text-orange-700 uppercase tracking-wider mb-1 leading-none">Instruções para Quitação Unificada:</h5>
+                        <p className="text-[7.5px] leading-snug text-gray-505 font-sans">
+                          Utilize o QR Code PIX disponibilizado pelas integrações oficiais do MTE. A conciliação individual de cada trabalhador na Caixa é instantânea.
+                        </p>
+                      </div>
+                      <div className="bg-orange-50 px-2 py-1.5 rounded border border-dashed text-[7px] text-orange-850 font-mono leading-none border-orange-200">
+                        Código Identificador eSocial: FGTSD-LOTE982-S1200-S1299
+                      </div>
+                    </div>
+                    <div className="col-span-4 grid grid-rows-3 gap-1 font-mono text-slate-700">
+                      <div className="border border-gray-300 p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">VALOR DO FGTS RECOLHIDO</label>
+                        <div className="font-semibold text-xs text-right leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fgtsForm.valorFGTS)}</div>
+                      </div>
+                      <div className="border border-gray-300 p-1">
+                        <label className="block text-[6px] font-bold text-gray-400">MULTAS E ACRÉSCIMOS</label>
+                        <div className="font-semibold text-xs text-right leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fgtsForm.encargos)}</div>
+                      </div>
+                      <div className="border border-orange-400 p-1 bg-orange-50 flex flex-col justify-center">
+                        <label className="block text-[6px] font-black text-orange-800">TOTAL FINAL A RECOLHER</label>
+                        <div className="font-black text-xs text-right text-orange-950 leading-none">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fgtsForm.totais)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Code Pix e Chave Copia e Cola */}
+                  <div className="border border-orange-200 p-3 bg-orange-50/20 flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="text-[8.5px] font-black text-orange-850 leading-none mb-1">⚡ PIX COBRANÇA DO FGTS DIGITAL (RECOLHIMENTO IMEDIATO)</div>
+                      <p className="text-[7.5px] text-gray-600 leading-tight">
+                        A compensação e individualização nas contas dos trabalhadores acontecem em tempo real. Muito mais ágil do que o antigo boleto GRF.
+                      </p>
+                      <div className="mt-1 text-[7px] font-mono select-all bg-white p-1 rounded border border-orange-200 overflow-x-auto text-gray-500 whitespace-nowrap leading-none">
+                        00020101021226850014br.gov.bcb.fgtsdigital.gov.br/receita/fgtspix?txid=fgtslote9823600abc
+                      </div>
+                    </div>
+                    <div className="w-16 h-16 bg-white border border-orange-200 p-0.5 flex shrink-0">
+                      <svg viewBox="0 0 100 100" className="w-full h-full text-black">
+                        <rect width="100" height="100" fill="white" />
+                        <rect x="5" y="5" width="25" height="25" fill="black" />
+                        <rect x="10" y="10" width="15" height="15" fill="white" />
+                        <rect x="13" y="13" width="9" height="9" fill="black" />
+                        <rect x="70" y="5" width="25" height="25" fill="black" />
+                        <rect x="75" y="10" width="15" height="15" fill="white" />
+                        <rect x="78" y="13" width="9" height="9" fill="black" />
+                        <rect x="5" y="70" width="25" height="25" fill="black" />
+                        <rect x="10" y="75" width="15" height="15" fill="white" />
+                        <rect x="13" y="78" width="9" height="9" fill="black" />
+                        <rect x="35" y="35" width="30" height="30" fill="black" />
+                        <rect x="40" y="40" width="20" height="20" fill="white" />
+                        <rect x="45" y="45" width="10" height="10" fill="black" />
+                        <rect x="35" y="10" width="5" height="10" fill="black" />
+                        <rect x="50" y="5" width="10" height="5" fill="black" />
+                        <rect x="75" y="35" width="15" height="5" fill="black" />
+                        <rect x="35" y="75" width="5" height="15" fill="black" />
+                        <rect x="50" y="85" width="15" height="5" fill="black" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Código de barras simulado */}
+                  <div className="mt-4 flex flex-col items-center">
+                    <div className="font-mono text-center text-[8px] tracking-widest font-black leading-none mb-1">
+                      858200000360 000002102026 052012543981 982360012345
+                    </div>
+                    <div className="flex items-center justify-center bg-white p-1 border border-orange-500 w-full max-w-sm">
+                      <svg viewBox="0 0 400 20" className="w-full h-4">
+                        <rect width="400" height="20" fill="white" />
+                        <g fill="black">
+                          <rect x="10" y="0" width="3" height="20" />
+                          <rect x="15" y="0" width="1" height="20" />
+                          <rect x="18" y="0" width="4" height="20" />
+                          <rect x="24" y="0" width="2" height="20" />
+                          <rect x="30" y="0" width="1" height="20" />
+                          <rect x="35" y="0" width="5" height="20" />
+                          <rect x="42" y="0" width="2" height="20" />
+                          <rect x="46" y="0" width="3" height="20" />
+                          <rect x="52" y="0" width="1" height="20" />
+                          <rect x="56" y="0" width="4" height="20" />
+                          <rect x="62" y="0" width="2" height="20" />
+                          <rect x="66" y="0" width="3" height="20" />
+                          <rect x="72" y="0" width="1" height="20" />
+                          <rect x="76" y="0" width="5" height="20" />
+                          <rect x="100" y="0" width="3" height="20" />
+                          <rect x="105" y="0" width="1" height="20" />
+                          <rect x="109" y="0" width="4" height="20" />
+                          <rect x="115" y="0" width="2" height="20" />
+                          <rect x="125" y="0" width="5" height="20" />
+                          <rect x="132" y="0" width="2" height="20" />
+                          <rect x="136" y="0" width="3" height="20" />
+                          <rect x="146" y="0" width="4" height="20" />
+                          <rect x="152" y="0" width="2" height="20" />
+                          <rect x="158" y="0" width="3" height="20" />
+                          <rect x="164" y="0" width="1" height="20" />
+                          <rect x="168" y="0" width="5" height="20" />
+                          <rect x="191" y="0" width="4" height="20" />
+                          <rect x="197" y="0" width="2" height="20" />
+                          <rect x="203" y="0" width="3" height="20" />
+                          <rect x="213" y="0" width="5" height="20" />
+                          <rect x="220" y="0" width="2" height="20" />
+                          <rect x="225" y="0" width="4" height="20" />
+                          <rect x="231" y="0" width="1" height="20" />
+                          <rect x="235" y="0" width="3" height="20" />
+                          <rect x="245" y="0" width="5" height="20" />
+                          <rect x="256" y="0" width="4" height="20" />
+                          <rect x="262" y="0" width="2" height="20" />
+                          <rect x="268" y="0" width="3" height="20" />
+                          <rect x="274" y="0" width="1" height="20" />
+                          <rect x="278" y="0" width="5" height="20" />
+                          <rect x="285" y="0" width="2" height="20" />
+                          <rect x="290" y="0" width="3" height="20" />
+                          <rect x="300" y="0" width="4" height="20" />
+                          <rect x="306" y="0" width="2" height="20" />
+                          <rect x="312" y="0" width="3" height="20" />
+                          <rect x="322" y="0" width="5" height="20" />
+                          <rect x="330" y="0" width="2" height="20" />
+                          <rect x="335" y="0" width="4" height="20" />
+                          <rect x="345" y="0" width="3" height="20" />
+                          <rect x="351" y="0" width="2" height="20" />
+                          <rect x="355" y="0" width="5" height="20" />
+                          <rect x="367" y="0" width="4" height="20" />
+                          <rect x="373" y="0" width="2" height="20" />
+                          <rect x="379" y="0" width="3" height="20" />
+                        </g>
+                      </svg>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3 rounded-b-3xl">
+              <div>
+                {fgtsForm.status !== 'Pago' && (
+                  <Button 
+                    onClick={() => {
+                      setFgtsForm({ ...fgtsForm, status: 'Pago' });
+                      setTransactions(prev => [
+                        { id: 'fgtst', data: getTodayDate(), descricao: 'PAGTO FGTS DIGITAL RECOLHIMENTO', valor: fgtsForm.totais, tipo: 'saida', status: 'conciliado', conciliadoCom: 'FGTS Digital Pix Emissor' },
+                        ...prev
+                      ]);
+                      addToast('Compensação recebida com sucesso! Encargos de FGTS individualizados e liquidados eletronicamente na CEF via Pix.', 'success');
+                    }}
+                    variant="primary" 
+                    icon={Check}
+                    className="bg-emerald-600 hover:bg-emerald-700 pointer font-bold"
+                  >
+                    Efetuar Lançamento e Pagamento (Pix)
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={() => setShowFgtsModal(false)} variant="secondary">Fechar</Button>
+                <Button 
+                  onClick={() => handlePrintFgts(fgtsForm)} 
+                  variant="primary" 
+                  icon={Printer}
+                  className="bg-orange-600 hover:bg-orange-700 hover:text-white pointer"
+                >
+                  Imprimir Guia
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showDirfModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="absolute inset-0" onClick={() => setShowDirfModal(false)}></div>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl h-[85vh] flex flex-col relative z-10 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-3xl text-slate-700">
+              <div>
+                <h3 className="text-base font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="text-emerald-600" size={18} /> Certidão Tempestiva - Substituição DIRF Anual
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Certificado eletrônico de conformidade com as diretivas eSocial e Receita Federal do Brasil.</p>
+              </div>
+              <button 
+                onClick={() => setShowDirfModal(false)}
+                className="bg-slate-200/60 hover:bg-rose-500 hover:text-white p-2 rounded-full text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 font-sans">
+              <div className="border border-emerald-600 border-2 bg-white rounded-2xl p-8 relative max-w-2xl mx-auto shadow-sm">
+                <div className="absolute top-4 right-4 text-right">
+                  <span className="text-[8px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider">
+                    Certidão Online Ativa
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-4 border-b border-emerald-100 pb-4 mb-6">
+                  <div className="w-12 h-12 bg-emerald-700 text-white rounded-full flex items-center justify-center font-extrabold text-[12px]">
+                    RFB
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wide text-emerald-950">MINISTÉRIO DA FAZENDA</h4>
+                    <p className="text-[10px] uppercase font-bold text-slate-600 leading-none mr-2">Secretaria Especial da Receita Federal do Brasil</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5 leading-none">Comprovante de Regularidade de Rendimentos na Fonte (DIRF)</p>
+                  </div>
+                </div>
+
+                <div className="text-center bg-emerald-50/50 rounded-xl p-3 border border-emerald-200 mb-6">
+                  <h5 className="text-xs font-black text-emerald-900 uppercase tracking-widest leading-none mb-1">DECLARAÇÃO DE DISPENSA E SUBSTITUIÇÃO</h5>
+                  <p className="text-[9px] text-emerald-750 font-mono font-semibold">Instrução Normativa RFB nº 2.043/2021 e nº 2.181/2024</p>
+                </div>
+
+                <div className="space-y-4 text-xs text-slate-700 leading-relaxed font-sans">
+                  <p className="text-[11px]">
+                    A <strong>Secretaria Especial da Receita Federal do Brasil</strong>, através do seu sistema consular integrado, CERTIFICA que para o ano-calendário correspondente, a entidade identificada abaixo cumpriu com as obrigações e encontra-se <strong>DISPENSADA</strong> de declaração física DIRF.
+                  </p>
+
+                  <div className="border rounded-xl p-4 bg-slate-50/50 font-mono text-[10px] space-y-2">
+                    <div>
+                      <span className="text-[8px] font-bold text-slate-400 block">NOME DA INSTITUIÇÃO / TEMPLO</span>
+                      <strong className="text-slate-800 text-xs">INSTITUIÇÃO SEDE / MATRIZ GIPP</strong>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-[8px] font-bold text-slate-400 block">CNPJ VALIDADOR</span>
+                        <strong className="text-slate-800">12.345.678/0001-99</strong>
+                      </div>
+                      <div>
+                        <span className="text-[8px] font-bold text-slate-400 block">ENQUADRAMENTO FISCAL</span>
+                        <strong className="text-slate-800">Organização Religiosa / Filantrópica</strong>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-[8px] font-bold text-slate-400 block">REGIME DA DIRF ANUAL</span>
+                        <span className="bg-emerald-100 text-emerald-850 px-1.5 py-0.5 rounded font-black text-[9px] border border-emerald-200">TOTALMENTE SUBSTITUÍDA</span>
+                      </div>
+                      <div>
+                        <span className="text-[8px] font-bold text-slate-400 block">CÓDIGO DE AUTORIZAÇÃO</span>
+                        <strong className="text-emerald-800">RFB-DIRFSUB-2026-9173A</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] space-y-2 pt-2 text-slate-600 font-medium">
+                    <h6 className="font-extrabold text-[11px] text-slate-800 uppercase tracking-wider mb-1">Dispositivos Constitucionais e Transmissão Ordinária:</h6>
+                    <p className="leading-snug">
+                      1. As informações de retenções na fonte relativas ao imposto de renda e as contribuições previdenciárias sobre os rendimentos do trabalho da folha clerical foram consolidadas integralmente por meio dos periódicos eSocial <strong>S-1200 / S-1210</strong>.
+                    </p>
+                    <p className="leading-snug">
+                      2. A quitação de encargos foi apurada sob a modalidade da <strong>DCTFWeb</strong> mensal.
+                    </p>
+                    <p className="leading-snug">
+                      3. Os dados foram devidamente homologados junto à Receita Federal e não apresentam inconformidades técnicas ou administrativas.
+                    </p>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div className="text-center sm:text-left">
+                      <span className="text-[8px] font-bold text-slate-400 block">CHAVE ELETRÔNICA ICP-BRASIL</span>
+                      <strong className="text-emerald-700 font-mono text-[10px]">✓ VALIDADA COM CERTIFICADO DIGITAL A1</strong>
+                    </div>
+                    <div className="text-[9px] text-slate-400 text-center sm:text-right font-mono font-bold">
+                      Data Homologação: 14/06/2026
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3 rounded-b-3xl">
+              <Button onClick={() => setShowDirfModal(false)} variant="secondary">Fechar</Button>
+              <Button 
+                onClick={handlePrintDirf} 
+                variant="primary" 
+                icon={Printer}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+              >
+                Imprimir Certidão
+              </Button>
             </div>
           </div>
         </div>,
