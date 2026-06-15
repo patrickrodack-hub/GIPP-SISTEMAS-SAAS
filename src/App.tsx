@@ -8893,7 +8893,7 @@ const PortalHome = ({ user, db, setView }) => {
             </div>
 
             {/* AÇÕES RÁPIDAS (NOVO LAYOUT ESTILO FINTECH) */}
-            <div className={`grid grid-cols-2 gap-4 ${isProfessor && allowedModulesHome.includes('portal_professor_ebd') ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+            <div className={`grid grid-cols-2 gap-4 ${isProfessor ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
                 {allowedModulesHome.includes('portal_financas') && (
                     <button onClick={() => setView('portal_financas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group">
                         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={24}/></div>
@@ -8922,7 +8922,7 @@ const PortalHome = ({ user, db, setView }) => {
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
                     </button>
                 )}
-                {isProfessor && allowedModulesHome.includes('portal_professor_ebd') && (
+                {isProfessor && (
                     <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1">
                         <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Sala do Professor</span>
@@ -11615,7 +11615,7 @@ const MemberPortalLayout = () => {
     const filteredBaseNavItems = baseNavItems.filter(item => {
         if (item.id === 'portal_home') return true;
         if (item.id === 'portal_professor_ebd') {
-            return isProfessor && allowedModules.includes('portal_professor_ebd');
+            return isProfessor;
         }
         return allowedModules.includes(item.id);
     });
