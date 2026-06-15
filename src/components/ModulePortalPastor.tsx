@@ -76,7 +76,7 @@ const ModulePortalPastor = () => {
                 .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
 
             const saidasRealizadas = txHasThisCc
-                .filter((f: any) => f.tipo === 'saida')
+                .filter((f: any) => f.tipo === 'saida' && f.status === 'pago')
                 .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
 
             return {

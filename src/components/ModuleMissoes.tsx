@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -43,8 +44,10 @@ import {
 
 // Exporting component
 const ModuleMissoes = () => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, logAction, deleteItem, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, logAction, deleteItem, setPrintMode, setPrintData, setPreviewOpen, user } = useContext(ChurchContext);
     const [tab, setTab] = useState(1);
+    const [selectedMissionarioProf, setSelectedMissionarioProf] = useState(null);
+    const [selectedAgenciaProf, setSelectedAgenciaProf] = useState(null);
     const [subTab, setSubTab] = useState('eventos');
     const [viewModeKanban, setViewModeKanban] = useState('kanban');
     const [msgTemplate, setMsgTemplate] = useState('');
@@ -77,6 +80,7 @@ const ModuleMissoes = () => {
     const [finStartDate, setFinStartDate] = useState('');
     const [finEndDate, setFinEndDate] = useState('');
     const [finPeriod, setFinPeriod] = useState('todos');
+    const [finSubTab, setFinSubTab] = useState('caixa');
 
     const handlePeriodChange = (val: string) => {
         setFinPeriod(val);
@@ -348,7 +352,7 @@ const ModuleMissoes = () => {
         {id: 1, label: 'Dashboard', icon: LayoutDashboard}, 
         {id: 2, label: 'Missionários', icon: Users}, 
         {id: 3, label: 'Agências', icon: Building2}, 
-        {id: 4, label: 'Colaboradores', icon: HeartHandshake}, 
+        {id: 4, label: 'Colaboradores e Parceiros', icon: HeartHandshake}, 
         {id: 6, label: 'Carnê de Missões', icon: CreditCard},
         {id: 5, label: 'Financeiro', icon: DollarSign}, 
         {id: 7, label: 'Agenda & Tarefas', icon: Calendar}
@@ -489,11 +493,11 @@ const ModuleMissoes = () => {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="glass-card p-8 rounded-[2.5rem] border border-slate-200">
-                                <h4 className="font-black text-slate-700 mb-6 flex items-center gap-2"><HeartHandshake size={20} className="text-emerald-500"/> Engajamento no Departamento</h4>
+                                <h4 className="font-black text-slate-700 mb-6 flex items-center gap-2"><HeartHandshake size={20} className="text-emerald-500"/> Parceiros & Colaboradores</h4>
                                 <div className="flex justify-between items-end mb-3">
                                     <div>
                                         <span className="text-3xl font-black text-emerald-600 block">{totalColaboradores}</span>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Colaboradores</span>
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Colaboradores & Parceiros</span>
                                     </div>
                                     <div className="text-right">
                                         <span className="text-2xl font-black text-slate-600 block">{totalMembros}</span>
@@ -526,106 +530,285 @@ const ModuleMissoes = () => {
                         </div>
                     </div>
                 )}
-                {tab === 2 && <GenericTable title="Missionários" type="missionario" data={missionariosList} columns={[{header:'Nome', key:'nome'}, {header:'Campo', key:'campo'}, {header:'Agência', key:'agencia'}]} />}
-                {tab === 3 && <GenericTable title="Agências" type="agencia_missoes" data={agenciasList} columns={[{header:'Agência', key:'nome'}, {header:'Responsável', key:'responsavel'}]} />}
-                {tab === 4 && <GenericTable title="Colaboradores" type="missoes_colaborador" data={colaboradoresList} columns={[{header:'Nome', key:'nome'}, {header:'Tipo Apoio', key:'tipo'}]} />}
+                {tab === 2 && (
+                    <GenericTable 
+                        title="Missionários" 
+                        type="missionario" 
+                        data={missionariosList} 
+                        columns={[
+                            { header: 'Foto', key: 'foto' },
+                            { header: 'Nome Completo', key: 'nome' },
+                            { header: 'Campo / País', key: 'campo' },
+                            { header: 'Agência', key: 'agencia' },
+                            { header: 'Status', key: 'status' },
+                            { header: 'Contato', key: 'telefone' }
+                        ]} 
+                        customActions={(item) => (
+                            <button 
+                                onClick={() => setSelectedMissionarioProf(item)} 
+                                className="p-2.5 text-blue-500 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all shadow-sm bg-white border border-blue-100 flex items-center justify-center" 
+                                title="Visualizar Perfil Completo"
+                            >
+                                <Eye size={18}/>
+                            </button>
+                        )}
+                    />
+                )}
+                {tab === 3 && (
+                    <GenericTable 
+                        title="Agências de Missões" 
+                        type="agencia_missoes" 
+                        data={agenciasList} 
+                        columns={[
+                            { header: 'Nome da Agência', key: 'nome' },
+                            { header: 'Sigla', key: 'sigla' },
+                            { header: 'Responsável', key: 'responsavel' },
+                            { header: 'E-mail', key: 'email' },
+                            { header: 'Telefone', key: 'contato' },
+                            { header: 'Regiões de Atuação', key: 'paises_atuacao' }
+                        ]} 
+                        customActions={(item) => (
+                            <button 
+                                onClick={() => setSelectedAgenciaProf(item)} 
+                                className="p-2.5 text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all shadow-sm bg-white border border-indigo-100 flex items-center justify-center" 
+                                title="Visualizar Detalhes"
+                            >
+                                <Eye size={18}/>
+                            </button>
+                        )}
+                    />
+                )}
+                {tab === 4 && (
+                    <GenericTable 
+                        title="Colaboradores e Parceiros" 
+                        type="missoes_colaborador" 
+                        data={colaboradoresList} 
+                        columns={[
+                            { header: 'Nome / Razão Social', key: 'nome', render: d => <div className="font-bold text-slate-800">{d.nome}</div> },
+                            { header: 'Tipo Pessoa', key: 'tipo_pessoa', render: d => d.tipo_pessoa === 'pj' ? <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-black uppercase border border-amber-200">PJ</span> : <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[10px] font-black uppercase border border-sky-200">PF</span> },
+                            { header: 'Documento', key: 'documento', render: d => <span className="font-mono text-slate-600 font-bold">{d.documento || d.cpf || d.cnpj || '-'}</span> },
+                            { header: 'Contato', key: 'telefone', render: d => <span className="text-slate-600">{d.telefone || d.contato || d.whatsapp || '-'}</span> },
+                            { header: 'Tipo Apoio', key: 'tipo', render: d => <span className="font-medium text-indigo-600 uppercase text-[10px] font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{d.tipo || 'Oração'}</span> },
+                            { header: 'Ajuda Recorrente', key: 'ajuda_financeira_ativa', render: d => d.ajuda_financeira_ativa === 'sim' ? <span className="text-emerald-600 font-black">Sim (R$ {parseFloat(d.ajuda_financeira_valor || 0).toFixed(2)})</span> : <span className="text-slate-400 font-bold">Não</span> },
+                            { header: 'Periodicidade', key: 'ajuda_financeira_periodo', render: d => d.ajuda_financeira_ativa === 'sim' ? <span className="text-slate-500 font-medium">{d.ajuda_financeira_periodo || 'Mensal'}</span> : '-' },
+                            { header: 'Planejado', key: 'ajuda_financeira_qtd', render: d => d.ajuda_financeira_ativa === 'sim' ? <span className="text-slate-500 font-bold">{d.ajuda_financeira_qtd || 12}x</span> : '-' }
+                        ]} 
+                    />
+                )}
                 {tab === 5 && (
                     <div className="h-full flex flex-col space-y-6 overflow-y-auto custom-scrollbar p-2 pb-16">
-                        {/* Painel de Filtros */}
-                        <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-end justify-between bg-white/70">
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-                                <div className="text-left">
-                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Período / Atalhos</label>
-                                    <select
-                                        value={finPeriod}
-                                        onChange={e => handlePeriodChange(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                                    >
-                                        <option value="todos">📅 Todo o Período</option>
-                                        <option value="hoje">☀️ Hoje</option>
-                                        <option value="7dias">🔄 Últimos 7 dias</option>
-                                        <option value="30dias">🗓️ Últimos 30 dias</option>
-                                        <option value="este_mes">🌸 Este Mês</option>
-                                        <option value="este_ano">✨ Este Ano</option>
-                                        <option value="personalizado">🛠️ Personalizado</option>
-                                    </select>
+                        {/* Seletor de Sub-Abas do Financeiro */}
+                        <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit self-center sm:self-start shrink-0">
+                            <button
+                                onClick={() => setFinSubTab('caixa')}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-2 ${
+                                    finSubTab === 'caixa' 
+                                        ? "bg-white text-rose-600 shadow-md shadow-rose-100" 
+                                        : "text-slate-500 hover:text-slate-800"
+                                }`}
+                            >
+                                <Landmark size={14} /> Caixa de Missões
+                            </button>
+                            <button
+                                onClick={() => setFinSubTab('ajudas')}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-2 ${
+                                    finSubTab === 'ajudas' 
+                                        ? "bg-white text-rose-600 shadow-md shadow-rose-100" 
+                                        : "text-slate-500 hover:text-slate-800"
+                                }`}
+                            >
+                                <Activity size={14} /> Ajudas & Repasses Agendados
+                            </button>
+                        </div>
+
+                        {finSubTab === 'caixa' ? (
+                            <>
+                                {/* Painel de Filtros */}
+                                <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-end justify-between bg-white/70">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                                        <div className="text-left">
+                                            <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Período / Atalhos</label>
+                                            <select
+                                                value={finPeriod}
+                                                onChange={e => handlePeriodChange(e.target.value)}
+                                                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                            >
+                                                <option value="todos">📅 Todo o Período</option>
+                                                <option value="hoje">☀️ Hoje</option>
+                                                <option value="7dias">🔄 Últimos 7 dias</option>
+                                                <option value="30dias">🗓️ Últimos 30 dias</option>
+                                                <option value="este_mes">🌸 Este Mês</option>
+                                                <option value="este_ano">✨ Este Ano</option>
+                                                <option value="personalizado">🛠️ Personalizado</option>
+                                            </select>
+                                        </div>
+                                        <div className={`text-left ${finPeriod === 'personalizado' ? "opacity-100" : "opacity-70"}`}>
+                                            <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Inicial</label>
+                                            <input
+                                                type="date"
+                                                value={finStartDate}
+                                                onChange={e => handleStartDateChange(e.target.value)}
+                                                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                            />
+                                        </div>
+                                        <div className={`text-left ${finPeriod === 'personalizado' ? "opacity-100" : "opacity-70"}`}>
+                                            <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Final</label>
+                                            <input
+                                                type="date"
+                                                value={finEndDate}
+                                                onChange={e => handleEndDateChange(e.target.value)}
+                                                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {(finPeriod !== 'todos' || finStartDate || finEndDate) && (
+                                        <button
+                                            onClick={() => handlePeriodChange('todos')}
+                                            className="px-4 py-2.5 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl text-[10px] font-black uppercase text-slate-600 hover:text-rose-600 tracking-wider transition duration-200 flex items-center gap-1.5 self-center md:self-end"
+                                        >
+                                            <RotateCcw size={12} /> Limpar
+                                        </button>
+                                    )}
                                 </div>
-                                <div className={`text-left ${finPeriod === 'personalizado' ? "opacity-100" : "opacity-70"}`}>
-                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Inicial</label>
-                                    <input
-                                        type="date"
-                                        value={finStartDate}
-                                        onChange={e => handleStartDateChange(e.target.value)}
-                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+
+                                {/* Badges de Métricas Financeiras Filtradas */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 shrink-0">
+                                    <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Entradas</p>
+                                            <h3 className="text-2xl font-black text-emerald-600 tracking-tight mt-1.5">R$ {filteredStats.entradas.toFixed(2)}</h3>
+                                            <span className="text-[9px] text-slate-400 font-bold block mt-0.5">no período selecionado</span>
+                                        </div>
+                                        <div className="p-3 bg-emerald-50 text-emerald-500 rounded-2xl"><TrendingUp size={24} /></div>
+                                    </div>
+
+                                    <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Saídas</p>
+                                            <h3 className="text-2xl font-black text-rose-600 tracking-tight mt-1.5">R$ {filteredStats.saidas.toFixed(2)}</h3>
+                                            <span className="text-[9px] text-slate-400 font-bold block mt-0.5">no período selecionado</span>
+                                        </div>
+                                        <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl"><TrendingDown size={24} /></div>
+                                    </div>
+
+                                    <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Saldo Líquido</p>
+                                            <h3 className={`text-2xl font-black tracking-tight mt-1.5 ${filteredStats.saldo >= 0 ? "text-indigo-600" : "text-rose-650"}`}>
+                                                R$ {filteredStats.saldo.toFixed(2)}
+                                            </h3>
+                                            <span className="text-[9px] text-slate-400 font-bold block mt-0.5">sobra em caixa</span>
+                                        </div>
+                                        <div className={`p-3 rounded-2xl ${filteredStats.saldo >= 0 ? "bg-indigo-50 text-indigo-500" : "bg-rose-50 text-rose-500"}`}><Landmark size={24} /></div>
+                                    </div>
+                                </div>
+
+                                {/* Tabela do Caixa de Missões */}
+                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                                    <GenericTable 
+                                        title="Caixa Missões" 
+                                        type="missoes_financeiro" 
+                                        data={filteredFinanceiroMissoes} 
+                                        columns={[
+                                            {header:'Data', key:'data_competencia', render: d=>formatDateLocal(d.data_competencia)}, 
+                                            {header:'Descrição', key:'descricao'}, 
+                                            {header:'Valor', key:'valor', render: v=>`R$ ${parseFloat(v.valor).toFixed(2)}`}, 
+                                            {header:'Tipo', key:'tipo'}
+                                        ]} 
                                     />
                                 </div>
-                                <div className={`text-left ${finPeriod === 'personalizado' ? "opacity-100" : "opacity-70"}`}>
-                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Final</label>
-                                    <input
-                                        type="date"
-                                        value={finEndDate}
-                                        onChange={e => handleEndDateChange(e.target.value)}
-                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                            </>
+                        ) : (
+                            <div className="space-y-6 flex-1 flex flex-col h-full animate-entrance">
+                                {/* Widgets das Ajudas */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 shrink-0">
+                                    <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total de Ajudas Planejadas</p>
+                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight mt-1.5">
+                                                R$ {db.financeiro.filter(f => f.missoes_relacionado_id).filter(filterByCong).reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0).toFixed(2)}
+                                            </h3>
+                                        </div>
+                                        <div className="p-3 bg-slate-100 text-slate-500 rounded-2xl"><Layers size={24} /></div>
+                                    </div>
+
+                                    <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Auxílio Pago / Baixado</p>
+                                            <h3 className="text-2xl font-black text-emerald-600 tracking-tight mt-1.5">
+                                                R$ {db.financeiro.filter(f => f.missoes_relacionado_id && f.status === 'pago').filter(filterByCong).reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0).toFixed(2)}
+                                            </h3>
+                                        </div>
+                                        <div className="p-3 bg-emerald-50 text-emerald-500 rounded-2xl"><TrendingUp size={24} /></div>
+                                    </div>
+
+                                    <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Pendente de Confirmação</p>
+                                            <h3 className="text-2xl font-black text-amber-600 tracking-tight mt-1.5">
+                                                R$ {db.financeiro.filter(f => f.missoes_relacionado_id && f.status !== 'pago').filter(filterByCong).reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0).toFixed(2)}
+                                            </h3>
+                                        </div>
+                                        <div className="p-3 bg-amber-50 text-amber-500 rounded-2xl"><Clock size={24} /></div>
+                                    </div>
+                                </div>
+
+                                {/* Tabela do Ajudas Agendadas */}
+                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                                    <GenericTable 
+                                        title="Gestão de Auxílios & Repasses" 
+                                        type="financeiro" 
+                                        data={db.financeiro.filter(f => f.missoes_relacionado_id).filter(filterByCong)} 
+                                        columns={[
+                                            {header:'Vencimento', key:'data_vencimento', render: d=>formatDateLocal(d.data_vencimento)}, 
+                                            {header:'Descrição / Referência', key:'descricao'}, 
+                                            {header:'Valor', key:'valor', render: v=>`R$ ${parseFloat(v.valor).toFixed(2)}`}, 
+                                            {header:'Status', key:'status'}
+                                        ]}
+                                        customActions={(item) => {
+                                            if (item.status !== 'pago') {
+                                                return (
+                                                    <button 
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            try {
+                                                                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', item.id), {
+                                                                    status: 'pago',
+                                                                    data_pagamento: new Date().toISOString().split('T')[0],
+                                                                    historico: [
+                                                                        {
+                                                                            usuario_nome: user?.nome || 'Operador',
+                                                                            usuario_id: user?.id || 'id',
+                                                                            data: new Date().toISOString(),
+                                                                            descricao: 'Baixa de pagamento efetuada diretamente pelo módulo de missões.'
+                                                                        },
+                                                                        ...(Array.isArray(item.historico) ? item.historico : [])
+                                                                    ]
+                                                                }, { merge: true });
+                                                                addToast("Baixa registrada com sucesso! Repasse pago. 🎉", "success");
+                                                                logAction('EDIÇÃO', `Confirmou repasse de auxílio: ${item.descricao}`, 'financeiro', item.id);
+                                                            } catch (err) {
+                                                                addToast("Erro ao dar baixa no auxílio.", "error");
+                                                            }
+                                                        }}
+                                                        className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl text-[10px] font-black border border-emerald-200 flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer ml-auto"
+                                                        title="Confirmar Pagamento (Dar Baixa)"
+                                                    >
+                                                        <CheckSquare size={12} /> Dar Baixa
+                                                    </button>
+                                                );
+                                            }
+                                            return (
+                                                <span className="px-3.5 py-1.5 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black border border-slate-200 flex items-center gap-1 leading-none">
+                                                    <CheckCheck size={12} className="text-emerald-500" /> Confirmado
+                                                </span>
+                                            );
+                                        }}
                                     />
                                 </div>
                             </div>
-                            
-                            {(finPeriod !== 'todos' || finStartDate || finEndDate) && (
-                                <button
-                                    onClick={() => handlePeriodChange('todos')}
-                                    className="px-4 py-2.5 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl text-[10px] font-black uppercase text-slate-600 hover:text-rose-600 tracking-wider transition duration-200 flex items-center gap-1.5 self-center md:self-end"
-                                >
-                                    <RotateCcw size={12} /> Limpar
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Badges de Métricas Financeiras Filtradas */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 shrink-0">
-                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
-                                <div className="text-left">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Entradas</p>
-                                    <h3 className="text-2xl font-black text-emerald-600 tracking-tight mt-1.5">R$ {filteredStats.entradas.toFixed(2)}</h3>
-                                    <span className="text-[9px] text-slate-400 font-bold block mt-0.5">no período selecionado</span>
-                                </div>
-                                <div className="p-3 bg-emerald-50 text-emerald-500 rounded-2xl"><TrendingUp size={24} /></div>
-                            </div>
-
-                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
-                                <div className="text-left">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Saídas</p>
-                                    <h3 className="text-2xl font-black text-rose-600 tracking-tight mt-1.5">R$ {filteredStats.saidas.toFixed(2)}</h3>
-                                    <span className="text-[9px] text-slate-400 font-bold block mt-0.5">no período selecionado</span>
-                                </div>
-                                <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl"><TrendingDown size={24} /></div>
-                            </div>
-
-                            <div className="glass-card p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex items-center justify-between bg-white">
-                                <div className="text-left">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Saldo Líquido</p>
-                                    <h3 className={`text-2xl font-black tracking-tight mt-1.5 ${filteredStats.saldo >= 0 ? "text-indigo-600" : "text-rose-650"}`}>
-                                        R$ {filteredStats.saldo.toFixed(2)}
-                                    </h3>
-                                    <span className="text-[9px] text-slate-400 font-bold block mt-0.5">sobra em caixa</span>
-                                </div>
-                                <div className={`p-3 rounded-2xl ${filteredStats.saldo >= 0 ? "bg-indigo-50 text-indigo-500" : "bg-rose-50 text-rose-500"}`}><Landmark size={24} /></div>
-                            </div>
-                        </div>
-
-                        {/* Tabela do Caixa de Missões */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-                            <GenericTable 
-                                title="Caixa Missões" 
-                                type="missoes_financeiro" 
-                                data={filteredFinanceiroMissoes} 
-                                columns={[
-                                    {header:'Data', key:'data_competencia', render: d=>formatDateLocal(d.data_competencia)}, 
-                                    {header:'Descrição', key:'descricao'}, 
-                                    {header:'Valor', key:'valor', render: v=>`R$ ${parseFloat(v.valor).toFixed(2)}`}, 
-                                    {header:'Tipo', key:'tipo'}
-                                ]} 
-                            />
-                        </div>
+                        )}
                     </div>
                 )}
                 
@@ -1120,6 +1303,260 @@ const ModuleMissoes = () => {
                     </div>
                 )}
             </div>
+
+            {/* MODAL DETALHE DO MISSIONÁRIO */}
+            {selectedMissionarioProf && createPortal(
+                <div 
+                    onClick={() => setSelectedMissionarioProf(null)}
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] animate-entrance no-print"
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto"
+                    >
+                        
+                        {/* Header do Perfil */}
+                        <div className="p-6 border-b border-slate-150 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
+                            <div className="flex items-center gap-3">
+                                <Globe className="text-indigo-600" size={24} />
+                                <div>
+                                    <h3 className="font-black text-slate-800 text-lg">Perfil do Missionário</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Base de Missões GIPP</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedMissionarioProf(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Conteúdo do Perfil */}
+                        <div className="p-8 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                            
+                            {/* Bloco 1: Identificação de Nome/Foto/Status */}
+                            <div className="flex flex-col md:flex-row gap-6 items-center md:items-start bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <div className="w-28 h-28 rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-md flex items-center justify-center shrink-0">
+                                    {selectedMissionarioProf.foto ? (
+                                        <img src={selectedMissionarioProf.foto} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User size={48} className="text-slate-300" />
+                                    )}
+                                </div>
+                                <div className="flex-1 text-center md:text-left space-y-2">
+                                    <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                        <h4 className="text-xl font-extrabold text-slate-800 tracking-tight">{selectedMissionarioProf.nome}</h4>
+                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border mx-auto md:mx-0 w-fit ${
+                                            selectedMissionarioProf.status === 'No Campo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                            selectedMissionarioProf.status === 'Preparação' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                            selectedMissionarioProf.status === 'Licenciado' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                            'bg-slate-50 text-slate-600 border-slate-200'
+                                        }`}>
+                                            {selectedMissionarioProf.status || 'No Campo'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-indigo-600 font-bold flex items-center justify-center md:justify-start gap-1">
+                                        <Globe size={14} /> Campo: {selectedMissionarioProf.campo}
+                                    </p>
+                                    <p className="text-xs text-slate-500 font-medium">
+                                        <strong>Agência Vinculada:</strong> {selectedMissionarioProf.agencia || '-- Envio Direto --'}
+                                    </p>
+                                    {selectedMissionarioProf.projeto_nome && (
+                                        <p className="text-xs text-slate-500 font-medium">
+                                            <strong>Projeto:</strong> {selectedMissionarioProf.projeto_nome}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Bloco 2: Dados Pessoais / Envio */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-left">
+                                    <h5 className="text-[10px] uppercase font-black tracking-widest text-slate-400 flex items-center gap-1.5 border-b pb-2"><Info size={14} className="text-slate-400" /> Detalhes Pessoais</h5>
+                                    <ul className="text-xs space-y-2.5 text-slate-600">
+                                        <li><strong>Nascimento:</strong> {selectedMissionarioProf.nascimento ? formatDateLocal(selectedMissionarioProf.nascimento) : '--'}</li>
+                                        <li><strong>CPF:</strong> {selectedMissionarioProf.cpf || '--'}</li>
+                                        <li><strong>Estado Civil:</strong> {selectedMissionarioProf.estado_civil || '--'}</li>
+                                        {selectedMissionarioProf.conjuge_nome && (
+                                            <li><strong>Cônjuge:</strong> {selectedMissionarioProf.conjuge_nome}</li>
+                                        )}
+                                    </ul>
+                                </div>
+
+                                <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-left">
+                                    <h5 className="text-[10px] uppercase font-black tracking-widest text-indigo-400 flex items-center gap-1.5 border-b pb-2"><Calendar size={14} /> Período & Envio</h5>
+                                    <ul className="text-xs space-y-2.5 text-slate-600">
+                                        <li><strong>Data de Envio:</strong> {selectedMissionarioProf.data_envio ? formatDateLocal(selectedMissionarioProf.data_envio) : '--/--/----'}</li>
+                                        <li><strong>Retorno Previsto:</strong> {selectedMissionarioProf.data_retorno_previsto ? formatDateLocal(selectedMissionarioProf.data_retorno_previsto) : '--/--/----'}</li>
+                                        <li><strong>WhatsApp / Tel:</strong> {selectedMissionarioProf.telefone || 'Sem contato cadastrado'}</li>
+                                        <li><strong>E-mail:</strong> {selectedMissionarioProf.email || 'Não informado'}</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Bloco 3: Suporte & Necessidades financeiras */}
+                            <div className="bg-gradient-to-br from-indigo-50/40 to-slate-50 p-6 rounded-2xl border border-indigo-100 text-left space-y-3">
+                                <h5 className="text-[10px] uppercase font-black tracking-widest text-indigo-600 flex items-center gap-1.5"><Heart size={14} /> Sustento e Parceria</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white p-4 rounded-xl border border-slate-100 relative z-10 shadow-sm">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Alvo Mensal Necessário</span>
+                                        <span className="text-2xl font-black text-indigo-600">{selectedMissionarioProf.valor_sustento ? `R$ ${parseFloat(selectedMissionarioProf.valor_sustento).toFixed(2)}` : 'Não definido'}</span>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl border border-slate-100 relative z-10 shadow-sm">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Apoio Solicitado</span>
+                                        <span className="text-sm font-bold text-slate-700 block mt-1">{selectedMissionarioProf.tipo_apoio_requerido || 'Oração e Finanças'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bloco 4: Desafios e Oração */}
+                            {selectedMissionarioProf.descricao_campo && (
+                                <div className="bg-amber-50/40 p-6 rounded-2xl border border-amber-100 text-left space-y-2">
+                                    <h5 className="text-[10px] uppercase font-black tracking-widest text-amber-700 flex items-center gap-1.5"><Gift size={14} /> Clamor do Campo e Desafios</h5>
+                                    <p className="text-xs text-slate-650 leading-relaxed italic whitespace-pre-line bg-white/65 p-4 rounded-xl border border-amber-50 shadow-sm">
+                                        "{selectedMissionarioProf.descricao_campo}"
+                                    </p>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Footer Modulado */}
+                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between gap-3">
+                            <Button variant="ghost" onClick={() => window.print()} className="bg-white border text-xs gap-1 py-1.5 px-4 shadow-sm">
+                                <Printer size={14} /> Imprimir Ficha
+                            </Button>
+                            <Button variant="primary" onClick={() => setSelectedMissionarioProf(null)} className="px-6 py-2.5 text-xs shadow-md">
+                                Fechar Perfil
+                            </Button>
+                        </div>
+
+                    </div>
+                </div>, 
+                document.body
+            )}
+
+            {/* MODAL DETALHE DA AGÊNCIA */}
+            {selectedAgenciaProf && createPortal(
+                <div 
+                    onClick={() => setSelectedAgenciaProf(null)}
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] animate-entrance no-print"
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto"
+                    >
+                        
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-150 flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+                            <div className="flex items-center gap-3">
+                                <Building2 className="text-blue-600" size={24} />
+                                <div>
+                                    <h3 className="font-black text-slate-800 text-lg">Detalhes da Agência</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Instituição de Apoio Missionário</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedAgenciaProf(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Conteúdo */}
+                        <div className="p-8 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                            
+                            {/* Identificação Geral da Agência */}
+                            <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/60 text-left space-y-2">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h4 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">{selectedAgenciaProf.nome}</h4>
+                                        {selectedAgenciaProf.sigla && (
+                                            <span className="inline-block mt-1 px-3 py-1 bg-blue-100 text-blue-800 font-black text-xs rounded-lg uppercase">
+                                                {selectedAgenciaProf.sigla}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="px-3 py-1.5 bg-white border border-blue-200 text-blue-650 text-xs font-bold rounded-xl shadow-sm uppercase">
+                                        {selectedAgenciaProf.tipo_agencia || 'Interdenominacional'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 font-medium font-bold">
+                                    <strong>CNPJ / Registro:</strong> {selectedAgenciaProf.cnpj || 'Não cadastrado'}
+                                </p>
+                            </div>
+
+                            {/* Diretoria & Contato */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-left">
+                                    <h5 className="text-[10px] uppercase font-black tracking-widest text-slate-400 flex items-center gap-1.5 border-b pb-2"><User size={14} className="text-slate-400" /> Diretoria & Liderança</h5>
+                                    <ul className="text-xs space-y-2.5 text-slate-600">
+                                        <li><strong>Diretor Geral / Responsável:</strong></li>
+                                        <li className="font-extrabold text-sm text-slate-800">{selectedAgenciaProf.responsavel || '--'}</li>
+                                        <li><strong>Endereço Sede:</strong></li>
+                                        <li className="text-slate-500 font-medium">{selectedAgenciaProf.endereco || 'Não informado'}</li>
+                                    </ul>
+                                </div>
+
+                                <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-left font-medium">
+                                    <h5 className="text-[10px] uppercase font-black tracking-widest text-blue-400 flex items-center gap-1.5 border-b pb-2"><Phone size={14} /> Canais de Contato</h5>
+                                    <ul className="text-xs space-y-2.5 text-slate-600">
+                                        <li><strong>Telefone Comercial:</strong> {selectedAgenciaProf.contato || '--'}</li>
+                                        <li><strong>E-mail Institucional:</strong> {selectedAgenciaProf.email || '--'}</li>
+                                        <li><strong>Website / Link:</strong> {selectedAgenciaProf.site ? (
+                                            <a href={selectedAgenciaProf.site.startsWith('http') ? selectedAgenciaProf.site : `https://${selectedAgenciaProf.site}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold inline-flex items-center gap-0.5">{selectedAgenciaProf.site} <ExternalLink size={10} /></a>
+                                        ) : '--'}</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Escopo de Atuação Geográfica */}
+                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-left space-y-2">
+                                <h5 className="text-[10px] uppercase font-black tracking-widest text-slate-500 flex items-center gap-1.5"><Globe size={14} /> Atuação Territorial</h5>
+                                <p className="text-xs text-slate-700 font-bold bg-white p-3 rounded-xl border">
+                                    {selectedAgenciaProf.paises_atuacao || 'Não informado (Multi-campos)'}
+                                </p>
+                            </div>
+
+                            {/* Dados de Contribuições e Ofertas */}
+                            <div className="bg-gradient-to-br from-emerald-50/40 to-teal-50/20 p-6 rounded-2xl border border-emerald-200 text-left space-y-4">
+                                <h5 className="text-[10px] uppercase font-black tracking-widest text-emerald-800 flex items-center gap-1.5"><Wallet size={14} /> Dados Financeiros de Apoio</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm z-10 relative">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Dados Bancários / Conta</span>
+                                        <span className="text-xs font-bold text-slate-700 block mt-1.5 break-words whitespace-pre-wrap">{selectedAgenciaProf.banco_info || 'Solicitar com o Diretor'}</span>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm z-10 relative">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Chave PIX Oficial</span>
+                                        <div className="flex items-center justify-between gap-1 mt-1.5">
+                                            <span className="text-xs font-black text-emerald-700 block truncate max-w-[150px]">{selectedAgenciaProf.chave_pix || 'Não cadastrada'}</span>
+                                            {selectedAgenciaProf.chave_pix && (
+                                                <button onClick={() => { copyToClipboard(selectedAgenciaProf.chave_pix); addToast("Chave PIX copiada!", "success"); }} className="p-1 px-1.5 bg-emerald-50 hover:bg-emerald-100 text-[10px] font-black text-emerald-700 rounded transition-colors uppercase">Copiar</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Visão de Apoio */}
+                            {selectedAgenciaProf.descricao && (
+                                <div className="bg-slate-50/50 p-6 rounded-2xl border text-left space-y-2">
+                                    <h5 className="text-[10px] uppercase font-black tracking-widest text-slate-600 flex items-center gap-1.5"><ScrollText size={14} /> Resumo dos Projetos & Visão</h5>
+                                    <p className="text-xs text-slate-650 leading-relaxed italic whitespace-pre-line p-4 bg-white rounded-xl border">
+                                        "{selectedAgenciaProf.descricao}"
+                                    </p>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                            <Button variant="primary" onClick={() => setSelectedAgenciaProf(null)} className="px-6 py-2.5 text-xs shadow-md">
+                                Fechar Detalhes
+                            </Button>
+                        </div>
+
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

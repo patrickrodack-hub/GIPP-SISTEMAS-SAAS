@@ -298,7 +298,7 @@ const ModuleDesenvolvedor = () => {
         {id: 'secretaria_integrada', label: 'Secretaria & Tarefas'},
         {id: 'secretaria_certificados', label: 'Certificados'},
         {id: 'carteirinha_studio', label: 'Estúdio Carteirinhas'},
-        {id: 'credencial_lote', label: 'Credencial Lote'},
+        {id: 'credencial_lote', label: 'Credencial em Lote'},
         {id: 'secretaria_ebd', label: 'Gestão EBD'},
         {id: 'salinha_kids', label: 'Salinha Kids (Berçário)'},
         {id: 'gestao_cursos', label: 'EAD Cursos de Capacitação'},

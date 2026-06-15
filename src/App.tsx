@@ -2731,26 +2731,364 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                 );
             case 'missionario':
                 return (
-                    <div className="grid grid-cols-1 gap-4">
-                        <FormInput label="Nome do Missionário" value={data.nome} onChange={v=>setData({...data, nome:v})} required/>
-                        <FormInput label="Campo de Atuação" value={data.campo} onChange={v=>setData({...data, campo:v})} placeholder="Ex: Sertão, País, Cidade..."/>
-                        <FormInput label="Agência Missionária" value={data.agencia} onChange={v=>setData({...data, agencia:v})} />
-                        <FormInput label="Data de Envio" type="date" value={data.data_envio} onChange={v=>setData({...data, data_envio:v})} />
+                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar text-left">
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <User size={16} className="text-indigo-500" /> 1. Identificação Geral
+                            </h4>
+                            <div className="flex flex-col md:flex-row gap-4 items-center mb-4">
+                                <div className="w-24 h-24 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden relative group shrink-0 shadow-sm">
+                                    {data.foto ? <img src={data.foto} className="w-full h-full object-cover" /> : <Camera size={32} className="text-slate-300"/>}
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <label className="cursor-pointer text-white text-xs font-bold p-2 text-center">Alterar<input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'foto')} /></label>
+                                    </div>
+                                </div>
+                                <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormInput label="Nome Completo do Missionário" value={data.nome} onChange={v=>setData({...data, nome:v})} required placeholder="Ex: Pr. André Valadão" className="!mb-0"/>
+                                    <FormSelect label="Status" value={data.status || 'No Campo'} onChange={v=>setData({...data, status:v})} options={['Preparação', 'No Campo', 'Licenciado', 'Inativo']} className="!mb-0"/>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormInput label="Nascimento" type="date" value={data.nascimento} onChange={v=>setData({...data, nascimento:v})} />
+                                <FormInput label="CPF" value={data.cpf} onChange={v=>setData({...data, cpf:formatCPF(v)})} placeholder="000.000.000-00"/>
+                                <FormSelect label="Estado Civil" value={data.estado_civil} onChange={v=>setData({...data, estado_civil:v})} options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)']} />
+                            </div>
+                            {data.estado_civil === 'Casado(a)' && (
+                                <FormInput label="Nome do Cônjuge" value={data.conjuge_nome} onChange={v=>setData({...data, conjuge_nome:v})} placeholder="Ex: Missionária Maria" />
+                            )}
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Globe size={16} className="text-indigo-500" /> 2. Campo Missionário & Envio
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormInput label="Campo de Atuação / Localidade" value={data.campo} onChange={v=>setData({...data, campo:v})} placeholder="Ex: Maputo, Moçambique ou Sertão Nordestino" required/>
+                                <FormSelect 
+                                    label="Agência de Missões Vinculada" 
+                                    value={data.agencia_id || ''} 
+                                    onChange={v => {
+                                        const ag = db.missoes?.agencias?.find(a => a.id === v);
+                                        setData({
+                                            ...data, 
+                                            agencia_id: v,
+                                            agencia: ag ? ag.nome : ''
+                                        });
+                                    }} 
+                                    options={[
+                                        { label: '-- Sem Agência / Envio Direto --', value: '' },
+                                        ...(db.missoes?.agencias || []).map(a => ({ label: a.nome, value: a.id }))
+                                    ]}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormInput label="Data de Envio" type="date" value={data.data_envio} onChange={v=>setData({...data, data_envio:v})} />
+                                <FormInput label="Previsão de Retorno" type="date" value={data.data_retorno_previsto} onChange={v=>setData({...data, data_retorno_previsto:v})} />
+                                <FormInput label="Nome do Projeto / Missão" value={data.projeto_nome} onChange={v=>setData({...data, projeto_nome:v})} placeholder="Ex: Projeto Água Viva" />
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Phone size={16} className="text-indigo-500" /> 3. Contatos & Informações Gerais
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormInput label="WhatsApp / Telefone" value={data.telefone} onChange={v=>setData({...data, telefone:v})} placeholder="Ex: +55 (11) 98765-4321" />
+                                <FormInput label="E-mail" type="email" value={data.email} onChange={v=>setData({...data, email:v})} placeholder="Ex: missionario@email.com" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormInput label="Sustento Alvo Mensal (R$)" type="number" value={data.valor_sustento} onChange={v=>setData({...data, valor_sustento:v})} placeholder="Ex: 1500" />
+                                <FormInput label="Tipo de Apoio Requerido" value={data.tipo_apoio_requerido} onChange={v=>setData({...data, tipo_apoio_requerido:v})} placeholder="Ex: Financeiro e Oração" />
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 mb-4">
+                                <FormSelect 
+                                    label="Oferecer Ajuda Financeira Sistemática?" 
+                                    value={data.ajuda_financeira_ativa || 'nao'} 
+                                    onChange={v=>setData({...data, ajuda_financeira_ativa: v})} 
+                                    options={[{label: 'Não - Apenas Apoio Geral / Oração', value: 'nao'}, {label: 'Sim - Registrar Ajuda Financeira', value: 'sim'}]} 
+                                />
+                                {data.ajuda_financeira_ativa === 'sim' && (
+                                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Valor de Cada Ajuda (R$)" 
+                                                type="number" 
+                                                step="0.01" 
+                                                value={data.ajuda_financeira_valor} 
+                                                onChange={v=>setData({...data, ajuda_financeira_valor: parseFloat(v)})} 
+                                                placeholder="Ex: 500" 
+                                                required
+                                            />
+                                            <FormSelect 
+                                                label="Período da Ajuda" 
+                                                value={data.ajuda_financeira_periodo || 'Mensal'} 
+                                                onChange={v=>setData({...data, ajuda_financeira_periodo: v})} 
+                                                options={['Mensal', 'Trimestral', 'Semestral', 'Anual', 'Único']} 
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Primeiro Vencimento" 
+                                                type="date" 
+                                                value={data.ajuda_financeira_vencimento} 
+                                                onChange={v=>setData({...data, ajuda_financeira_vencimento: v})} 
+                                                required
+                                            />
+                                            <FormInput 
+                                                label="Qtd. de Parcelas / Ajuda" 
+                                                type="number" 
+                                                value={data.ajuda_financeira_qtd || 12} 
+                                                onChange={v=>setData({...data, ajuda_financeira_qtd: parseInt(v) || 12})} 
+                                                placeholder="Ex: 12"
+                                                disabled={data.ajuda_financeira_periodo === 'Único'}
+                                            />
+                                        </div>
+                                        {data.ajuda_financeira_gerada && (
+                                            <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-xl text-xs font-bold leading-relaxed flex items-center gap-2">
+                                                <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+                                                <span>Cronograma financeiro de suporte já foi gerado para este cadastro. Se alterar as datas e quiser gerar outras, desmarque a flag interna de controle `ajuda_financeira_gerada` editando o cadastro.</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1.5">Desafios do Campo / Pedidos de Oração</label>
+                                <textarea 
+                                    className="w-full text-slate-700 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[80px]"
+                                    value={data.descricao_campo || ''} 
+                                    onChange={e=>setData({...data, descricao_campo: e.target.value})}
+                                    placeholder="Escreva aqui detalhes sobre o campo, necessidades de oração e desafios enfrentados..."
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
             case 'agencia_missoes':
                 return (
-                    <div className="grid grid-cols-1 gap-4">
-                        <FormInput label="Nome da Agência" value={data.nome} onChange={v=>setData({...data, nome:v})} required/>
-                        <FormInput label="Responsável" value={data.responsavel} onChange={v=>setData({...data, responsavel:v})} />
-                        <FormInput label="Contato" value={data.contato} onChange={v=>setData({...data, contato:v})} />
+                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar text-left">
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Building2 size={16} className="text-blue-500" /> 1. Identificação da Agência
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                    <FormInput label="Nome da Agência" value={data.nome} onChange={v=>setData({...data, nome:v})} required placeholder="Ex: Junta de Missões Mundiais"/>
+                                </div>
+                                <FormInput label="Sigla / Abreviação" value={data.sigla} onChange={v=>setData({...data, sigla:v})} placeholder="Ex: JMM"/>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormInput label="CNPJ / Registro" value={data.cnpj} onChange={v=>setData({...data, cnpj:v})} placeholder="00.000.000/0001-00"/>
+                                <FormInput label="Responsável / Diretor" value={data.responsavel} onChange={v=>setData({...data, responsavel:v})} placeholder="Ex: Pr. Geraldo Junior" required/>
+                                <FormSelect label="Tipo de Agência" value={data.tipo_agencia} onChange={v=>setData({...data, tipo_agencia:v})} options={['Denominacional', 'Interdenominacional', 'Junta de Missões', 'Outro']} />
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Phone size={16} className="text-blue-500" /> 2. Contato & Localização Sede
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormInput label="Telefone / Celular" value={data.contato} onChange={v=>setData({...data, contato:v})} placeholder="Ex: (11) 4002-8922" required/>
+                                <FormInput label="E-mail" type="email" value={data.email} onChange={v=>setData({...data, email:v})} placeholder="Ex: contato@agencia.org" />
+                                <FormInput label="Website / Link" value={data.site} onChange={v=>setData({...data, site:v})} placeholder="Ex: www.agenciamissoes.org" />
+                            </div>
+                            <FormInput label="Endereço da Sede" value={data.endereco} onChange={v=>setData({...data, endereco:v})} placeholder="Ex: Av. Principal, 1000 - Centro, São Paulo - SP" />
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Wallet size={16} className="text-blue-500" /> 3. Dados Bancários para Ofertas
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormInput label="Informações de Conta (Banco, Agência, Conta)" value={data.banco_info} onChange={v=>setData({...data, banco_info:v})} placeholder="Ex: Bradesco, Ag 1234, CC 56789-0" />
+                                <FormInput label="Chave PIX da Agência" value={data.chave_pix} onChange={v=>setData({...data, chave_pix:v})} placeholder="Ex: CNPJ, E-mail, Celular..." />
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Globe size={16} className="text-blue-500" /> 4. Escopo & Atuação
+                            </h4>
+                            <FormInput label="Países ou Regiões em Atuação" value={data.paises_atuacao} onChange={v=>setData({...data, paises_atuacao:v})} placeholder="Ex: Angola, Índia, Bolívia, Sertão Brasileiro" />
+                            <div className="mt-4">
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1.5">Descrição / Visão Institucional</label>
+                                <textarea 
+                                    className="w-full text-slate-700 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                                    value={data.descricao || ''} 
+                                    onChange={e=>setData({...data, descricao: e.target.value})}
+                                    placeholder="Visão, foco de evangelismo e resumo dos projetos principais da agência..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <DollarSign size={16} className="text-indigo-500" /> 5. Ajuda / Apoio Financeiro Recorrente
+                            </h4>
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 mb-4">
+                                <FormSelect 
+                                    label="Oferecer Ajuda Financeira Sistemática?" 
+                                    value={data.ajuda_financeira_ativa || 'nao'} 
+                                    onChange={v=>setData({...data, ajuda_financeira_ativa: v})} 
+                                    options={[{label: 'Não - Apenas Apoio Geral / Oração', value: 'nao'}, {label: 'Sim - Registrar Ajuda Financeira', value: 'sim'}]} 
+                                />
+                                {data.ajuda_financeira_ativa === 'sim' && (
+                                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Valor de Cada Ajuda (R$)" 
+                                                type="number" 
+                                                step="0.01" 
+                                                value={data.ajuda_financeira_valor} 
+                                                onChange={v=>setData({...data, ajuda_financeira_valor: parseFloat(v)})} 
+                                                placeholder="Ex: 500" 
+                                                required
+                                            />
+                                            <FormSelect 
+                                                label="Período da Ajuda" 
+                                                value={data.ajuda_financeira_periodo || 'Mensal'} 
+                                                onChange={v=>setData({...data, ajuda_financeira_periodo: v})} 
+                                                options={['Mensal', 'Trimestral', 'Semestral', 'Anual', 'Único']} 
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Primeiro Vencimento" 
+                                                type="date" 
+                                                value={data.ajuda_financeira_vencimento} 
+                                                onChange={v=>setData({...data, ajuda_financeira_vencimento: v})} 
+                                                required
+                                            />
+                                            <FormInput 
+                                                label="Qtd. de Parcelas / Ajuda" 
+                                                type="number" 
+                                                value={data.ajuda_financeira_qtd || 12} 
+                                                onChange={v=>setData({...data, ajuda_financeira_qtd: parseInt(v) || 12})} 
+                                                placeholder="Ex: 12"
+                                                disabled={data.ajuda_financeira_periodo === 'Único'}
+                                            />
+                                        </div>
+                                        {data.ajuda_financeira_gerada && (
+                                            <div className="p-2.5 bg-indigo-50 text-indigo-800 border border-indigo-100 rounded-xl text-xs font-bold leading-relaxed flex items-center gap-2">
+                                                <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+                                                <span>Cronograma financeiro de suporte já foi gerado para este cadastro. Se alterar as datas e quiser gerar outras, desmarque a flag interna de controle `ajuda_financeira_gerada` editando o cadastro.</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 );
             case 'missoes_colaborador':
                 return (
-                    <div className="grid grid-cols-1 gap-4">
-                        <FormInput label="Nome do Colaborador" value={data.nome} onChange={v=>setData({...data, nome:v})} required/>
-                        <FormSelect label="Tipo Apoio" value={data.tipo} onChange={v=>setData({...data, tipo:v})} options={['Oração', 'Financeiro', 'Voluntário']} />
+                    <div className="space-y-6">
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Users size={16} className="text-indigo-500" /> 1. Identificação do Colaborador / Parceiro
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormInput label="Nome Completo / Razão Social" value={data.nome} onChange={v=>setData({...data, nome:v})} required placeholder="Ex: José da Silva ou Empresa XYZ Ltda."/>
+                                <FormSelect 
+                                    label="Tipo de Pessoa" 
+                                    value={data.tipo_pessoa || 'pf'} 
+                                    onChange={v=>setData({...data, tipo_pessoa:v})} 
+                                    options={[{label: 'Pessoa Física (PF)', value: 'pf'}, {label: 'Pessoa Jurídica (PJ)', value: 'pj'}]} 
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <FormInput 
+                                    label={data.tipo_pessoa === 'pj' ? "CNPJ" : "CPF"} 
+                                    value={data.documento || ''} 
+                                    onChange={v=>setData({...data, documento:v})} 
+                                    placeholder={data.tipo_pessoa === 'pj' ? "Ex: 00.000.000/0001-00" : "Ex: 000.000.000-00"}
+                                />
+                                <FormInput label="E-mail de Contato" value={data.email || ''} onChange={v=>setData({...data, email:v})} placeholder="Ex: contato@exemplo.com"/>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <FormInput label="Celular / WhatsApp" value={data.telefone || data.contato || data.whatsapp || ''} onChange={v=>setData({...data, telefone:v, contato:v, whatsapp:v})} placeholder="Ex: 5511999999999"/>
+                                {isMaster && <FormSelect label="Congregação / Filial" value={data.congregacao_id || 'sede'} onChange={v=>setData({...data, congregacao_id:v})} options={[{label: 'Sede Principal (Matriz)', value: 'sede'}, ...db.congregacoes.map(c=>({label: c.nome, value: c.id}))]} />}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <HeartHandshake size={16} className="text-indigo-500" /> 2. Tipo de Ajuda / Apoio
+                            </h4>
+                            <FormSelect 
+                                label="Como deseja apoiar o Departamento de Missões?" 
+                                value={data.tipo || 'Oração'} 
+                                onChange={v=>{
+                                    const nextAct = v === 'Financeiro' ? 'sim' : 'nao';
+                                    setData({...data, tipo:v, ajuda_financeira_ativa: nextAct});
+                                }} 
+                                options={['Oração', 'Financeiro', 'Voluntário', 'Campanhas', 'Outro']} 
+                            />
+                        </div>
+
+                        {/* Se o tipo for Financeiro, ou ajuda_financeira_ativa for sim, exibe o cronograma idêntico ao da agência */}
+                        {(data.tipo === 'Financeiro' || data.ajuda_financeira_ativa === 'sim') && (
+                            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                                <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <DollarSign size={16} className="text-emerald-500" /> 3. Ajuda Financeira Recorrente / Programada
+                                </h4>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-200 mb-4">
+                                    <FormSelect 
+                                        label="Deseja registrar contribuição financeira programada?" 
+                                        value={data.ajuda_financeira_ativa || 'sim'} 
+                                        onChange={v=>setData({...data, ajuda_financeira_ativa: v})} 
+                                        options={[{label: 'Sim - Ativar Contribuições Programadas', value: 'sim'}, {label: 'Não - Contribuição Única / Espontânea', value: 'nao'}]} 
+                                    />
+                                    {data.ajuda_financeira_ativa === 'sim' && (
+                                        <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormInput 
+                                                    label="Valor de Cada Contribuição (R$)" 
+                                                    type="number" 
+                                                    step="0.01" 
+                                                    value={data.ajuda_financeira_valor} 
+                                                    onChange={v=>setData({...data, ajuda_financeira_valor: parseFloat(v)})} 
+                                                    placeholder="Ex: 50.00" 
+                                                    required
+                                                />
+                                                <FormSelect 
+                                                    label="Período da Contribuição" 
+                                                    value={data.ajuda_financeira_periodo || 'Mensal'} 
+                                                    onChange={v=>setData({...data, ajuda_financeira_periodo: v})} 
+                                                    options={['Mensal', 'Trimestral', 'Semestral', 'Anual', 'Único']} 
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormInput 
+                                                    label="Primeiro Vencimento" 
+                                                    type="date" 
+                                                    value={data.ajuda_financeira_vencimento} 
+                                                    onChange={v=>setData({...data, ajuda_financeira_vencimento: v})} 
+                                                    required
+                                                />
+                                                <FormInput 
+                                                    label="Qtd. de Parcelas / Contribuições" 
+                                                    type="number" 
+                                                    value={data.ajuda_financeira_qtd || 12} 
+                                                    onChange={v=>setData({...data, ajuda_financeira_qtd: parseInt(v) || 12})} 
+                                                    placeholder="Ex: 12"
+                                                    disabled={data.ajuda_financeira_periodo === 'Único'}
+                                                />
+                                            </div>
+                                            {data.ajuda_financeira_gerada && (
+                                                <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-xl text-xs font-bold leading-relaxed flex items-center gap-2">
+                                                    <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+                                                    <span>Cronograma de contribuições já foi gerado para este parceiro. Se alterar os dados e quiser gerar outros, desmarque a flag `ajuda_financeira_gerada` na edição para que sejam geradas novas parcelas.</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
              case 'missoes_financeiro':
@@ -4993,7 +5331,7 @@ export const PrintSystem = ({
         });
 
         const entradasMissoes = finFiltrado.filter(f => f.tipo === 'entrada').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
-        const saidasMissoes = finFiltrado.filter(f => f.tipo === 'saida').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+        const saidasMissoes = finFiltrado.filter(f => f.tipo === 'saida' && f.status === 'pago').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
         const saldoMissoes = entradasMissoes - saidasMissoes;
 
         return (
@@ -6023,7 +6361,7 @@ export const PrintSystem = ({
                 .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
 
             const saidasRealizadas = filteredTxs
-                .filter((f: any) => f.tipo === 'saida')
+                .filter((f: any) => f.tipo === 'saida' && f.status === 'pago')
                 .reduce((sum: number, f: any) => sum + (parseFloat(f.valor) || 0), 0);
 
             return {
@@ -7647,24 +7985,32 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     <MenuGroup label="Secretaria Eclesiástica" />
                     {hasPermission('access_boletim') && checkPlan('boletim') && <MenuItem id="boletim" icon={Newspaper} label="Boletim Digital" />}
                     {checkPlan('biblia') && <MenuItem id="biblia" icon={Book} label="Bíblia de Estudo" />}
-                    {hasPermission('access_ia') && checkPlan('assistente_ai') && <MenuItem id="assistente_ai" icon={Sparkles} label="Pastoral IA" />}
                     {hasPermission('access_email') && checkPlan('email_interno') && <MenuItem id="email_interno" icon={Mail} label="Webmail Direto" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
-                    {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
-                    {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial Lote" />}
                     {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
                     {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
                     {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
-                    {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
                 </div>
 
-                {(hasPermission('master') || user?.nivel === 'pastor' || user?.cargo?.toLowerCase().includes('pastor') || user?.funcao?.toLowerCase().includes('pastor')) && (
+                {(hasPermission('access_sec_certificados') || hasPermission('access_midia')) && (
+                    <div>
+                        <MenuGroup label="Estúdio Canva" />
+                        {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
+                        {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
+                        {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
+                    </div>
+                )}
+
+                {(hasPermission('master') || hasPermission('access_ia') || user?.nivel === 'pastor' || user?.cargo?.toLowerCase().includes('pastor') || user?.funcao?.toLowerCase().includes('pastor')) && (
                     <div>
                         <MenuGroup label="Área Pastoral" />
-                        <MenuItem id="portal_pastor" icon={BookOpenText} label="Portal do Pastor" />
+                        {(hasPermission('master') || user?.nivel === 'pastor' || user?.cargo?.toLowerCase().includes('pastor') || user?.funcao?.toLowerCase().includes('pastor')) && (
+                            <MenuItem id="portal_pastor" icon={BookOpenText} label="Portal do Pastor" />
+                        )}
+                        {hasPermission('access_ia') && checkPlan('assistente_ai') && <MenuItem id="assistente_ai" icon={Sparkles} label="Pastoral IA" />}
                     </div>
                 )}
 
@@ -13021,7 +13367,23 @@ export default function App() {
       const target = map[type] || type + 's';
       setConfirmDialog({ isOpen: true, title: "Lixeira", message: "Mover para lixeira?", onConfirm: async () => { try { await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', target, id), { deleted: true }, { merge: true }); logAction('EXCLUSÃO_LÓGICA', `Moveu item para a lixeira`, target, id); addToast("Na lixeira.", "success"); } catch (e) { addToast("Erro de permissão ao apagar.", "error"); } } }); 
   };
-  const openModal = (type, item = null) => { setModalType(type); setEditingItem(item && item.id ? item : null); setFormData(item || {}); setModalOpen(true); };
+  const openModal = (type, item = null) => { 
+      if (type === 'lembrete' && item) {
+          const parentMembroId = item.membro_id || item.id;
+          const actualMember = db.membros.find(m => m.id === parentMembroId);
+          if (actualMember) {
+              setModalType('membro');
+              setEditingItem(actualMember);
+              setFormData({ ...actualMember });
+              setModalOpen(true);
+              return;
+          }
+      }
+      setModalType(type); 
+      setEditingItem(item && item.id ? item : null); 
+      setFormData(item || {}); 
+      setModalOpen(true); 
+  };
   const closeModal = () => { setModalOpen(false); setEditingItem(null); setFormData({}); };
   const hasPermission = (perm) => { 
       if (!user) return false; 
@@ -13540,6 +13902,72 @@ export default function App() {
                 if (safeData.imagem) await storeMedia(`agenda_${savedId}_imagem`, safeData.imagem);
             } catch (err) {
                 console.warn("Erro ao registar cache IndexedDB pós-guardar:", err);
+            }
+
+            // Geração Automática de Apoio Financeiro para Missionários, Agências ou Colaboradores
+            if ((resolvedModalType === 'missionario' || resolvedModalType === 'agencia_missoes' || resolvedModalType === 'missoes_colaborador') && safeData.ajuda_financeira_ativa === 'sim' && !editingItem?.ajuda_financeira_gerada && !safeData.ajuda_financeira_gerada) {
+                const val = parseFloat(safeData.ajuda_financeira_valor) || 0;
+                const period = safeData.ajuda_financeira_periodo || 'Mensal';
+                const startStr = safeData.ajuda_financeira_vencimento;
+                const qty = period === 'Único' ? 1 : (parseInt(safeData.ajuda_financeira_qtd) || 12);
+                
+                if (val > 0 && startStr) {
+                    const baseDate = new Date(startStr + 'T12:00:00');
+                    const installments = [];
+                    for (let i = 0; i < qty; i++) {
+                        const currentInstallmentDate = new Date(baseDate);
+                        if (period === 'Mensal') {
+                            currentInstallmentDate.setMonth(currentInstallmentDate.getMonth() + i);
+                        } else if (period === 'Trimestral') {
+                            currentInstallmentDate.setMonth(currentInstallmentDate.getMonth() + (i * 3));
+                        } else if (period === 'Semestral') {
+                            currentInstallmentDate.setMonth(currentInstallmentDate.getMonth() + (i * 6));
+                        } else if (period === 'Anual') {
+                            currentInstallmentDate.setFullYear(currentInstallmentDate.getFullYear() + i);
+                        }
+                        
+                        const dateFormatted = currentInstallmentDate.toISOString().split('T')[0];
+                        const refDesc = resolvedModalType === 'missoes_colaborador'
+                            ? `Contribuição Parceiro - [${safeData.nome || 'Cadastro'}] (${i + 1}/${qty})`
+                            : `Ajuda Fin. - ${resolvedModalType === 'missionario' ? 'Missionário' : 'Agência'} [${safeData.nome || 'Cadastro'}] (${i + 1}/${qty})`;
+                        
+                        const newInst = {
+                            descricao: refDesc,
+                            valor: val,
+                            data_competencia: dateFormatted,
+                            data_vencimento: dateFormatted,
+                            tipo: resolvedModalType === 'missoes_colaborador' ? 'entrada' : 'saida',
+                            categoria: 'Missões',
+                            status: 'pendente',
+                            forma_pagamento: 'PIX',
+                            congregacao_id: safeData.congregacao_id || 'sede',
+                            missoes_relacionado_id: savedId,
+                            missoes_relacionado_tipo: resolvedModalType,
+                            conciliado: false,
+                            historico: [{
+                                usuario_nome: user?.nome || 'Operador',
+                                usuario_id: user?.id || 'id',
+                                data: new Date().toISOString(),
+                                descricao: `Lançamento gerado automaticamente pelo apoio financeiro programado.`
+                            }]
+                        };
+                        
+                        installments.push(newInst);
+                    }
+                    
+                    // Write installments to 'financeiro' collection
+                    for (const inst of installments) {
+                        await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro'), {
+                            ...inst,
+                            created_at: new Date().toISOString()
+                        });
+                    }
+                    
+                    // Update key in the original document to prevent duplicate generation
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, savedId), {
+                        ajuda_financeira_gerada: true
+                    }, { merge: true });
+                }
             }
 
             // Automatic Push Notifications (FCM) on scales/events registration

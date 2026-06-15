@@ -149,9 +149,10 @@ const DashboardModule = () => {
             const cat = (f.categoria || '').toLowerCase();
             const matchCategory = cat.includes('dízimo') || cat.includes('dizimo');
             const isEntrada = f.tipo === 'entrada';
+            const isPago = f.status === 'pago';
             const dateStr = f.data_pagamento || f.data_vencimento || f.data || '';
             const matchYear = dateStr.startsWith(String(currentYear));
-            return matchCategory && isEntrada && matchYear;
+            return matchCategory && isEntrada && isPago && matchYear;
         });
     }, [db.financeiro, currentYear, congregacaoFilter]);
 

@@ -128,10 +128,10 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
     const { entradas, saidas, despesasPendentes, saldoAtual, saldoGeral } = useMemo(() => {
         const ent = financeiroFiltrado.filter(f => f.tipo === 'entrada').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
-        const sai = financeiroFiltrado.filter(f => f.tipo === 'saida').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+        const sai = financeiroFiltrado.filter(f => f.tipo === 'saida' && f.status === 'pago').reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
         const pendentes = (db.financeiro || []).filter(f => f.tipo === 'saida' && f.status === 'pendente' && (congregacaoFilter === 'todas' || f.congregacao_id === congregacaoFilter || (!f.congregacao_id && congregacaoFilter === 'sede'))).reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
         const salAtual = ent - sai;
-        const salGeral = (db.financeiro || []).filter(f=>f.tipo==='entrada' && !(f.conciliado === false && String(f.descricao).includes('via Portal')) && (congregacaoFilter === 'todas' || f.congregacao_id === congregacaoFilter || (!f.congregacao_id && congregacaoFilter === 'sede'))).reduce((a,c)=>a+(parseFloat(c.valor)||0),0) - (db.financeiro || []).filter(f=>f.tipo==='saida' && (congregacaoFilter === 'todas' || f.congregacao_id === congregacaoFilter || (!f.congregacao_id && congregacaoFilter === 'sede'))).reduce((a,c)=>a+(parseFloat(c.valor)||0),0);
+        const salGeral = (db.financeiro || []).filter(f=>f.tipo==='entrada' && !(f.conciliado === false && String(f.descricao).includes('via Portal')) && (congregacaoFilter === 'todas' || f.congregacao_id === congregacaoFilter || (!f.congregacao_id && congregacaoFilter === 'sede'))).reduce((a,c)=>a+(parseFloat(c.valor)||0),0) - (db.financeiro || []).filter(f=>f.tipo==='saida' && f.status === 'pago' && (congregacaoFilter === 'todas' || f.congregacao_id === congregacaoFilter || (!f.congregacao_id && congregacaoFilter === 'sede'))).reduce((a,c)=>a+(parseFloat(c.valor)||0),0);
 
         return {
             entradas: ent,
@@ -222,6 +222,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             
             if (atrasosDesc.length > 0) {
                 pending.push({
+                    id: membro.id,
                     membro_id: membro.id,
                     nome: membro.nome,
                     telefone: membro.telefone || '',
@@ -264,7 +265,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 .reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
 
             const saidasTotal = mensalTrans
-                .filter((f: any) => f.tipo === 'saida')
+                .filter((f: any) => f.tipo === 'saida' && f.status === 'pago')
                 .reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
 
             return {
@@ -291,7 +292,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     }, [financeiroFiltrado]);
 
     const categoriaSaidasData = useMemo(() => {
-        const expenses = financeiroFiltrado.filter(f => f.tipo === 'saida');
+        const expenses = financeiroFiltrado.filter(f => f.tipo === 'saida' && f.status === 'pago');
         const map = new Map();
         expenses.forEach(f => {
             const cat = f.categoria || 'Geral/Outros';

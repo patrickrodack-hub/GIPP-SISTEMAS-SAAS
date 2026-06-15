@@ -49,7 +49,7 @@ const ModuleUtilitarios = () => {
     // Processamento de dados: calcular o balanço de entradas e saídas de cada centro de custo
     const ccData = db.centro_custo.map(cc => {
         const entradas = db.financeiro.filter(f => f.centro_custo_id === cc.id && f.tipo === 'entrada').reduce((a, b) => a + (parseFloat(b.valor) || 0), 0);
-        const saidas = db.financeiro.filter(f => f.centro_custo_id === cc.id && f.tipo === 'saida').reduce((a, b) => a + (parseFloat(b.valor) || 0), 0);
+        const saidas = db.financeiro.filter(f => f.centro_custo_id === cc.id && f.tipo === 'saida' && f.status === 'pago').reduce((a, b) => a + (parseFloat(b.valor) || 0), 0);
         return { 
             ...cc, 
             total_entradas: entradas, 
