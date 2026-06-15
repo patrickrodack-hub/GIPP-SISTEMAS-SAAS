@@ -12246,7 +12246,12 @@ export default function App() {
   const [user, setUser] = useState(null); 
   const [authUser, setAuthUser] = useState(null); 
   const [view, setView] = useState('login');
-  const [loginMode, setLoginMode] = useState('admin');
+  const [loginMode, setLoginMode] = useState(() => {
+      if (typeof navigator !== 'undefined') {
+          return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'membro' : 'admin';
+      }
+      return 'admin';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -12539,7 +12544,12 @@ export default function App() {
       const saved = localStorage.getItem('gipp-animbg-enabled');
       return saved !== 'false';
   });
-  const [isMobileDevice, setIsMobileDevice] = useState(false); // NOVO: Identifica acesso por telemóvel
+  const [isMobileDevice, setIsMobileDevice] = useState(() => {
+      if (typeof navigator !== 'undefined') {
+          return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+      return false;
+  }); // NOVO: Identifica acesso por telemóvel
 
   const notifications = useMemo(() => {
     const notifs = [];
@@ -12828,14 +12838,7 @@ export default function App() {
     }
   }, [notifications, db.igreja?.icone_sistema]);
 
-  // NOVO: Detetar telemóvel e forçar Portal do Membro
-  useEffect(() => {
-      const mobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobileDevice(mobileCheck);
-      if (mobileCheck) {
-          setLoginMode('membro');
-      }
-  }, []);
+
 
   // NOVO: Limpar cache ao inicializar o sistema para manter sempre atualizado
   useEffect(() => {
