@@ -45,10 +45,14 @@ import {
 import { InteractiveMagazineView } from './InteractiveMagazineView';
 import { InteractiveWindow } from './InteractiveWindow';
 
+interface ModuleEBDProps {
+    isProfessorOnly?: boolean;
+}
+
 // Exporting component
-const ModuleEBD = () => {
+const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const { db, dbFirestore, appId, user, openModal, addToast, deleteItem, isOnline } = useContext(ChurchContext);
-    const [tab, setTab] = useState(1);
+    const [tab, setTab] = useState(isProfessorOnly ? 6 : 1);
     const [loadingList, setLoadingList] = useState(true);
     const [aiLesson, setAiLesson] = useState<any>(null);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
@@ -140,11 +144,567 @@ const ModuleEBD = () => {
     const [aiGeneratingQuiz, setAiGeneratingQuiz] = useState(false);
     const [aiQuizText, setAiQuizText] = useState('');
 
-    const turmasFiltradas = (db.ebd?.turmas || []).filter(t => congregacaoFilter === 'todas' || t.congregacao_id === congregacaoFilter || (!t.congregacao_id && congregacaoFilter === 'sede'));
+    // --- ESTADOS DA ÁREA DO PROFESSOR (REGISTROS INTERNOS DA TURMA E ALUNOS) ---
+    const [profSelectedTurmaId, setProfSelectedTurmaId] = useState<string>('');
+    const [profActiveSubTab, setProfActiveSubTab] = useState<'alunos' | 'pedagogico' | 'suporte' | 'avisos'>('alunos');
+    const [profSelectedAlunoId, setProfSelectedAlunoId] = useState<string>('');
+
+    // --- ESTADOS DA ESCALA DE PROFESSORES ---
+    const [localEscalaRows, setLocalEscalaRows] = useState<any[]>([]);
+    const [escalaPeriodo, setEscalaPeriodo] = useState('trimestral'); // 'semanal' | 'trimestral' | 'semestral' | 'anual'
+    const [generatorStartDate, setGeneratorStartDate] = useState(getTodayDate());
+    const [generatorTurmaId, setGeneratorTurmaId] = useState('todas');
+    const [generatorRevista, setGeneratorRevista] = useState('');
+    const [generatorLicaoInicial, setGeneratorLicaoInicial] = useState('1');
+    const [escalaSearch, setEscalaSearch] = useState('');
+    const [escalaFiltroTurmaId, setEscalaFiltroTurmaId] = useState('');
+
+    const reloadEscalaFromDb = () => {
+        const list = db.ebd?.escalas || [];
+        const sorted = [...list].sort((a: any, b: any) => {
+            const dateComp = (a.data || '').localeCompare(b.data || '');
+            if (dateComp !== 0) return dateComp;
+            const classA = db.ebd?.turmas?.find((t: any) => t.id === a.turma_id)?.nome || '';
+            const classB = db.ebd?.turmas?.find((t: any) => t.id === b.turma_id)?.nome || '';
+            return classA.localeCompare(classB);
+        });
+        setLocalEscalaRows(sorted);
+    };
+
+    const filteredEscalas = useMemo(() => {
+        return localEscalaRows.filter((row: any) => {
+            if (escalaFiltroTurmaId && row.turma_id !== escalaFiltroTurmaId) return false;
+            
+            if (escalaSearch.trim()) {
+                const search = escalaSearch.toLowerCase();
+                const classNome = db.ebd?.turmas?.find((t: any) => t.id === row.turma_id)?.nome?.toLowerCase() || '';
+                const revista = (row.revista || '').toLowerCase();
+                const licao = (row.licao || '').toLowerCase();
+                const tema = (row.tema || '').toLowerCase();
+                const profNome = db.membros?.find((m: any) => m.id === row.prof_id)?.nome?.toLowerCase() || '';
+                const auxNome = db.membros?.find((m: any) => m.id === row.aux_id)?.nome?.toLowerCase() || '';
+                
+                if (!classNome.includes(search) && 
+                    !revista.includes(search) && 
+                    !licao.includes(search) && 
+                    !tema.includes(search) && 
+                    !profNome.includes(search) && 
+                    !auxNome.includes(search)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }, [localEscalaRows, escalaFiltroTurmaId, escalaSearch, db.ebd?.turmas, db.membros]);
+
+    // Auto-load initially when tab becomes 7
+    useEffect(() => {
+        if (tab === 7) {
+            reloadEscalaFromDb();
+        }
+    }, [tab, db.ebd?.escalas]);
+
+    const getSundaysFromDate = (startDateStr: string, count: number): string[] => {
+        const dates: string[] = [];
+        let current = new Date(startDateStr + 'T12:00:00'); // avoid timezone offset issues
+        
+        // Find next Sunday if the start date isn't Sunday
+        const day = current.getDay();
+        if (day !== 0) {
+            const daysToAdd = 7 - day;
+            current.setDate(current.getDate() + daysToAdd);
+        }
+        
+        for (let i = 0; i < count; i++) {
+            dates.push(current.toISOString().split('T')[0]);
+            current.setDate(current.getDate() + 7);
+        }
+        return dates;
+    };
+
+    const handleGenerateBatchEscala = () => {
+        let count = 1;
+        if (escalaPeriodo === 'trimestral') count = 13;
+        else if (escalaPeriodo === 'semestral') count = 26;
+        else if (escalaPeriodo === 'anual') count = 52;
+        
+        const sundays = getSundaysFromDate(generatorStartDate, count);
+        const turmasToGenerate = generatorTurmaId === 'todas' 
+            ? turmasFiltradas 
+            : turmasFiltradas.filter(t => t.id === generatorTurmaId);
+            
+        if (turmasToGenerate.length === 0) {
+            addToast("Nenhuma turma disponível para gerar a escala.", "warning");
+            return;
+        }
+        
+        const newRows: any[] = [];
+        sundays.forEach((sundayDate, sundayIdx) => {
+            const licaoNum = parseInt(generatorLicaoInicial) + sundayIdx;
+            turmasToGenerate.forEach(turma => {
+                newRows.push({
+                    id: '', // temporary empty id before saving
+                    data: sundayDate,
+                    turma_id: turma.id,
+                    revista: generatorRevista || turma.revista || 'Revista EBD',
+                    licao: `Lição ${licaoNum}`,
+                    capitulo: '',
+                    tema: '',
+                    prof_id: turma.prof1_id || '', // pre-fill with turma primary teacher
+                    aux_id: turma.prof2_id || '', // pre-fill with secondary teacher
+                    periodo: escalaPeriodo,
+                    observacoes: '',
+                    congregacao_id: congregacaoFilter !== 'todas' ? congregacaoFilter : 'sede',
+                });
+            });
+        });
+        
+        setLocalEscalaRows(prev => [...newRows, ...prev]);
+        addToast(`Gerado esboço com ${newRows.length} linhas de escala para preenchimento. Não se esqueça de salvar!`, "info");
+    };
+
+    const handleSaveEscalaRow = async (rowIndex: number) => {
+        const row = localEscalaRows[rowIndex];
+        if (!row.data || !row.turma_id) {
+            addToast("A data e a turma são obrigatórias para salvar uma escala.", "warning");
+            return;
+        }
+        try {
+            const payload = {
+                data: row.data,
+                turma_id: row.turma_id,
+                revista: row.revista || '',
+                licao: row.licao || '',
+                capitulo: row.capitulo || '',
+                tema: row.tema || '',
+                prof_id: row.prof_id || '',
+                aux_id: row.aux_id || '',
+                periodo: row.periodo || 'semanal',
+                observacoes: row.observacoes || '',
+                congregacao_id: row.congregacao_id || (row.congregacao_id === 'sede' || row.congregacao_id ? row.congregacao_id : (congregacaoFilter !== 'todas' ? congregacaoFilter : 'sede')),
+                updated_at: new Date().toISOString()
+            };
+            if (row.id) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_escalas', row.id), payload);
+            } else {
+                const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_escalas');
+                const docAdded = await addDoc(colRef, payload);
+                const updated = [...localEscalaRows];
+                updated[rowIndex].id = docAdded.id;
+                setLocalEscalaRows(updated);
+            }
+            addToast("Linha da escala salva com sucesso!", "success");
+        } catch (e: any) {
+            addToast("Erro ao salvar linha: " + e.message, "error");
+        }
+    };
+
+    const handleSaveAllEscalas = async () => {
+        let countSaved = 0;
+        try {
+            for (let i = 0; i < localEscalaRows.length; i++) {
+                const row = localEscalaRows[i];
+                const original = (db.ebd?.escalas || []).find((x: any) => x.id === row.id);
+                const isChanged = !original || 
+                    original.data !== row.data ||
+                    original.turma_id !== row.turma_id ||
+                    original.revista !== row.revista ||
+                    original.licao !== row.licao ||
+                    original.capitulo !== row.capitulo ||
+                    original.tema !== row.tema ||
+                    original.prof_id !== row.prof_id ||
+                    original.aux_id !== row.aux_id ||
+                    original.periodo !== row.periodo ||
+                    original.observacoes !== row.observacoes;
+
+                if (isChanged) {
+                    if (!row.data || !row.turma_id) continue;
+                    const payload = {
+                        data: row.data,
+                        turma_id: row.turma_id,
+                        revista: row.revista || '',
+                        licao: row.licao || '',
+                        capitulo: row.capitulo || '',
+                        tema: row.tema || '',
+                        prof_id: row.prof_id || '',
+                        aux_id: row.aux_id || '',
+                        periodo: row.periodo || 'semanal',
+                        observacoes: row.observacoes || '',
+                        congregacao_id: row.congregacao_id || (row.congregacao_id === 'sede' || row.congregacao_id ? row.congregacao_id : (congregacaoFilter !== 'todas' ? congregacaoFilter : 'sede')),
+                        updated_at: new Date().toISOString()
+                    };
+                    if (row.id) {
+                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_escalas', row.id), payload);
+                    } else {
+                        const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_escalas');
+                        await addDoc(colRef, payload);
+                    }
+                    countSaved++;
+                }
+            }
+            addToast(`${countSaved} registro(s) da escala salvos/atualizados com sucesso!`, "success");
+            reloadEscalaFromDb();
+        } catch (e: any) {
+            addToast("Erro ao salvar toda a planilha: " + e.message, "error");
+        }
+    };
+
+    const handleRemoveEscalaRow = (index: number) => {
+        const row = localEscalaRows[index];
+        if (row.id) {
+            deleteItem('ebd_escala', row.id);
+        } else {
+            setLocalEscalaRows(prev => prev.filter((_, idx) => idx !== index));
+            addToast("Rascunho de linha removido da tela.", "info");
+        }
+    };
+
+    const shareEscalaToWhatsApp = () => {
+        if (localEscalaRows.length === 0) {
+            addToast("Nenhuma escala disponível para compartilhar.", "warning");
+            return;
+        }
+        
+        let text = `📅 *ESCALA DE PROFESSORES - EBD* 📅\n`;
+        text += `_Período:_ ${escalaPeriodo.toUpperCase()}\n`;
+        text += `==============================\n\n`;
+        
+        const groupedByDate: Record<string, any[]> = {};
+        localEscalaRows.forEach(row => {
+            if (!groupedByDate[row.data]) groupedByDate[row.data] = [];
+            groupedByDate[row.data].push(row);
+        });
+        
+        const sortedDates = Object.keys(groupedByDate).sort();
+        sortedDates.forEach(dateStr => {
+            const formattedDate = dateStr.split('-').reverse().join('/');
+            text += `🗓️ *DOMINGO - ${formattedDate}*\n`;
+            
+            groupedByDate[dateStr].forEach(row => {
+                const classNome = db.ebd?.turmas?.find((t: any) => t.id === row.turma_id)?.nome || 'Turma';
+                const profNome = db.membros?.find((m: any) => m.id === row.prof_id)?.nome || 'Não definido';
+                const auxNome = db.membros?.find((m: any) => m.id === row.aux_id)?.nome;
+                
+                text += `🏫 *${classNome}*\n`;
+                text += `📚 *${row.revista || 'Revista'}*: ${row.licao || ''} - ${row.tema || 'Tema não definido'}\n`;
+                if (row.capitulo) text += `📖 *Texto:* ${row.capitulo}\n`;
+                text += `👨‍🏫 *Prof:* ${profNome}${auxNome ? ` e ${auxNome}` : ''}\n`;
+                if (row.observacoes) text += `📝 *Obs:* ${row.observacoes}\n`;
+                text += `--------------------\n`;
+            });
+            text += `\n`;
+        });
+        
+        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    };
+
+    const handleDownloadPDFEscala = () => {
+        if (localEscalaRows.length === 0) {
+            addToast("Nenhuma escala disponível para gerar o PDF.", "warning");
+            return;
+        }
+        
+        // Use landscape mode for a proper spreadsheet (planilha) layout
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // Sort scale rows by date first, then by class/turma name
+        const sortedRows = [...localEscalaRows].sort((a, b) => {
+            const dateCompare = (a.data || '').localeCompare(b.data || '');
+            if (dateCompare !== 0) return dateCompare;
+            
+            const classA = db.ebd?.turmas?.find((t: any) => t.id === a.turma_id)?.nome || '';
+            const classB = db.ebd?.turmas?.find((t: any) => t.id === b.turma_id)?.nome || '';
+            return classA.localeCompare(classB);
+        });
+
+        // 277mm of printable width (A4 Landscape is 297mm - 20mm margins)
+        const colWidths = {
+            data: 24,
+            turma: 32,
+            revista: 28,
+            licao: 16,
+            tema: 67,
+            capitulo: 30,
+            prof: 40,
+            aux: 40
+        };
+        const colKeys = ['data', 'turma', 'revista', 'licao', 'tema', 'capitulo', 'prof', 'aux'];
+        const colHeaders = ['DATA', 'CLASSE / TURMA', 'REVISTA', 'LIÇÃO', 'TEMA / TÍTULO DA AULA', 'TEXTO BÍBLICO', 'PROF. TITULAR', 'AUXILIAR EBD'];
+
+        const drawPageHeader = (pageNum: number) => {
+            if (pageNum === 1) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(15);
+                doc.setTextColor(30, 41, 59); // slate-800
+                doc.text("CRONOGRAMA DE AULAS & ESCALA DE PROFESSORES - EBD", 10, 16);
+                
+                doc.setFontSize(8.5);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(100, 116, 139); // slate-500
+                const filial = db.igreja?.nome || "Igreja Sede";
+                doc.text(`${filial.toUpperCase()}  •  PERÍODO: ${escalaPeriodo.toUpperCase()}  •  GERADO EM ${new Date().toLocaleDateString('pt-BR')}`, 10, 21);
+                
+                doc.setDrawColor(79, 70, 229); // Indigo border
+                doc.setLineWidth(0.4);
+                doc.line(10, 24, 287, 24);
+            } else {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9);
+                doc.setTextColor(100, 116, 139);
+                doc.text(`Escala de Professores - EBD (Continuação)  |  Página ${pageNum}`, 10, 12);
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.2);
+                doc.line(10, 14, 287, 14);
+            }
+        };
+
+        const drawTableHeader = (startX: number, currentY: number) => {
+            let cx = startX;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            
+            colKeys.forEach((key, idx) => {
+                const w = colWidths[key as keyof typeof colWidths];
+                const headerText = colHeaders[idx];
+                
+                // Draw background box
+                doc.setFillColor(79, 70, 229); // Indigo-600
+                doc.rect(cx, currentY, w, 7.5, 'F');
+                
+                // Draw border line
+                doc.setDrawColor(67, 56, 190);
+                doc.setLineWidth(0.1);
+                doc.rect(cx, currentY, w, 7.5);
+                
+                // Draw white header text
+                doc.setTextColor(255, 255, 255);
+                
+                // Center text horizontally in header cell 
+                const textWidth = doc.getTextWidth(headerText);
+                const textX = cx + (w - textWidth) / 2;
+                doc.text(headerText, textX, currentY + 4.8);
+                
+                cx += w;
+            });
+        };
+
+        const getRowHeight = (rowData: any): number => {
+            let maxLines = 1;
+            const padding = 2;
+            
+            colKeys.forEach((key) => {
+                let cellVal = '';
+                if (key === 'data') {
+                    cellVal = (rowData.data || '').split('-').reverse().join('/');
+                } else if (key === 'turma') {
+                    cellVal = db.ebd?.turmas?.find((t: any) => t.id === rowData.turma_id)?.nome || '';
+                } else if (key === 'prof') {
+                    cellVal = db.membros?.find((m: any) => m.id === rowData.prof_id)?.nome || '';
+                } else if (key === 'aux') {
+                    cellVal = db.membros?.find((m: any) => m.id === rowData.aux_id)?.nome || '';
+                } else {
+                    cellVal = rowData[key] || '';
+                }
+                
+                const w = colWidths[key as keyof typeof colWidths];
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7.5);
+                const splitText = doc.splitTextToSize(cellVal, w - padding * 2);
+                maxLines = Math.max(maxLines, splitText.length);
+            });
+            
+            return Math.max(7, 3.5 + maxLines * 3);
+        };
+
+        let y = 28; // Starting y for page 1
+        let pageNum = 1;
+        
+        drawPageHeader(pageNum);
+        drawTableHeader(10, y);
+        y += 7.5; // move past header row
+        
+        sortedRows.forEach((row, idx) => {
+            const rowH = getRowHeight(row);
+            
+            // Check if height exceeds page threshold (A4 height is 210mm, let's break at 190mm)
+            if (y + rowH > 190) {
+                // Draw footer on current page before adding a new page
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Página ${pageNum}`, 272, 202);
+                
+                doc.addPage();
+                pageNum++;
+                y = 18; // reset y for next pages
+                
+                drawPageHeader(pageNum);
+                drawTableHeader(10, y);
+                y += 7.5;
+            }
+            
+            let cx = 10;
+            colKeys.forEach((key) => {
+                const w = colWidths[key as keyof typeof colWidths];
+                
+                let cellVal = '';
+                if (key === 'data') {
+                    cellVal = (row.data || '').split('-').reverse().join('/');
+                } else if (key === 'turma') {
+                    cellVal = db.ebd?.turmas?.find((t: any) => t.id === row.turma_id)?.nome || '';
+                } else if (key === 'prof') {
+                    cellVal = db.membros?.find((m: any) => m.id === row.prof_id)?.nome || '';
+                } else if (key === 'aux') {
+                    cellVal = db.membros?.find((m: any) => m.id === row.aux_id)?.nome || '';
+                } else {
+                    cellVal = row[key] || '';
+                }
+                
+                // Zebra striping style
+                const isAlternate = idx % 2 === 1;
+                doc.setFillColor(isAlternate ? 248 : 255, isAlternate ? 250 : 255, isAlternate ? 252 : 255);
+                doc.rect(cx, y, w, rowH, 'F');
+                
+                // Draw border
+                doc.setDrawColor(226, 232, 240); // slate-200
+                doc.setLineWidth(0.1);
+                doc.rect(cx, y, w, rowH);
+                
+                // Text auto-wrap
+                doc.setFont("helvetica", "normal");
+                if (key === 'tema') {
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(30, 41, 59); // darker slate for theme
+                } else if (key === 'prof') {
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(79, 70, 229); // slate indigo for prof
+                } else {
+                    doc.setTextColor(71, 85, 105);
+                }
+                doc.setFontSize(7.5);
+                
+                const splitText = doc.splitTextToSize(cellVal, w - 3.5); // padding
+                const linesCount = splitText.length;
+                const startY = y + (rowH - (linesCount - 1) * 3) / 2 + 0.6;
+                
+                splitText.forEach((line: string, lineIdx: number) => {
+                    doc.text(line, cx + 1.8, startY + (lineIdx * 3));
+                });
+                
+                cx += w;
+            });
+            
+            y += rowH;
+        });
+        
+        // Draw page footer on final page
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Página ${pageNum}`, 272, 202);
+        
+        doc.save(`escala_professores_ebd_${escalaPeriodo}.pdf`);
+        addToast("Escala em PDF baixada com sucesso!", "success");
+    };
+    
+    // Alunos e Acompanhamento Espiritual
+    const [novoAcompanhamentoAnotacao, setNovoAcompanhamentoAnotacao] = useState('');
+    const [novoAcompanhamentoTipo, setNovoAcompanhamentoTipo] = useState<'pedido_oracao' | 'visita' | 'decisao_fe' | 'observacao'>('observacao');
+
+    // Pedagógico Form States
+    const [novoCronogramaData, setNovoCronogramaData] = useState(getTodayDate());
+    const [novoCronogramaLicaoNum, setNovoCronogramaLicaoNum] = useState('');
+    const [novoCronogramaTema, setNovoCronogramaTema] = useState('');
+    const [novoCronogramaComemorativa, setNovoCronogramaComemorativa] = useState('');
+    const [novoCronogramaObjetivo, setNovoCronogramaObjetivo] = useState('');
+
+    const [selectedPlanoLicaoId, setSelectedPlanoLicaoId] = useState('');
+    const [planoObjetivo, setPlanoObjetivo] = useState('');
+    const [planoQuebraGelo, setPlanoQuebraGelo] = useState('');
+    const [planoAplicacao, setPlanoAplicacao] = useState('');
+    const [planoDinamica, setPlanoDinamica] = useState('');
+
+    const [novoArquivoNome, setNovoArquivoNome] = useState('');
+    const [novoArquivoCategoria, setNovoArquivoCategoria] = useState('pdf');
+    const [novoArquivoUrl, setNovoArquivoUrl] = useState('');
+
+    const [novaAtividadeTitulo, setNovaAtividadeTitulo] = useState('');
+    const [novaAtividadeDescricao, setNovaAtividadeDescricao] = useState('');
+    const [novaAtividadeEntrega, setNovaAtividadeEntrega] = useState('');
+    const [novaAtividadeTipo, setNovaAtividadeTipo] = useState('leitura');
+
+    // Suporte (Caixa e Materiais) Form States
+    const [caixaDescricao, setCaixaDescricao] = useState('');
+    const [caixaTipo, setCaixaTipo] = useState<'entrada' | 'saida'>('entrada');
+    const [caixaValor, setCaixaValor] = useState('');
+    
+    const [materialNome, setMaterialNome] = useState('');
+    const [materialQtd, setMaterialQtd] = useState('');
+    const [materialStatus, setMaterialStatus] = useState('excelente');
+    const [materialNotas, setMaterialNotas] = useState('');
+
+    // Avisos Form States
+    const [avisoTitulo, setAvisoTitulo] = useState('');
+    const [avisoConteudo, setAvisoConteudo] = useState('');
+    const [avisoTipo, setAvisoTipo] = useState<'urgente' | 'geral' | 'festividade'>('geral');
+
+    // WhatsApp Template States
+    const [templateSelectedAlunoId, setTemplateSelectedAlunoId] = useState('');
+    const [templateTemaCustom, setTemplateTemaCustom] = useState('');
+    const [templateRecadoCustom, setTemplateRecadoCustom] = useState('');
+    const [activeTemplateType, setActiveTemplateType] = useState<'aniversario' | 'lembrete' | 'oracao' | 'aviso'>('lembrete');
+
+    const handleUpdateTurmaField = async (turmaId: string, fieldName: string, updatedArray: any[]) => {
+        if (!isOnline) {
+            addToast("Apenas disponível online para salvar alterações no servidor.", "warning");
+            return;
+        }
+        try {
+            const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_turmas', turmaId);
+            await updateDoc(docRef, { [fieldName]: updatedArray });
+            addToast("Sucesso ao registrar!", "success");
+        } catch (err: any) {
+            addToast("Erro ao salvar no servidor: " + err.message, "error");
+        }
+    };
+
+    const handleUpdateAlunoField = async (alunoId: string, fieldName: string, updatedArray: any[]) => {
+        if (!isOnline) {
+            addToast("Apenas disponível online para salvar alterações no servidor.", "warning");
+            return;
+        }
+        try {
+            const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_alunos', alunoId);
+            await updateDoc(docRef, { [fieldName]: updatedArray });
+            addToast("Registro espiritual atualizado!", "success");
+        } catch (err: any) {
+            addToast("Erro ao salvar no servidor: " + err.message, "error");
+        }
+    };
+
+    const turmasFiltradas = useMemo(() => {
+        const list = db.ebd?.turmas || [];
+        if (isProfessorOnly) {
+            // Find turmas where user is assigned as one of the professors
+            const userTurmas = list.filter((t: any) => t.prof1_id === user?.id || t.prof2_id === user?.id || t.prof3_id === user?.id);
+            if (userTurmas.length > 0) return userTurmas;
+        }
+        return list.filter((t: any) => congregacaoFilter === 'todas' || t.congregacao_id === congregacaoFilter || (!t.congregacao_id && congregacaoFilter === 'sede'));
+    }, [db.ebd?.turmas, isProfessorOnly, user?.id, congregacaoFilter]);
     
     // Os alunos e lições são baseados nas turmas filtradas
-    const alunosFiltrados = (db.ebd?.alunos || []).filter(a => turmasFiltradas.some(t => t.id === a.turma_id));
-    const licoesFiltradasTotal = (db.ebd?.licoes || []).filter(l => turmasFiltradas.some(t => t.id === l.turma_id));
+    const alunosFiltrados = useMemo(() => {
+        return (db.ebd?.alunos || []).filter((a: any) => turmasFiltradas.some((t: any) => t.id === a.turma_id));
+    }, [db.ebd?.alunos, turmasFiltradas]);
+
+    const licoesFiltradasTotal = useMemo(() => {
+        return (db.ebd?.licoes || []).filter((l: any) => turmasFiltradas.some((t: any) => t.id === l.turma_id));
+    }, [db.ebd?.licoes, turmasFiltradas]);
 
     // --- FILTRAGEM EFETIVA DE LIÇÕES POR TIPO DE DATA/PERÍODO ---
     const filteredLicoesPeriodoFull = useMemo(() => {
@@ -312,8 +872,14 @@ const ModuleEBD = () => {
             .slice(0, 5); // sugerir até 5 membros
     }, [db.ebd?.alunos, db.membros, congregacaoFilter]);
 
-    const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}];
+    const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}, {id: 7, label: 'Escala de Professores', icon: Calendar}, {id: 6, label: 'Área do Professor', icon: GraduationCap}];
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+
+    useEffect(() => {
+        if (tab === 6 && !profSelectedTurmaId && turmasFiltradas.length > 0) {
+            setProfSelectedTurmaId(turmasFiltradas[0].id);
+        }
+    }, [tab, turmasFiltradas, profSelectedTurmaId]);
 
     const handleGenerateLessonPlan = async (licao, silent = false) => {
         const cacheKey = `gipp_cached_ebd_lesson_${licao.id || licao.licao_numero || '1'}_${licao.revista}`;
@@ -493,34 +1059,48 @@ const ModuleEBD = () => {
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance relative">
-            <div className="flex flex-wrap gap-4 justify-between items-center bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shadow-sm border border-blue-100"><BookOpen size={28}/></div>
-                    <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Escola Bíblica Dominical</h2>
-                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Gestão de turmas, lições e frequência</p>
+            {isProfessorOnly ? (
+                <div className="flex flex-wrap gap-4 justify-between items-center bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-violet-50 text-violet-600 rounded-2xl shadow-sm border border-violet-100"><GraduationCap size={28}/></div>
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Área do Professor</h2>
+                            <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Menu Executivo • Lançar Presenças, Gerir Cronogramas, Lições e Financeiro de Classe</p>
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <select value={congregacaoFilter} onChange={e => setCongregacaoFilter(e.target.value)} className="bg-white p-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-sm">
-                        <option value="todas">Filtro: Todas as Filiais</option>
-                        <option value="sede">Sede Principal</option>
-                        {(db.congregacoes||[]).map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
-                    </select>
+            ) : (
+                <div className="flex flex-wrap gap-4 justify-between items-center bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shadow-sm border border-blue-100"><BookOpen size={28}/></div>
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Escola Bíblica Dominical</h2>
+                            <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Gestão de turmas, lições e frequência</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <select value={congregacaoFilter} onChange={e => setCongregacaoFilter(e.target.value)} className="bg-white p-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-sm">
+                            <option value="todas">Filtro: Todas as Filiais</option>
+                            <option value="sede">Sede Principal</option>
+                            {(db.congregacoes||[]).map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                        </select>
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="glass-modern p-2 rounded-[2rem] flex overflow-x-auto custom-scrollbar gap-2 border border-white/50 w-full md:w-auto">
-                    {menuItems.map(item => <TabButton key={item.id} item={item} />)}
-                </div>
-                {tab === 1 && (
-                    <div className="flex items-center gap-3 bg-white/40 p-2 rounded-2xl border border-white/50">
-                        <Calendar size={18} className="text-indigo-600 ml-2"/>
-                        <input type="month" value={filterDate} onChange={e => setFilterDate(((e.target.value || "").toUpperCase() || "").toUpperCase())} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 uppercase"/>
+            {!isProfessorOnly && (
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="glass-modern p-2 rounded-[2rem] flex overflow-x-auto custom-scrollbar gap-2 border border-white/50 w-full md:w-auto">
+                        {menuItems.map(item => <TabButton key={item.id} item={item} />)}
                     </div>
-                )}
-            </div>
+                    {tab === 1 && (
+                        <div className="flex items-center gap-3 bg-white/40 p-2 rounded-2xl border border-white/50">
+                            <Calendar size={18} className="text-indigo-600 ml-2"/>
+                            <input type="month" value={filterDate} onChange={e => setFilterDate(((e.target.value || "").toUpperCase() || "").toUpperCase())} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 uppercase"/>
+                        </div>
+                    )}
+                </div>
+            )}
             
             <div className="flex-1 overflow-hidden">
                 {tab === 1 && (
@@ -1097,6 +1677,1570 @@ const ModuleEBD = () => {
                         </div>
                     </div>
                 )}
+
+                {tab === 6 && (() => {
+                    const selectedProfTurma = turmasFiltradas.find(t => t.id === profSelectedTurmaId);
+                    
+                    const formatDateStr = (dateString?: string) => {
+                        if (!dateString) return 'Não informado';
+                        try {
+                            const parts = dateString.split('-');
+                            if (parts.length === 3) {
+                                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            }
+                            return dateString;
+                        } catch (e) {
+                            return dateString;
+                        }
+                    };
+
+                    return (
+                        <div className="h-full flex flex-col animate-fadeIn gap-6 pb-12 text-slate-700">
+                            {/* Selector and General Info */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-105 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xs">
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Classe de EBD que você está Gerenciando</label>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <select 
+                                            value={profSelectedTurmaId} 
+                                            onChange={(e) => {
+                                                setProfSelectedTurmaId(e.target.value);
+                                                setProfSelectedAlunoId('');
+                                            }}
+                                            className="bg-white p-3 rounded-2xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-xs focus:ring-2 focus:ring-indigo-500"
+                                        >
+                                            <option value="">-- Selecione uma Classe --</option>
+                                            {turmasFiltradas.map(t => (
+                                                <option key={t.id} value={t.id}>{t.nome}</option>
+                                            ))}
+                                        </select>
+                                        {selectedProfTurma && (
+                                            <span className="text-xs bg-indigo-100/75 text-indigo-700 px-3 py-1.5 rounded-full font-bold uppercase tracking-wide flex items-center gap-1.5">
+                                                <MapPin size={12}/> {selectedProfTurma.sala || 'Sala Principal'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {selectedProfTurma && (
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => openChamadaModal(selectedProfTurma)}
+                                            className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25 cursor-pointer"
+                                        >
+                                            <UserCheck size={16}/> Chamar Frequência
+                                        </button>
+                                        <button
+                                            onClick={() => openModal('ebd_aluno', { turma_id: selectedProfTurma.id })}
+                                            className="px-5 py-3 bg-white hover:bg-slate-5  text-slate-600 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all border border-slate-200/80 flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <UserPlus size={16}/> Matricular Aluno
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {!selectedProfTurma ? (
+                                <div className="flex-1 py-16 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
+                                    <GraduationCap size={56} className="mx-auto mb-4 text-indigo-400 animate-bounce"/>
+                                    <h4 className="font-bold text-lg text-slate-700">Selecione uma Classe</h4>
+                                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Abra o menu de seleção acima para escolher qual classe da Escola Bíblica você deseja gerenciar no momento.</p>
+                                </div>
+                            ) : (() => {
+                                const alunosDaTurma = alunosFiltrados.filter(a => a.turma_id === selectedProfTurma.id);
+                                
+                                // Calculate classroom cash balance
+                                const transactions = selectedProfTurma.caixa_transacoes || [];
+                                const totalEntradas = transactions.filter((t: any) => t.tipo === 'entrada').reduce((sum: number, t: any) => sum + (parseFloat(t.valor) || 0), 0);
+                                const totalSaidas = transactions.filter((t: any) => t.tipo === 'saida').reduce((sum: number, t: any) => sum + (parseFloat(t.valor) || 0), 0);
+                                const caixaSaldo = totalEntradas - totalSaidas;
+
+                                return (
+                                    <div className="flex flex-col gap-6 animate-fadeIn">
+                                        {/* Class Metrics Cards */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alunos Matriculados</p>
+                                                    <h4 className="text-xl font-black text-slate-800 mt-1">{alunosDaTurma.length}</h4>
+                                                </div>
+                                                <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-100">
+                                                    <Users size={18}/>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aulas no Trimestre</p>
+                                                    <h4 className="text-xl font-black text-indigo-800 mt-1">{selectedProfTurma.cronograma?.length || 0}</h4>
+                                                </div>
+                                                <div className="w-11 h-11 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center border border-indigo-100">
+                                                    <BookOpen size={18}/>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de Mão (Caixa)</p>
+                                                    <h4 className={`text-xl font-black mt-1 ${caixaSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                        R$ {caixaSaldo.toFixed(2)}
+                                                    </h4>
+                                                </div>
+                                                <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100">
+                                                    <Wallet size={18}/>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avisos no Painel</p>
+                                                    <h4 className="text-xl font-black text-purple-800 mt-1">{selectedProfTurma.mural_avisos?.length || 0}</h4>
+                                                </div>
+                                                <div className="w-11 h-11 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center border border-purple-100">
+                                                    <Megaphone size={18}/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Secondary Navigation tabs */}
+                                        <div className="flex border-b border-slate-200 gap-1 overflow-x-auto shrink-0 py-1 font-bold">
+                                            <button 
+                                                onClick={() => setProfActiveSubTab('alunos')} 
+                                                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer ${profActiveSubTab === 'alunos' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                👥 Alunos & Diário Pastoral
+                                            </button>
+                                            <button 
+                                                onClick={() => setProfActiveSubTab('pedagogico')} 
+                                                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer ${profActiveSubTab === 'pedagogico' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                📖 Conteúdo & Aulas (Pedagógico)
+                                            </button>
+                                            <button 
+                                                onClick={() => setProfActiveSubTab('suporte')} 
+                                                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer ${profActiveSubTab === 'suporte' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                💼 Caixa & Recursos (Suporte)
+                                            </button>
+                                            <button 
+                                                onClick={() => setProfActiveSubTab('avisos')} 
+                                                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer ${profActiveSubTab === 'avisos' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                📢 Comunicação & Avisos
+                                            </button>
+                                        </div>
+
+                                        {/* Sub-tab 1: ALUNOS & FREQUENCIA */}
+                                        {profActiveSubTab === 'alunos' && (
+                                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
+                                                {/* Student List (Left Column) */}
+                                                <div className="lg:col-span-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-slate-700 text-xs">Alunos ({alunosDaTurma.length})</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium">Clique no aluno para ver o histórico pastoral e métricas de engajamento</p>
+                                                    </div>
+                                                    
+                                                    <div className="max-h-[500px] overflow-y-auto custom-scrollbar flex flex-col gap-1.5">
+                                                        {alunosDaTurma.map(aluno => {
+                                                            const userBirthMonth = aluno.data_nascimento ? new Date(aluno.data_nascimento).getMonth() : -1;
+                                                            const currentMonth = new Date().getMonth();
+                                                            const isBirthdayMonth = userBirthMonth === currentMonth;
+
+                                                            return (
+                                                                <div 
+                                                                    key={aluno.id}
+                                                                    onClick={() => setProfSelectedAlunoId(aluno.id)}
+                                                                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${profSelectedAlunoId === aluno.id ? 'bg-indigo-50/50 border-indigo-200' : 'bg-white border-slate-100 hover:bg-slate-50'}`}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs border border-slate-200 shadow-xs">
+                                                                            {(aluno.nome || '?').charAt(0)}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-extrabold text-xs text-slate-700 leading-none">{aluno.nome}</p>
+                                                                            <p className="text-[9px] text-slate-400 mt-1">{aluno.celular || 'Sem celular'}</p>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {isBirthdayMonth && (
+                                                                        <span className="text-[9px] bg-rose-50 text-rose-650 px-2 py-0.5 rounded-full border border-rose-100 font-bold flex items-center gap-1 animate-pulse">
+                                                                            🎂 Mês Niver
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {alunosDaTurma.length === 0 && (
+                                                            <div className="text-center py-12 text-slate-400">
+                                                                <Users size={32} className="mx-auto mb-2 opacity-40"/>
+                                                                <p className="font-bold text-xs">Membro nenhum cadastrado.</p>
+                                                                <p className="text-[10px] mt-0.5">Use o botão "Matricular Aluno" no topo.</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Detailed Pupil Area (Right Column) */}
+                                                <div className="lg:col-span-8 flex flex-col gap-6">
+                                                    {(() => {
+                                                        const activeAluno = db.ebd?.alunos?.find(a => a.id === profSelectedAlunoId);
+                                                        if (!activeAluno) {
+                                                            return (
+                                                                <div className="bg-white p-12 rounded-3xl border border-slate-200 shadow-xs text-center text-slate-450 flex flex-col justify-center items-center h-full min-h-[300px]">
+                                                                    <UserCircle size={44} className="text-slate-300 mb-3"/>
+                                                                    <h4 className="font-bold text-slate-600 text-sm">Prontuário Pedagógico</h4>
+                                                                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Escolha um aluno na listagem à esquerda para consultar dados pessoais de comunicação, relatórios de assiduidade e anotações espirituais pastorais.</p>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        // Calculate Student specific metrics
+                                                        const classLessons = (db.ebd?.licoes || []).filter(l => l.turma_id === selectedProfTurma.id);
+                                                        const lessonCountWithAttendance = classLessons.filter(l => l.detalhes_chamada).length;
+                                                        
+                                                        const presentCount = classLessons.filter(l => l.detalhes_chamada?.[activeAluno.id]?.presente).length;
+                                                        const bibleCount = classLessons.filter(l => l.detalhes_chamada?.[activeAluno.id]?.trouxeBiblia).length;
+                                                        const magazineCount = classLessons.filter(l => l.detalhes_chamada?.[activeAluno.id]?.trouxeRevista).length;
+                                                        const offerCount = classLessons.filter(l => l.detalhes_chamada?.[activeAluno.id]?.oferta).length;
+
+                                                        const presencaRate = lessonCountWithAttendance > 0 ? Math.round((presentCount / lessonCountWithAttendance) * 100) : 0;
+                                                        const bibliaRate = lessonCountWithAttendance > 0 ? Math.round((bibleCount / lessonCountWithAttendance) * 100) : 0;
+                                                        const revistaRate = lessonCountWithAttendance > 0 ? Math.round((magazineCount / lessonCountWithAttendance) * 100) : 0;
+                                                        const ofertaRate = lessonCountWithAttendance > 0 ? Math.round((offerCount / lessonCountWithAttendance) * 100) : 0;
+
+                                                        return (
+                                                            <div className="flex flex-col gap-6 animate-fadeIn">
+                                                                {/* Student Profile Card */}
+                                                                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center font-black text-lg text-indigo-600 shadow-xs">
+                                                                            {(activeAluno.nome || '?').charAt(0)}
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="font-extrabold text-sm text-slate-800 leading-tight">{activeAluno.nome}</h4>
+                                                                            <div className="flex flex-col sm:flex-row gap-x-4 mt-1 text-[11px] text-slate-500 font-medium">
+                                                                                <span>🎂 Nasc: {formatDateStr(activeAluno.data_nascimento)}</span>
+                                                                                {activeAluno.celular && (
+                                                                                    <span>📞 {activeAluno.celular}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            {activeAluno.membro_status && (
+                                                                                <span className="inline-block mt-2 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase border border-emerald-100">
+                                                                                    {activeAluno.membro_status}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex gap-2 w-full sm:w-auto">
+                                                                        {activeAluno.celular && (
+                                                                            <a
+                                                                                href={`https://api.whatsapp.com/send?phone=55${activeAluno.celular.replace(/\D/g, '')}`}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-xl flex items-center justify-center gap-1 transition-all text-center flex-1 sm:flex-initial cursor-pointer"
+                                                                            >
+                                                                                <Phone size={13}/> WhatsApp
+                                                                            </a>
+                                                                        )}
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                setTemplateSelectedAlunoId(activeAluno.id);
+                                                                                setActiveTemplateType('aniversario');
+                                                                                setProfActiveSubTab('avisos');
+                                                                            }}
+                                                                            className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1 transition-all border border-rose-100 flex-1 sm:flex-initial cursor-pointer"
+                                                                        >
+                                                                            <Gift size={13}/> Niver SMS
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Student Engagement Metrics Dashboard */}
+                                                                <div className="bg-gradient-to-br from-slate-50 to-indigo-50/20 p-5 rounded-3xl border border-slate-205 shadow-xs">
+                                                                    <div className="mb-3.5">
+                                                                        <h5 className="font-extrabold text-[10px] text-slate-500 uppercase tracking-wider">Métricas de Engajamento e Pontualidade</h5>
+                                                                        <p className="text-[10px] text-slate-400 font-medium">Índice obtido de todas as listas de chamadas arquivadas neste trimestre</p>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                                        <div className="bg-white p-3 rounded-2xl border border-slate-100 text-center shadow-xs">
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase block">Presença</span>
+                                                                            <h5 className="text-base font-black text-indigo-700 mt-1">{presencaRate}%</h5>
+                                                                            <div className="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
+                                                                                <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${presencaRate}%` }}/>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="bg-white p-3 rounded-2xl border border-slate-100 text-center shadow-xs">
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase block">Bíblia</span>
+                                                                            <h5 className="text-base font-black text-blue-600 mt-1">{bibliaRate}%</h5>
+                                                                            <div className="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
+                                                                                <div className="bg-blue-500 h-full rounded-full" style={{ width: `${bibliaRate}%` }}/>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="bg-white p-3 rounded-2xl border border-slate-100 text-center shadow-xs">
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase block">Revista</span>
+                                                                            <h5 className="text-base font-black text-emerald-600 mt-1">{revistaRate}%</h5>
+                                                                            <div className="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
+                                                                                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${revistaRate}%` }}/>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="bg-white p-3 rounded-2xl border border-slate-100 text-center shadow-xs">
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase block">Oferta</span>
+                                                                            <h5 className="text-base font-black text-amber-600 mt-1">{ofertaRate}%</h5>
+                                                                            <div className="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
+                                                                                <div className="bg-amber-500 h-full rounded-full" style={{ width: `${ofertaRate}%` }}/>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Spiritual Accompaniment Section */}
+                                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                                    <div>
+                                                                        <h5 className="font-extrabold text-xs text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
+                                                                            <Heart className="text-rose-500" size={16}/> Acompanhamento Pastoral / Espiritual
+                                                                        </h5>
+                                                                        <p className="text-[10px] text-slate-400 font-medium">Anote necessidades de oração, decisões de batismo, dízimo ou visitas domiciliares</p>
+                                                                    </div>
+
+                                                                    {/* Create Annotation Form */}
+                                                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-3">
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                            <div>
+                                                                                <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Categoria do Registro</label>
+                                                                                <select 
+                                                                                    value={novoAcompanhamentoTipo} 
+                                                                                    onChange={(e: any) => setNovoAcompanhamentoTipo(e.target.value)}
+                                                                                    className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none shadow-xs"
+                                                                                >
+                                                                                    <option value="observacao">📝 Observação Geral</option>
+                                                                                    <option value="pedido_oracao">🙏 Pedido de Oração</option>
+                                                                                    <option value="visita">🏠 Visita Necessária</option>
+                                                                                    <option value="decisao_fe">🕊 Decisão de Fé</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Nota Pastoral</label>
+                                                                            <textarea 
+                                                                                value={novoAcompanhamentoAnotacao}
+                                                                                onChange={(e) => setNovoAcompanhamentoAnotacao(e.target.value)}
+                                                                                placeholder="Ex: Alunto manifestou desejo de participar do próximo batismo. Solicitar visita pastoral."
+                                                                                className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-700 outline-none h-16 resize-none shadow-xs"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className="flex justify-end">
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    if (!novoAcompanhamentoAnotacao.trim()) return addToast("Descreva o histórico.", "warning");
+                                                                                    const current = activeAluno.acompanhamento_espiritual || [];
+                                                                                    const updated = [...current, {
+                                                                                        id: Date.now().toString(),
+                                                                                        data: getTodayDate(),
+                                                                                        anotacao: novoAcompanhamentoAnotacao,
+                                                                                        tipo: novoAcompanhamentoTipo
+                                                                                    }];
+                                                                                    await handleUpdateAlunoField(activeAluno.id, 'acompanhamento_espiritual', updated);
+                                                                                    setNovoAcompanhamentoAnotacao('');
+                                                                                }}
+                                                                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase rounded-xl transition-all shadow-xs cursor-pointer"
+                                                                            >
+                                                                                Adicionar Notas Pastoral
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Annotation Timeline */}
+                                                                    <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                                                        {[(activeAluno.acompanhamento_espiritual || [])].flat().slice().reverse().map((item: any) => {
+                                                                            if (!item || !item.id) return null;
+                                                                            
+                                                                            const typeBadgeMap = {
+                                                                                observacao: { bg: 'bg-slate-50 text-slate-600 border-slate-100', label: '📝 Observação' },
+                                                                                pedido_oracao: { bg: 'bg-rose-50 text-rose-600 border-rose-100', label: '🙏 Pedido Oração' },
+                                                                                visita: { bg: 'bg-amber-50 text-amber-600 border-amber-100', label: '🏠 Visita' },
+                                                                                decisao_fe: { bg: 'bg-emerald-50 text-emerald-600 border-emerald-100', label: '🕊 Decisão de Fé' }
+                                                                            };
+
+                                                                            const b = typeBadgeMap[item.tipo] || typeBadgeMap.observacao;
+
+                                                                            return (
+                                                                                <div key={item.id} className="p-3 bg-white rounded-xl border border-slate-150 flex flex-col gap-1.5 relative hover:border-slate-350 transition-all">
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${b.bg}`}>
+                                                                                            {b.label}
+                                                                                        </span>
+                                                                                        <div className="flex items-center gap-1.5">
+                                                                                            <span className="text-[9px] font-bold text-slate-400">{formatDateStr(item.data)}</span>
+                                                                                            <button 
+                                                                                                onClick={async () => {
+                                                                                                    const filtered = (activeAluno.acompanhamento_espiritual || []).filter((x: any) => x.id !== item.id);
+                                                                                                    await handleUpdateAlunoField(activeAluno.id, 'acompanhamento_espiritual', filtered);
+                                                                                                }}
+                                                                                                className="text-rose-400 hover:text-rose-600 p-0.5" 
+                                                                                            >
+                                                                                                <Trash2 size={12}/>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <p className="text-[11px] text-slate-700 leading-normal font-medium whitespace-pre-wrap">{item.anotacao}</p>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+
+                                                                        {(activeAluno.acompanhamento_espiritual || []).length === 0 && (
+                                                                            <p className="text-[11px] text-slate-400 italic text-center py-4">Sem registros ainda.</p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Sub-tab 2: PEDAGOGICO */}
+                                        {profActiveSubTab === 'pedagogico' && (
+                                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 animate-fadeIn">
+                                                {/* Classes Schedule - Trimester Cronograma */}
+                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><Calendar size={16} className="text-blue-500"/> Cronograma de Leituras & Lições</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium">Divida as lições bíblicas oficiais pelas datas do calendário do trimestre</p>
+                                                    </div>
+
+                                                    {/* Form schedule input */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                                        <div className="sm:col-span-4">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Data Dominical</label>
+                                                            <input type="date" value={novoCronogramaData} onChange={e => setNovoCronogramaData(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none"/>
+                                                        </div>
+                                                        <div className="sm:col-span-3">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Número Lição</label>
+                                                            <input type="number" placeholder="Ex: 5" value={novoCronogramaLicaoNum} onChange={e => setNovoCronogramaLicaoNum(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none"/>
+                                                        </div>
+                                                        <div className="sm:col-span-5">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Data Comemorativa / Festa (opcional)</label>
+                                                            <input type="text" placeholder="Ex: Círculo de Oração" value={novoCronogramaComemorativa} onChange={e => setNovoCronogramaComemorativa(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none"/>
+                                                        </div>
+                                                        <div className="sm:col-span-12">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Tema Oficial da Revista</label>
+                                                            <input type="text" placeholder="Ex: A Armadura de Deus para Guerrear" value={novoCronogramaTema} onChange={e => setNovoCronogramaTema(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none"/>
+                                                        </div>
+                                                        <div className="sm:col-span-12">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Objetivo Bíblico Principal</label>
+                                                            <input type="text" placeholder="Ex: Compreender a importância de orar sem esmorecer" value={novoCronogramaObjetivo} onChange={e => setNovoCronogramaObjetivo(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none"/>
+                                                        </div>
+                                                        <div className="sm:col-span-12 flex justify-end">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!novoCronogramaTema.trim() || !novoCronogramaLicaoNum) return addToast("Preencha tema e número da lição.", "warning");
+                                                                    const current = selectedProfTurma.cronograma || [];
+                                                                    const updated = [...current, {
+                                                                        id: Date.now().toString(),
+                                                                        data: novoCronogramaData,
+                                                                        licao_numero: novoCronogramaLicaoNum,
+                                                                        tema: novoCronogramaTema,
+                                                                        comemorativa: novoCronogramaComemorativa,
+                                                                        objetivo: novoCronogramaObjetivo
+                                                                    }].sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'cronograma', updated);
+                                                                    setNovoCronogramaLicaoNum('');
+                                                                    setNovoCronogramaTema('');
+                                                                    setNovoCronogramaComemorativa('');
+                                                                    setNovoCronogramaObjetivo('');
+                                                                }}
+                                                                className="px-3.5 py-1.8 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer"
+                                                            >
+                                                                Adicionar no Cronograma
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Listings */}
+                                                    <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                                        {(selectedProfTurma.cronograma || []).map((item: any) => (
+                                                            <div key={item.id} className="p-3 bg-white rounded-xl border border-slate-150 flex justify-between gap-3 shadow-xs">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[8px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md border border-blue-100">
+                                                                            Lição {item.licao_numero}
+                                                                        </span>
+                                                                        {item.comemorativa && (
+                                                                            <span className="text-[8px] font-black bg-rose-50 text-rose-700 px-2 py-0.5 rounded-md border border-rose-100">
+                                                                                🎉 {item.comemorativa}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <h5 className="font-extrabold text-xs text-slate-800 mt-1">{item.tema}</h5>
+                                                                    {item.objetivo && <p className="text-[9px] text-slate-500 font-medium italic mt-0.5">Objetivo: {item.objetivo}</p>}
+                                                                </div>
+                                                                <div className="flex flex-col items-end justify-between shrink-0">
+                                                                    <span className="text-[9px] font-bold text-slate-400">{formatDateStr(item.data)}</span>
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const filtered = (selectedProfTurma.cronograma || []).filter((x: any) => x.id !== item.id);
+                                                                            await handleUpdateTurmaField(selectedProfTurma.id, 'cronograma', filtered);
+                                                                        }}
+                                                                        className="text-rose-400 hover:text-rose-600 p-0.5"
+                                                                    >
+                                                                        <Trash2 size={12}/>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+
+                                                        {(selectedProfTurma.cronograma || []).length === 0 && (
+                                                            <p className="text-xs text-slate-450 italic text-center py-4">Sem aulas cadastradas no cronograma ainda.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Lesson Plan Builder */}
+                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><PenTool size={16} className="text-indigo-500"/> Diário de Plano de Aula</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium">Esboço prático da lição com quebra-gelo, objetivos e dinâmicas pedagógicas</p>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <select
+                                                            value={selectedPlanoLicaoId}
+                                                            onChange={(e) => {
+                                                                const lid = e.target.value;
+                                                                setSelectedPlanoLicaoId(lid);
+                                                                const existingPlan = (selectedProfTurma.planos_aula || []).find((p: any) => p.licao_id === lid);
+                                                                if (existingPlan) {
+                                                                    setPlanoObjetivo(existingPlan.objetivo || '');
+                                                                    setPlanoQuebraGelo(existingPlan.quebra_gelo || '');
+                                                                    setPlanoAplicacao(existingPlan.aplicacao || '');
+                                                                    setPlanoDinamica(existingPlan.dinamica || '');
+                                                                } else {
+                                                                    setPlanoObjetivo('');
+                                                                    setPlanoQuebraGelo('');
+                                                                    setPlanoAplicacao('');
+                                                                    setPlanoDinamica('');
+                                                                }
+                                                            }}
+                                                            className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none"
+                                                        >
+                                                            <option value="">-- Selecionar Lição do Cronograma --</option>
+                                                            {(selectedProfTurma.cronograma || []).map((item: any) => (
+                                                                <option key={item.id} value={item.id}>Lição {item.licao_numero} • {item.tema}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    {selectedPlanoLicaoId ? (
+                                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col gap-3 animate-fadeIn">
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Objetivo de Aprendizagem</label>
+                                                                <input type="text" placeholder="Entender a graça de Deus..." value={planoObjetivo} onChange={e => setPlanoObjetivo(e.target.value)} className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Pergunta Quebra-Gelo (Introdução)</label>
+                                                                <textarea placeholder="O que você faria se..." value={planoQuebraGelo} onChange={e => setPlanoQuebraGelo(e.target.value)} className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs outline-none h-12 resize-none shadow-xs"/>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Aplicação Prática no Cotidiano</label>
+                                                                <textarea placeholder="Como aplicar no dia a dia com a família..." value={planoAplicacao} onChange={e => setPlanoAplicacao(e.target.value)} className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs outline-none h-12 resize-none shadow-xs"/>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Dinâmica Pedagógica / Atividades do Dia</label>
+                                                                <input type="text" placeholder="Competição bíblica em grupo, questionário..." value={planoDinamica} onChange={e => setPlanoDinamica(e.target.value)} className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs outline-none shadow-xs"/>
+                                                            </div>
+
+                                                            <div className="flex justify-end mt-1">
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const current = selectedProfTurma.planos_aula || [];
+                                                                        const filtered = current.filter((x: any) => x.licao_id !== selectedPlanoLicaoId);
+                                                                        const updated = [...filtered, {
+                                                                            licao_id: selectedPlanoLicaoId,
+                                                                            objetivo: planoObjetivo,
+                                                                            quebra_gelo: planoQuebraGelo,
+                                                                            aplicacao: planoAplicacao,
+                                                                            dinamica: planoDinamica
+                                                                        }];
+                                                                        await handleUpdateTurmaField(selectedProfTurma.id, 'planos_aula', updated);
+                                                                    }}
+                                                                    className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-xs"
+                                                                >
+                                                                    Salvar Plano de Aula
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center p-8 border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs italic">
+                                                            Escolha uma das lições do cronograma para registrar o plano pedagógico de classe.
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* File repository */}
+                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><UploadCloud size={16} className="text-emerald-500"/> Repositório de Revistas, Slides e Mapas</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium">Cadastre PDFs de revistas de apoio, slides ou roteiros adicionais para auxiliar em sala</p>
+                                                    </div>
+
+                                                    {/* Form */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                                                        <div className="sm:col-span-5">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Nome do Arquivo</label>
+                                                            <input type="text" placeholder="Ex: Revista 4T PDF" value={novoArquivoNome} onChange={e => setNovoArquivoNome(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-3">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Tipo</label>
+                                                            <select value={novoArquivoCategoria} onChange={e => setNovoArquivoCategoria(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none shadow-xs">
+                                                                <option value="pdf">📕 PDF</option>
+                                                                <option value="slide">💻 Slide PPT</option>
+                                                                <option value="mapa">🌍 Mapa Bíblico</option>
+                                                                <option value="video">🎥 Vídeo</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="sm:col-span-4">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Link de Acesso (Drive/Drive/YouTube)</label>
+                                                            <input type="text" placeholder="https://" value={novoArquivoUrl} onChange={e => setNovoArquivoUrl(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-12 flex justify-end">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!novoArquivoNome.trim() || !novoArquivoUrl.trim()) return addToast("Preencha nome e URL.", "warning");
+                                                                    const current = selectedProfTurma.repositorio_arquivos || [];
+                                                                    const updated = [...current, {
+                                                                        id: Date.now().toString(),
+                                                                        nome: novoArquivoNome,
+                                                                        categoria: novoArquivoCategoria,
+                                                                        url: novoArquivoUrl
+                                                                    }];
+                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'repositorio_arquivos', updated);
+                                                                    setNovoArquivoNome('');
+                                                                    setNovoArquivoUrl('');
+                                                                }}
+                                                                className="px-3.5 py-1.8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-xs"
+                                                            >
+                                                                Arquivar Link
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* File lists */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto custom-scrollbar">
+                                                        {(selectedProfTurma.repositorio_arquivos || []).map((file: any) => {
+                                                            const iconM = { pdf: '📕', slide: '💻', mapa: '🌍', video: '🎥' };
+                                                            return (
+                                                                <div key={file.id} className="p-2.5 bg-white rounded-xl border border-slate-150 flex items-center justify-between gap-2.5 hover:border-slate-300 shadow-xs">
+                                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                                        <span className="text-base shrink-0">{iconM[file.categoria] || '📄'}</span>
+                                                                        <div className="overflow-hidden">
+                                                                            <h5 className="font-extrabold text-[11px] text-slate-800 leading-none truncate">{file.nome}</h5>
+                                                                            <a href={file.url} target="_blank" rel="noreferrer" className="text-[8px] text-blue-500 font-bold hover:underline mt-1 block">
+                                                                                Acessar <ExternalLink size={8} className="inline"/>
+                                                                            </a>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const filtered = (selectedProfTurma.repositorio_arquivos || []).filter((x: any) => x.id !== file.id);
+                                                                            await handleUpdateTurmaField(selectedProfTurma.id, 'repositorio_arquivos', filtered);
+                                                                        }}
+                                                                        className="text-rose-455 hover:text-rose-600 p-0.5 shrink-0"
+                                                                    >
+                                                                        <X size={12}/>
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {(selectedProfTurma.repositorio_arquivos || []).length === 0 && (
+                                                            <div className="col-span-full py-4 text-center text-slate-400 italic text-xs">
+                                                                Nenhum anexo registrado neste almoxarifado virtual.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Atividades e tarefas e desafios */}
+                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><Target size={16} className="text-blue-500"/> Atividades & Desafios Semanais</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium font-medium">Proponha tarefas de leitura bíblica, atividades teológicas ou gincanas fora de classe</p>
+                                                    </div>
+
+                                                    {/* Form */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col gap-3">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Título do Desafio</label>
+                                                                <input type="text" placeholder="Ex: Ler Hebreus 11" value={novaAtividadeTitulo} onChange={e => setNovaAtividadeTitulo(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Zelo / Estilo</label>
+                                                                <select value={novaAtividadeTipo} onChange={e => setNovaAtividadeTipo(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none shadow-xs">
+                                                                    <option value="leitura">📖 Leitura Semanal</option>
+                                                                    <option value="decorar">🧠 Memorização Versículo</option>
+                                                                    <option value="questionario">✏ Questionário Trimestral</option>
+                                                                    <option value="outro">🎯 Outra Gincana</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-3 gap-3">
+                                                            <div className="col-span-2">
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Descrição Curta / Instruções</label>
+                                                                <input type="text" placeholder="Ler e grifar palavras-chave..." value={novaAtividadeDescricao} onChange={e => setNovaAtividadeDescricao(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Prazo Entrega</label>
+                                                                <input type="date" value={novaAtividadeEntrega} onChange={e => setNovaAtividadeEntrega(e.target.value)} className="w-full p-2 rounded-xl border border-slate-200 bg-white text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex justify-end">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!novaAtividadeTitulo.trim()) return addToast("Preencha o título.", "warning");
+                                                                    const current = selectedProfTurma.atividades_desafios || [];
+                                                                    const updated = [...current, {
+                                                                        id: Date.now().toString(),
+                                                                        titulo: novaAtividadeTitulo,
+                                                                        descricao: novaAtividadeDescricao,
+                                                                        tipo: novaAtividadeTipo,
+                                                                        deadline: novaAtividadeEntrega
+                                                                    }];
+                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'atividades_desafios', updated);
+                                                                    setNovaAtividadeTitulo('');
+                                                                    setNovaAtividadeDescricao('');
+                                                                    setNovaAtividadeEntrega('');
+                                                                }}
+                                                                className="px-4 py-2 bg-blue-650 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-xs"
+                                                            >
+                                                                Enviar Atividade
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                                                        {(selectedProfTurma.atividades_desafios || []).map((chal: any) => {
+                                                            const mapB = { leitura: '📖 Leitura', decorar: '🧠 Memorização', questionario: '✏ Questionário', outro: '🎯 Gincana' };
+                                                            return (
+                                                                <div key={chal.id} className="p-3 bg-white rounded-xl border border-slate-150 flex justify-between gap-3 shadow-xs">
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[8px] font-extrabold bg-indigo-50 border border-indigo-150 text-indigo-700 px-2 py-0.5 rounded-md">
+                                                                                {mapB[chal.tipo] || mapB.outro}
+                                                                            </span>
+                                                                            {chal.deadline && (
+                                                                                <span className="text-[9px] font-bold text-slate-400">Até: {formatDateStr(chal.deadline)}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <h5 className="font-extrabold text-xs text-slate-800 mt-1">{chal.titulo}</h5>
+                                                                        {chal.descricao && <p className="text-[10px] text-slate-500 font-medium">{chal.descricao}</p>}
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const filtered = (selectedProfTurma.atividades_desafios || []).filter((x: any) => x.id !== chal.id);
+                                                                            await handleUpdateTurmaField(selectedProfTurma.id, 'atividades_desafios', filtered);
+                                                                        }}
+                                                                        className="text-rose-400 hover:text-rose-600 p-0.5 shrink-0"
+                                                                    >
+                                                                        <Trash2 size={13}/>
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {(selectedProfTurma.atividades_desafios || []).length === 0 && (
+                                                            <p className="text-xs text-slate-400 italic text-center py-4">Sem gincanas ou desafios ativos hoje.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Sub-tab 3: FINANCEIRO */}
+                                        {profActiveSubTab === 'suporte' && (
+                                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 animate-fadeIn">
+                                                {/* Class Petty cash controller */}
+                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><Wallet size={16} className="text-emerald-500"/> Livro de Caixa de Classe (Tesouraria Básica)</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium font-medium font-medium">Controle as ofertas arrecadadas e as saídas (ex: lanche dos alunos, brindes, lembrancinhas)</p>
+                                                    </div>
+
+                                                    {/* Balance card indicator */}
+                                                    <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex justify-between items-center shadow-xs relative overflow-hidden shrink-0 mt-1">
+                                                        <div className="relative z-10">
+                                                            <p className="text-[10px] font-bold tracking-widest text-slate-300 uppercase leading-none">Saldo Acumulado de Classe</p>
+                                                            <h3 className={`text-2xl font-black mt-1.5 ${caixaSaldo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                R$ {caixaSaldo.toFixed(2)}
+                                                            </h3>
+                                                        </div>
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border relative z-10 ${caixaSaldo >= 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+                                                            <DollarSign size={20}/>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Ledger inputs form */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                                        <div className="sm:col-span-3">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Operação</label>
+                                                            <select value={caixaTipo} onChange={(e: any) => setCaixaTipo(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none">
+                                                                <option value="entrada">🟢 Entrada (Oferta)</option>
+                                                                <option value="saida">🔴 Saída (Lanche)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="sm:col-span-3">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Valor do Lançamento</label>
+                                                            <input type="number" step="0.01" placeholder="R$ 0.00" value={caixaValor} onChange={e => setCaixaValor(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-200 text-xs font-bold outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-6">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Memorial Descritivo / Finalidade</label>
+                                                            <input type="text" placeholder="Ex: Oferta dominical, Refrigerantes pro lanche..." value={caixaDescricao} onChange={e => setCaixaDescricao(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-200 text-xs outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-12 flex justify-end">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!caixaDescricao.trim() || !caixaValor) return addToast("Preencha finalidade e valor.", "warning");
+                                                                    const current = selectedProfTurma.caixa_transacoes || [];
+                                                                    const updated = [...current, {
+                                                                        id: Date.now().toString(),
+                                                                        data: getTodayDate(),
+                                                                        tipo: caixaTipo,
+                                                                        valor: parseFloat(caixaValor),
+                                                                        descricao: caixaDescricao
+                                                                    }];
+                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'caixa_transacoes', updated);
+                                                                    setCaixaValor('');
+                                                                    setCaixaDescricao('');
+                                                                }}
+                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-750 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-xs"
+                                                            >
+                                                                Lançar no Livro de Caixa
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Petty cash lists */}
+                                                    <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                                        {transactions.slice().reverse().map((t: any) => (
+                                                            <div key={t.id} className="p-3 bg-white rounded-xl border border-slate-150 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-base">{t.tipo === 'entrada' ? '🟢' : '🔴'}</span>
+                                                                    <div>
+                                                                        <h5 className="font-extrabold text-xs text-slate-800 leading-none">{t.descricao}</h5>
+                                                                        <p className="text-[9px] text-slate-400 mt-1 font-semibold">{formatDateStr(t.data)}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 shrink-0">
+                                                                    <span className={`font-black text-xs ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                        {t.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(t.valor).toFixed(2)}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const filtered = transactions.filter((x: any) => x.id !== t.id);
+                                                                            await handleUpdateTurmaField(selectedProfTurma.id, 'caixa_transacoes', filtered);
+                                                                        }}
+                                                                        className="text-rose-400 hover:text-rose-605 p-0.5"
+                                                                    >
+                                                                        <Trash size={12}/>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+
+                                                        {transactions.length === 0 && (
+                                                            <p className="text-xs text-slate-400 italic text-center py-4">Nenhuma transação lançada no caixa.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Inventory Controller */}
+                                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><Package size={16} className="text-indigo-500"/> Almoxarifado / Armário Física da Classe</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium font-medium">Controles itens estocados (Bíblias sobressalentes, revistas extras, fita adesiva, lápis do dia)</p>
+                                                    </div>
+
+                                                    {/* Form */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                                                        <div className="sm:col-span-5">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Item / Descrição</label>
+                                                            <input type="text" placeholder="Ex: Lápis de cor Faber" value={materialNome} onChange={e => setMaterialNome(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-205 text-xs outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-3">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Qtd</label>
+                                                            <input type="number" placeholder="Ex: 12" value={materialQtd} onChange={e => setMaterialQtd(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-205 text-xs outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-4">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Status de Conservação</label>
+                                                            <select value={materialStatus} onChange={e => setMaterialStatus(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none shadow-xs">
+                                                                <option value="excelente">Excelente ✨</option>
+                                                                <option value="bom">Bom 👍</option>
+                                                                <option value="desgastado">Desgastado 🛠</option>
+                                                                <option value="falta">Em Falta / Repor 🚨</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="sm:col-span-12">
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-1">Localização física / Armário notas</label>
+                                                            <input type="text" placeholder="Ex: Gaveta B do armário no canto superior..." value={materialNotas} onChange={e => setMaterialNotas(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-205 text-xs outline-none shadow-xs"/>
+                                                        </div>
+                                                        <div className="sm:col-span-12 flex justify-end">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!materialNome.trim() || !materialQtd) return addToast("Preencha o item estatístico.", "warning");
+                                                                    const current = selectedProfTurma.inventario_materiais || [];
+                                                                    const updated = [...current, {
+                                                                        id: Date.now().toString(),
+                                                                        nome: materialNome,
+                                                                        qtd: parseInt(materialQtd),
+                                                                        status: materialStatus,
+                                                                        notas: materialNotas
+                                                                    }];
+                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'inventario_materiais', updated);
+                                                                    setMaterialNome('');
+                                                                    setMaterialQtd('');
+                                                                    setMaterialNotas('');
+                                                                }}
+                                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-xs"
+                                                            >
+                                                                Salvar item no Inventário
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Inventories */}
+                                                    <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                                        {(selectedProfTurma.inventario_materiais || []).map((item: any) => {
+                                                            const condStyleM = {
+                                                                excelente: 'bg-emerald-50 text-emerald-700 border-emerald-120',
+                                                                bom: 'bg-indigo-50 text-indigo-700 border-indigo-120',
+                                                                desgastado: 'bg-amber-50 text-amber-700 border-amber-120',
+                                                                falta: 'bg-rose-50 text-rose-700 border-rose-120'
+                                                            };
+                                                            return (
+                                                                <div key={item.id} className="p-3 bg-white rounded-xl border border-slate-150 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300">
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <h5 className="font-extrabold text-[11px] text-slate-800 leading-tight">{item.nome}</h5>
+                                                                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.2 rounded border ${condStyleM[item.status] || condStyleM.bom}`}>
+                                                                                {item.status}
+                                                                            </span>
+                                                                        </div>
+                                                                        {item.notas && <p className="text-[10px] text-slate-400 mt-1 font-medium italic">{item.notas}</p>}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3.5 shrink-0">
+                                                                        {/* Qtd controllers */}
+                                                                        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
+                                                                            <button 
+                                                                                onClick={async () => {
+                                                                                    const updated = (selectedProfTurma.inventario_materiais || []).map((x: any) => {
+                                                                                        if (x.id === item.id) return { ...x, qtd: Math.max(0, x.qtd - 1) };
+                                                                                        return x;
+                                                                                    });
+                                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'inventario_materiais', updated);
+                                                                                }}
+                                                                                className="text-slate-550 hover:text-indigo-600 font-bold text-xs px-1 select-none cursor-pointer"
+                                                                            >
+                                                                                -
+                                                                            </button>
+                                                                            <span className="font-black text-xs text-slate-750 min-w-4 text-center">{item.qtd}</span>
+                                                                            <button 
+                                                                                onClick={async () => {
+                                                                                    const updated = (selectedProfTurma.inventario_materiais || []).map((x: any) => {
+                                                                                        if (x.id === item.id) return { ...x, qtd: x.qtd + 1 };
+                                                                                        return x;
+                                                                                    });
+                                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'inventario_materiais', updated);
+                                                                                }}
+                                                                                className="text-slate-550 hover:text-indigo-600 font-bold text-xs px-1 select-none cursor-pointer"
+                                                                            >
+                                                                                +
+                                                                            </button>
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                const filtered = (selectedProfTurma.inventario_materiais || []).filter((x: any) => x.id !== item.id);
+                                                                                await handleUpdateTurmaField(selectedProfTurma.id, 'inventario_materiais', filtered);
+                                                                            }}
+                                                                            className="text-rose-400 hover:text-rose-600 p-0.5 cursor-pointer"
+                                                                        >
+                                                                            <Trash2 size={12}/>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {(selectedProfTurma.inventario_materiais || []).length === 0 && (
+                                                            <p className="text-xs text-slate-400 italic text-center py-4">Sem recursos cadastrados.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Sub-tab 4: MESSAGES & BULLETINS */}
+                                        {profActiveSubTab === 'avisos' && (
+                                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
+                                                {/* Notice Board */}
+                                                <div className="lg:col-span-6 bg-white p-5 rounded-3xl border border-slate-205 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><Newspaper size={16} className="text-purple-500"/> Mural de Avisos de Classe</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium font-medium">Escreva informativos que aparecem no feed da igreja ou avisos para pais</p>
+                                                    </div>
+
+                                                    {/* Notice add */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col gap-3">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                                            <div className="sm:col-span-8">
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Assunto / Título do Recado</label>
+                                                                <input type="text" placeholder="Ex: Próximo domingo teremos lanche especial" value={avisoTitulo} onChange={e => setAvisoTitulo(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-200 text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                            <div className="sm:col-span-4">
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Sinalizador / Tom do Aviso</label>
+                                                                <select value={avisoTipo} onChange={(e: any) => setAvisoTipo(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-200 text-xs font-bold outline-none shadow-xs">
+                                                                    <option value="geral">🔵 Geral</option>
+                                                                    <option value="urgente">🔴 Urgente</option>
+                                                                    <option value="festividade">🟣 Festividade</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Informativo Completo</label>
+                                                            <textarea placeholder="Ex: Solicitamos a cooperação de R$ 5,00 de cada família..." value={avisoConteudo} onChange={e => setAvisoConteudo(e.target.value)} className="w-full p-2 bg-white rounded-xl border border-slate-200 text-xs outline-none h-14 resize-none shadow-xs"/>
+                                                        </div>
+
+                                                        <div className="flex justify-end">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!avisoTitulo.trim() || !avisoConteudo.trim()) return addToast("Preencha título e conteúdo.", "warning");
+                                                                    const current = selectedProfTurma.mural_avisos || [];
+                                                                    const updated = [...current, {
+                                                                        id: Date.now().toString(),
+                                                                        titulo: avisoTitulo,
+                                                                        conteudo: avisoConteudo,
+                                                                        tipo: avisoTipo,
+                                                                        data: getTodayDate()
+                                                                    }];
+                                                                    await handleUpdateTurmaField(selectedProfTurma.id, 'mural_avisos', updated);
+                                                                    setAvisoTitulo('');
+                                                                    setAvisoConteudo('');
+                                                                }}
+                                                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white font-bold text-xs uppercase rounded-xl transition-all shadow-xs cursor-pointer"
+                                                            >
+                                                                Inserir no Mural
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Notice list timeline */}
+                                                    <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                                                        {(selectedProfTurma.mural_avisos || []).slice().reverse().map((rec: any) => {
+                                                            const colorMap = {
+                                                                geral: 'border-blue-150 bg-blue-50/50 text-blue-700',
+                                                                urgente: 'border-rose-150 bg-rose-50/70 text-rose-700 font-extrabold',
+                                                                festividade: 'border-purple-150 bg-purple-50/50 text-purple-700'
+                                                            };
+                                                            return (
+                                                                <div key={rec.id} className={`p-4 rounded-2xl border ${rec.tipo === 'urgente' ? 'border-l-4 border-rose-500 bg-rose-50/10' : 'bg-white border-slate-200'} flex flex-col gap-2 relative shadow-xs`}>
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${colorMap[rec.tipo] || colorMap.geral}`}>
+                                                                            {rec.tipo}
+                                                                        </span>
+                                                                        <span className="text-[9px] text-slate-400 font-medium">{formatDateStr(rec.data)}</span>
+                                                                    </div>
+                                                                    <h5 className="font-extrabold text-xs text-slate-800 leading-none">{rec.titulo}</h5>
+                                                                    <p className="text-[11px] text-slate-600 leading-normal font-medium whitespace-pre-wrap">{rec.conteudo}</p>
+                                                                    
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const filtered = (selectedProfTurma.mural_avisos || []).filter((x: any) => x.id !== rec.id);
+                                                                            await handleUpdateTurmaField(selectedProfTurma.id, 'mural_avisos', filtered);
+                                                                        }}
+                                                                        className="absolute bottom-3 right-3 text-rose-455 hover:text-rose-600 p-1 cursor-pointer"
+                                                                    >
+                                                                        <Trash2 size={13}/>
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {(selectedProfTurma.mural_avisos || []).length === 0 && (
+                                                            <p className="text-xs text-slate-400 italic text-center py-4">Sem avisos escolares no momento.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Prebuilt alerts and communications */}
+                                                <div className="lg:col-span-6 bg-white p-5 rounded-3xl border border-slate-205 shadow-xs flex flex-col gap-4">
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[13px] text-slate-700 flex items-center gap-1.5"><Share2 size={16} className="text-emerald-500"/> Central de Comunicados Integrados</h4>
+                                                        <p className="text-[10px] text-slate-400 font-medium">Gere formulários, avisos e campanhas prontas de WhatsApp para agilizar a vida ministerial</p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-2 font-black text-slate-700">
+                                                        <button 
+                                                            onClick={() => setActiveTemplateType('lembrete')}
+                                                            className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${activeTemplateType === 'lembrete' ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-extrabold shadow-xs' : 'bg-slate-50 border-slate-150 text-slate-600'}`}
+                                                        >
+                                                            <BookOpen size={16} className="mx-auto mb-1 text-emerald-600"/>
+                                                            <span className="text-[9px] uppercase tracking-wide block">Lembrete de Aula</span>
+                                                        </button>
+
+                                                        <button 
+                                                            onClick={() => {
+                                                                setActiveTemplateType('aniversario');
+                                                            }}
+                                                            className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${activeTemplateType === 'aniversario' ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-extrabold shadow-xs' : 'bg-slate-50 border-slate-150 text-slate-600'}`}
+                                                        >
+                                                            <Gift size={16} className="mx-auto mb-1 text-pink-500"/>
+                                                            <span className="text-[9px] uppercase tracking-wide block">Feliz Aniversário</span>
+                                                        </button>
+
+                                                        <button 
+                                                            onClick={() => {
+                                                                setActiveTemplateType('oracao');
+                                                            }}
+                                                            className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${activeTemplateType === 'oracao' ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-extrabold shadow-xs' : 'bg-slate-50 border-slate-150 text-slate-600'}`}
+                                                        >
+                                                            <Heart size={16} className="mx-auto mb-1 text-rose-500"/>
+                                                            <span className="text-[9px] uppercase tracking-wide block">Estudo / Clamor</span>
+                                                        </button>
+
+                                                        <button 
+                                                            onClick={() => {
+                                                                setActiveTemplateType('aviso');
+                                                            }}
+                                                            className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${activeTemplateType === 'aviso' ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-extrabold shadow-xs' : 'bg-slate-50 border-slate-150 text-slate-600'}`}
+                                                        >
+                                                            <Megaphone size={16} className="mx-auto mb-1 text-blue-500"/>
+                                                            <span className="text-[9px] uppercase tracking-wide block">Aviso Geral</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Template configuration panel */}
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col gap-3">
+                                                        <div>
+                                                            <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Destinatário (Membro ou Aluno)</label>
+                                                            <select
+                                                                value={templateSelectedAlunoId}
+                                                                onChange={e => setTemplateSelectedAlunoId(e.target.value)}
+                                                                className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs font-bold text-slate-700 shadow-xs outline-none"
+                                                            >
+                                                                <option value="">-- Escolher Aluno --</option>
+                                                                {alunosDaTurma.map(a => (
+                                                                    <option key={a.id} value={a.id}>{a.nome}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+
+                                                        {activeTemplateType === 'lembrete' && (
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Assunto da Aula de Amanhã</label>
+                                                                <input type="text" placeholder="Ex: O Caráter do Cristão..." value={templateTemaCustom} onChange={e => setTemplateTemaCustom(e.target.value)} className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                        )}
+
+                                                        {(activeTemplateType === 'oracao' || activeTemplateType === 'aviso') && (
+                                                            <div>
+                                                                <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Informações e Motivo do Aviso</label>
+                                                                <input type="text" placeholder="Ex: saúde do pé, reforma do templo..." value={templateRecadoCustom} onChange={e => setTemplateRecadoCustom(e.target.value)} className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs outline-none shadow-xs"/>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Preview */}
+                                                        {(() => {
+                                                            const recipient = alunosDaTurma.find(a => a.id === templateSelectedAlunoId);
+                                                            const destName = recipient ? recipient.nome : '[Nome Aluno]';
+                                                            
+                                                            let cText = '';
+                                                            if (activeTemplateType === 'aniversario') {
+                                                                cText = `Graça e Paz, ${destName}! A liderança da classe EBD "${selectedProfTurma.nome}" te saúda nesta data feliz do seu aniversário natalício! Rogamos as mais ricas bênçãos do trono da graça sobre a sua casa e família. Deus te abençoe! 🧁🎉🎊`;
+                                                            } else if (activeTemplateType === 'lembrete') {
+                                                                cText = `Olá, ${destName}! Passando para te lembrar que amanhã teremos a nossa aula da Escola Bíblica na Sala "${selectedProfTurma.sala || 'Sala Comum'}" às 09:00. Tema da Lição: "${templateTemaCustom || 'Tema de Apoio Semanal'}". Traga a Bíblia e Revista. Te aguardamos com júbilo! 📖🎒`;
+                                                            } else if (activeTemplateType === 'oracao') {
+                                                                cText = `Olá amada igreja EBD! Neste trimestre, conclamamos todos no círculo de jejum pelo nosso irmão(a) ${destName}, que tem como finalidade: "${templateRecadoCustom || 'sua saúde física e espiritual'}". Quem puder, se una a nós nas vigílias! 🙏`;
+                                                            } else if (activeTemplateType === 'aviso') {
+                                                                cText = `Importante comunicado para a classe de EBD "${selectedProfTurma.nome}": ${templateRecadoCustom || 'Pedimos pontualidade absoluta neste domingo.'} Deus recompense o amor de todos! 🔔🏛`;
+                                                            }
+
+                                                            return (
+                                                                <div className="flex flex-col gap-2.5">
+                                                                    <div>
+                                                                        <label className="text-[9px] font-extrabold text-slate-500 block mb-0.5">Preview da Mensagem</label>
+                                                                        <textarea 
+                                                                            readOnly
+                                                                            value={cText}
+                                                                            className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700 outline-none h-20 select-all resize-none shadow-inner"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="flex gap-2 justify-end">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                copyToClipboard(cText);
+                                                                                addToast("Copiado!", "success");
+                                                                            }}
+                                                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-205 text-slate-600 font-bold text-[10px] uppercase rounded-lg select-none cursor-pointer flex items-center gap-1"
+                                                                        >
+                                                                            <Copy size={11}/> Copiar
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const phone = recipient && recipient.celular ? recipient.celular.replace(/\D/g, '') : '';
+                                                                                const link = `https://api.whatsapp.com/send?${phone ? `phone=55${phone}&` : ''}text=${encodeURIComponent(cText)}`;
+                                                                                window.open(link, '_blank');
+                                                                                addToast("Abrindo WhatsApp Web...", "info");
+                                                                            }}
+                                                                            className="px-3.5 py-1.8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] uppercase tracking-wide rounded-lg flex items-center gap-1 cursor-pointer shadow-xs"
+                                                                        >
+                                                                            <Send size={11}/> Enviar WhatsApp
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    );
+                })()}
+
+                {tab === 7 && (
+                    <div className="h-full flex flex-col animate-fadeIn">
+                        {/* Header do Módulo */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-2">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-800">Escala de Professores (EBD)</h3>
+                                <p className="text-xs text-slate-500 font-medium">Crie, planeje, edite e exporte o cronograma de lições e professores de forma trimestral, semestral ou anual.</p>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button 
+                                    onClick={() => {
+                                        const newRow = {
+                                            id: '',
+                                            data: getTodayDate(),
+                                            turma_id: db.ebd?.turmas?.[0]?.id || '',
+                                            revista: '',
+                                            licao: `Lição ${localEscalaRows.length + 1}`,
+                                            capitulo: '',
+                                            tema: '',
+                                            prof_id: '',
+                                            aux_id: '',
+                                            periodo: escalaPeriodo,
+                                            observacoes: '',
+                                            congregacao_id: congregacaoFilter !== 'todas' ? congregacaoFilter : 'sede',
+                                        };
+                                        setLocalEscalaRows(prev => [newRow, ...prev]);
+                                        addToast("Linha avulsa adicionada ao início do rascunho.", "info");
+                                    }}
+                                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-indigo-100 cursor-pointer"
+                                >
+                                    <Plus size={16}/> Linha Avulsa
+                                </button>
+                                
+                                <button 
+                                    onClick={handleSaveAllEscalas}
+                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-600/20 cursor-pointer"
+                                >
+                                    <Save size={16}/> Salvar Planilha
+                                </button>
+                                
+                                <button 
+                                    onClick={shareEscalaToWhatsApp}
+                                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-teal-600/20 cursor-pointer"
+                                >
+                                    <Send size={16}/> Compartilhar WhatsApp
+                                </button>
+                                
+                                <button 
+                                    onClick={handleDownloadPDFEscala}
+                                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-rose-600/20 cursor-pointer"
+                                >
+                                    <FileText size={16}/> Baixar PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Painel do Gerador Automático em Lote */}
+                        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm mb-6 flex flex-col gap-4">
+                            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                                <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
+                                    <Calendar size={18}/>
+                                </div>
+                                <h4 className="font-bold text-sm text-slate-800">Gerador Automático de Cronogramas em Lote</h4>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Período para Planejar</label>
+                                    <select 
+                                        value={escalaPeriodo} 
+                                        onChange={(e) => setEscalaPeriodo(e.target.value)}
+                                        className="w-full text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                    >
+                                        <option value="semanal">Uma única semana (1 Domingo)</option>
+                                        <option value="trimestral">1 Trimestre (13 Domingos)</option>
+                                        <option value="semestral">1 Semestre (26 Domingos)</option>
+                                        <option value="anual">1 Ano Inteiro (52 Domingos)</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">A partir do Domingo</label>
+                                    <input 
+                                        type="date"
+                                        value={generatorStartDate}
+                                        onChange={(e) => setGeneratorStartDate(e.target.value)}
+                                        className="w-full text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Para Qual Turma</label>
+                                    <select 
+                                        value={generatorTurmaId}
+                                        onChange={(e) => setGeneratorTurmaId(e.target.value)}
+                                        className="w-full text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                    >
+                                        <option value="todas">Todas as Turmas da Escola</option>
+                                        {turmasFiltradas.map(t => (
+                                            <option key={t.id} value={t.id}>{t.nome}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Título da Revista (Opcional)</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="Ex: Vida Cristã, CPAD..."
+                                        value={generatorRevista}
+                                        onChange={(e) => setGeneratorRevista(e.target.value)}
+                                        className="w-full text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-300"
+                                    />
+                                </div>
+                                
+                                <div className="flex items-end">
+                                    <button 
+                                        onClick={handleGenerateBatchEscala}
+                                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-indigo-600/15 shadow-md h-[40px]"
+                                    >
+                                        <RefreshCw size={14}/> Gerar Cronograma
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Barra de Busca e Filtros da Planilha */}
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+                            <div className="relative w-full sm:w-80">
+                                <input 
+                                    type="text"
+                                    placeholder="Pesquisar lição, tema ou professor..."
+                                    value={escalaSearch}
+                                    onChange={(e) => setEscalaSearch(e.target.value)}
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2 pl-9 pr-4 text-xs font-medium text-slate-600 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all"
+                                />
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap hidden sm:inline">Filtrar Turma:</span>
+                                <select 
+                                    value={escalaFiltroTurmaId}
+                                    onChange={(e) => setEscalaFiltroTurmaId(e.target.value)}
+                                    className="w-full sm:w-56 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                >
+                                    <option value="">Todas as Turmas</option>
+                                    {turmasFiltradas.map(t => (
+                                        <option key={t.id} value={t.id}>{t.nome}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Tabela Planilha de Escala */}
+                        <div className="flex-1 overflow-x-auto border border-slate-200 rounded-[2rem] bg-white shadow-sm custom-scrollbar">
+                            <table className="w-full border-collapse text-left min-w-[1200px]">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                        <th className="py-4 px-4 w-[130px] text-center">Data</th>
+                                        <th className="py-4 px-4 w-[160px]">Classe/Turma</th>
+                                        <th className="py-4 px-4 w-[130px]">Revista</th>
+                                        <th className="py-4 px-4 w-[110px]">Nº Lição</th>
+                                        <th className="py-4 px-4 w-[200px]">Tema / Título da Aula</th>
+                                        <th className="py-4 px-4 w-[130px]">Texto Bíblico</th>
+                                        <th className="py-4 px-4 w-[180px]">Professor(a) Titular</th>
+                                        <th className="py-4 px-4 w-[180px]">Auxiliar EBD</th>
+                                        <th className="py-4 px-3">Obs / Anotações</th>
+                                        <th className="py-4 px-4 w-[100px] text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredEscalas.map((row, idx) => {
+                                        const actualIndex = localEscalaRows.findIndex(x => x === row);
+                                        if (actualIndex === -1) return null;
+                                        
+                                        const handleRowFieldChange = (field: string, val: string) => {
+                                            const updated = [...localEscalaRows];
+                                            updated[actualIndex] = { ...updated[actualIndex], [field]: val };
+                                            setLocalEscalaRows(updated);
+                                        };
+
+                                        return (
+                                            <tr key={idx} className="hover:bg-indigo-50/20 group/row transition-all">
+                                                {/* DATA */}
+                                                <td className="py-3 px-3">
+                                                    <input 
+                                                        type="date"
+                                                        value={row.data || ''}
+                                                        onChange={(e) => handleRowFieldChange('data', e.target.value)}
+                                                        className="w-full text-xs font-semibold text-slate-600 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                                                    />
+                                                </td>
+                                                {/* TURMA */}
+                                                <td className="py-3 px-3">
+                                                    <select
+                                                        value={row.turma_id || ''}
+                                                        onChange={(e) => handleRowFieldChange('turma_id', e.target.value)}
+                                                        className="w-full text-xs font-bold text-slate-600 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        {turmasFiltradas.map(t => (
+                                                            <option key={t.id} value={t.id}>{t.nome}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                {/* REVISTA */}
+                                                <td className="py-3 px-3">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Revista..."
+                                                        value={row.revista || ''}
+                                                        onChange={(e) => handleRowFieldChange('revista', e.target.value)}
+                                                        className="w-full text-xs font-medium text-slate-600 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none placeholder:text-slate-300"
+                                                    />
+                                                </td>
+                                                {/* LIÇÃO */}
+                                                <td className="py-3 px-3">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Lição..."
+                                                        value={row.licao || ''}
+                                                        onChange={(e) => handleRowFieldChange('licao', e.target.value)}
+                                                        className="w-full text-xs font-semibold text-slate-600 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none placeholder:text-slate-300"
+                                                    />
+                                                </td>
+                                                {/* TEMA */}
+                                                <td className="py-3 px-3">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Tema da aula..."
+                                                        value={row.tema || ''}
+                                                        onChange={(e) => handleRowFieldChange('tema', e.target.value)}
+                                                        className="w-full text-xs font-bold text-slate-700 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none placeholder:text-slate-300"
+                                                    />
+                                                </td>
+                                                {/* CAPÍTULO */}
+                                                <td className="py-3 px-3">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Atos 1:1..."
+                                                        value={row.capitulo || ''}
+                                                        onChange={(e) => handleRowFieldChange('capitulo', e.target.value)}
+                                                        className="w-full text-xs font-medium text-slate-500 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none placeholder:text-slate-300"
+                                                    />
+                                                </td>
+                                                {/* PROFESSOR TITULAR */}
+                                                <td className="py-3 px-3">
+                                                    <select
+                                                        value={row.prof_id || ''}
+                                                        onChange={(e) => handleRowFieldChange('prof_id', e.target.value)}
+                                                        className="w-full text-xs font-bold text-indigo-700 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        {db.membros?.map((m: any) => (
+                                                            <option key={m.id} value={m.id}>{m.nome}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                {/* AUXILIAR */}
+                                                <td className="py-3 px-3">
+                                                    <select
+                                                        value={row.aux_id || ''}
+                                                        onChange={(e) => handleRowFieldChange('aux_id', e.target.value)}
+                                                        className="w-full text-xs font-semibold text-slate-600 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        {db.membros?.map((m: any) => (
+                                                            <option key={m.id} value={m.id}>{m.nome}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                {/* OBSERVAÇÕES */}
+                                                <td className="py-3 px-3">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Observações..."
+                                                        value={row.observacoes || ''}
+                                                        onChange={(e) => handleRowFieldChange('observacoes', e.target.value)}
+                                                        className="w-full text-xs font-medium text-slate-500 bg-transparent border border-transparent group-hover/row:border-slate-200 rounded-md py-1 px-1.5 focus:bg-white focus:border-indigo-500 focus:outline-none placeholder:text-slate-300"
+                                                    />
+                                                </td>
+                                                {/* AÇÕES DE LINHA */}
+                                                <td className="py-3 px-3 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button 
+                                                            onClick={() => handleSaveEscalaRow(actualIndex)}
+                                                            className="p-1.5 hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 rounded-lg transition-colors cursor-pointer"
+                                                            title="Salvar esta linha individualmente"
+                                                        >
+                                                            <Check size={14}/>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleRemoveEscalaRow(actualIndex)}
+                                                            className="p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
+                                                            title="Excluir de vez"
+                                                        >
+                                                            <Trash2 size={14}/>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {filteredEscalas.length === 0 && (
+                                        <tr>
+                                            <td colSpan={10} className="py-20 text-center text-slate-400 font-medium">
+                                                <Calendar size={48} className="mx-auto mb-3 opacity-30 text-indigo-500 animate-bounce"/>
+                                                <p className="font-extrabold text-[15px] text-slate-700">A escala de professores está vazia.</p>
+                                                <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">Insira rascunhos de cronograma usando o Gerador Automático acima ou clique em "Linha Avulsa" para organizar as datas.</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* AI Lesson Modal - Estudo Interativo */}
@@ -1246,15 +3390,15 @@ Gere em formatação simples e amigável.`;
             )}
 
             {/* MODAL 1: REGISTRO DE CHAMADA (CONTROLE DE PRESENÇA) */}
-            {chamadaModalOpen && selectedTurmaForChamada && (
+            {chamadaModalOpen && selectedTurmaForChamada && createPortal(
                 <InteractiveWindow
-                    id="ebd_chamada_window"
+                    id="generic_modal_ebd_chamada"
                     title={`Turma: ${selectedTurmaForChamada.nome}`}
                     subtitle="Controle de Lições • Frequência"
                     onClose={() => setChamadaModalOpen(false)}
                     icon={ClipboardList}
                     headerBg="from-indigo-700 via-blue-700 to-indigo-900"
-                    defaultWidth={760}
+                    defaultWidth={670}
                     defaultHeight={670}
                     footer={
                         <div className="flex justify-end gap-3 w-full">
@@ -1391,11 +3535,12 @@ Gere em formatação simples e amigável.`;
                             </div>
                         </div>
                     </div>
-                </InteractiveWindow>
+                </InteractiveWindow>,
+                document.body
             )}
 
             {/* MODAL 2: FICHA DE DESEMPENHO E HISTÓRICO DO ALUNO (INDIVIDUAL) */}
-            {alunoHistoryModalOpen && selectedAlunoForHistory && (
+            {alunoHistoryModalOpen && selectedAlunoForHistory && createPortal(
                 <InteractiveWindow
                     id="ebd_aluno_historico_window"
                     title={selectedAlunoForHistory.nome || 'Ficha do Aluno'}
@@ -1482,7 +3627,7 @@ Gere em formatação simples e amigável.`;
                                             </div>
                                         </div>
                                     );
-                                })}
+                                }).reverse()}
                                 {(db.ebd?.licoes || []).filter(l => {
                                     const t = turmasFiltradas.find(tf=>tf.id===l.turma_id);
                                     return t && t.id === selectedAlunoForHistory.turma_id;
@@ -1492,7 +3637,8 @@ Gere em formatação simples e amigável.`;
                             </div>
                         </div>
                     </div>
-                </InteractiveWindow>
+                </InteractiveWindow>,
+                document.body
             )}
         </div>
     );

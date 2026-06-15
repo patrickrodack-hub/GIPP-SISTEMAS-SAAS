@@ -59,7 +59,8 @@ export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
     'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
     'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_carteirinha'],
     'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha'],
-    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_salinha_kids', 'portal_carteirinha']
+    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_salinha_kids', 'portal_carteirinha'],
+    'PROFESSOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha', 'portal_professor_ebd']
 };
 
 export const DEFAULT_SALINHA_KIDS_LEADERSHIP_ROLES = [
@@ -103,7 +104,8 @@ export const PORTAL_MODULES = [
     { id: 'portal_salinha_kids', label: 'Salinha Kids', desc: 'Controle de segurança integrado com QrCode para entrega de crianças.', iconId: 'Baby' },
     { id: 'portal_carteirinha', label: 'Cartão de Membro', desc: 'Gera a credencial digital de identificação com dados oficiais e QrCode.', iconId: 'IdCard' },
     { id: 'portal_pastor', label: 'Portal do Pastor', desc: 'Canal de supervisão exclusivo de dízimos detalhados e controle eclesiástico geral.', iconId: 'Shield' },
-    { id: 'portal_tesoureiro', label: 'Portal do Tesoureiro', desc: 'Faculdade para tesoureiros oficiais lançarem envelopes diretamente do portal.', iconId: 'ShieldCheck' }
+    { id: 'portal_tesoureiro', label: 'Portal do Tesoureiro', desc: 'Faculdade para tesoureiros oficiais lançarem envelopes diretamente do portal.', iconId: 'ShieldCheck' },
+    { id: 'portal_professor_ebd', label: 'Área do Professor (EBD)', desc: 'Permite que o professor lance frequências, gerencie cronograma, crie lições inteligentes via IA e controle o livro caixa de classe da EBD.', iconId: 'GraduationCap' }
 ];
 
 // Exporting component

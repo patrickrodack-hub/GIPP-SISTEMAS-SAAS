@@ -2470,10 +2470,10 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                              <h4 className="text-sm font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2"><Building2 size={16} /> 3. Dados Eclesiásticos</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 {isMaster && <FormSelect label="Congregação / Filial" value={data.congregacao_id || 'sede'} onChange={v=>setData({...data, congregacao_id:v})} options={[{label: 'Sede Principal (Matriz)', value: 'sede'}, ...db.congregacoes.map(c=>({label: c.nome, value: c.id}))]} />}
-                                <FormSelect label="Cargo Eclesiástico" value={data.cargo} onChange={v=>setData({...data, cargo:v})} options={['Membro', 'Auxiliar', 'Diácono', 'Presbítero', 'Evangelista', 'Missionário', 'Pastor']} />
+                                <FormSelect label="Cargo Eclesiástico" value={data.cargo} onChange={v=>setData({...data, cargo:v})} options={['Membro', 'Professor', 'Auxiliar', 'Diácono', 'Presbítero', 'Evangelista', 'Missionário', 'Pastor']} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <FormSelect label="Função Administrativa" value={data.funcao_administrativa || 'NENHUMA'} onChange={v=>setData({...data, funcao_administrativa:v})} options={['NENHUMA', 'PASTOR PRESIDENTE', 'PASTOR AUXILIAR', 'COORDENADOR', 'SUPERINTENDENTE', 'SECRETARIO', 'TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR', 'ADVOGADO', 'AUXILIAR', 'LIDER DE DEPARTAMENTO']} />
+                                <FormSelect label="Função Administrativa" value={data.funcao_administrativa || 'NENHUMA'} onChange={v=>setData({...data, funcao_administrativa:v})} options={['NENHUMA', 'PASTOR PRESIDENTE', 'PASTOR AUXILIAR', 'COORDENADOR', 'SUPERINTENDENTE', 'SECRETARIO', 'TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR', 'ADVOGADO', 'AUXILIAR', 'LIDER DE DEPARTAMENTO', 'PROFESSOR']} />
                                 <FormInput label="Nº Carteirinha" value={data.numero_registro} onChange={v=>setData({...data, numero_registro:v})} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -8646,6 +8646,16 @@ const PortalHome = ({ user, db, setView }) => {
     const hoje = hojeObj.toISOString().split('T')[0];
     const currentMonthStr = hojeObj.toISOString().slice(0, 7);
     const currentUser = db.membros.find((m: any) => m.id === user.id) || user;
+
+    const userFuncaoAdmHome = (currentUser.funcao_administrativa || 'NENHUMA').toUpperCase();
+    const portalAcessosFuncaoHome = db.igreja?.portal_acessos_funcao || {};
+    const allowedModulesHome = portalAcessosFuncaoHome[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+
+    const isProfessor = (currentUser.cargo || '').toLowerCase().includes('professor') || 
+                        (currentUser.funcao || '').toLowerCase().includes('professor') || 
+                        (currentUser.funcao_administrativa || '').toLowerCase().includes('professor') || 
+                        currentUser.nivel === 'master' ||
+                        (db.ebd?.turmas || []).some((t: any) => t.prof1_id === currentUser.id || t.prof2_id === currentUser.id || t.prof3_id === currentUser.id);
     
     const [devocional, setDevocional] = useState('');
     const [loadingDev, setLoadingDev] = useState(false);
@@ -8883,27 +8893,42 @@ const PortalHome = ({ user, db, setView }) => {
             </div>
 
             {/* AÇÕES RÁPIDAS (NOVO LAYOUT ESTILO FINTECH) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button onClick={() => setView('portal_financas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group">
-                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={24}/></div>
-                    <span className="font-black text-slate-800 text-base mb-1">Dízimos</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ofertar agora</span>
-                </button>
-                <button onClick={() => setView('portal_carteirinha')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group">
-                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><QrCode size={24}/></div>
-                    <span className="font-black text-slate-800 text-base mb-1">Credencial</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
-                </button>
-                <button onClick={() => setView('portal_tarefas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group">
-                    <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:rotate-6"><CheckSquare size={24}/></div>
-                    <span className="font-black text-slate-800 text-base mb-1">Escalas</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minhas tarefas</span>
-                </button>
-                <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group">
-                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={24}/></div>
-                    <span className="font-black text-slate-800 text-base mb-1">Estudo EBD</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
-                </button>
+            <div className={`grid grid-cols-2 gap-4 ${isProfessor && allowedModulesHome.includes('portal_professor_ebd') ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+                {allowedModulesHome.includes('portal_financas') && (
+                    <button onClick={() => setView('portal_financas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group">
+                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Dízimos</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ofertar agora</span>
+                    </button>
+                )}
+                {allowedModulesHome.includes('portal_carteirinha') && (
+                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><QrCode size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Credencial</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
+                    </button>
+                )}
+                {allowedModulesHome.includes('portal_tarefas') && (
+                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group">
+                        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:rotate-6"><CheckSquare size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Escalas</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minhas tarefas</span>
+                    </button>
+                )}
+                {allowedModulesHome.includes('portal_ebd') && (
+                    <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Estudo EBD</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
+                    </button>
+                )}
+                {isProfessor && allowedModulesHome.includes('portal_professor_ebd') && (
+                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1">
+                        <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Sala do Professor</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">EBD Painel</span>
+                    </button>
+                )}
             </div>
 
             {/* --- SECÇÃO DE GAMIFICAÇÃO (CONQUISTAS 3D) --- */}
@@ -9791,6 +9816,8 @@ const PortalTarefas = ({ user, db }) => {
     });
     
     const [reminderMenuOpen, setReminderMenuOpen] = useState<string | null>(null);
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [selectedTaskForHistory, setSelectedTaskForHistory] = useState<any>(null);
 
     const minhasTarefas = (db.tarefas || []).filter(t => 
         (t.equipe || []).some(m => m.id === user.id || m.nome === user.nome)
@@ -9905,6 +9932,57 @@ const PortalTarefas = ({ user, db }) => {
         }
     };
 
+    const handleEditAlarmOption = (alarmId: string, newOption: string) => {
+        const alarm = activeAlarms.find(a => a.id === alarmId);
+        if (!alarm) return;
+        const task = db.tarefas?.find(t => t.id === alarm.taskId);
+        if (!task) return;
+        
+        const parts = task.data ? task.data.split('-') : [];
+        let taskDate: Date;
+        if (parts.length === 3) {
+            taskDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 8, 0, 0);
+        } else {
+            taskDate = new Date();
+        }
+        
+        let offset = 0;
+        let optionLabel = 'No Dia do Compromisso';
+        
+        if (newOption === '1day') {
+            offset = 24 * 60 * 60 * 1000;
+            optionLabel = '1 dia antes';
+        } else if (newOption === '1hour') {
+            offset = 60 * 60 * 1000;
+            optionLabel = '1 hora antes';
+        } else {
+            optionLabel = 'No dia (08h)';
+        }
+        
+        const targetTime = taskDate.getTime() - offset;
+        const newAlarmId = `${task.id}_${newOption}`;
+        
+        const updated = activeAlarms.filter(a => a.id !== alarmId);
+        const newAlarm = {
+            ...alarm,
+            id: newAlarmId,
+            targetTime: targetTime,
+            optionLabel: optionLabel
+        };
+        updated.push(newAlarm);
+        localStorage.setItem('gipp_local_alarms', JSON.stringify(updated));
+        setActiveAlarms(updated);
+        addToast(`Lembrete local editado: ${optionLabel}!`, "success");
+    };
+
+    const getGoogleCalendarUrl = (task: any) => {
+        const title = encodeURIComponent(`Escala GIPP: ${task.categoria} - ${task.descricao}`);
+        const dateForm = task.data ? task.data.replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const dates = `${dateForm}T090000/${dateForm}T110000`; // 09:00 to 11:00 UTC/floating format
+        const details = encodeURIComponent(`Compromisso na igreja. Tema/Escala: ${task.descricao}. Categoria: ${task.categoria}.`);
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&sf=true&output=xml`;
+    };
+
     return (
         <div className="space-y-6 animate-entrance">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm">
@@ -9915,19 +9993,89 @@ const PortalTarefas = ({ user, db }) => {
                         <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Compromissos agendados e Confirmações</p>
                     </div>
                 </div>
-                {minhasTarefas.length > 0 && (
-                    <button 
-                        onClick={() => {
-                            setPrintData({ membro: user, tarefas: db.tarefas || [], igreja: db.igreja });
-                            setPrintMode('membro_escala_print');
-                            setPreviewOpen(true);
-                        }}
-                        className="shadow-md flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 px-4.5 font-bold text-xs transition-all border border-indigo-500"
-                    >
-                        <Printer size={16}/> Imprimir Compromissos
-                    </button>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                    {minhasTarefas.length > 0 && (
+                        <button 
+                            onClick={() => {
+                                setPrintData({ membro: user, tarefas: db.tarefas || [], igreja: db.igreja });
+                                setPrintMode('membro_escala_print');
+                                setPreviewOpen(true);
+                            }}
+                            className="shadow-md flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 px-4.5 font-bold text-xs transition-all border border-indigo-500 cursor-pointer"
+                        >
+                            <Printer size={16}/> Imprimir Compromissos
+                        </button>
+                    )}
+                    {/* Botão de Sincronização global / todos */}
+                    {minhasTarefas.length > 0 && (
+                        <a 
+                            href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Compromissos GIPP: Meus Serviços na Igreja')}&dates=${new Date().toISOString().split('T')[0].replace(/-/g, '')}T090000/${new Date().toISOString().split('T')[0].replace(/-/g, '')}T110000&details=${encodeURIComponent('Consultar escalas semanais do membro GIPP atuante na Obra.')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shadow-md flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-[#1a73e8] border border-slate-200 rounded-xl py-2.5 px-4.5 font-bold text-xs transition-all cursor-pointer"
+                        >
+                            <svg className="w-4 h-4 fill-current text-[#1a73e8]" viewBox="0 0 24 24">
+                                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                            </svg>
+                            Sincronizar com Google Agenda
+                        </a>
+                    )}
+                </div>
             </div>
+
+            {/* List of active scheduled local alarms */}
+            {activeAlarms.length > 0 && (
+                <div id="portal_alarme_lista" className="bg-gradient-to-r from-amber-50 to-amber-100/50 p-5 rounded-[2rem] border border-amber-200/60 shadow-xs animate-entrance">
+                    <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Bell size={16} className="text-amber-500 animate-pulse" /> 
+                        Alarmes Locais Programados ({activeAlarms.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {activeAlarms.map(alarm => {
+                            const task = db.tarefas?.find(tf => tf.id === alarm.taskId);
+                            const taskName = task ? task.descricao : alarm.title;
+                            return (
+                                <div key={alarm.id} className="bg-white p-4 rounded-2xl border border-amber-200/50 shadow-xs flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-slate-800 line-clamp-1">{taskName}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-100 uppercase">
+                                                {alarm.optionLabel}
+                                            </span>
+                                            <span className="text-[9px] text-slate-500 font-bold bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                                                {new Date(alarm.targetTime).toLocaleDateString()} {new Date(alarm.targetTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <select 
+                                            value={alarm.id.split('_').slice(1).join('_') || 'on_hour'} 
+                                            onChange={(e) => handleEditAlarmOption(alarm.id, e.target.value)}
+                                            className="text-[10px] font-black bg-slate-50 border border-slate-200 rounded-lg p-1 text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                        >
+                                            <option value="on_hour">No dia (08h)</option>
+                                            <option value="1hour">1h antes</option>
+                                            <option value="1day">1 dia antes</option>
+                                        </select>
+                                        <button 
+                                            onClick={() => {
+                                                const updated = activeAlarms.filter(a => a.id !== alarm.id);
+                                                localStorage.setItem('gipp_local_alarms', JSON.stringify(updated));
+                                                setActiveAlarms(updated);
+                                                addToast("Alarme cancelado.", "info");
+                                            }}
+                                            className="p-1 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg border border-rose-200 text-[10px] cursor-pointer transition-colors"
+                                            title="Cancelar alarme"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             
             <div className="glass-modern rounded-[2rem] shadow-sm border border-white/50 p-6 md:p-8">
                 {minhasTarefas.length > 0 ? (
@@ -9938,13 +10086,30 @@ const PortalTarefas = ({ user, db }) => {
                             const rsvpStatus = membroInfo?.status_presenca;
                             
                             return (
-                                <div key={i} className="flex flex-col gap-4 p-5 md:p-6 rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-md transition-all group">
+                                <div key={i} className="flex flex-col gap-4 p-5 md:p-6 rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-md transition-all group animate-entrance">
                                     <div className="flex-1">
-                                        <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center justify-between items-start mb-4">
                                             <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded bg-slate-100 text-slate-500 tracking-wider border border-slate-200">{t.categoria}</span>
-                                            <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase shadow-sm ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'} `}>
-                                                {t.status}
-                                            </span>
+                                            
+                                            <div className="flex items-center gap-2">
+                                                {/* Botão Sincronizar Google Agenda específico da tarefa */}
+                                                <a 
+                                                    href={getGoogleCalendarUrl(t)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#1a73e8]/10 hover:bg-[#1a73e8]/25 text-[#1a73e8] border border-[#1a73e8]/20 text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                                                    title="Sincronizar esta tarefa com a Google Agenda"
+                                                >
+                                                    <svg className="w-3.5 h-3.5 fill-current text-[#1a73e8]" viewBox="0 0 24 24">
+                                                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                                                    </svg>
+                                                    Sincronizar com Google Agenda
+                                                </a>
+
+                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase shadow-sm ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'} `}>
+                                                    {t.status}
+                                                </span>
+                                            </div>
                                         </div>
                                         <h4 className="font-bold text-slate-800 text-lg mb-3">{t.descricao}</h4>
                                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 inline-block mb-4 shadow-sm">
@@ -9992,6 +10157,18 @@ const PortalTarefas = ({ user, db }) => {
                                             )}
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                            {/* Botão de Histórico de Presença */}
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedTaskForHistory(t);
+                                                    setHistoryModalOpen(true);
+                                                }}
+                                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                                                title="Histórico de presença confirmada nesta tarefa"
+                                            >
+                                                <History size={13} className="text-slate-500" /> Histórico de Presença
+                                            </button>
+
                                             {/* Botão de Lembrete Local com Dropdown */}
                                             <div className="relative inline-block text-left w-full sm:w-auto">
                                                 <button 
@@ -10036,7 +10213,7 @@ const PortalTarefas = ({ user, db }) => {
                                                     </>
                                                 )}
                                             </div>
-
+ 
                                             <button 
                                                 onClick={() => handleRSVP(t.id, 'confirmado')}
                                                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-400 hover:text-emerald-600'}`}
@@ -10051,7 +10228,7 @@ const PortalTarefas = ({ user, db }) => {
                                             </button>
                                         </div>
                                     </div>
-
+ 
                                 </div>
                             )
                         })}
@@ -10064,6 +10241,80 @@ const PortalTarefas = ({ user, db }) => {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Histórico de Presença */}
+            {historyModalOpen && selectedTaskForHistory && createPortal(
+                <InteractiveWindow
+                    id="escala_presenca_historico_modal"
+                    title={`Histórico: ${selectedTaskForHistory.descricao}`}
+                    subtitle="Registro de todas as vezes que confirmou presença nesta tarefa"
+                    onClose={() => {
+                        setHistoryModalOpen(false);
+                        setSelectedTaskForHistory(null);
+                    }}
+                    headerBg="from-indigo-600 via-indigo-700 to-indigo-800"
+                    defaultWidth={550}
+                    defaultHeight={500}
+                >
+                    <div className="p-6">
+                        <p className="text-xs text-slate-500 mb-4">
+                            Exibindo o registro histórico de escalas e tarefas com a descrição <span className="font-bold text-slate-700 font-mono">"{selectedTaskForHistory.descricao}"</span> que você confirmou presença.
+                        </p>
+                        <div className="overflow-hidden border border-slate-200 rounded-2xl bg-white shadow-xs">
+                            <table className="w-full text-left border-collapse border-0">
+                                <thead>
+                                    <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider border-b border-slate-200">
+                                        <th className="p-4">Data</th>
+                                        <th className="p-4">Categoria</th>
+                                        <th className="p-4">Status</th>
+                                        <th className="p-4 text-right">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {(() => {
+                                        const presencas = (db.tarefas || []).filter(item => 
+                                            item.descricao === selectedTaskForHistory.descricao && 
+                                            (item.equipe || []).some(m => 
+                                                (m.id === user.id || m.nome === user.nome) && 
+                                                m.status_presenca === 'confirmado'
+                                            )
+                                        ).sort((a, b) => new Date(b.data || '1970-01-01').getTime() - new Date(a.data || '1970-01-01').getTime());
+
+                                        if (presencas.length === 0) {
+                                            return (
+                                                <tr>
+                                                    <td colSpan={4} className="p-8 text-center text-xs text-slate-400 italic">
+                                                        Nenhuma data anterior confirmada encontrada.
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }
+
+                                        return presencas.map((item, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                <td className="p-4 text-xs font-semibold text-slate-700">{formatDateLocal(item.data)}</td>
+                                                <td className="p-4 text-[10px]"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-medium border border-slate-200">{item.categoria}</span></td>
+                                                <td className="p-4 text-[10px]"><span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 font-bold border border-emerald-100 uppercase">Confirmado</span></td>
+                                                <td className="p-4 text-right">
+                                                    <a 
+                                                        href={getGoogleCalendarUrl(item)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold transition-all cursor-pointer bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded inline-block"
+                                                    >
+                                                        Google Agenda
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        ));
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </InteractiveWindow>,
+                document.body
+            )}
         </div>
     );
 };
@@ -11338,6 +11589,12 @@ const MemberPortalLayout = () => {
     const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
     const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
 
+    const isProfessor = (user?.cargo || '').toLowerCase().includes('professor') || 
+                        (user?.funcao || '').toLowerCase().includes('professor') || 
+                        (user?.funcao_administrativa || '').toLowerCase().includes('professor') || 
+                        user?.nivel === 'master' ||
+                        (db.ebd?.turmas || []).some((t: any) => t.prof1_id === user?.id || t.prof2_id === user?.id || t.prof3_id === user?.id);
+
     const baseNavItems = [
         { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
         { id: 'portal_mural', icon: MessageSquare, label: 'Mural', hoverColor: 'group-hover:text-rose-500' },
@@ -11348,6 +11605,7 @@ const MemberPortalLayout = () => {
         { id: 'portal_tarefas', icon: CheckSquare, label: 'Escalas', hoverColor: 'group-hover:text-rose-500' },
         { id: 'portal_financas', icon: DollarSign, label: 'Dízimos', hoverColor: 'group-hover:text-emerald-600' },
         { id: 'portal_ebd', icon: BookOpen, label: 'EBD', hoverColor: 'group-hover:text-blue-600' },
+        { id: 'portal_professor_ebd', icon: GraduationCap, label: 'Sala do Professor', hoverColor: 'group-hover:text-indigo-600' },
         { id: 'portal_cursos', icon: GraduationCap, label: 'Cursos', hoverColor: 'group-hover:text-purple-500' },
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
@@ -11356,6 +11614,9 @@ const MemberPortalLayout = () => {
 
     const filteredBaseNavItems = baseNavItems.filter(item => {
         if (item.id === 'portal_home') return true;
+        if (item.id === 'portal_professor_ebd') {
+            return isProfessor && allowedModules.includes('portal_professor_ebd');
+        }
         return allowedModules.includes(item.id);
     });
 
@@ -11401,6 +11662,7 @@ const MemberPortalLayout = () => {
             case 'portal_tesoureiro': return <ModulePortalTesoureiro />;
             case 'portal_financas': return <PortalFinanceiro user={user} db={db} isTesoureiro={isTesoureiro} />;
             case 'portal_ebd': return <PortalEBD user={user} db={db} />;
+            case 'portal_professor_ebd': return <ModuleEBD isProfessorOnly={true} />;
             case 'portal_frequencia': return <PortalFrequencia user={user} db={db} />;
             case 'portal_salinha_kids': return <ModuleSalinhaKids mode="portal" />;
             case 'portal_agenda': return <PortalAgenda user={user} db={db} />;
@@ -12958,7 +13220,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -12983,7 +13245,7 @@ export default function App() {
           // O Portal do Membro bypassa este filtro para poder recuperar o histórico legado sem congregacao_id.
           if (user && user.nivel !== 'master' && user.tipo !== 'membro') {
               const myBranch = user.congregacao_id || 'sede';
-              const tenantTables = ['membros', 'financeiro', 'carnes', 'celulas', 'agenda', 'tarefas', 'visitantes', 'patrimonio', 'ebd_turmas', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
+              const tenantTables = ['membros', 'financeiro', 'carnes', 'celulas', 'agenda', 'tarefas', 'visitantes', 'patrimonio', 'ebd_turmas', 'ebd_escalas', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
               
               if (tenantTables.includes(key)) {
                   q = query(colRef, where('congregacao_id', '==', myBranch));
@@ -13014,6 +13276,7 @@ export default function App() {
                               if (k === 'ebd_turmas') stateKey = 'ebd.turmas'; 
                               else if (k === 'ebd_alunos') stateKey = 'ebd.alunos'; 
                               else if (k === 'ebd_licoes') stateKey = 'ebd.licoes'; 
+                              else if (k === 'ebd_escalas') stateKey = 'ebd.escalas'; 
                               else if (k === 'missoes_missionarios') stateKey = 'missoes.missionarios'; 
                               else if (k === 'missoes_agencias') stateKey = 'missoes.agencias';
                               else if (k === 'missoes_colaboradores') stateKey = 'missoes.colaboradores';
@@ -13360,10 +13623,19 @@ export default function App() {
       else { addToast("Erro login.", 'error'); }
   };
 
-  const handleLogout = () => { auth.signOut(); setUser(null); setView('login'); };
+  const handleLogout = () => { 
+      auth.signOut(); 
+      setUser(null); 
+      setLoginData({ user: '', pass: '' }); 
+      setFirstAccessData({ nome: '', data_nascimento: '', senha: '', confirmar: '' });
+      setIsFirstAccess(false);
+      setFirstAccessSuccessData(null);
+      setView('login'); 
+      addToast("Até breve! O seu utilizador e palavra-passe foram limpos.", "success");
+  };
   const deleteItem = (type, id) => { 
       if (!authUser) return addToast("Aguarde a conexão com o servidor.", "warning");
-      const map = { 'membro': 'membros', 'visitante': 'visitantes', 'celula': 'celulas', 'congregacao': 'congregacoes', 'departamento': 'departamentos', 'ministerio': 'departamentos', 'usuario': 'usuarios', 'agenda': 'agenda', 'tarefa': 'tarefas', 'entrada': 'financeiro', 'saida': 'financeiro', 'gestao_despesa': 'financeiro', 'carne': 'carnes', 'ebd_turma': 'ebd_turmas', 'ebd_aluno': 'ebd_alunos', 'ebd_licao': 'ebd_licoes', 'missionario': 'missoes_missionarios', 'agencia_missoes': 'missoes_agencias', 'missoes_colaborador': 'missoes_colaboradores', 'missoes_agenda': 'missoes_agenda', 'centro_custo': 'centro_custo', 'fornecedor': 'fornecedores', 'patrimonio': 'patrimonio' };
+      const map = { 'membro': 'membros', 'visitante': 'visitantes', 'celula': 'celulas', 'congregacao': 'congregacoes', 'departamento': 'departamentos', 'ministerio': 'departamentos', 'usuario': 'usuarios', 'agenda': 'agenda', 'tarefa': 'tarefas', 'entrada': 'financeiro', 'saida': 'financeiro', 'gestao_despesa': 'financeiro', 'carne': 'carnes', 'ebd_turma': 'ebd_turmas', 'ebd_aluno': 'ebd_alunos', 'ebd_licao': 'ebd_licoes', 'ebd_escala': 'ebd_escalas', 'missionario': 'missoes_missionarios', 'agencia_missoes': 'missoes_agencias', 'missoes_colaborador': 'missoes_colaboradores', 'missoes_agenda': 'missoes_agenda', 'centro_custo': 'centro_custo', 'fornecedor': 'fornecedores', 'patrimonio': 'patrimonio' };
       const target = map[type] || type + 's';
       setConfirmDialog({ isOpen: true, title: "Lixeira", message: "Mover para lixeira?", onConfirm: async () => { try { await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', target, id), { deleted: true }, { merge: true }); logAction('EXCLUSÃO_LÓGICA', `Moveu item para a lixeira`, target, id); addToast("Na lixeira.", "success"); } catch (e) { addToast("Erro de permissão ao apagar.", "error"); } } }); 
   };
@@ -13643,7 +13915,7 @@ export default function App() {
     try {
         const resolvedModalType = modalType === 'financeiro' ? (formData.tipo || 'saida') : modalType;
         let colName = resolvedModalType;
-        const map = { 'membro': 'membros', 'visitante': 'visitantes', 'celula': 'celulas', 'celula_relatorio': 'celulas_relatorios', 'congregacao': 'congregacoes', 'departamento': 'departamentos', 'usuario': 'usuarios', 'agenda': 'agenda', 'tarefa': 'tarefas', 'entrada': 'financeiro', 'saida': 'financeiro', 'gestao_despesa': 'financeiro', 'carne': 'carnes', 'ebd_turma': 'ebd_turmas', 'ebd_aluno': 'ebd_alunos', 'ebd_licao': 'ebd_licoes', 'missionario': 'missoes_missionarios', 'agencia_missoes': 'missoes_agencias', 'missoes_colaborador': 'missoes_colaboradores', 'missoes_financeiro': 'financeiro', 'missoes_agenda': 'missoes_agenda', 'fin_entrada_novo': 'financeiro', 'fin_saida_novo': 'financeiro', 'ministerio': 'departamentos', 'ministerio_membro': 'departamentos', 'ministerio_evento': 'departamentos', 'carne_novo': 'carnes', 'centro_custo': 'centro_custo', 'fornecedor': 'fornecedores', 'patrimonio': 'patrimonio' };
+        const map = { 'membro': 'membros', 'visitante': 'visitantes', 'celula': 'celulas', 'celula_relatorio': 'celulas_relatorios', 'congregacao': 'congregacoes', 'departamento': 'departamentos', 'usuario': 'usuarios', 'agenda': 'agenda', 'tarefa': 'tarefas', 'entrada': 'financeiro', 'saida': 'financeiro', 'gestao_despesa': 'financeiro', 'carne': 'carnes', 'ebd_turma': 'ebd_turmas', 'ebd_aluno': 'ebd_alunos', 'ebd_licao': 'ebd_licoes', 'ebd_escala': 'ebd_escalas', 'missionario': 'missoes_missionarios', 'agencia_missoes': 'missoes_agencias', 'missoes_colaborador': 'missoes_colaboradores', 'missoes_financeiro': 'financeiro', 'missoes_agenda': 'missoes_agenda', 'fin_entrada_novo': 'financeiro', 'fin_saida_novo': 'financeiro', 'ministerio': 'departamentos', 'ministerio_membro': 'departamentos', 'ministerio_evento': 'departamentos', 'carne_novo': 'carnes', 'centro_custo': 'centro_custo', 'fornecedor': 'fornecedores', 'patrimonio': 'patrimonio' };
         colName = map[resolvedModalType] || resolvedModalType + 's';
         
         let processedData = { ...formData };
@@ -14187,7 +14459,7 @@ export default function App() {
 
                 <MobilePushCompatibilityCheck />
 
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={handleLogin} autoComplete="off" className="space-y-6" key={loginMode}>
                     {!isFirstAccess ? (
                         <>
                             <div className="space-y-2 relative">
