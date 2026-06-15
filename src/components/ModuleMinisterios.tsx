@@ -41,6 +41,8 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+import { ModuleMidiaTab } from './ModuleMidiaTab';
+
 // Exporting component
 const ModuleMinisterios = () => {
     const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, callGeminiAI, user, addDoc, collection, deleteDoc } = useContext(ChurchContext);
@@ -57,6 +59,19 @@ const ModuleMinisterios = () => {
     const [loadingMusicas, setLoadingMusicas] = useState(true);
     const [loadingEscalas, setLoadingEscalas] = useState(true);
     const [loadingReunioes, setLoadingReunioes] = useState(true);
+    const [subTabMedia, setSubTabMedia] = useState('equipe');
+
+    // Media Ministry State (Firestore sync)
+    const [mediaEquipe, setMediaEquipe] = useState<any[]>([]);
+    const [mediaEventos, setMediaEventos] = useState<any[]>([]);
+    const [mediaBiblioteca, setMediaBiblioteca] = useState<any[]>([]);
+    const [mediaEquipamentos, setMediaEquipamentos] = useState<any[]>([]);
+
+    const [loadingMediaEquipe, setLoadingMediaEquipe] = useState(true);
+    const [loadingMediaEventos, setLoadingMediaEventos] = useState(true);
+    const [loadingMediaBiblioteca, setLoadingMediaBiblioteca] = useState(true);
+    const [loadingMediaEquipamentos, setLoadingMediaEquipamentos] = useState(true);
+
     const [loadingMusicos, setLoadingMusicos] = useState(true);
 
     // Form overlays / creation toggle
@@ -151,11 +166,47 @@ const ModuleMinisterios = () => {
             setLoadingMusicos(false);
         }, () => setLoadingMusicos(false));
 
+        const mediaEquipeRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'midia_equipe');
+        const unsubMediaEquipe = onSnapshot(mediaEquipeRef, (snapshot: any) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
+            setMediaEquipe(list);
+            setLoadingMediaEquipe(false);
+        }, () => setLoadingMediaEquipe(false));
+
+        const mediaEventosRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'midia_eventos');
+        const unsubMediaEventos = onSnapshot(mediaEventosRef, (snapshot: any) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
+            setMediaEventos(list);
+            setLoadingMediaEventos(false);
+        }, () => setLoadingMediaEventos(false));
+
+        const mediaBiblioRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'midia_biblioteca');
+        const unsubMediaBiblio = onSnapshot(mediaBiblioRef, (snapshot: any) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
+            setMediaBiblioteca(list);
+            setLoadingMediaBiblioteca(false);
+        }, () => setLoadingMediaBiblioteca(false));
+
+        const mediaEqpRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'midia_equipamentos');
+        const unsubMediaEqp = onSnapshot(mediaEqpRef, (snapshot: any) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
+            setMediaEquipamentos(list);
+            setLoadingMediaEquipamentos(false);
+        }, () => setLoadingMediaEquipamentos(false));
+
         return () => {
             unsubMusicas();
             unsubEscalas();
             unsubReunioes();
             unsubMusicos();
+            unsubMediaEquipe();
+            unsubMediaEventos();
+            unsubMediaBiblio();
+            unsubMediaEqp();
         };
     }, [dbFirestore, appId]);
 
@@ -443,7 +494,8 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
         {id: 2, label: 'Cadastros', icon: Building2}, 
         {id: 3, label: 'Componentes', icon: Users}, 
         {id: 4, label: 'Agenda & Tarefas', icon: Calendar},
-        {id: 5, label: 'Ministério de Louvor', icon: Music}
+        {id: 5, label: 'Ministério de Louvor', icon: Music},
+        {id: 6, label: 'Ministério de Mídia', icon: Video}
     ];
 
     const TabButton: any = ({ item }) => (
@@ -1525,6 +1577,17 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                         )}
                     </div>
                 )}
+                
+                {tab === 6 && (
+                    <ModuleMidiaTab 
+                        subTabMedia={subTabMedia} setSubTabMedia={setSubTabMedia}
+                        mediaEquipe={mediaEquipe} loadingMediaEquipe={loadingMediaEquipe}
+                        mediaEventos={mediaEventos} loadingMediaEventos={loadingMediaEventos}
+                        mediaBiblioteca={mediaBiblioteca} loadingMediaBiblioteca={loadingMediaBiblioteca}
+                        mediaEquipamentos={mediaEquipamentos} loadingMediaEquipamentos={loadingMediaEquipamentos}
+                    />
+                )}
+                
             </div>
         </div>
     );

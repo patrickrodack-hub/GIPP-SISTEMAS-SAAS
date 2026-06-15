@@ -47,11 +47,23 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.4.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-indigo-800 font-[Outfit]">v8.4.0 - Otimização SaaS: Relação de Pacotes & Governança de Usuários</h3>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Atualização de Malha de Pacotes:</strong> Nova redistribuição dos planos (Básico, Standard, Avançado), incluindo novos escopos como Amparo Legal, Auditoria, Salinha Kids, Lixeira e Registro de Software nativamente categorizados.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Restrições e Presets de Usuários:</strong> Ampliação das predefinições de regras (Pastores, Secretários, Administradores), unificando permissões de EBD, Salinha Kids, Backups e Recursos de Proteção.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Estabilização do Login Multidispositivo:</strong> Correção no redirecionamento responsivo para priorização coesa do APP e PWA do dispositivo cliente em vez de renderizações exclusivas da web.</li>
+                </ul>
+            </div>
+
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.3.0 */}
             <div className="relative pl-8 border-l-2 border-violet-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-violet-600 shadow-[0_0_10px_rgba(139,92,246,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-violet-800 font-[Outfit]">v8.3.0 - Divisão Eclesiástica Jurídica: Amparo Constitucional & Registro do Software</h3>
-                <p className="text-xs text-violet-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <p className="text-xs text-violet-600 font-black uppercase mb-3 tracking-wider">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Módulo Amparo Constitucional Dedicado:</strong> Biblioteca estendida de direito eclesiástico com índice de proteção apostólica, banco de acórdãos, jurisprudências completas e artigos jurídicos prontos para orientação e amparo à liberdade de doutrina.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Módulo Registro do Software Separado:</strong> Divisão principal dedicada especificamente às bases normativas de tecnologia (Lei nº 9.609/98) e conformidade LGPD.</li>
@@ -64,7 +76,7 @@ const ModuleChangelog = () => (
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-indigo-800 font-[Outfit]">v8.2.0 - Planilha de Apontamento Individual Rápido & Espelho de Ponto</h3>
-                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Planilha de Apontamento Rápido:</strong> Lançamento direto e em lote de todas as batidas e registros de entrada, saída e intervalos em um formato dinâmico de Grid de Planilha, facilitando fechamentos mensais de forma ágil.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Autopreenchimento Inteligente:</strong> Autopreenchimento de toda a jornada semanal com apenas um clique por meio do motor de escalas padrão vinculadas a cada colaborador.</li>

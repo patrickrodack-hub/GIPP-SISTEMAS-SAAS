@@ -157,13 +157,13 @@ const ModuleUsuarios = memo(() => {
   const handleFuncaoChange = (val: string) => {
     let perms = [...(formData.permissoes || [])];
     if (val === 'PASTOR PRESIDENTE' || val === 'PASTOR AUXILIAR') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
+      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
     } else if (val === 'SECRETARIO') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
     } else if (val === 'TESOUREIRO' || val === 'CONTADOR') {
       perms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_sec_relatorios', 'access_manual'];
     } else if (val === 'ADMINISTRADOR') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
+      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_boletim', 'access_midia', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
     } else if (val === 'ADVOGADO') {
       perms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
     } else if (val === 'LIDER DE DEPARTAMENTO') {

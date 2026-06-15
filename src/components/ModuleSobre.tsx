@@ -53,7 +53,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight block uppercase">{db.igreja?.saas_nome_sistema || "GIPP - GESTÃO DE IGREJA"}</h2>
-                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">{db.igreja?.saas_versao_sistema || "Versão 8.3.0 (SaaS Platinum Enterprise - Versão Completa)"}</p>
+                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">{db.igreja?.saas_versao_sistema || "Versão 8.4.0 (SaaS Platinum Enterprise - Versão Completa)"}</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
