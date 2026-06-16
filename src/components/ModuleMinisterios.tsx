@@ -44,9 +44,14 @@ import {
 import { ModuleMidiaTab } from './ModuleMidiaTab';
 
 // Exporting component
-const ModuleMinisterios = () => {
+const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
     const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, callGeminiAI, user, addDoc, collection, deleteDoc } = useContext(ChurchContext);
-    const [tab, setTab] = useState(1);
+    const [tab, setTab] = useState(initialTab);
+    
+    useEffect(() => {
+        setTab(initialTab);
+    }, [initialTab]);
+
     const [subTab, setSubTab] = useState('escalas');
     const ministerios = db.departamentos || [];
     

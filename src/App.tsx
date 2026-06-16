@@ -7805,6 +7805,10 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
     
     // --- NOVO: LÓGICA DE VERIFICAÇÃO DE PLANOS (SaaS) ---
     const checkPlan = (moduleId) => {
+        let targetModuleId = moduleId;
+        if (moduleId === 'ministerio_louvor' || moduleId === 'ministerio_midia') {
+            targetModuleId = 'cad_departamento';
+        }
         if (user?.id === 'dev') return true; // O Desenvolvedor acede a tudo para testar
         const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
 
@@ -7837,7 +7841,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
         if (plano === 'avancado' && (!PLAN_MODULES || !PLAN_MODULES.avancado)) return true;
 
-        return PLAN_MODULES[plano]?.includes(moduleId) || false;
+        return PLAN_MODULES[plano]?.includes(targetModuleId) || false;
     };
     
     // CORES DINÂMICAS PARA OS ÍCONES DO MENU
@@ -7857,6 +7861,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         cad_usuario: 'group-hover:text-slate-700',
         acessos_portal: 'group-hover:text-cyan-500',
         cad_departamento: 'group-hover:text-pink-500',
+        ministerio_louvor: 'group-hover:text-violet-500',
+        ministerio_midia: 'group-hover:text-teal-500',
         fin_entrada: 'group-hover:text-emerald-500',
         fin_saida: 'group-hover:text-rose-500',
         fin_dre: 'group-hover:text-blue-500',
@@ -7964,7 +7970,15 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_celulas') && checkPlan('cad_celula') && <MenuItem id="cad_celula" icon={Share2} label="Células e Grupos" />}
                         {hasPermission('master') && checkPlan('cad_usuario') && <MenuItem id="cad_usuario" icon={Shield} label="Usuários e Níveis" />}
                         {hasPermission('access_membros') && checkPlan('acessos_portal') && <MenuItem id="acessos_portal" icon={Key} label="Acessos do Portal" />}
-                        {hasPermission('access_ministerios') && checkPlan('cad_departamento') && <MenuItem id="cad_departamento" icon={Briefcase} label="Ministérios (Deptos)" />}
+                    </div>
+                )}
+
+                {hasPermission('access_ministerios') && (
+                    <div>
+                        <MenuGroup label="Ministérios e Depto." />
+                        {checkPlan('cad_departamento') && <MenuItem id="cad_departamento" icon={Briefcase} label="Ministério (Deptos)" />}
+                        {checkPlan('ministerio_louvor') && <MenuItem id="ministerio_louvor" icon={Music} label="Ministério de Louvor" />}
+                        {checkPlan('ministerio_midia') && <MenuItem id="ministerio_midia" icon={Video} label="Ministério de Mídia" />}
                     </div>
                 )}
 
@@ -11922,7 +11936,9 @@ const AppLayout = () => {
         'visitantes': { component: ModuleVisitantes, access: 'access_visitantes' },
         'cad_usuario': { component: ModuleUsuarios, access: 'master' },
         'acessos_portal': { component: ModuleAcessosPortal, access: 'access_membros' },
-        'cad_departamento': { component: ModuleMinisterios, access: 'access_ministerios' },
+        'cad_departamento': { component: () => <ModuleMinisterios initialTab={1} />, access: 'access_ministerios' },
+        'ministerio_louvor': { component: () => <ModuleMinisterios initialTab={5} />, access: 'access_ministerios' },
+        'ministerio_midia': { component: () => <ModuleMinisterios initialTab={6} />, access: 'access_ministerios' },
         'secretaria_integrada': { component: ModuleSecretariaIntegrada, access: 'access_sec_agenda' },
         'secretaria_certificados': { component: ModuleCertificados, access: 'access_sec_certificados' },
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },

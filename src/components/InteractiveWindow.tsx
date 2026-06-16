@@ -70,8 +70,9 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
         const config = JSON.parse(saved);
         targetWidth = Math.max(300, Math.min(config.width, screenW - 16));
         targetHeight = Math.max(200, Math.min(config.height, screenH - 16));
-        targetX = Math.max(0, Math.min(config.x, screenW - 100));
-        targetY = Math.max(0, Math.min(config.y, screenH - 80));
+        // Recover user's saved positioning coordinate if available, otherwise open centered
+        targetX = typeof config.x === 'number' ? Math.max(-targetWidth + 50, Math.min(config.x, screenW - 50)) : (screenW - targetWidth) / 2;
+        targetY = typeof config.y === 'number' ? Math.max(0, Math.min(config.y, screenH - 40)) : (screenH - targetHeight) / 2;
       } catch (e) {
         console.error('Error loading window config:', e);
       }
@@ -106,8 +107,9 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
       const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
       const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
-      const newX = Math.max(0, Math.min(curX - startX, window.innerWidth - 100));
-      const newY = Math.max(0, Math.min(curY - startY, window.innerHeight - 60));
+      // Expanded motion area limits: allow full freedom across the viewport, leaving at least 50px of header visible
+      const newX = Math.max(-sizeRef.current.width + 50, Math.min(curX - startX, window.innerWidth - 50));
+      const newY = Math.max(0, Math.min(curY - startY, window.innerHeight - 40));
 
       setPosition({ x: newX, y: newY });
     };
@@ -216,9 +218,12 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
       };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-md overflow-hidden no-print interactive-window-backdrop">
-      {/* Background click to optionally close (only if users clicking on strict backdrop outside the dialog) */}
-      <div className="absolute inset-0 z-0" onClick={onClose}></div>
+    <div className="fixed inset-0 z-[9999] overflow-hidden no-print">
+      {/* Background/Backdrop sibling with click to close & blur effects (doesn't restrict fixed siblings) */}
+      <div 
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-0 interactive-window-backdrop" 
+        onClick={onClose}
+      />
 
       {/* Main draggable resizable window container */}
       <div
