@@ -139,12 +139,18 @@ app.post("/api/gemini/generate", async (req, res) => {
             }
         });
 
+        const isSearchQuery = /jusbrasil|diario oficial|consulta|pesquisa|notica|clima|tempo|processo/i.test(prompt || '');
+        const config: any = {
+            systemInstruction: "Você é um assistente especialista, teológico e administrativo.",
+        };
+        if (isSearchQuery) {
+            config.tools = [{ googleSearch: {} }];
+        }
+
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-2.5-flash",
             contents: String(prompt || ''),
-            config: {
-                systemInstruction: "Você é um assistente especialista, teológico e administrativo.",
-            }
+            config: config
         });
 
         res.json({ text: response.text });

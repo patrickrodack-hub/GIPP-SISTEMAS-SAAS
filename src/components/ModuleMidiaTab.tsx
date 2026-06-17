@@ -1,15 +1,62 @@
 import React, { useState, useContext } from 'react';
 import { 
   Video, UserCircle, UploadCloud, MonitorPlay, Calendar, Activity, Database, X, Plus, Trash2, 
-  Tv, Radio, Music, Users, Shield, Percent, Eye, MessageSquare, PlayCircle, Clock
+  Tv, Radio, Music, Users, Shield, Percent, Eye, MessageSquare, PlayCircle, Clock, Cloud, CloudOff
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
   ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell 
 } from 'recharts';
 import { collection, doc, addDoc, deleteDoc } from 'firebase/firestore';
-import { Button, GenericTable, ChurchContext } from '../App';
+import { Button, GenericTable, ChurchContext, ConfirmModal } from '../App';
 import { InteractiveWindow } from './InteractiveWindow';
+
+const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
+    const [lastSync, setLastSync] = useState<Date>(new Date());
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    React.useEffect(() => {
+        if (isOnline) {
+            setIsSyncing(true);
+            const timer = setTimeout(() => {
+                setIsSyncing(false);
+                setLastSync(new Date());
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [isOnline]);
+
+    const [minutesSinceSync, setMinutesSinceSync] = useState(0);
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            const diffMs = new Date().getTime() - lastSync.getTime();
+            setMinutesSinceSync(Math.floor(diffMs / 60000));
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [lastSync]);
+
+    return (
+        <div className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all duration-300 select-none ${
+            isOnline 
+                ? 'bg-white/10 text-white border-white/25' 
+                : 'bg-amber-500/20 text-amber-100 border-amber-500/25 animate-pulse'
+        }`}>
+            {isOnline ? (
+                <>
+                    <Cloud className={`w-3.5 h-3.5 text-emerald-400 ${isSyncing ? 'animate-bounce' : ''}`} />
+                    <span>
+                        {isSyncing ? 'Sincronizando...' : minutesSinceSync === 0 ? 'Sincronizado' : `Sincronizado há ${minutesSinceSync} min`}
+                    </span>
+                </>
+            ) : (
+                <>
+                    <CloudOff className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span>Offline (Salvo Local)</span>
+                </>
+            )}
+        </div>
+    );
+};
 
 export const ModuleMidiaTab = ({
   subTabMedia, setSubTabMedia,
@@ -19,7 +66,7 @@ export const ModuleMidiaTab = ({
   mediaEquipamentos, loadingMediaEquipamentos
 }: any) => {
 
-  const { dbFirestore, appId, addToast, db } = useContext<any>(ChurchContext);
+  const { dbFirestore, appId, addToast, db, isOnline } = useContext<any>(ChurchContext);
 
   // Modal display toggles
   const [showEquipeModal, setShowEquipeModal] = useState(false);
@@ -229,16 +276,11 @@ export const ModuleMidiaTab = ({
     }
   };
 
+  const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ colName: string; id: string } | null>(null);
+
   // Delete Handlers
-  const handleDeleteItem = async (colName: string, id: string) => {
-    if (!confirm('Deseja realmente remover este registro do Ministério de Mídia?')) return;
-    try {
-      await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, id));
-      addToast('Registro removido com sucesso.', 'success');
-    } catch (err) {
-      console.error(err);
-      addToast('Erro ao excluir registro.', 'error');
-    }
+  const handleDeleteItem = (colName: string, id: string) => {
+    setDeleteConfirmInfo({ colName, id });
   };
 
   // Simulated Analytics Process
@@ -282,7 +324,10 @@ export const ModuleMidiaTab = ({
         <div className="flex items-center gap-4">
           <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md"><Video size={32}/></div>
           <div>
-            <h3 className="font-extrabold text-2xl tracking-tight">Ministério de Mídia (Departamento Geral)</h3>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="font-extrabold text-2xl tracking-tight">Ministério de Mídia (Departamento Geral)</h3>
+              <SyncStatusIndicator isOnline={isOnline} />
+            </div>
             <p className="text-xs text-teal-100/85 font-medium mt-1 uppercase tracking-widest">Escalas de Transmissão, Conteúdo Digital e Inventário Técnico</p>
           </div>
         </div>
@@ -723,7 +768,7 @@ export const ModuleMidiaTab = ({
               <input required type="text" value={eqNome} onChange={e => setEqNome(e.target.value)} placeholder="Ex: Samuel Silva de Paula" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Função Principal</label>
                 <select value={eqFuncao} onChange={e => setEqFuncao(e.target.value)} className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none bg-white">
@@ -745,7 +790,7 @@ export const ModuleMidiaTab = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">WhatsApp / Celular</label>
                 <input type="text" value={eqTelefone} onChange={e => setEqTelefone(e.target.value)} placeholder="Ex: (11) 98765-4321" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
@@ -782,7 +827,7 @@ export const ModuleMidiaTab = ({
           defaultHeight={700}
         >
           <form onSubmit={handleAddEventBriefing} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Título ou Tipo de Culto</label>
                 <input required type="text" value={evTitulo} onChange={e => setEvTitulo(e.target.value)} placeholder="Ex: Culto de Celebração de Domingo" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
@@ -815,7 +860,7 @@ export const ModuleMidiaTab = ({
 
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-600 uppercase block">Checklist Preliminar Requerido</label>
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                 <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                   <input type="checkbox" checked={evCheckAud} onChange={e => setEvCheckAud(e.target.checked)} className="accent-teal-600" /> Afinação de Vozes / PA Som
                 </label>
@@ -1005,7 +1050,7 @@ export const ModuleMidiaTab = ({
               <input required type="text" value={biNome} onChange={e => setBiNome(e.target.value)} placeholder="Ex: Folder Campanha de Oração 2026" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Categoria</label>
                 <select value={biCategoria} onChange={e => setBiCategoria(e.target.value)} className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none bg-white">
@@ -1028,7 +1073,7 @@ export const ModuleMidiaTab = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Tamanho Estimado</label>
                 <input type="text" value={biTamanho} onChange={e => setBiTamanho(e.target.value)} placeholder="Ex: 12.4 MB" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
@@ -1104,7 +1149,7 @@ export const ModuleMidiaTab = ({
               <input required type="text" value={eqpNome} onChange={e => setEqpNome(e.target.value)} placeholder="Ex: Câmera Sony Mirrorless A7III" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Modelo / Marca</label>
                 <input type="text" value={eqpModelo} onChange={e => setEqpModelo(e.target.value)} placeholder="Ex: Sony Alpha" className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
@@ -1115,7 +1160,7 @@ export const ModuleMidiaTab = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Categoria</label>
                 <select value={eqpCategoria} onChange={e => setEqpCategoria(e.target.value)} className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none bg-white">
@@ -1140,7 +1185,7 @@ export const ModuleMidiaTab = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-600 uppercase">Última Revisão</label>
                 <input type="date" value={eqpUltRevisão} onChange={e => setEqpUltRevisão(e.target.value)} className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:border-teal-500 focus:outline-none" />
@@ -1157,6 +1202,27 @@ export const ModuleMidiaTab = ({
             </div>
           </form>
         </InteractiveWindow>
+      )}
+
+      {deleteConfirmInfo && (
+        <ConfirmModal
+          isOpen={!!deleteConfirmInfo}
+          onClose={() => setDeleteConfirmInfo(null)}
+          title="Remover Registro de Mídia"
+          message="Tem certeza que deseja excluir permanentemente este item do Ministério de Mídia? Esta ação é irreversível."
+          onConfirm={async () => {
+            const { colName, id } = deleteConfirmInfo;
+            setDeleteConfirmInfo(null);
+            try {
+              await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, id));
+              addToast('Registro removido com sucesso.', 'success');
+            } catch (err) {
+              console.error(err);
+              addToast('Erro ao excluir registro.', 'error');
+            }
+          }}
+          onCancel={() => setDeleteConfirmInfo(null)}
+        />
       )}
     </div>
   );

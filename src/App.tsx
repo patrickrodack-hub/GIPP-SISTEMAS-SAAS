@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -69,25 +69,25 @@ import ModuleUtilitarios from './components/ModuleUtilitarios';
 import ModuleConciliacaoBancaria from './components/ModuleConciliacaoBancaria';
 import ModulePortalPastor from './components/ModulePortalPastor';
 import ModulePortalTesoureiro from './components/ModulePortalTesoureiro';
-import ModuleSobre from './components/ModuleSobre';
-import ModuleRelatorios from './components/ModuleRelatorios';
+const ModuleSobre = lazy(() => import('./components/ModuleSobre'));
+const ModuleRelatorios = lazy(() => import('./components/ModuleRelatorios'));
 import ModuleMinisterios from './components/ModuleMinisterios';
-import ModuleMissoes from './components/ModuleMissoes';
-import ModuleCarnes from './components/ModuleCarnes';
-import ModuleLixeira from './components/ModuleLixeira';
+const ModuleMissoes = lazy(() => import('./components/ModuleMissoes'));
+const ModuleCarnes = lazy(() => import('./components/ModuleCarnes'));
+const ModuleLixeira = lazy(() => import('./components/ModuleLixeira'));
 import ModuleAcessosPortal from './components/ModuleAcessosPortal';
 import ModuleCredencial from './components/ModuleCredencial';
 import ModuleCarteirinha from './components/ModuleCarteirinha';
-import ModuleDPContabilidade from './components/ModuleDPContabilidade';
+const ModuleDPContabilidade = lazy(() => import('./components/ModuleDPContabilidade'));
 import ModuleAuditoria from './components/ModuleAuditoria';
 import ModuleVisitantes from './components/ModuleVisitantes';
 import ModulePatrimonio from './components/ModulePatrimonio';
 import ModuleFrotas from './components/ModuleFrotas';
 import ModuleCelulas from './components/ModuleCelulas';
 import ModuleBoletim from './components/ModuleBoletim';
-import ModuleManualUsuario from './components/ModuleManualUsuario';
-import ModuleAmparoLegal from './components/ModuleAmparoLegal';
-import ModuleRegistroSoftware from './components/ModuleRegistroSoftware';
+const ModuleManualUsuario = lazy(() => import('./components/ModuleManualUsuario'));
+const ModuleAmparoLegal = lazy(() => import('./components/ModuleAmparoLegal'));
+const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSoftware'));
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
 // ----------------------------
 
@@ -7973,12 +7973,13 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     </div>
                 )}
 
-                {hasPermission('access_ministerios') && (
+                {(hasPermission('access_ministerios') || (hasPermission('access_salinha_kids') && checkPlan('salinha_kids'))) && (
                     <div>
                         <MenuGroup label="Ministérios e Depto." />
-                        {checkPlan('cad_departamento') && <MenuItem id="cad_departamento" icon={Briefcase} label="Ministério (Deptos)" />}
-                        {checkPlan('ministerio_louvor') && <MenuItem id="ministerio_louvor" icon={Music} label="Ministério de Louvor" />}
-                        {checkPlan('ministerio_midia') && <MenuItem id="ministerio_midia" icon={Video} label="Ministério de Mídia" />}
+                        {hasPermission('access_ministerios') && checkPlan('cad_departamento') && <MenuItem id="cad_departamento" icon={Briefcase} label="Ministério (Deptos)" />}
+                        {hasPermission('access_ministerios') && checkPlan('ministerio_louvor') && <MenuItem id="ministerio_louvor" icon={Music} label="Ministério de Louvor" />}
+                        {hasPermission('access_ministerios') && checkPlan('ministerio_midia') && <MenuItem id="ministerio_midia" icon={Video} label="Ministério de Mídia" />}
+                        {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                     </div>
                 )}
 
@@ -8003,7 +8004,6 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
                     {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
-                    {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
                     {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
@@ -11936,9 +11936,9 @@ const AppLayout = () => {
         'visitantes': { component: ModuleVisitantes, access: 'access_visitantes' },
         'cad_usuario': { component: ModuleUsuarios, access: 'master' },
         'acessos_portal': { component: ModuleAcessosPortal, access: 'access_membros' },
-        'cad_departamento': { component: () => <ModuleMinisterios initialTab={1} />, access: 'access_ministerios' },
-        'ministerio_louvor': { component: () => <ModuleMinisterios initialTab={5} />, access: 'access_ministerios' },
-        'ministerio_midia': { component: () => <ModuleMinisterios initialTab={6} />, access: 'access_ministerios' },
+        'cad_departamento': { component: ModuleMinisterios, props: { initialTab: 1 }, access: 'access_ministerios' },
+        'ministerio_louvor': { component: ModuleMinisterios, props: { initialTab: 5 }, access: 'access_ministerios' },
+        'ministerio_midia': { component: ModuleMinisterios, props: { initialTab: 6 }, access: 'access_ministerios' },
         'secretaria_integrada': { component: ModuleSecretariaIntegrada, access: 'access_sec_agenda' },
         'secretaria_certificados': { component: ModuleCertificados, access: 'access_sec_certificados' },
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },
@@ -11951,9 +11951,9 @@ const AppLayout = () => {
         'relatorios': { component: ModuleRelatorios, access: 'access_sec_relatorios' },
         'assistente_ai': { component: ModuleAssistenteAI, access: 'access_ia' },
         'dp_contabilidade': { component: ModuleDPContabilidade, access: 'access_fin_saidas' },
-        'fin_entrada': { component: () => <ModuleFinanceiro initialTab={2} />, access: 'access_fin_entradas' },
-        'fin_saida': { component: () => <ModuleFinanceiro initialTab={3} />, access: 'access_fin_saidas' },
-        'fin_dre': { component: () => <ModuleFinanceiro initialTab={1} />, access: 'access_fin_analise' },
+        'fin_entrada': { component: ModuleFinanceiro, props: { initialTab: 2 }, access: 'access_fin_entradas' },
+        'fin_saida': { component: ModuleFinanceiro, props: { initialTab: 3 }, access: 'access_fin_saidas' },
+        'fin_dre': { component: ModuleFinanceiro, props: { initialTab: 1 }, access: 'access_fin_analise' },
         'fin_conciliacao': { component: ModuleConciliacaoBancaria, access: 'access_fin_analise' },
         'fin_carnes': { component: ModuleCarnes, access: 'access_fin_carnes' },
         'fin_utilitarios': { component: ModuleUtilitarios, access: 'access_fin_cadastros' },
@@ -11971,6 +11971,7 @@ const AppLayout = () => {
         'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
+    const currentProps = MODULE_REGISTRY[view]?.props || {};
     const access = MODULE_REGISTRY[view]?.access || 'public';
     return (
         <div className="flex min-h-screen font-sans text-slate-900 relative overflow-hidden">
@@ -12064,7 +12065,17 @@ const AppLayout = () => {
                             transition={{ duration: 0.3, ease: 'easeOut' }}
                             className="max-w-[1800px] mx-auto pb-16"
                         >
-                            <ErrorBoundary><CurrentModule /></ErrorBoundary>
+                            <ErrorBoundary>
+                                <Suspense fallback={
+                                    <div className="h-48 flex flex-col items-center justify-center text-center p-12 text-slate-500 font-bold bg-white/40 backdrop-blur-md rounded-3xl border border-slate-100 shadow-sm animate-pulse max-w-md mx-auto mt-12">
+                                        <RefreshCw className="animate-spin mb-4 text-emerald-500" size={32} />
+                                        <span className="text-sm text-slate-600 font-bold">Carregando módulo de forma dinâmica...</span>
+                                        <span className="text-[10px] text-slate-400 mt-1 uppercase font-normal tracking-wide">Otimizando desempenho inicial</span>
+                                    </div>
+                                }>
+                                    <CurrentModule {...currentProps} />
+                                </Suspense>
+                            </ErrorBoundary>
                         </motion.div>
                     </AnimatePresence>
                 ) : (

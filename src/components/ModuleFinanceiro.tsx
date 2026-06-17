@@ -16,7 +16,7 @@ import {
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
-  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
+  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudOff,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
@@ -42,9 +42,56 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
+    const [lastSync, setLastSync] = useState<Date>(new Date());
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    useEffect(() => {
+        if (isOnline) {
+            setIsSyncing(true);
+            const timer = setTimeout(() => {
+                setIsSyncing(false);
+                setLastSync(new Date());
+            }, 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [isOnline]);
+
+    const [minutesSinceSync, setMinutesSinceSync] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const diffMs = new Date().getTime() - lastSync.getTime();
+            setMinutesSinceSync(Math.floor(diffMs / 60000));
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [lastSync]);
+
+    return (
+        <div className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all duration-300 select-none ${
+            isOnline 
+                ? 'bg-emerald-50/80 text-emerald-700 border-emerald-100/60' 
+                : 'bg-amber-50/80 text-amber-700 border-amber-200/60 animate-pulse'
+        }`}>
+            {isOnline ? (
+                <>
+                    <Cloud className={`w-3.5 h-3.5 text-emerald-500 ${isSyncing ? 'animate-bounce' : ''}`} />
+                    <span>
+                        {isSyncing ? 'Sincronizando...' : minutesSinceSync === 0 ? 'Sincronizado' : `Sincronizado há ${minutesSinceSync} min`}
+                    </span>
+                </>
+            ) : (
+                <>
+                    <CloudOff className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    <span>Offline (Salvo Local)</span>
+                </>
+            )}
+        </div>
+    );
+};
+
 // Exporting component
 const ModuleFinanceiro = ({ initialTab = 1 }) => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user } = useContext(ChurchContext);
+    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user, isOnline } = useContext(ChurchContext);
     const [tab, setTab] = useState(initialTab);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
     const [statusFilter, setStatusFilter] = useState('todos');
@@ -351,7 +398,10 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shadow-sm border border-emerald-100"><DollarSign size={28}/></div>
                     <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Gestão Financeira</h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Gestão Financeira</h2>
+                            <SyncStatusIndicator isOnline={isOnline} />
+                        </div>
                         <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Entradas, Saídas e DRE</p>
                     </div>
                 </div>

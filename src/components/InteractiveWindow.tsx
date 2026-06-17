@@ -57,8 +57,8 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
   // Load configuration or center window
   useEffect(() => {
     const saved = localStorage.getItem(`window_config_${id}`);
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight;
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const screenH = typeof window !== 'undefined' ? window.innerHeight : 768;
 
     let targetWidth = initialWidth;
     let targetHeight = initialHeight;
@@ -70,18 +70,51 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
         const config = JSON.parse(saved);
         targetWidth = Math.max(300, Math.min(config.width, screenW - 16));
         targetHeight = Math.max(200, Math.min(config.height, screenH - 16));
-        // Recover user's saved positioning coordinate if available, otherwise open centered
-        targetX = typeof config.x === 'number' ? Math.max(-targetWidth + 50, Math.min(config.x, screenW - 50)) : (screenW - targetWidth) / 2;
-        targetY = typeof config.y === 'number' ? Math.max(0, Math.min(config.y, screenH - 40)) : (screenH - targetHeight) / 2;
+        
+        // Recover user's saved positioning coordinate if available
+        if (typeof config.x === 'number' && typeof config.y === 'number') {
+          targetX = config.x;
+          targetY = config.y;
+        }
       } catch (e) {
         console.error('Error loading window config:', e);
       }
     }
 
+    // Always clamp to screen boundaries to keep window fully visible and styled
+    targetX = Math.max(8, Math.min(targetX, Math.max(8, screenW - targetWidth - 8)));
+    targetY = Math.max(8, Math.min(targetY, Math.max(8, screenH - targetHeight - 8)));
+
     setPosition({ x: targetX, y: targetY });
     setSize({ width: targetWidth, height: targetHeight });
     setIsInitialized(true);
   }, [id, initialWidth, initialHeight]);
+
+  // Listen to window size changes and dynamically clamp boundaries to prevent clipping
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      if (isFullscreen) return;
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+
+      setSize(prev => {
+        const w = Math.max(300, Math.min(prev.width, screenW - 16));
+        const h = Math.max(200, Math.min(prev.height, screenH - 16));
+        return { width: w, height: h };
+      });
+
+      setPosition(prev => {
+        const x = Math.max(8, Math.min(prev.x, Math.max(8, screenW - 50)));
+        const y = Math.max(8, Math.min(prev.y, Math.max(8, screenH - 40)));
+        return { x, y };
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isFullscreen]);
 
   const saveConfig = (x: number, y: number, w: number, h: number) => {
     const config = { x, y, width: w, height: h };
@@ -201,6 +234,8 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
 
   if (!isInitialized) return null;
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   const currentStyle: React.CSSProperties = isFullscreen
     ? {
         position: 'fixed',
@@ -208,6 +243,16 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
         top: 0,
         width: '100vw',
         height: '100vh',
+      }
+    : isMobile
+    ? {
+        position: 'fixed',
+        left: '12px',
+        right: '12px',
+        top: '12px',
+        bottom: '12px',
+        width: 'calc(100% - 24px)',
+        height: 'calc(100% - 24px)',
       }
     : {
         position: 'fixed',
@@ -235,12 +280,12 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
       >
         {/* Header - Drag Zone */}
         <div
-          onMouseDown={handleHeaderMouseDown}
-          onTouchStart={handleHeaderMouseDown}
-          className="px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/20 select-none relative cursor-move hover:brightness-105 active:scale-[0.995] transition-all interactive-window-header"
+          onMouseDown={isMobile ? undefined : handleHeaderMouseDown}
+          onTouchStart={isMobile ? undefined : handleHeaderMouseDown}
+          className={`px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/20 select-none relative z-10 interactive-window-header ${isMobile ? '' : 'cursor-move hover:brightness-105 active:scale-[0.995] transition-all'}`}
         >
           {/* Header Gradients and Styling */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${headerBg} bg-[length:200%_200%] animate-pulse-glow z-0 interactive-window-header-bg`}></div>
+          <div className={`absolute inset-0 bg-gradient-to-br ${headerBg} bg-[length:200%_200%] animate-pulse-glow -z-10 interactive-window-header-bg`}></div>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.12] mix-blend-overlay pointer-events-none interactive-window-header-pattern"></div>
 
           <div className="relative z-10 flex items-center gap-4 w-full min-w-0 pr-4">
@@ -263,22 +308,26 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
 
           <div className="relative z-10 flex items-center gap-1.5 shrink-0 interactive-window-controls">
             {/* Quick Helper to Reset Position */}
-            <button
-              onClick={resetWindow}
-              title="Centralizar Janela"
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-reset"
-            >
-              <Command size={14} className="animate-pulse" />
-            </button>
+            {!isMobile && (
+              <button
+                onClick={resetWindow}
+                title="Centralizar Janela"
+                className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-reset"
+              >
+                <Command size={14} className="animate-pulse" />
+              </button>
+            )}
 
             {/* Minimize / Maximize */}
-            <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Restaurar Janela' : 'Maximizar'}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-resize"
-            >
-              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </button>
+            {!isMobile && (
+              <button
+                onClick={toggleFullscreen}
+                title={isFullscreen ? 'Restaurar Janela' : 'Maximizar'}
+                className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-resize"
+              >
+                {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
+            )}
 
             {/* Close */}
             <button
@@ -292,7 +341,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50/70 p-6 sm:p-8 interactive-window-content">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50/70 sm:p-8 interactive-window-content">
           {children}
         </div>
 

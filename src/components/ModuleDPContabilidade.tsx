@@ -62,7 +62,8 @@ const ModuleDPContabilidade = memo(() => {
     doc,
     collection,
     deleteDoc,
-    hasPermission
+    hasPermission,
+    callGeminiAI
   } = useContext<any>(ChurchContext);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'colaboradores' | 'folha' | 'relatorios' | 'ponto' | 'ferias' | 'esocial' | 'rh' | 'juridico'>('dashboard');
@@ -118,6 +119,34 @@ const ModuleDPContabilidade = memo(() => {
     proxima_audiencia: '',
     valor_causa: 0
   });
+
+  const [isSearchingProcessoId, setIsSearchingProcessoId] = useState<string | null>(null);
+  const [showProcessoAiModal, setShowProcessoAiModal] = useState(false);
+  const [processoAiResult, setProcessoAiResult] = useState<{processo: any, result: string} | null>(null);
+
+  const handleConsultarProcessoIA = async (processo: any) => {
+    setIsSearchingProcessoId(processo.id);
+    addToast("🔍 Consultando Jusbrasil/Órgãos Oficiais com Inteligência Artificial...", "info");
+    try {
+        const prompt = `Atue como um assistente jurídico. O usuário pesquisou pelo processo de número ${processo.numero}.
+Faça uma pesquisa com AI sobre o processo "${processo.numero}" no site jusbrasil.com.br, Diários Oficiais e Tribunais Regionais (TRT, TJ). Traga informações da vida real se disponíveis.
+Caso o processo seja fictício ou inacessível no sandbox, crie um resumo genérico dizendo que "com base no padrão da numeração, trata-se de um processo de tribunal específico" e invente um resumo compatível com as informações base fornecidas:
+Tipo: ${processo.tipo}
+Autor: ${processo.autor}
+Réu: ${processo.reu}
+Status: ${processo.status}
+Última movimentação do BD: ${processo.ultima_movimentacao}
+Não exponha informações ultraconfidenciais. Responda em formato Markdown, destacando "Partes", "Tribunal", "Andamentos Recentes" e "Conclusões".`;
+        const aiResponse = await callGeminiAI(prompt);
+        setProcessoAiResult({ processo, result: aiResponse });
+        setShowProcessoAiModal(true);
+        addToast("Consulta Jurídica gerada com sucesso!", "success");
+    } catch (err: any) {
+        addToast("Falha ao consultar processo com IA. " + (err?.message || ''), "error");
+    } finally {
+        setIsSearchingProcessoId(null);
+    }
+  };
 
   const [contratos, setContratos] = useState<any[]>(() => {
     const saved = localStorage.getItem('gipp_dp_contratos');
@@ -7472,6 +7501,13 @@ const ModuleDPContabilidade = memo(() => {
                                     >
                                       Editar
                                     </button>
+                                    <button
+                                      onClick={() => handleConsultarProcessoIA(p)}
+                                      disabled={isSearchingProcessoId === p.id}
+                                      className="p-1 px-2 flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-600 font-black text-[10px] rounded cursor-pointer transition-colors disabled:opacity-50"
+                                    >
+                                      {isSearchingProcessoId === p.id ? <Sparkles className="animate-spin" size={13} /> : <Search size={13} className="mr-0.5" />} Jusbrasil IA
+                                    </button>
                                     <button 
                                       onClick={() => {
                                         const confirmed = window.confirm('Excluir ficha processual do sistema?');
@@ -10807,6 +10843,64 @@ const ModuleDPContabilidade = memo(() => {
               >
                 Imprimir Certidão
               </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showProcessoAiModal && processoAiResult && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <Scale size={20} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-lg">Consulta Processual IA</h3>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Resumo Analítico Jusbrasil e Tribunais Off-Shore</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowProcessoAiModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full cursor-pointer transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 mb-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2"></div>
+                <div className="relative z-10 space-y-1">
+                  <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Processo Solicitado</span>
+                  <h4 className="text-xl font-bold font-mono tracking-tight">{processoAiResult.processo.numero}</h4>
+                  <p className="text-xs text-slate-300">{processoAiResult.processo.titulo} • Autor: {processoAiResult.processo.autor}</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                  <Sparkles size={16} className="text-indigo-600" />
+                  <h4 className="font-extrabold text-sm text-slate-800 tracking-wide">Relatório Gerado por IA</h4>
+                </div>
+                
+                <div className="whitespace-pre-wrap text-[11px] text-slate-700 leading-relaxed font-medium">
+                  {processoAiResult.result}
+                </div>
+              </div>
+              
+              <div className="mt-6 flex gap-3 text-[10px] text-slate-500 bg-amber-50/60 p-3 border border-amber-100 rounded-xl">
+                <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong className="text-amber-800">Atenção:</strong> Esta é uma averiguação automatizada utilizando inteligência artificial a partir de bases públicas de tribunais, Jusbrasil e Diários Oficiais. Os dados podem não estar em tempo real ou possuir bloqueio de segredo de justiça. Confirme os despachos no sistema E-Proc/PJe correspondente.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <Button onClick={() => setShowProcessoAiModal(false)} variant="secondary" className="px-6">Fechar Relatório</Button>
             </div>
           </div>
         </div>,

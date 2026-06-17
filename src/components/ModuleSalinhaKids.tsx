@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
-import { ChurchContext } from '../App';
+import { ChurchContext, ConfirmModal } from '../App';
 import { 
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
@@ -105,6 +105,9 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
   // Badge/Tag Modal Visualizer
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [badgeChild, setBadgeChild] = useState<Crianca | null>(null);
+  
+  // Custom ConfirmModal for deletion confirmation
+  const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ type: 'volunteer' | 'child'; id: string } | null>(null);
 
   // New enhancements states (Age filters, Attendance history, Team volunteer schedules)
   const [filterTurma, setFilterTurma] = useState('todas');
@@ -305,16 +308,8 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
     }
   };
 
-  const handleDeleteVolunteer = async (id: string) => {
-    if (!window.confirm('Remover voluntário da escala?')) return;
-    try {
-      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_voluntarios', id);
-      await deleteDoc(docRef);
-      addToast('Voluntário removido da escala.', 'success');
-      fetchVolunteers(); // reload
-    } catch (err: any) {
-      addToast(`Erro ao remover: ${err.message}`, 'error');
-    }
+  const handleDeleteVolunteer = (id: string) => {
+    setDeleteConfirmInfo({ type: 'volunteer', id });
   };
 
   const isPastorOrLeader = useMemo(() => {
@@ -613,12 +608,25 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
     }
   };
 
-  const handleDeleteChild = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja remover esta criança?')) return;
+  const handleDeleteChild = (id: string) => {
+    setDeleteConfirmInfo({ type: 'child', id });
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirmInfo) return;
+    const { type, id } = deleteConfirmInfo;
+    setDeleteConfirmInfo(null);
     try {
-      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_criancas', id);
-      await deleteDoc(docRef);
-      addToast('Criança removida com sucesso.', 'success');
+      if (type === 'volunteer') {
+        const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_voluntarios', id);
+        await deleteDoc(docRef);
+        addToast('Voluntário removido da escala.', 'success');
+        fetchVolunteers(); // reload
+      } else if (type === 'child') {
+        const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'kids_criancas', id);
+        await deleteDoc(docRef);
+        addToast('Criança removida com sucesso.', 'success');
+      }
     } catch (err: any) {
       addToast(`Erro ao remover: ${err.message}`, 'error');
     }
@@ -2643,6 +2651,17 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
           </div>
         </div>,
         document.body
+      )}
+
+      {deleteConfirmInfo && (
+        <ConfirmModal
+          isOpen={!!deleteConfirmInfo}
+          onClose={() => setDeleteConfirmInfo(null)}
+          title={deleteConfirmInfo.type === 'volunteer' ? 'Remover Voluntário da Escala' : 'Excluir Cadastro da Criança'}
+          message={deleteConfirmInfo.type === 'volunteer' ? 'Deseja realmente remover este voluntário da escala?' : 'Tem certeza que deseja remover esta criança de forma permanente? Esta ação não pode ser desfeita.'}
+          onConfirm={handleExecuteDelete}
+          onCancel={() => setDeleteConfirmInfo(null)}
+        />
       )}
     </div>
   );

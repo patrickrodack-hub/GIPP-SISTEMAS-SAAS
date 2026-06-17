@@ -15,7 +15,7 @@ import {
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
-  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
+  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudOff,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
@@ -43,34 +43,162 @@ import {
 
 import { ModuleMidiaTab } from './ModuleMidiaTab';
 
+const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
+    const [lastSync, setLastSync] = useState<Date>(new Date());
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    useEffect(() => {
+        if (isOnline) {
+            setIsSyncing(true);
+            const timer = setTimeout(() => {
+                setIsSyncing(false);
+                setLastSync(new Date());
+            }, 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [isOnline]);
+
+    const [minutesSinceSync, setMinutesSinceSync] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const diffMs = new Date().getTime() - lastSync.getTime();
+            setMinutesSinceSync(Math.floor(diffMs / 60000));
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [lastSync]);
+
+    return (
+        <div className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all duration-300 select-none ${
+            isOnline 
+                ? 'bg-emerald-50/80 text-emerald-700 border-emerald-100/60' 
+                : 'bg-amber-50/80 text-amber-700 border-amber-200/60 animate-pulse'
+        }`}>
+            {isOnline ? (
+                <>
+                    <Cloud className={`w-3.5 h-3.5 text-emerald-500 ${isSyncing ? 'animate-bounce' : ''}`} />
+                    <span>
+                        {isSyncing ? 'Sincronizando...' : minutesSinceSync === 0 ? 'Sincronizado' : `Sincronizado há ${minutesSinceSync} min`}
+                    </span>
+                </>
+            ) : (
+                <>
+                    <CloudOff className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    <span>Offline (Salvo Local)</span>
+                </>
+            )}
+        </div>
+    );
+};
+
 // Exporting component
 const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, callGeminiAI, user, addDoc, collection, deleteDoc } = useContext(ChurchContext);
+    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, callGeminiAI, user, addDoc, collection, deleteDoc, isOnline } = useContext(ChurchContext);
     const [tab, setTab] = useState(initialTab);
     
     useEffect(() => {
         setTab(initialTab);
     }, [initialTab]);
 
-    const [subTab, setSubTab] = useState('escalas');
+    const [subTab, setSubTab] = useState(() => {
+        try {
+            return localStorage.getItem('louvor_subtab') || 'escalas';
+        } catch (_) {
+            return 'escalas';
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('louvor_subtab', subTab);
+        } catch (_) {}
+    }, [subTab]);
+
     const ministerios = db.departamentos || [];
     
-    // Worship state (Firestore sync)
-    const [musicas, setMusicas] = useState<any[]>([]);
-    const [escalas, setEscalas] = useState<any[]>([]);
-    const [reunioes, setReunioes] = useState<any[]>([]);
-    const [musicos, setMusicos] = useState<any[]>([]);
+    // Worship state (Firestore sync with local storage fallback)
+    const [musicas, setMusicas] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('louvor_musicas');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
+    const [escalas, setEscalas] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('louvor_escalas');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
+    const [reunioes, setReunioes] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('louvor_reunioes');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
+    const [musicos, setMusicos] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('louvor_musicos');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
 
     const [loadingMusicas, setLoadingMusicas] = useState(true);
     const [loadingEscalas, setLoadingEscalas] = useState(true);
     const [loadingReunioes, setLoadingReunioes] = useState(true);
-    const [subTabMedia, setSubTabMedia] = useState('equipe');
+    const [subTabMedia, setSubTabMedia] = useState(() => {
+        try {
+            return localStorage.getItem('midia_subtab') || 'equipe';
+        } catch (_) {
+            return 'equipe';
+        }
+    });
 
-    // Media Ministry State (Firestore sync)
-    const [mediaEquipe, setMediaEquipe] = useState<any[]>([]);
-    const [mediaEventos, setMediaEventos] = useState<any[]>([]);
-    const [mediaBiblioteca, setMediaBiblioteca] = useState<any[]>([]);
-    const [mediaEquipamentos, setMediaEquipamentos] = useState<any[]>([]);
+    useEffect(() => {
+        try {
+            localStorage.setItem('midia_subtab', subTabMedia);
+        } catch (_) {}
+    }, [subTabMedia]);
+
+    // Media Ministry State (Firestore sync with local storage fallback)
+    const [mediaEquipe, setMediaEquipe] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('midia_equipe');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
+    const [mediaEventos, setMediaEventos] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('midia_eventos');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
+    const [mediaBiblioteca, setMediaBiblioteca] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('midia_biblioteca');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
+    const [mediaEquipamentos, setMediaEquipamentos] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem('midia_equipamentos');
+            return saved ? JSON.parse(saved) : [];
+        } catch (_) {
+            return [];
+        }
+    });
 
     const [loadingMediaEquipe, setLoadingMediaEquipe] = useState(true);
     const [loadingMediaEventos, setLoadingMediaEventos] = useState(true);
@@ -78,6 +206,14 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
     const [loadingMediaEquipamentos, setLoadingMediaEquipamentos] = useState(true);
 
     const [loadingMusicos, setLoadingMusicos] = useState(true);
+
+    // State for ConfirmModal
+    const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{
+        type: 'musica' | 'escala' | 'musico' | 'ensaio' | 'membro' | 'anexo_escala' | 'anexo_musica';
+        id: string;
+        membroIndex?: number;
+        anexoI?: number;
+    } | null>(null);
 
     // Form overlays / creation toggle
     const [showAddSong, setShowAddSong] = useState(false);
@@ -135,13 +271,24 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
 
     // Real-time subscribers
     useEffect(() => {
-        if (!dbFirestore || !appId) return;
+        if (!dbFirestore || !appId) {
+            setLoadingMusicas(false);
+            setLoadingEscalas(false);
+            setLoadingReunioes(false);
+            setLoadingMusicos(false);
+            setLoadingMediaEquipe(false);
+            setLoadingMediaEventos(false);
+            setLoadingMediaBiblioteca(false);
+            setLoadingMediaEquipamentos(false);
+            return;
+        }
 
         const musicasRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas');
         const unsubMusicas = onSnapshot(musicasRef, (snapshot: any) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             setMusicas(list);
+            try { localStorage.setItem('louvor_musicas', JSON.stringify(list)); } catch(_) {}
             setLoadingMusicas(false);
         }, () => setLoadingMusicas(false));
 
@@ -151,6 +298,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
             setEscalas(list);
+            try { localStorage.setItem('louvor_escalas', JSON.stringify(list)); } catch(_) {}
             setLoadingEscalas(false);
         }, () => setLoadingEscalas(false));
 
@@ -160,6 +308,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
             setReunioes(list);
+            try { localStorage.setItem('louvor_reunioes', JSON.stringify(list)); } catch(_) {}
             setLoadingReunioes(false);
         }, () => setLoadingReunioes(false));
 
@@ -168,6 +317,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             setMusicos(list);
+            try { localStorage.setItem('louvor_musicos', JSON.stringify(list)); } catch(_) {}
             setLoadingMusicos(false);
         }, () => setLoadingMusicos(false));
 
@@ -176,6 +326,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             setMediaEquipe(list);
+            try { localStorage.setItem('midia_equipe', JSON.stringify(list)); } catch(_) {}
             setLoadingMediaEquipe(false);
         }, () => setLoadingMediaEquipe(false));
 
@@ -184,6 +335,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             setMediaEventos(list);
+            try { localStorage.setItem('midia_eventos', JSON.stringify(list)); } catch(_) {}
             setLoadingMediaEventos(false);
         }, () => setLoadingMediaEventos(false));
 
@@ -192,6 +344,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             setMediaBiblioteca(list);
+            try { localStorage.setItem('midia_biblioteca', JSON.stringify(list)); } catch(_) {}
             setLoadingMediaBiblioteca(false);
         }, () => setLoadingMediaBiblioteca(false));
 
@@ -200,6 +353,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
             setMediaEquipamentos(list);
+            try { localStorage.setItem('midia_equipamentos', JSON.stringify(list)); } catch(_) {}
             setLoadingMediaEquipamentos(false);
         }, () => setLoadingMediaEquipamentos(false));
 
@@ -216,7 +370,9 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
     }, [dbFirestore, appId]);
 
     // AI Cifras Fetching
-    const handleGenerateChordsWithAI = async () => {
+    const handleGenerateChordsWithAI = async (e?: any) => {
+        if (e) e.preventDefault();
+        console.log("handleGenerateChordsWithAI called, songTitulo:", songTitulo);
         if (!songTitulo.trim()) {
             addToast("Informe ao menos o Título da Música.", "warning");
             return;
@@ -225,16 +381,22 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         addToast("Buscando cifras com Inteligência Artificial...", "info");
         try {
             const prompt = `Forneça a letra completa da música cristã "${songTitulo}" ${songArtista ? `do artista ${songArtista}` : ''} com as cifras corretas sobrepostas em formato de texto limpo. Use o tom principal de "${songTom}". Retorne apenas a letra cifrada formatada, sem saudações ou comentários iniciais/finais. Organize em blocos perfeitamente legíveis. Se não conhecer a música, gere uma letra estimulada com cifras condizentes.`;
+            console.log("Calling Gemini AI with prompt:", prompt);
             const response = await callGeminiAI(prompt);
-            if (response && response.trim()) {
-                setSongLetraCifra(response);
-                addToast("Cifras geradas com sucesso pela IA!", "success");
+            console.log("Gemini AI response obtained:", response);
+            if (response && typeof response === 'string' && response.trim()) {
+                if (response.startsWith("Erro na IA")) {
+                    addToast(response, "error");
+                } else {
+                    setSongLetraCifra(response);
+                    addToast("Cifras geradas com sucesso pela IA!", "success");
+                }
             } else {
                 addToast("Gemini não conseguiu processar no momento. Tente novamente.", "error");
             }
         } catch (err: any) {
-            console.error(err);
-            addToast("Falha na geração com IA.", "error");
+            console.error("AI Generation Error: ", err);
+            addToast("Falha na geração com IA. " + (err?.message || ''), "error");
         } finally {
             setAiGenerating(false);
         }
@@ -243,35 +405,102 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
     // Persistence Actions
     const handleSaveSong = async () => {
         if (!songTitulo.trim()) return addToast("Informe o título.", "warning");
-        try {
-            const payload = {
-                titulo: songTitulo,
-                artista: songArtista,
-                tom: songTom,
-                ritmo: songRitmo,
-                bpm: songBpm,
-                letra_cifra: songLetraCifra,
-                arquivos: songArquivos
-            };
-            const targetId = editingSongId || `musica_${Date.now()}`;
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas', targetId), payload);
-            addToast(editingSongId ? "Música atualizada!" : "Nova música adicionada!", "success");
-            
-            // Clean states
-            setSongTitulo(''); setSongArtista(''); setSongTom('G'); setSongRitmo('Worship'); setSongBpm('72'); setSongLetraCifra(''); setSongArquivos([]);
-            setShowAddSong(false); setEditingSongId(null);
-        } catch (e) {
-            addToast("Erro ao gravar música.", "error");
+        const targetId = editingSongId || `musica_${Date.now()}`;
+        const payload = {
+            id: targetId,
+            titulo: songTitulo,
+            artista: songArtista,
+            tom: songTom,
+            ritmo: songRitmo,
+            bpm: songBpm,
+            letra_cifra: songLetraCifra,
+            arquivos: songArquivos
+        };
+
+        if (dbFirestore && appId) {
+            try {
+                const { id, ...cloudData } = payload;
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas', targetId), cloudData);
+            } catch (err) {
+                console.error("Firestore save song failed:", err);
+            }
         }
+
+        const updatedList = editingSongId 
+            ? musicas.map(m => m.id === targetId ? payload : m)
+            : [...musicas, payload];
+        setMusicas(updatedList);
+        try { localStorage.setItem('louvor_musicas', JSON.stringify(updatedList)); } catch(_) {}
+
+        addToast(editingSongId ? "Música atualizada!" : "Nova música adicionada!", "success");
+        
+        // Clean states
+        setSongTitulo(''); setSongArtista(''); setSongTom('G'); setSongRitmo('Worship'); setSongBpm('72'); setSongLetraCifra(''); setSongArquivos([]);
+        setShowAddSong(false); setEditingSongId(null);
     };
 
-    const handleDeleteSong = async (id: string) => {
-        if (!confirm("Remover esta música do repertório?")) return;
+    const handleDeleteSong = (id: string) => {
+        setDeleteConfirmInfo({ type: 'musica', id });
+    };
+
+    const handleExecuteDelete = async () => {
+        if (!deleteConfirmInfo) return;
+        const { type, id, membroIndex, anexoI } = deleteConfirmInfo;
+        setDeleteConfirmInfo(null);
+
         try {
-            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas', id));
-            addToast("Música removida do repertório.", "success");
-        } catch(e) {
-            addToast("Erro ao remover.", "error");
+            if (type === 'musica') {
+                if (dbFirestore && appId) {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas', id));
+                }
+                const updatedList = musicas.filter(m => m.id !== id);
+                setMusicas(updatedList);
+                try { localStorage.setItem('louvor_musicas', JSON.stringify(updatedList)); } catch(_) {}
+                addToast("Música removida do repertório.", "success");
+            } else if (type === 'escala') {
+                if (dbFirestore && appId) {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_escalas', id));
+                }
+                const updatedList = escalas.filter(s => s.id !== id);
+                setEscalas(updatedList);
+                try { localStorage.setItem('louvor_escalas', JSON.stringify(updatedList)); } catch(_) {}
+                addToast("Escala excluída.", "success");
+            } else if (type === 'musico') {
+                if (dbFirestore && appId) {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicos', id));
+                }
+                const updatedList = musicos.filter(m => m.id !== id);
+                setMusicos(updatedList);
+                try { localStorage.setItem('louvor_musicos', JSON.stringify(updatedList)); } catch(_) {}
+                addToast("Músico removido da equipe.", "success");
+            } else if (type === 'ensaio') {
+                if (dbFirestore && appId) {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_reunioes', id));
+                }
+                const updatedList = reunioes.filter(r => r.id !== id);
+                setReunioes(updatedList);
+                try { localStorage.setItem('louvor_reunioes', JSON.stringify(updatedList)); } catch(_) {}
+                addToast("Agendamento removido.", "success");
+            } else if (type === 'membro') {
+                const ministerio = ministerios.find(m => m.id === id); 
+                if (!ministerio || typeof membroIndex !== 'number') return; 
+                const novosMembros = [...(ministerio.membros || [])]; 
+                novosMembros.splice(membroIndex, 1); 
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'departamentos', id), { membros: novosMembros }, { merge: true }); 
+                addToast("Membro removido do ministério.", "success"); 
+            } else if (type === 'anexo_escala') {
+                if (typeof anexoI === 'number') {
+                    setScaleArquivos(scaleArquivos.filter((_, idx) => idx !== anexoI));
+                    addToast("Anexo da escala removido.", "success");
+                }
+            } else if (type === 'anexo_musica') {
+                if (typeof anexoI === 'number') {
+                    setSongArquivos(songArquivos.filter((_, idx) => idx !== anexoI));
+                    addToast("Anexo da música removido.", "success");
+                }
+            }
+        } catch (err: any) {
+            addToast(`Erro ao excluir: ${err.message}`, "error");
         }
     };
 
@@ -289,35 +518,41 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
 
     const handleSaveScale = async () => {
         if (!scaleData) return addToast("Selecione a data.", "warning");
-        try {
-            const payload = {
-                data: scaleData,
-                lider_id: scaleLiderId,
-                musicos: scaleMusicos,
-                musicasIds: scaleMusicasIds,
-                observacoes: scaleObservacoes,
-                arquivos: scaleArquivos
-            };
-            const targetId = editingScaleId || `escala_${Date.now()}`;
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_escalas', targetId), payload);
-            addToast(editingScaleId ? "Escala atualizada!" : "Escala criada e salva com sucesso!", "success");
-            
-            // Clean states
-            setScaleData(getTodayDate()); setScaleLiderId(''); setScaleMusicos({}); setScaleMusicasIds([]); setScaleObservacoes(''); setScaleArquivos([]);
-            setShowAddScale(false); setEditingScaleId(null);
-        } catch (e) {
-            addToast("Erro ao gravar escala.", "error");
+        const targetId = editingScaleId || `escala_${Date.now()}`;
+        const payload = {
+            id: targetId,
+            data: scaleData,
+            lider_id: scaleLiderId,
+            musicos: scaleMusicos,
+            musicasIds: scaleMusicasIds,
+            observacoes: scaleObservacoes,
+            arquivos: scaleArquivos
+        };
+
+        if (dbFirestore && appId) {
+            try {
+                const { id, ...cloudData } = payload;
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_escalas', targetId), cloudData);
+            } catch (err) {
+                console.error("Firestore save scale failed:", err);
+            }
         }
+
+        const updatedList = editingScaleId 
+            ? escalas.map(s => s.id === targetId ? payload : s)
+            : [...escalas, payload];
+        setEscalas(updatedList);
+        try { localStorage.setItem('louvor_escalas', JSON.stringify(updatedList)); } catch(_) {}
+
+        addToast(editingScaleId ? "Escala atualizada!" : "Escala criada e salva com sucesso!", "success");
+        
+        // Clean states
+        setScaleData(getTodayDate()); setScaleLiderId(''); setScaleMusicos({}); setScaleMusicasIds([]); setScaleObservacoes(''); setScaleArquivos([]);
+        setShowAddScale(false); setEditingScaleId(null);
     };
 
-    const handleDeleteScale = async (id: string) => {
-        if (!confirm("Remover esta escala do histórico?")) return;
-        try {
-            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_escalas', id));
-            addToast("Escala excluída.", "success");
-        } catch(e) {
-            addToast("Erro ao remover.", "error");
-        }
+    const handleDeleteScale = (id: string) => {
+        setDeleteConfirmInfo({ type: 'escala', id });
     };
 
     const handleEditScale = (sch: any) => {
@@ -336,54 +571,72 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         if (musicos.some(m => m.membro_id === musicianMembroId && m.id !== editingMusicianId)) {
             return addToast("Este membro já está na equipe de louvor.", "warning");
         }
-        try {
-            const payload = {
-                membro_id: musicianMembroId,
-                instrumentos: musicianInstrumentos,
-                disponibilidade: musicianDisponibilidade,
-                status: musicianStatus
-            };
-            const targetId = editingMusicianId || `musico_${Date.now()}`;
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicos', targetId), payload);
-            addToast("Músico salvo!", "success");
-            
-            setMusicianMembroId(''); setMusicianInstrumentos(''); setMusicianDisponibilidade('Livre todos os cultos'); setMusicianStatus('Ativo');
-            setShowAddMusician(false); setEditingMusicianId(null);
-        } catch(e) {
-            addToast("Erro ao salvar cadastro.", "error");
+        const targetId = editingMusicianId || `musico_${Date.now()}`;
+        const payload = {
+            id: targetId,
+            membro_id: musicianMembroId,
+            instrumentos: musicianInstrumentos,
+            disponibilidade: musicianDisponibilidade,
+            status: musicianStatus
+        };
+
+        if (dbFirestore && appId) {
+            try {
+                const { id, ...cloudData } = payload;
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicos', targetId), cloudData);
+            } catch (err) {
+                console.error("Firestore save musician failed:", err);
+            }
         }
+
+        const updatedList = editingMusicianId 
+            ? musicos.map(m => m.id === targetId ? payload : m)
+            : [...musicos, payload];
+        setMusicos(updatedList);
+        try { localStorage.setItem('louvor_musicos', JSON.stringify(updatedList)); } catch(_) {}
+
+        addToast("Músico salvo!", "success");
+        
+        setMusicianMembroId(''); setMusicianInstrumentos(''); setMusicianDisponibilidade('Livre todos os cultos'); setMusicianStatus('Ativo');
+        setShowAddMusician(false); setEditingMusicianId(null);
     };
 
-    const handleDeleteMusician = async (id: string) => {
-        if (!confirm("Remover este músico da equipe?")) return;
-        try {
-            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicos', id));
-            addToast("Músico removido da equipe.", "success");
-        } catch(e) {
-            addToast("Erro ao remover.", "error");
-        }
+    const handleDeleteMusician = (id: string) => {
+        setDeleteConfirmInfo({ type: 'musico', id });
     };
 
     const handleSaveRehearsal = async () => {
         if (!rehearsalTitulo.trim() || !rehearsalData) return addToast("Título e data são obrigatórios.", "warning");
-        try {
-            const payload = {
-                titulo: rehearsalTitulo,
-                data: rehearsalData,
-                hora: rehearsalHora,
-                local: rehearsalLocal,
-                pauta: rehearsalPauta,
-                notificadoPortal: false
-            };
-            const targetId = editingRehearsalId || `reuniao_${Date.now()}`;
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_reunioes', targetId), payload);
-            addToast("Compromisso salvo!", "success");
-            
-            setRehearsalTitulo(''); setRehearsalData(getTodayDate()); setRehearsalHora('19:30'); setRehearsalLocal('Templo Sede'); setRehearsalPauta('');
-            setShowAddRehearsal(false); setEditingRehearsalId(null);
-        } catch(e) {
-            addToast("Erro ao agendar compromisso.", "error");
+        const targetId = editingRehearsalId || `reuniao_${Date.now()}`;
+        const payload = {
+            id: targetId,
+            titulo: rehearsalTitulo,
+            data: rehearsalData,
+            hora: rehearsalHora,
+            local: rehearsalLocal,
+            pauta: rehearsalPauta,
+            notificadoPortal: false
+        };
+
+        if (dbFirestore && appId) {
+            try {
+                const { id, ...cloudData } = payload;
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_reunioes', targetId), cloudData);
+            } catch (err) {
+                console.error("Firestore save rehearsal failed:", err);
+            }
         }
+
+        const updatedList = editingRehearsalId 
+            ? reunioes.map(r => r.id === targetId ? payload : r)
+            : [...reunioes, payload];
+        setReunioes(updatedList);
+        try { localStorage.setItem('louvor_reunioes', JSON.stringify(updatedList)); } catch(_) {}
+
+        addToast("Compromisso salvo!", "success");
+        
+        setRehearsalTitulo(''); setRehearsalData(getTodayDate()); setRehearsalHora('19:30'); setRehearsalLocal('Templo Sede'); setRehearsalPauta('');
+        setShowAddRehearsal(false); setEditingRehearsalId(null);
     };
 
     const handleSendRehearsalEmail = async (reuniao: any) => {
@@ -479,14 +732,8 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
         }
     };
 
-    const handleDeleteRehearsal = async (id: string) => {
-        if (!confirm("Deletar este ensaio/reunião?")) return;
-        try {
-            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_reunioes', id));
-            addToast("Agendamento removido.", "success");
-        } catch(e) {
-            addToast("Erro ao cancelar.", "error");
-        }
+    const handleDeleteRehearsal = (id: string) => {
+        setDeleteConfirmInfo({ type: 'ensaio', id });
     };
 
     // Dashboard Calculations
@@ -509,13 +756,8 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
         </button>
     );
 
-    const handleDeleteMember = async (ministerioId, membroIndex) => { 
-        const ministerio = ministerios.find(m => m.id === ministerioId); 
-        if (!ministerio) return; 
-        const novosMembros = [...(ministerio.membros || [])]; 
-        novosMembros.splice(membroIndex, 1); 
-        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'departamentos', ministerioId), { membros: novosMembros }, { merge: true }); 
-        addToast("Membro removido.", "success"); 
+    const handleDeleteMember = (ministerioId: string, membroIndex: number) => { 
+        setDeleteConfirmInfo({ type: 'membro', id: ministerioId, membroIndex });
     };
 
     const filteredSongs = musicas.filter(s => 
@@ -980,7 +1222,10 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-indigo-50 text-indigo-500 rounded-2xl shadow-sm border border-indigo-100"><Briefcase size={28}/></div>
                     <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Ministérios e Departamentos</h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Ministérios e Departamentos</h2>
+                            <SyncStatusIndicator isOnline={isOnline} />
+                        </div>
                         <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Gestão de líderes, componentes e agendas</p>
                     </div>
                 </div>
@@ -1167,7 +1412,7 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                         {scaleArquivos.map((a, i) => (
                                                             <div key={i} className="flex justify-between items-center text-[11px] bg-slate-100 px-3 py-1 rounded">
                                                                 <span className="font-semibold text-slate-700">{a.nome}</span>
-                                                                <button type="button" onClick={() => setScaleArquivos(scaleArquivos.filter((_, idx)=>idx!==i))} className="text-rose-600 font-bold">Excluir</button>
+                                                                <button type="button" onClick={() => setDeleteConfirmInfo({ type: 'anexo_escala', id: 'anexo', anexoI: i })} className="text-rose-600 font-bold">Excluir</button>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1338,7 +1583,7 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                     {songArquivos.map((a, i) => (
                                                         <div key={i} className="flex justify-between items-center text-[10px] bg-slate-100 px-3 py-1 rounded">
                                                             <span className="font-semibold">{a.nome}</span>
-                                                            <button type="button" onClick={() => setSongArquivos(songArquivos.filter((_, idx)=>idx!==i))} className="text-rose-600 font-bold">Remover</button>
+                                                            <button type="button" onClick={() => setDeleteConfirmInfo({ type: 'anexo_musica', id: 'anexo', anexoI: i })} className="text-rose-600 font-bold">Remover</button>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1593,6 +1838,31 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                     />
                 )}
                 
+                {deleteConfirmInfo && (
+                    <ConfirmModal
+                        isOpen={!!deleteConfirmInfo}
+                        onClose={() => setDeleteConfirmInfo(null)}
+                        title={
+                            deleteConfirmInfo.type === 'musica' ? 'Remover Música' :
+                            deleteConfirmInfo.type === 'escala' ? 'Excluir Escala' :
+                            deleteConfirmInfo.type === 'musico' ? 'Remover Músico' :
+                            deleteConfirmInfo.type === 'ensaio' ? 'Remover Compromisso' :
+                            deleteConfirmInfo.type === 'membro' ? 'Remover Membro' :
+                            'Excluir Anexo'
+                        }
+                        message={
+                            deleteConfirmInfo.type === 'musica' ? 'Deseja realmente remover esta música do repertório?' :
+                            deleteConfirmInfo.type === 'escala' ? 'Deseja realmente remover esta escala do histórico?' :
+                            deleteConfirmInfo.type === 'musico' ? 'Deseja realmente remover este músico da equipe?' :
+                            deleteConfirmInfo.type === 'ensaio' ? 'Deseja realmente deletar este ensaio/reunião?' :
+                            deleteConfirmInfo.type === 'membro' ? 'Deseja realmente remover este membro do ministério?' :
+                            'Deseja realmente remover este anexo?'
+                        }
+                        onConfirm={handleExecuteDelete}
+                        onCancel={() => setDeleteConfirmInfo(null)}
+                    />
+                )}
+
             </div>
         </div>
     );
