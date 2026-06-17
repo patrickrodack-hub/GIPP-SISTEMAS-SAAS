@@ -1641,6 +1641,222 @@ const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
+
+export const getModuleColor = (id) => {
+    const colors = {
+        portal_pastor: 'amber',
+        dashboard: 'blue',
+        changelog: 'fuchsia',
+        sobre: 'teal',
+        manual: 'indigo',
+        amparo_legal: 'amber',
+        registro_software: 'indigo',
+        cad_membro: 'indigo',
+        visitantes: 'rose',
+        cad_igreja: 'amber',
+        cad_patrimonio: 'emerald',
+        cad_celula: 'purple',
+        cad_usuario: 'slate',
+        acessos_portal: 'cyan',
+        cad_departamento: 'pink',
+        ministerio_louvor: 'violet',
+        ministerio_midia: 'teal',
+        fin_entrada: 'emerald',
+        fin_saida: 'rose',
+        fin_dre: 'blue',
+        fin_conciliacao: 'indigo',
+        fin_carnes: 'fuchsia',
+        fin_utilitarios: 'slate',
+        boletim: 'orange',
+        biblia: 'amber',
+        assistente_ai: 'violet',
+        email_interno: 'emerald',
+        secretaria_integrada: 'blue',
+        secretaria_certificados: 'amber',
+        carteirinha_studio: 'pink',
+        credencial_lote: 'purple',
+        secretaria_ebd: 'emerald',
+        salinha_kids: 'rose',
+        missoes_painel: 'rose',
+        rede_social: 'pink',
+        relatorios: 'indigo',
+        config_backup: 'emerald',
+        auditoria: 'slate',
+        lixeira: 'rose',
+        desenvolvedor: 'emerald',
+        config_sistema: 'indigo',
+        config_visual: 'purple'
+    };
+    return colors[id] || 'indigo';
+};
+
+const COLOR_CLASSES = {
+    amber: {
+        bgActive: 'bg-amber-100 text-amber-700 border-amber-200',
+        bgNormal: 'bg-amber-500/10 dark:bg-amber-950/25 text-amber-600 dark:text-amber-400 border-transparent',
+        iosBg: 'bg-amber-500',
+        neon: 'text-amber-500 dark:text-amber-400 border-amber-500/20 bg-amber-500/5 shadow-[0_0_8px_rgba(245,158,11,0.12)]',
+        neonActive: 'text-amber-400 border-amber-400 bg-slate-900 shadow-[0_0_16px_rgba(245,158,11,0.45)] font-black'
+    },
+    blue: {
+        bgActive: 'bg-blue-100 text-blue-700 border-blue-200',
+        bgNormal: 'bg-blue-500/10 dark:bg-blue-950/25 text-blue-600 dark:text-blue-400 border-transparent',
+        iosBg: 'bg-blue-500',
+        neon: 'text-blue-500 dark:text-blue-400 border-blue-500/20 bg-blue-500/5 shadow-[0_0_8px_rgba(59,130,246,0.12)]',
+        neonActive: 'text-blue-400 border-blue-400 bg-slate-900 shadow-[0_0_16px_rgba(59,130,246,0.45)] font-black'
+    },
+    fuchsia: {
+        bgActive: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200',
+        bgNormal: 'bg-fuchsia-500/10 dark:bg-fuchsia-950/25 text-fuchsia-600 dark:text-fuchsia-400 border-transparent',
+        iosBg: 'bg-fuchsia-500',
+        neon: 'text-fuchsia-500 dark:text-fuchsia-400 border-fuchsia-500/20 bg-fuchsia-500/5 shadow-[0_0_8px_rgba(217,70,239,0.12)]',
+        neonActive: 'text-fuchsia-400 border-fuchsia-400 bg-slate-900 shadow-[0_0_16px_rgba(217,70,239,0.45)] font-black'
+    },
+    teal: {
+        bgActive: 'bg-teal-100 text-teal-700 border-teal-200',
+        bgNormal: 'bg-teal-500/10 dark:bg-teal-950/25 text-teal-600 dark:text-teal-400 border-transparent',
+        iosBg: 'bg-teal-500',
+        neon: 'text-teal-500 dark:text-teal-400 border-teal-500/20 bg-teal-500/5 shadow-[0_0_8px_rgba(20,184,166,0.12)]',
+        neonActive: 'text-teal-405 border-teal-400 bg-slate-900 shadow-[0_0_16px_rgba(20,184,166,0.45)] font-black'
+    },
+    indigo: {
+        bgActive: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+        bgNormal: 'bg-indigo-500/10 dark:bg-indigo-950/25 text-indigo-600 dark:text-indigo-400 border-transparent',
+        iosBg: 'bg-indigo-500',
+        neon: 'text-indigo-500 dark:text-indigo-400 border-indigo-500/20 bg-indigo-500/5 shadow-[0_0_8px_rgba(99,102,241,0.12)]',
+        neonActive: 'text-indigo-400 border-indigo-400 bg-slate-900 shadow-[0_0_16px_rgba(99,102,241,0.45)] font-black'
+    },
+    rose: {
+        bgActive: 'bg-rose-100 text-rose-700 border-rose-200',
+        bgNormal: 'bg-rose-500/10 dark:bg-rose-950/25 text-rose-600 dark:text-rose-400 border-transparent',
+        iosBg: 'bg-rose-500',
+        neon: 'text-rose-500 dark:text-rose-400 border-rose-500/20 bg-rose-500/5 shadow-[0_0_8px_rgba(244,63,94,0.12)]',
+        neonActive: 'text-rose-400 border-rose-400 bg-slate-900 shadow-[0_0_16px_rgba(244,63,94,0.45)] font-black'
+    },
+    emerald: {
+        bgActive: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        bgNormal: 'bg-emerald-500/10 dark:bg-emerald-950/25 text-emerald-600 dark:text-emerald-400 border-transparent',
+        iosBg: 'bg-emerald-500',
+        neon: 'text-emerald-500 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_8px_rgba(16,185,129,0.12)]',
+        neonActive: 'text-emerald-400 border-emerald-400 bg-slate-900 shadow-[0_0_16px_rgba(16,185,129,0.45)] font-black'
+    },
+    purple: {
+        bgActive: 'bg-purple-100 text-purple-700 border-purple-200',
+        bgNormal: 'bg-purple-500/10 dark:bg-purple-950/25 text-purple-600 dark:text-purple-400 border-transparent',
+        iosBg: 'bg-purple-500',
+        neon: 'text-purple-500 dark:text-purple-400 border-purple-500/20 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.12)]',
+        neonActive: 'text-purple-400 border-purple-400 bg-slate-900 shadow-[0_0_16px_rgba(168,85,247,0.45)] font-black'
+    },
+    slate: {
+        bgActive: 'bg-slate-200 text-slate-800 border-slate-300',
+        bgNormal: 'bg-slate-500/10 dark:bg-slate-950/25 text-slate-600 dark:text-slate-400 border-transparent',
+        iosBg: 'bg-slate-500',
+        neon: 'text-slate-500 dark:text-slate-400 border-slate-500/20 bg-slate-500/5 shadow-[0_0_8px_rgba(100,116,139,0.12)]',
+        neonActive: 'text-slate-405 border-slate-400 bg-slate-900 shadow-[0_0_16px_rgba(100,116,139,0.45)] font-black'
+    },
+    cyan: {
+        bgActive: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+        bgNormal: 'bg-cyan-500/10 dark:bg-cyan-950/25 text-cyan-600 dark:text-cyan-400 border-transparent',
+        iosBg: 'bg-cyan-500',
+        neon: 'text-cyan-500 dark:text-cyan-400 border-cyan-500/20 bg-cyan-500/5 shadow-[0_0_8px_rgba(6,182,212,0.12)]',
+        neonActive: 'text-cyan-400 border-cyan-400 bg-slate-900 shadow-[0_0_16px_rgba(6,182,212,0.45)] font-black'
+    },
+    pink: {
+        bgActive: 'bg-pink-100 text-pink-700 border-pink-200',
+        bgNormal: 'bg-pink-500/10 dark:bg-pink-950/25 text-pink-600 dark:text-pink-400 border-transparent',
+        iosBg: 'bg-pink-500',
+        neon: 'text-pink-500 dark:text-pink-400 border-pink-500/20 bg-pink-500/5 shadow-[0_0_8px_rgba(236,72,153,0.12)]',
+        neonActive: 'text-pink-400 border-pink-400 bg-slate-900 shadow-[0_0_16px_rgba(236,72,153,0.45)] font-black'
+    },
+    violet: {
+        bgActive: 'bg-violet-100 text-violet-700 border-violet-200',
+        bgNormal: 'bg-violet-500/10 dark:bg-violet-950/25 text-violet-600 dark:text-violet-400 border-transparent',
+        iosBg: 'bg-violet-500',
+        neon: 'text-violet-500 dark:text-violet-400 border-violet-500/20 bg-violet-500/5 shadow-[0_0_8px_rgba(139,92,246,0.12)]',
+        neonActive: 'text-violet-400 border-violet-400 bg-slate-900 shadow-[0_0_16px_rgba(139,92,246,0.45)] font-black'
+    },
+    orange: {
+        bgActive: 'bg-orange-100 text-orange-700 border-orange-200',
+        bgNormal: 'bg-orange-500/10 dark:bg-orange-950/25 text-orange-600 dark:text-orange-400 border-transparent',
+        iosBg: 'bg-orange-500',
+        neon: 'text-orange-500 dark:text-orange-400 border-orange-500/20 bg-orange-500/5 shadow-[0_0_8px_rgba(249,115,22,0.12)]',
+        neonActive: 'text-orange-400 border-orange-400 bg-slate-900 shadow-[0_0_16px_rgba(249,115,22,0.45)] font-black'
+    }
+};
+
+export const SystemIcon = ({ id, icon: Icon, active, size = 18 }) => {
+    const context = useContext(ChurchContext);
+    const pack = context?.db?.igreja?.pacote_icones || 'gipp';
+    
+    if (!Icon) return null;
+    
+    const color = getModuleColor(id);
+    const themeClass = COLOR_CLASSES[color] || COLOR_CLASSES.indigo;
+
+    // GIPP (Padrão Tecnológico/Neon)
+    if (pack === 'gipp') {
+        if (active) {
+            return (
+                <div className={`p-1.5 rounded-[10px] border-2 flex items-center justify-center shrink-0 scale-110 duration-300 font-mono ${themeClass.neonActive}`}>
+                    <Icon size={size - 1} strokeWidth={2.4} className="shrink-0 animate-pulse text-white" />
+                </div>
+            );
+        }
+        return (
+            <div className={`p-1.5 rounded-[10px] border transition-all duration-300 flex items-center justify-center shrink-0 hover:scale-110 ${themeClass.neon}`}>
+                <Icon size={size - 1} strokeWidth={1.8} className="shrink-0" />
+            </div>
+        );
+    }
+
+    // Se o próprio item do sidebar estiver ativo, o fundo do link do sidebar é roxo/azul gradiente.
+    // Nesse caso, o ícone precisa de alto contraste sobre o fundo colorido.
+    if (active) {
+        if (pack === 'android') {
+            return (
+                <div className="w-8 h-8 rounded-full bg-white text-indigo-700 shadow-md flex items-center justify-center shrink-0 scale-110 duration-300">
+                    <Icon size={size} strokeWidth={2.3} className="shrink-0" />
+                </div>
+            );
+        }
+        if (pack === 'ios') {
+            return (
+                <div className="w-8 h-8 rounded-[10px] bg-white text-indigo-700 shadow-md flex items-center justify-center shrink-0 scale-110 duration-300">
+                    <Icon size={size - 2} strokeWidth={1.8} className="shrink-0 animate-pulse" />
+                </div>
+            );
+        }
+        // Windows 11
+        return (
+            <div className="p-1.5 rounded-[8px] bg-white/20 border border-white/30 text-white shadow-sm flex items-center justify-center shrink-0 scale-105 duration-300">
+                <Icon size={size} strokeWidth={1.6} className="shrink-0" />
+            </div>
+        );
+    }
+
+    if (pack === 'android') {
+        return (
+            <div className={`w-8 h-8 rounded-full transition-all duration-300 flex items-center justify-center border shrink-0 hover:scale-105 ${themeClass.bgNormal}`}>
+                <Icon size={size} strokeWidth={2.4} className="shrink-0" />
+            </div>
+        );
+    }
+
+    if (pack === 'ios') {
+        return (
+            <div className={`w-8 h-8 rounded-[10px] transition-all duration-350 flex items-center justify-center shrink-0 shadow-[0_2.5px_5px_rgba(0,0,0,0.12)] hover:scale-105 ${themeClass.iosBg}`}>
+                <Icon size={size - 2} strokeWidth={2.0} className="text-white shrink-0" />
+            </div>
+        );
+    }
+
+    // Windows 11 Default (Fluent Modern)
+    return (
+        <div className={`p-1.5 rounded-[8px] transition-all duration-300 flex items-center justify-center border shrink-0 hover:scale-105 bg-slate-500/5 dark:bg-slate-900/40 border-slate-200/20 dark:border-slate-800/20 text-slate-500 dark:text-slate-400`}>
+            <Icon size={size} strokeWidth={1.5} className="shrink-0" />
+        </div>
+    );
+};
 export const THEME_COLORS = ['amber', 'blue', 'purple', 'orange', 'emerald', 'pink', 'rose', 'indigo', 'teal', 'cyan', 'slate'];
 export const REGRA_DOMINGOS = ['1º Domingo', '2º Domingo', '3º Domingo', '4º Domingo', 'Últ. Domingo', 'Consultar Avisos'];
 
@@ -6083,6 +6299,47 @@ export const PrintSystem = ({
         );
     }
 
+    // 7.1 - CARTA DE RECOMENDAÇÃO OU DESLIGAMENTO
+    if (mode === 'rel_carta_desligamento_recomendacao') {
+        const { config, membro } = data;
+        const isRecomendacao = config.documento_tipo === 'recomendacao';
+        const docTitle = isRecomendacao ? 'Carta de Recomendação Oficial' : 'Carta de Desligamento Ministerial';
+
+        return (
+            <PageContainer>
+                <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-center mb-10 text-slate-900 border-b-2 border-slate-900 pb-2">
+                    {docTitle}
+                </h1>
+                
+                <div className="px-8 font-serif text-lg text-justify text-slate-800 leading-loose space-y-6">
+                    <p><strong>AOS SEUS DESTINATÁRIOS E OFICIAIS ECLESIÁSTICOS COIRMÃOS,</strong></p>
+                    <p className="indent-12 whitespace-pre-wrap leading-relaxed">
+                        {config.texto_carta}
+                    </p>
+                </div>
+
+                <div className="mt-auto text-center pt-24 flex flex-col items-center avoid-break">
+                    <p className="text-sm font-serif mb-14">
+                        {data.igreja.cidade || 'CIDADE'}, {new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'})}
+                    </p>
+                    
+                    <div className="flex justify-around w-full gap-12 px-10">
+                        <div className="flex flex-col items-center flex-1">
+                            <div className="border-b border-black w-full mb-2"></div>
+                            <p className="font-bold text-sm uppercase tracking-wider">{data.igreja.pastor}</p>
+                            <p className="text-xs font-serif text-slate-500">Pastor Presidente - {data.igreja.nome}</p>
+                        </div>
+                        <div className="flex flex-col items-center flex-1">
+                            <div className="border-b border-black w-full mb-2"></div>
+                            <p className="font-bold text-sm uppercase tracking-wider">{membro ? membro.nome : '[NOME DO MEMBRO / REQUERENTE]'}</p>
+                            <p className="text-xs font-serif text-slate-500">Assinatura do Membro / Requerente</p>
+                        </div>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
     // 8 - MINISTÉRIOS (APRESENTAÇÃO)
     if (mode === 'rel_ministerios') {
         const { ministerios, membros } = data;
@@ -7908,13 +8165,13 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     playMenuSound(); // Efeito sonoro no clique
                     setView(id); 
                 }} 
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative mb-1.5 overflow-hidden ${active ? 'text-white shadow-xl shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'} ${isMaryDisabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 group relative mb-1 overflow-hidden ${active ? 'text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'} ${isMaryDisabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
             >
                 {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 animate-slide-in z-0"></div>}
-                <div className="relative z-10 flex items-center gap-4 w-full">
-                    <Icon size={20} className={`transition-transform duration-300 ${active ? 'text-white scale-110' : `${hoverColor} group-hover:scale-110`} ${isMaryDisabled ? 'text-slate-400' : ''}`} />
-                    {open && <span className={`font-bold text-sm tracking-wide transition-colors duration-300 ${active ? 'text-white' : ''} ${isMaryDisabled ? 'text-slate-400' : ''}`}>{label}</span>}
-                    {isMaryDisabled && open && <Lock size={12} className="text-slate-400 ml-auto shrink-0 animate-pulse" />}
+                <div className="relative z-10 flex items-center gap-3.5 w-full">
+                    <SystemIcon id={id} icon={Icon} active={active} size={20} />
+                    {open && <span className={`font-semibold text-xs sm:text-xs+ tracking-wide transition-colors duration-300 ${active ? 'text-white font-bold' : ''} ${isMaryDisabled ? 'text-slate-400' : ''}`}>{label}</span>}
+                    {isMaryDisabled && open && <Lock size={11} className="text-slate-400 ml-auto shrink-0 animate-pulse" />}
                 </div>
             </button>
         );

@@ -51,29 +51,34 @@ const ModuleConfigVisual = () => {
     const [selectedWall, setSelectedWall] = useState(configData.papel_parede || null);
     const [selectedAnim, setSelectedAnim] = useState(configData.tipo_animacao || 'auto');
     const [opacityFilter, setOpacityFilter] = useState(configData.papel_parede_opacidade !== undefined ? Number(configData.papel_parede_opacidade) : 40);
+    const [selectedIconPack, setSelectedIconPack] = useState(configData.pacote_icones || 'gipp');
     const [customUrl, setCustomUrl] = useState('');
     const [saving, setSaving] = useState(false);
 
     // Sincroniza estados caso d_igreja mude externamente
     useEffect(() => {
         if (configData.papel_parede !== undefined) {
-            setSelectedWall(configData.papel_parede);
+             setSelectedWall(configData.papel_parede);
         }
         if (configData.tipo_animacao !== undefined) {
-            setSelectedAnim(configData.tipo_animacao);
+             setSelectedAnim(configData.tipo_animacao);
         }
         if (configData.papel_parede_opacidade !== undefined) {
-            setOpacityFilter(Number(configData.papel_parede_opacidade));
+             setOpacityFilter(Number(configData.papel_parede_opacidade));
+        }
+        if (configData.pacote_icones !== undefined) {
+             setSelectedIconPack(configData.pacote_icones || 'gipp');
         }
     }, [db.igreja]);
 
-    const handleSaveConfig = async (wall = selectedWall, anim = selectedAnim, opacity = opacityFilter) => {
+    const handleSaveConfig = async (wall = selectedWall, anim = selectedAnim, opacity = opacityFilter, iconPack = selectedIconPack) => {
         setSaving(true);
         try {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
                 papel_parede: wall,
                 tipo_animacao: anim,
-                papel_parede_opacidade: opacity
+                papel_parede_opacidade: opacity,
+                pacote_icones: iconPack
             }, { merge: true });
             addToast("Preferências visuais atualizadas com sucesso!", "success");
         } catch (err) {
@@ -279,12 +284,100 @@ const ModuleConfigVisual = () => {
                         </div>
                     </div>
 
-                    {/* Quadrante 3: Tema do Sistema (Claro / Escuro) */}
+                    {/* Quadrante 3: Pacote de Ícones do Sistema */}
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                            <Sliders className="text-indigo-600" size={24}/>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800">3. Pacote de Ícones do Sistema</h3>
+                                <p className="text-xs text-slate-550 font-medium">Escolha a identidade visual dos ícones do menu e botões do portal.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col space-y-4">
+                            {[
+                                {
+                                    id: 'gipp',
+                                    name: 'GIPP Tecnológico (Padrão)',
+                                    desc: 'Ícones cibernéticos de alta precisão, realces em neon dinâmico e contornos radiantes que se adaptam inteligentemente às cores de cada departamento do portal.',
+                                    previewStyle: (
+                                        <div className="flex gap-2 items-center">
+                                            <div className="p-1.5 rounded-[10px] border border-blue-500/20 bg-slate-900 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.35)]"><Calendar size={14} strokeWidth={2.0}/></div>
+                                            <div className="p-1.5 rounded-[10px] border border-indigo-500/20 bg-slate-900 text-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.35)]"><Users size={14} strokeWidth={2.0}/></div>
+                                            <div className="p-1.5 rounded-[10px] border border-emerald-500/20 bg-slate-900 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.35)]"><CreditCard size={14} strokeWidth={2.0}/></div>
+                                        </div>
+                                    )
+                                },
+                                {
+                                    id: 'windows11',
+                                    name: 'Windows 11 (Fluent Design)',
+                                    desc: 'Linhas finas e modernas com grid minimalista, leves contornos e cantos levemente suavizados no estilo Segoe Fluent.',
+                                    previewStyle: (
+                                        <div className="flex gap-2 items-center">
+                                            <div className="p-1.5 rounded-[8px] bg-slate-50 border border-slate-200 text-slate-600"><Calendar size={16} strokeWidth={1.45}/></div>
+                                            <div className="p-1.5 rounded-[8px] bg-slate-50 border border-slate-200 text-slate-600"><Users size={16} strokeWidth={1.45}/></div>
+                                            <div className="p-1.5 rounded-[8px] bg-slate-50 border border-slate-200 text-slate-600"><CreditCard size={16} strokeWidth={1.45}/></div>
+                                        </div>
+                                    )
+                                },
+                                {
+                                    id: 'android',
+                                    name: 'Android 14 (Material Design You)',
+                                    desc: 'Linhas encorpadas, formas circulares amigáveis e descontraídas com realces pastéis dinâmicos do Google.',
+                                    previewStyle: (
+                                        <div className="flex gap-2 items-center">
+                                            <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center"><Calendar size={16} strokeWidth={2.4}/></div>
+                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center"><Users size={16} strokeWidth={2.4}/></div>
+                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center"><CreditCard size={16} strokeWidth={2.4}/></div>
+                                        </div>
+                                    )
+                                },
+                                {
+                                    id: 'ios',
+                                    name: 'iOS 17 (Apple SF Symbols)',
+                                    desc: 'Ícones vibrantes de alta resolução em blocos contínuos "Squircle", com cores contrastantes e ricas no clássico sistema Apple.',
+                                    previewStyle: (
+                                        <div className="flex gap-2 items-center">
+                                            <div className="w-8 h-8 rounded-[10px] bg-blue-500 text-white flex items-center justify-center shadow-xs"><Calendar size={14} strokeWidth={2.0}/></div>
+                                            <div className="w-8 h-8 rounded-[10px] bg-indigo-500 text-white flex items-center justify-center shadow-xs"><Users size={14} strokeWidth={2.0}/></div>
+                                            <div className="w-8 h-8 rounded-[10px] bg-emerald-500 text-white flex items-center justify-center shadow-xs"><CreditCard size={14} strokeWidth={2.0}/></div>
+                                        </div>
+                                    )
+                                }
+                            ].map((pack) => {
+                                const isSelected = selectedIconPack === pack.id;
+                                return (
+                                    <button
+                                        key={pack.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedIconPack(pack.id);
+                                            handleSaveConfig(selectedWall, selectedAnim, opacityFilter, pack.id);
+                                        }}
+                                        className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-3xl border-2 text-left transition-all ${isSelected ? 'border-indigo-600 bg-indigo-55/15 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs sm:text-sm font-black text-slate-800 leading-none">{pack.name}</span>
+                                                {isSelected && <span className="text-[9px] font-black uppercase text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md leading-none tracking-wider">Ativo</span>}
+                                            </div>
+                                            <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5 font-semibold pr-2">{pack.desc}</p>
+                                        </div>
+                                        <div className="shrink-0 bg-white/70 dark:bg-slate-900/40 p-2 rounded-2xl border border-slate-100/50 flex items-center justify-center">
+                                            {pack.previewStyle}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Quadrante 4: Tema do Sistema (Claro / Escuro) */}
                     <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
                         <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
                             {theme === 'dark' ? <Moon className="text-indigo-600" size={24}/> : <Sun className="text-indigo-600" size={24}/>}
                             <div>
-                                <h3 className="text-lg font-black text-slate-800">3. Tema do Sistema</h3>
+                                <h3 className="text-lg font-black text-slate-800">4. Tema do Sistema</h3>
                                 <p className="text-xs text-slate-550 font-medium">Selecione o estilo visual padrão para a sua navegação permanente.</p>
                             </div>
                         </div>

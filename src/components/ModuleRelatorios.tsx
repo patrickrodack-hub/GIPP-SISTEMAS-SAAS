@@ -49,7 +49,36 @@ const ModuleRelatorios = memo(() => {
     const [inputs, setInputs] = useState({});
     const [loadingAiAta, setLoadingAiAta] = useState(false);
 
-    // Os 11 relatórios requeridos
+    // Helper para gerar o rascunho de carta padrão com dados reais do membro
+    const updateLetterText = (mId, docType, destIgreja, motivo) => {
+        const m = db.membros.find(x => x.id === mId);
+        let text = '';
+        const nome = m ? m.nome : '[NOME DO MEMBRO]';
+        const cpf = m ? (m.cpf || '[CPF DO MEMBRO]') : '[CPF DO MEMBRO]';
+        const numReg = m ? (m.numero_registro || '[MATRÍCULA]') : '[MATRÍCULA]';
+        const cargo = m ? (m.cargo || 'MEMBRO') : 'MEMBRO';
+        const dataBatismo = m && m.data_batismo ? formatDateLocal(m.data_batismo) : '[DATA DE BATISMO]';
+        const dataAdmissao = m && m.data_admissao ? formatDateLocal(m.data_admissao) : '[DATA DE ADMISSÃO]';
+        const destino = destIgreja || '[IGREJA DESTINO]';
+        const motivoText = motivo || 'TRANSFERÊNCIA PARA CONGREGAÇÃO COIRMÃ';
+        
+        if (docType === 'recomendacao') {
+            text = `PELO PRESENTE INSTRUMENTO, RECOMENDAMOS À VOSSA COMUNHÃO E AMOR FRATERNAL O(A) NOSSO(A) AMADO(A) IRMÃO(Ã) ${nome.toUpperCase()}, PORTADOR(A) DO CPF Nº ${cpf}, REGISTRADO(A) SOB A MATRÍCULA Nº ${numReg} E INTEGRANTE DO CORPO DE MEMBROS NO CARGO DE ${cargo.toUpperCase()} NESTE MINISTÉRIO.
+
+O(A) REFERIDO(A) É MEMBRO(A) EM PLENA COMUNHÃO ESPIRITUAL DE NOSSA IGREJA, BATIZADO(A) EM ÁGUAS EM ${dataBatismo} E ADMITIDO(A) EM ${dataAdmissao}. DECLARAMOS QUE DURANTE O PERÍODO DE SUA CONVIVÊNCIA CONOSCO, DEMONSTROU CONDUTA CRISTÃ EXEMPLAR, PAUTADA NOS PRINCÍPIOS E ENSINAMENTOS BÍBLICOS, COOPERANDO DE FORMA VOLUNTÁRIA E EDIFICANTE EM TODAS AS ATIVIDADES, NADA HAVENDO QUE O(A) DESABONE ECLESIÁSTICA OU CIVILMENTE.
+
+PORTANTO, SOLICITAMOS ÀS LIDERANÇAS DA ${destino.toUpperCase()} QUE O(A) ACOLHAM COM AMOR FRATERNAL E O(A) AUXILIEM EM SUAS ATIVIDADES ESPIRITUAIS E MINISTERIAIS, PARA O QUAL O RECOMENDAMOS COM GRANDE APREÇO.`;
+        } else {
+            text = `CERTIFICAMOS E DECLARAMOS PARA OS DEVIDOS FINS LEGAIS E ECLESIÁSTICOS QUE O(A) IRMÃO(Ã) ${nome.toUpperCase()}, PORTADOR(A) DO CPF Nº ${cpf}, DE QUANTES MEMBRO ATIVO DESTE MINISTÉRIO, REGISTRADO(A) SOB A MATRÍCULA Nº ${numReg} NO CARGO DE ${cargo.toUpperCase()}, SOLICITOU FORMALMENTE O SEU DESLIGAMENTO E EXCLUSÃO DO NOSSO ROL DE MEMBROS POR MOTIVO DE: ${motivoText.toUpperCase()}.
+
+ATESTAMOS QUE O(A) REFERIDO(A) MEMBRO ESTEVE EM COMUNHÃO REGULAR E CONDUTA COMPATÍVEL COM OS PRINCÍPIOS ÉTICOS DA IGREJA DURANTE SUA PERMANÊNCIA CONOSCO, SENDO AMPARADO(A) COM A PRESENTE DECLARAÇÃO QUE OFICIALIZA SUA DESFILIAÇÃO DO QUADRO ECLESIÁSTICO DA NOSSA IGREJA.
+
+RESSALTAMOS QUE, A PARTIR DA PRESENTE DATA, O(A) MESMO(A) FICA DESLIGADO(A) DE QUAISQUER ATRIBUIÇÕES, RESPONSABILIDADES OU REPRESENTAÇÕES JUNTO A ESTE MINISTÉRIO.`;
+        }
+        return text.toUpperCase();
+    };
+
+    // Os 11 relatórios requeridos + Aniversariantes + Planejamento + Recomendação/Desligamento
     const reportTypes = [ 
         { id: 'rel_fluxo', label: '1. Fluxo de Caixa', desc: 'Controle Financeiro Geral', icon: DollarSign, color: 'emerald' }, 
         { id: 'rel_ebd', label: '2. Relatório EBD', desc: 'Turmas, Profs e Alunos', icon: BookOpen, color: 'blue' }, 
@@ -63,11 +92,22 @@ const ModuleRelatorios = memo(() => {
         { id: 'rel_contador', label: '10. P/ Contador', desc: 'Financeiro Detalhado p/ Auditoria', icon: FileSpreadsheet, color: 'cyan' },
         { id: 'rel_ata_reuniao', label: '11. Ata de Reunião', desc: 'Documento Padrão AD', icon: ScrollText, color: 'stone' },
         { id: 'rel_aniversariantes', label: '12. Aniversariantes', desc: 'Listagem de Membros por Mês', icon: Gift, color: 'pink' },
-        { id: 'rel_planejamento_anual', label: '13. Planejamento Anual', desc: 'Metas vs Realizado / Orçamentos', icon: Target, color: 'emerald' }
+        { id: 'rel_planejamento_anual', label: '13. Planejamento Anual', desc: 'Metas vs Realizado / Orçamentos', icon: Target, color: 'emerald' },
+        { id: 'rel_carta_desligamento_recomendacao', label: '14. Recomendação / Desligamento', desc: 'Carta do Membro com Texto Oficial', icon: ScrollText, color: 'indigo' }
     ];
 
     const openReportConfig = (type) => { 
-        setInputs({}); // Reset inputs on open
+        if (type === 'rel_carta_desligamento_recomendacao') {
+            setInputs({
+                documento_tipo: 'recomendacao',
+                membro_id: '',
+                igreja_destino: '', 
+                motivo_desligamento: 'TRANSFERÊNCIA PARA CONGREGAÇÃO COIRMÃ',
+                texto_carta: ''
+            });
+        } else {
+            setInputs({}); // Reset inputs on open
+        }
         setConfigModal({ open: true, type }); 
     };
 
@@ -102,6 +142,12 @@ const ModuleRelatorios = memo(() => {
                 break; 
             case 'rel_carta_convite':
                 payload = { config: inputs };
+                break;
+            case 'rel_carta_desligamento_recomendacao':
+                payload = { 
+                    config: inputs, 
+                    membro: inputs.membro_id ? db.membros.find(m => m.id === inputs.membro_id) : null 
+                };
                 break;
             case 'rel_ministerios':
                 payload = { ministerios: db.departamentos, membros: db.membros };
@@ -175,6 +221,114 @@ const ModuleRelatorios = memo(() => {
                                     )}
                                 </>
                             )}
+
+                            {configModal.type === 'rel_carta_desligamento_recomendacao' && (() => {
+                                const updateText = (newInputs) => {
+                                    const merged = { ...inputs, ...newInputs };
+                                    const text = updateLetterText(
+                                        merged.membro_id,
+                                        merged.documento_tipo,
+                                        merged.igreja_destino,
+                                        merged.motivo_desligamento
+                                    );
+                                    setInputs({ ...merged, texto_carta: text });
+                                };
+
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="bg-indigo-50/70 p-5 rounded-2xl border border-indigo-100 flex items-start gap-4 mb-2">
+                                            <ScrollText className="text-indigo-600 mt-0.5 shrink-0" size={24}/>
+                                            <div>
+                                                <h4 className="font-black text-sm text-indigo-950 uppercase leading-normal">Gerador de Recomendações & Desligamentos</h4>
+                                                <p className="text-xs text-indigo-700/80 mt-1 font-semibold leading-relaxed">
+                                                    Selecione o membro do cadastro para extrair seus dados oficiais. Escolha o tipo de documento, preencha os dados e revise o texto do documento oficial antes de mandar para o motor de impressão.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <FormSelect 
+                                                    label="Selecionar Membro Oficial" 
+                                                    value={inputs.membro_id || ''} 
+                                                    onChange={v => updateText({ membro_id: v })} 
+                                                    options={[{label: '-- SELECIONAR MEMBRO CADASTRADO --', value: ''}, ...db.membros.map(m=>({label: `${m.nome} (${m.cargo || 'Membro'})`, value: m.id}))]} 
+                                                />
+                                            </div>
+                                            <div>
+                                                <FormSelect 
+                                                    label="Tipo de Documento" 
+                                                    value={inputs.documento_tipo || 'recomendacao'} 
+                                                    onChange={v => updateText({ documento_tipo: v })} 
+                                                    options={[
+                                                        {label: 'Carta de Recomendação Oficial', value: 'recomendacao'},
+                                                        {label: 'Carta de Desligamento / Transferência', value: 'desligamento'}
+                                                    ]} 
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {inputs.documento_tipo === 'recomendacao' ? (
+                                            <div>
+                                                <FormInput 
+                                                    label="Igreja de Destino (Para Recomendação)" 
+                                                    value={inputs.igreja_destino || ''} 
+                                                    onChange={v => updateText({ igreja_destino: v })} 
+                                                    placeholder="Ex: Assembleia de Deus Central em São Paulo"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <FormSelect 
+                                                        label="Motivo do Desligamento" 
+                                                        value={inputs.motivo_desligamento || 'TRANSFERÊNCIA PARA CONGREGAÇÃO COIRMÃ'} 
+                                                        onChange={v => updateText({ motivo_desligamento: v })} 
+                                                        options={[
+                                                            {label: 'Transferência para Congregação Coirmã', value: 'TRANSFERÊNCIA PARA CONGREGAÇÃO COIRMÃ'},
+                                                            {label: 'A Pedido por Motivos Pessoais', value: 'A PEDIDO POR MOTIVOS PESSOAIS'},
+                                                            {label: 'Decisão Administrativo / Conselho', value: 'DECISÃO ADMINISTRATIVO / CONSELHO'},
+                                                            {label: 'Outro Motivo Específico', value: 'OUTROS MOTIVOS CADASTRAIS'}
+                                                        ]}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <FormInput 
+                                                        label="Igreja Coirmã Destinatária (Opcional)" 
+                                                        value={inputs.igreja_destino || ''} 
+                                                        onChange={v => updateText({ igreja_destino: v })} 
+                                                        placeholder="Ex: Assembleia de Deus Belém"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Corpo da Carta Oficial (Editável)</label>
+                                                <Button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const text = updateLetterText(inputs.membro_id, inputs.documento_tipo, inputs.igreja_destino, inputs.motivo_desligamento);
+                                                        setInputs({ ...inputs, texto_carta: text });
+                                                        addToast("Texto restaurado para o padrão oficial!", "info");
+                                                    }} 
+                                                    variant="ghost" 
+                                                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 py-1 px-2.5 rounded-lg border border-slate-200"
+                                                >
+                                                    <RotateCcw size={12} className="inline mr-1"/> Restaurar Padrão
+                                                </Button>
+                                            </div>
+                                            <textarea 
+                                                className="w-full bg-white border border-slate-300 rounded-2xl p-4 text-xs h-48 focus:ring-2 focus:ring-indigo-500 outline-none resize-y shadow-inner leading-relaxed uppercase" 
+                                                value={inputs.texto_carta || ''} 
+                                                onChange={e => setInputs({...inputs, texto_carta: (e.target.value || '').toUpperCase()})} 
+                                                placeholder="Selecione um membro e o tipo de documento para gerar o rascunho oficial..."
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {configModal.type === 'rel_carta_convite' && (
                                 <div className="grid grid-cols-2 gap-4">
