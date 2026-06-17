@@ -3500,6 +3500,22 @@ export const DocumentPreviewModal = ({
     const [signatureName2, setSignatureName2] = useState<string>("");
     const [signatureTitle2, setSignatureTitle2] = useState<string>("");
 
+    // States for pre-defined digital signatures tab & manager
+    const [previewTab, setPreviewTab] = useState<'layout' | 'signatures_manager'>('layout');
+    const [savedSignatures, setSavedSignatures] = useState<Array<{id: string, name: string, title: string}>>(() => {
+        try {
+            const local = localStorage.getItem("gipp_predefined_signatures");
+            if (local) return JSON.parse(local);
+        } catch (e) {}
+        return [
+            { id: '1', name: "Pr. Antonio Silva", title: "Pastor Presidente" },
+            { id: '2', name: "Tes. Marcos Oliveira", title: "Coordenador Financeiro" },
+            { id: '3', name: "Sec. Sandra Lima", title: "Secretária Geral" }
+        ];
+    });
+    const [newSigName, setNewSigName] = useState("");
+    const [newSigTitle, setNewSigTitle] = useState("");
+
     useEffect(() => {
         if (isOpen && data) {
             setShowWatermark(false);
@@ -3925,78 +3941,241 @@ export const DocumentPreviewModal = ({
                 </div>
 
                 {/* NOVO: Ajustes Avançados de Layout e Institucionalidade */}
-                <div className="bg-slate-850 px-8 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4 z-10 select-none">
-                    <div className="flex items-center gap-6 flex-wrap">
-                        <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                            <Settings size={12} className="text-indigo-400" /> Customização Institucional:
-                        </span>
-
-                        {/* Toggle de Marca d'água */}
-                        <label className="flex items-center gap-2 text-xs font-bold text-slate-350 cursor-pointer hover:text-white transition-colors">
-                            <input 
-                                type="checkbox" 
-                                checked={showWatermark} 
-                                onChange={e => setShowWatermark(e.target.checked)}
-                                className="accent-indigo-500 rounded border-slate-700 bg-slate-900 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
-                            />
-                            <span className="flex items-center gap-1"><Award size={13} className="text-slate-400" /> Marca d'água de Fundo</span>
-                        </label>
-                        
-                        <div className="w-px h-4 bg-slate-800"></div>
-
-                        {/* Toggle de Assinaturas */}
-                        <label className="flex items-center gap-2 text-xs font-bold text-slate-350 cursor-pointer hover:text-white transition-colors">
-                            <input 
-                                type="checkbox" 
-                                checked={includeSignatures} 
-                                onChange={e => setIncludeSignatures(e.target.checked)}
-                                className="accent-indigo-500 rounded border-slate-700 bg-slate-900 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
-                            />
-                            <span className="flex items-center gap-1"><PenTool size={13} className="text-slate-400" /> Incluir Assinaturas Oficiais</span>
-                        </label>
+                <div className="bg-slate-850 border-b border-slate-800 flex flex-col z-10 select-none">
+                    {/* Tab Navigation Controls */}
+                    <div className="flex border-b border-slate-800/85 bg-slate-900/60 overflow-x-auto scrollbar-none shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setPreviewTab('layout')}
+                            className={`px-6 py-3.5 text-xs font-extrabold uppercase tracking-widest border-b-2 flex items-center gap-2 transition-all shrink-0 ${previewTab === 'layout' ? 'border-indigo-500 text-white bg-slate-800/50' : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'}`}
+                        >
+                            <Settings size={14} className={previewTab === 'layout' ? 'text-indigo-400' : 'text-slate-400'} /> 
+                            Customização do Layout e Água
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPreviewTab('signatures_manager')}
+                            className={`px-6 py-3.5 text-xs font-extrabold uppercase tracking-widest border-b-2 flex items-center gap-2 transition-all shrink-0 ${previewTab === 'signatures_manager' ? 'border-emerald-500 text-white bg-slate-800/50' : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'}`}
+                        >
+                            <PenTool size={14} className={previewTab === 'signatures_manager' ? 'text-emerald-400' : 'text-slate-400'} /> 
+                            Assinaturas Pré-definidas Salvas
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1 font-mono">
+                                {savedSignatures.length}
+                            </span>
+                        </button>
                     </div>
 
-                    {/* Inputs das assinaturas (Exibidos apenas se "includeSignatures" for verdadeiro) */}
-                    {includeSignatures && (
-                        <div className="flex items-center gap-3 animate-fadeIn flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-indigo-400 uppercase">Assinatura 1:</span>
-                                <input 
-                                    type="text" 
-                                    value={signatureName1} 
-                                    onChange={e => setSignatureName1(e.target.value)} 
-                                    placeholder="Nome da liderança"
-                                    className="bg-slate-900 text-slate-150 text-[11px] font-bold border border-slate-700 rounded-lg px-2 py-1 w-32 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
-                                    title="Nome da Assinatura 1"
-                                />
-                                <input 
-                                    type="text" 
-                                    value={signatureTitle1} 
-                                    onChange={e => setSignatureTitle1(e.target.value)} 
-                                    placeholder="Cargo / Ministério"
-                                    className="bg-slate-900 text-slate-400 text-[11px] font-semibold border border-slate-700 rounded-lg px-2 py-1 w-28 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
-                                    title="Cargo da Assinatura 1"
-                                />
+                    {/* Tab 1: Layout Controls */}
+                    {previewTab === 'layout' && (
+                        <div className="px-8 py-3 flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+                            <div className="flex items-center gap-6 flex-wrap">
+                                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                                    <Settings size={12} className="text-indigo-400" /> Customização Institucional:
+                                </span>
+
+                                {/* Toggle de Marca d'água */}
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-350 cursor-pointer hover:text-white transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={showWatermark} 
+                                        onChange={e => setShowWatermark(e.target.checked)}
+                                        className="accent-indigo-500 rounded border-slate-700 bg-slate-900 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                                    />
+                                    <span className="flex items-center gap-1"><Award size={13} className="text-slate-400" /> Marca d'água de Fundo</span>
+                                </label>
+                                
+                                <div className="w-px h-4 bg-slate-800"></div>
+
+                                {/* Toggle de Assinaturas */}
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-350 cursor-pointer hover:text-white transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={includeSignatures} 
+                                        onChange={e => setIncludeSignatures(e.target.checked)}
+                                        className="accent-indigo-500 rounded border-slate-700 bg-slate-900 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                                    />
+                                    <span className="flex items-center gap-1"><PenTool size={13} className="text-slate-400" /> Incluir Assinaturas Oficiais</span>
+                                </label>
                             </div>
-                            <span className="text-slate-700 font-bold">•</span>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-indigo-400 uppercase">Assinatura 2:</span>
-                                <input 
-                                    type="text" 
-                                    value={signatureName2} 
-                                    onChange={e => setSignatureName2(e.target.value)} 
-                                    placeholder="Nome da liderança"
-                                    className="bg-slate-900 text-slate-150 text-[11px] font-bold border border-slate-700 rounded-lg px-2 py-1 w-32 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
-                                    title="Nome da Assinatura 2"
-                                />
-                                <input 
-                                    type="text" 
-                                    value={signatureTitle2} 
-                                    onChange={e => setSignatureTitle2(e.target.value)} 
-                                    placeholder="Cargo / Ministério"
-                                    className="bg-slate-900 text-slate-400 text-[11px] font-semibold border border-slate-700 rounded-lg px-2 py-1 w-28 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
-                                    title="Cargo da Assinatura 2"
-                                />
+
+                            {/* Inputs das assinaturas (Exibidos apenas se "includeSignatures" for verdadeiro) */}
+                            {includeSignatures && (
+                                <div className="flex items-center gap-3 animate-fadeIn flex-wrap">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[9px] font-bold text-indigo-400 uppercase">Assinatura 1:</span>
+                                        <input 
+                                            type="text" 
+                                            value={signatureName1} 
+                                            onChange={e => setSignatureName1(e.target.value)} 
+                                            placeholder="Nome da liderança"
+                                            className="bg-slate-900 text-slate-150 text-[11px] font-bold border border-slate-700 rounded-lg px-2 py-1 w-32 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                            title="Nome da Assinatura 1"
+                                        />
+                                        <input 
+                                            type="text" 
+                                            value={signatureTitle1} 
+                                            onChange={e => setSignatureTitle1(e.target.value)} 
+                                            placeholder="Cargo / Ministério"
+                                            className="bg-slate-900 text-slate-400 text-[11px] font-semibold border border-slate-700 rounded-lg px-2 py-1 w-28 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                            title="Cargo da Assinatura 1"
+                                        />
+                                    </div>
+                                    <span className="text-slate-700 font-bold hidden sm:inline">•</span>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[9px] font-bold text-indigo-400 uppercase">Assinatura 2:</span>
+                                        <input 
+                                            type="text" 
+                                            value={signatureName2} 
+                                            onChange={e => setSignatureName2(e.target.value)} 
+                                            placeholder="Nome da liderança"
+                                            className="bg-slate-900 text-slate-150 text-[11px] font-bold border border-slate-700 rounded-lg px-2 py-1 w-32 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                            title="Nome da Assinatura 2"
+                                        />
+                                        <input 
+                                            type="text" 
+                                            value={signatureTitle2} 
+                                            onChange={e => setSignatureTitle2(e.target.value)} 
+                                            placeholder="Cargo / Ministério"
+                                            className="bg-slate-900 text-slate-400 text-[11px] font-semibold border border-slate-700 rounded-lg px-2 py-1 w-28 outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600" 
+                                            title="Cargo da Assinatura 2"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Tab 2: Signatures Manager */}
+                    {previewTab === 'signatures_manager' && (
+                        <div className="px-8 py-4 bg-slate-850 animate-fadeIn grid grid-cols-1 lg:grid-cols-12 gap-6 items-start border-t border-slate-800">
+                            {/* Cadastrar Nova Liderança / Assinatura */}
+                            <form onSubmit={(e) => { e.preventDefault(); }} className="lg:col-span-4 bg-slate-900 p-4 border border-slate-800 rounded-2xl space-y-3 shadow-inner">
+                                <h4 className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                                    <Plus size={12} /> Cadastrar Nova Assinatura
+                                </h4>
+                                <p className="text-[11px] text-slate-400 font-medium">Salve novas lideranças pré-definidas para que fiquem salvas no navegador para futuras impressões do sistema.</p>
+                                
+                                <div className="space-y-2.5 pt-1">
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nome Completo do Membro / Liderança</label>
+                                        <input 
+                                            type="text"
+                                            value={newSigName}
+                                            onChange={e => setNewSigName(e.target.value)}
+                                            placeholder="Ex: Pr. Geraldo de Alencar"
+                                            className="w-full bg-slate-800 text-slate-100 text-xs border border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder-slate-600 font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cargo / Ministério / Função</label>
+                                        <input 
+                                            type="text"
+                                            value={newSigTitle}
+                                            onChange={e => setNewSigTitle(e.target.value)}
+                                            placeholder="Ex: 2º Vice-Presidente ou Tesoureiro Oficial"
+                                            className="w-full bg-slate-800 text-slate-100 text-xs border border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder-slate-600 font-bold"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!newSigName.trim() || !newSigTitle.trim()) {
+                                                addToast("Por favor, preencha o nome e o cargo/ministério.", "error");
+                                                return;
+                                            }
+                                            const newSig = {
+                                                id: `sig_${Date.now()}`,
+                                                name: newSigName.trim(),
+                                                title: newSigTitle.trim()
+                                            };
+                                            const updated = [...savedSignatures, newSig];
+                                            setSavedSignatures(updated);
+                                            localStorage.setItem("gipp_predefined_signatures", JSON.stringify(updated));
+                                            setNewSigName("");
+                                            setNewSigTitle("");
+                                            addToast("Assinatura salva com sucesso!", "success");
+                                        }}
+                                        className="w-full mt-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 hover:scale-[1.02] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95 border-0 cursor-pointer"
+                                    >
+                                        <Save size={13} /> Gravar Assinatura na Lista
+                                    </button>
+                                </div>
+                            </form>
+
+                            {/* Listagem de Assinaturas pré-definidas */}
+                            <div className="lg:col-span-8 space-y-3">
+                                <div className="flex justify-between items-center px-1 flex-wrap gap-2">
+                                    <h4 className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                                        <ClipboardList size={13} className="text-emerald-400" /> Assinaturas Pré-definidas Salvas
+                                    </h4>
+                                    <div className="flex gap-4 text-[10px] font-bold text-slate-400 uppercase">
+                                        <span>Slot 1: <strong className="text-indigo-400">{signatureName1 || 'Nenhum'}</strong></span>
+                                        <span>•</span>
+                                        <span>Slot 2: <strong className="text-emerald-400">{signatureName2 || 'Nenhum'}</strong></span>
+                                    </div>
+                                </div>
+                                
+                                {savedSignatures.length === 0 ? (
+                                    <div className="p-8 text-center bg-slate-900 border border-dashed border-slate-800 rounded-2xl">
+                                        <PenTool className="text-slate-600 mx-auto mb-2 animate-pulse" size={24} />
+                                        <p className="text-xs text-slate-400 font-bold uppercase">Nenhuma assinatura pré-definida salva.</p>
+                                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">Cadastre uma assinatura no formulário ao lado para começar.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[190px] overflow-y-auto custom-scrollbar pr-1">
+                                        {savedSignatures.map(sig => (
+                                            <div key={sig.id} className="bg-slate-900/60 border border-slate-800 hover:border-slate-700 rounded-xl p-3 flex flex-col justify-between gap-3 shadow-md transition-colors">
+                                                <div>
+                                                    <p className="text-xs font-black text-slate-100 uppercase tracking-tight truncate">{sig.name}</p>
+                                                    <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider truncate mb-1">{sig.title}</p>
+                                                </div>
+                                                <div className="flex items-center justify-between border-t border-slate-800/80 pt-2 gap-2 mt-auto">
+                                                    <div className="flex gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSignatureName1(sig.name);
+                                                                setSignatureTitle1(sig.title);
+                                                                setIncludeSignatures(true);
+                                                                addToast(`"${sig.name}" definido no Slot 1!`, "success");
+                                                            }}
+                                                            className="text-[9px] font-black uppercase text-indigo-400 border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 px-2.5 py-1 rounded transition-colors cursor-pointer"
+                                                            title="Aplicar no primeiro espaço de assinatura"
+                                                        >
+                                                            Slot 1
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSignatureName2(sig.name);
+                                                                setSignatureTitle2(sig.title);
+                                                                setIncludeSignatures(true);
+                                                                addToast(`"${sig.name}" definido no Slot 2!`, "success");
+                                                            }}
+                                                            className="text-[9px] font-black uppercase text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 px-2.5 py-1 rounded transition-colors cursor-pointer"
+                                                            title="Aplicar no segundo espaço de assinatura"
+                                                        >
+                                                            Slot 2
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = savedSignatures.filter(s => s.id !== sig.id);
+                                                            setSavedSignatures(updated);
+                                                            localStorage.setItem("gipp_predefined_signatures", JSON.stringify(updated));
+                                                            addToast("Assinatura predefinida excluída.", "info");
+                                                        }}
+                                                        className="text-rose-500 hover:text-rose-450 hover:bg-rose-500/15 p-1 rounded transition-colors ml-auto border-0 bg-transparent cursor-pointer"
+                                                        title="Excluir da lista"
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
