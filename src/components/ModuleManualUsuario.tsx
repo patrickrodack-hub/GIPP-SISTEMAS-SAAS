@@ -1785,7 +1785,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP v8.4.0 (Versão Completa) estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino de qualidade (EBD dominical e cursos teológicos EAD) e na ministração estruturada e litúrgica de ordem pastoral.
+            O GIPP v8.5.0 (Versão Completa com EAD & Teologia Canônica) estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica) e na ministração estruturada e litúrgica de ordem pastoral.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

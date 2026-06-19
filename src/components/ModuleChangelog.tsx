@@ -47,11 +47,23 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.5.0 */}
+            <div className="relative pl-8 border-l-2 border-emerald-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-emerald-800 font-[Outfit]">v8.5.0 - Universidade Teológica Assembleiana & Compilador IA com Rigor Canônico</h3>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Universidade Teológica Integrada:</strong> Lançamento do novo ecossistema eclesiástico-educacional focado na formação dogmática das Assembleias de Deus no Brasil, estruturado com Grade Curricular em três níveis (Básico, Médio e Avançado) e rastreamento de progresso por módulo.</li>
+                    <li><strong className="text-slate-755 font-sans font-extrabold">Compilador Teológico por IA:</strong> Motor inteligente alimentado com as doutrinas canônicas que respeitam integralmente os 24 capítulos da Declaração de Fé da CGADB, com proteção estrita contra conceitos evolucionistas. Gera apostilas completas incluindo referências exegéticas, introdução, aplicação e quizzes automatizados, com mecanismo de autorreparo de sintaxe JSON contra quebras e aspas indesejadas.</li>
+                    <li><strong className="text-slate-755 font-sans font-extrabold">Caderno & Cadastramento de Anotações:</strong> Novo bloco interativo para elaboração de resumos e anotações teológicas com salvamento persistente robusto por lição via `localStorage` e módulo centralizado de exportação imediata para arquivos físicos `.TXT` para amparo no púlpito.</li>
+                </ul>
+            </div>
+            
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.4.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-indigo-800 font-[Outfit]">v8.4.0 - Otimização SaaS: Relação de Pacotes & Governança de Usuários</h3>
-                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Anterior)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Atualização de Malha de Pacotes:</strong> Nova redistribuição dos planos (Básico, Standard, Avançado), incluindo novos escopos como Amparo Legal, Auditoria, Salinha Kids, Lixeira e Registro de Software nativamente categorizados.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Restrições e Presets de Usuários:</strong> Ampliação das predefinições de regras (Pastores, Secretários, Administradores), unificando permissões de EBD, Salinha Kids, Backups e Recursos de Proteção.</li>
