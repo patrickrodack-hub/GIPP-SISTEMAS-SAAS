@@ -23,6 +23,60 @@ import {
 // Preset credentials and designs
 const PRESET_TEMPLATES = [
   {
+    id: 'assembleia_membro_horizontal',
+    name: 'Assembleia de Deus: Credencial de Membro (Horizontal)',
+    orientation: 'horizontal',
+    bgColor: '#1e3a8a',
+    bgImage: null as string | null,
+    fields: [
+      { id: 'logo', type: 'sticker', label: 'Símbolo Bíblia', x: 16, y: 22, size: 36, color: '#ffd700', visible: true, content: '📖', rotation: 0 },
+      { id: 'igreja', type: 'text', label: 'Igreja Assembleia de Deus', x: 55, y: 18, size: 14, color: '#ffd700', bold: true, visible: true, fontFamily: 'Outfit', alignment: 'center' },
+      { id: 'lbl_titulo', type: 'text', label: 'CARTÃO DE MEMBRO OFICIAL', x: 55, y: 27, size: 10, color: '#ffffff', bold: true, visible: true, fontFamily: 'Plus Jakarta Sans', alignment: 'center' },
+      { id: 'foto', type: 'image', label: 'Foto de Perfil', x: 18, y: 68, w: 15, h: 21, visible: true },
+      { id: 'nome', type: 'text', label: 'Nome Completo', x: 34, y: 48, size: 18, color: '#ffffff', bold: true, visible: true, fontFamily: 'Outfit', alignment: 'left' },
+      { id: 'cargo', type: 'text', label: 'Função Eclesiástica', x: 34, y: 57, size: 11, color: '#93c5fd', bold: true, visible: true, fontFamily: 'Plus Jakarta Sans', alignment: 'left' },
+      { id: 'cpf', type: 'text', label: 'CPF', x: 34, y: 66, size: 10, color: '#cbd5e1', bold: false, visible: true, fontFamily: 'JetBrains Mono', alignment: 'left' },
+      { id: 'registro', type: 'text', label: 'Reg. Membro', x: 34, y: 74, size: 10, color: '#ffd700', bold: true, visible: true, fontFamily: 'JetBrains Mono', alignment: 'left' },
+      { id: 'qr', type: 'qr', label: 'QR Validade', x: 84, y: 68, w: 12, h: 12, visible: true }
+    ]
+  },
+  {
+    id: 'assembleia_obreiro_horizontal',
+    name: 'Assembleia de Deus: Credencial de Obreiro / Oficial (Horizontal)',
+    orientation: 'horizontal',
+    bgColor: '#064e3b',
+    bgImage: null as string | null,
+    fields: [
+      { id: 'logo', type: 'sticker', label: 'Símbolo Pomba', x: 16, y: 22, size: 36, color: '#ffd700', visible: true, content: '🕊️', rotation: 0 },
+      { id: 'igreja', type: 'text', label: 'CONREMA - ASSEMBLEIA DE DEUS', x: 55, y: 18, size: 13, color: '#ffd700', bold: true, visible: true, fontFamily: 'Outfit', alignment: 'center' },
+      { id: 'lbl_titulo', type: 'text', label: 'CREDENCIAL DE MINISTÉRIO AUTORIZADO', x: 55, y: 27, size: 9, color: '#ffffff', bold: true, visible: true, fontFamily: 'Plus Jakarta Sans', alignment: 'center' },
+      { id: 'foto', type: 'image', label: 'Foto do Obreiro', x: 18, y: 68, w: 15, h: 21, visible: true },
+      { id: 'nome', type: 'text', label: 'Nome do Obreiro', x: 34, y: 48, size: 18, color: '#ffffff', bold: true, visible: true, fontFamily: 'Outfit', alignment: 'left' },
+      { id: 'cargo', type: 'text', label: 'Função: Diácono/Presbítero/Evangelista', x: 34, y: 57, size: 11, color: '#ffd700', bold: true, visible: true, fontFamily: 'Plus Jakarta Sans', alignment: 'left' },
+      { id: 'cpf', type: 'text', label: 'Documento CPF', x: 34, y: 66, size: 10, color: '#cbd5e1', bold: false, visible: true, fontFamily: 'JetBrains Mono', alignment: 'left' },
+      { id: 'registro', type: 'text', label: 'Reg. Ministério', x: 34, y: 74, size: 10, color: '#ffffff', bold: true, visible: true, fontFamily: 'JetBrains Mono', alignment: 'left' },
+      { id: 'qr', type: 'qr', label: 'QR de Segurança', x: 84, y: 68, w: 12, h: 12, visible: true }
+    ]
+  },
+  {
+    id: 'assembleia_cgadb_vertical',
+    name: 'CGADB: Credencial de Ministro Nacional (Retrato)',
+    orientation: 'vertical',
+    bgColor: '#082f49',
+    bgImage: null as string | null,
+    fields: [
+      { id: 'logo', type: 'sticker', label: 'Emblema Glóbulo', x: 50, y: 14, size: 42, color: '#f59e0b', visible: true, content: '🌐', rotation: 0 },
+      { id: 'igreja', type: 'text', label: 'C.G.A.D.B.', x: 50, y: 24, size: 18, color: '#f59e0b', bold: true, visible: true, fontFamily: 'Outfit', alignment: 'center' },
+      { id: 'lbl_titulo', type: 'text', label: 'CONVENÇÃO GERAL DAS ASSEMBLEIAS DE DEUS NO BRASIL', x: 50, y: 31, size: 9, color: '#ffffff', bold: true, visible: true, fontFamily: 'Plus Jakarta Sans', alignment: 'center' },
+      { id: 'foto', type: 'image', label: 'Ministro', x: 50, y: 48, w: 22, h: 22, visible: true },
+      { id: 'nome', type: 'text', label: 'Nome do Pastor Solicitante', x: 50, y: 62, size: 15, color: '#ffffff', bold: true, visible: true, fontFamily: 'Outfit', alignment: 'center' },
+      { id: 'cargo', type: 'text', label: 'Cargo: Pastor / Evangelista', x: 50, y: 69, size: 12, color: '#f59e0b', bold: true, visible: true, fontFamily: 'Plus Jakarta Sans', alignment: 'center' },
+      { id: 'cpf', type: 'text', label: 'CPF do Ministro', x: 50, y: 75, size: 10, color: '#e2e8f0', bold: false, visible: true, fontFamily: 'JetBrains Mono', alignment: 'center' },
+      { id: 'registro', type: 'text', label: 'Registro Nacional CGADB', x: 50, y: 81, size: 10, color: '#38bdf8', bold: true, visible: true, fontFamily: 'JetBrains Mono', alignment: 'center' },
+      { id: 'qr', type: 'qr', label: 'Segurança Convenção', x: 50, y: 91, w: 14, h: 10, visible: true }
+    ]
+  },
+  {
     id: 'pastor_gold',
     name: 'Credencial Ministerial (Ouro Real)',
     orientation: 'horizontal',
