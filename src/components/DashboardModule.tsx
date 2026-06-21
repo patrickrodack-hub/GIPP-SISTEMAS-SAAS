@@ -48,6 +48,39 @@ const DashboardModule = () => {
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
     const dashboardRef = useRef(null);
 
+    // States and helper utilities for the interactive Aniversariantes do Mês widget
+    const [birthdaySearch, setBirthdaySearch] = useState('');
+    const [selectedBirthdayMonth, setSelectedBirthdayMonth] = useState(new Date().getMonth());
+
+    const isBirthdayToday = (birthDateStr?: string) => {
+        if (!birthDateStr) return false;
+        const parts = birthDateStr.split('-');
+        if (parts.length < 3) return false;
+        const birthMonth = parseInt(parts[1]) - 1;
+        const birthDay = parseInt(parts[2]);
+        const d = new Date();
+        return birthMonth === d.getMonth() && birthDay === d.getDate();
+    };
+
+    const getPastelBg = (name: string) => {
+        const colors = [
+            'bg-indigo-50 border-indigo-150 text-indigo-700',
+            'bg-emerald-50 border-emerald-155 text-emerald-700',
+            'bg-amber-50 border-amber-100 text-amber-700',
+            'bg-rose-50 border-rose-100 text-rose-700',
+            'bg-sky-50 border-sky-100 text-sky-700',
+            'bg-violet-50 border-violet-100 text-violet-700',
+            'bg-pink-50 border-pink-100 text-pink-700',
+            'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-700'
+        ];
+        let hash = 0;
+        const safeName = name || 'Membro';
+        for (let i = 0; i < safeName.length; i++) {
+            hash = safeName.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    };
+
     const isPastorOrTesoureiro = useMemo(() => {
         if (!user) return false;
         
@@ -179,6 +212,30 @@ const DashboardModule = () => {
         const [y, month, d] = m.data_nascimento.split('-');
         return parseInt(month) - 1 === currentMonth;
     }).sort((a,b) => parseInt(a.data_nascimento.split('-')[2]) - parseInt(b.data_nascimento.split('-')[2]));
+
+    const filteredAniversariantes = useMemo(() => {
+        return (db.membros || [])
+            .filter(filterByCongregacao)
+            .filter(m => {
+                if (!m.data_nascimento) return false;
+                const parts = m.data_nascimento.split('-');
+                if (parts.length < 2) return false;
+                const month = parseInt(parts[1]) - 1;
+                
+                const matchMonth = month === selectedBirthdayMonth;
+                const matchSearch = birthdaySearch.trim() === '' || 
+                    (m.nome || '').toLowerCase().includes(birthdaySearch.toLowerCase()) || 
+                    (m.cargo || '').toLowerCase().includes(birthdaySearch.toLowerCase()) ||
+                    (m.telefone || '').includes(birthdaySearch);
+                    
+                return matchMonth && matchSearch;
+            })
+            .sort((a, b) => {
+                const dayA = parseInt(a.data_nascimento.split('-')[2]) || 0;
+                const dayB = parseInt(b.data_nascimento.split('-')[2]) || 0;
+                return dayA - dayB;
+            });
+    }, [db.membros, congregacaoFilter, selectedBirthdayMonth, birthdaySearch]);
 
     const despesasVencer = (db.financeiro || []).filter(filterByCongregacao).filter(f => {
         return f.tipo === 'saida' && f.status === 'pendente' && f.data_vencimento && f.data_vencimento.startsWith(currentMonthStr);
@@ -410,76 +467,248 @@ const DashboardModule = () => {
                     </div>
                 )}
 
+                {/* NOVO ROW: Aniversariantes do Mês (Destaque Premium) & Estado Civil */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="glass-modern p-6 rounded-[2.5rem]">
-                         <h3 className="font-bold text-lg text-slate-800 mb-6 flex items-center gap-2">
-                            <Heart size={20} className="text-pink-500"/> Estado Civil
-                        </h3>
-                        <div className="h-48 w-full">
-                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie 
-                                        data={dataEstadoCivil} 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        innerRadius={40} 
-                                        outerRadius={70} 
-                                        paddingAngle={5} 
-                                        dataKey="value"
-                                    >
-                                        {dataEstadoCivil.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsTooltip />
-                                    <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" iconSize={8} wrapperStyle={{fontSize: '10px'}}/>
-                                </PieChart>
-                            </ResponsiveContainer>
+                    {/* Widget Avançado de Aniversariantes */}
+                    <div className="glass-modern p-6 rounded-[2.5rem] lg:col-span-2 flex flex-col relative overflow-hidden">
+                        <div className="absolute right-0 top-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                        
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 relative z-10">
+                            <div>
+                                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                    <Gift size={20} className="text-amber-500 animate-pulse" /> Aniversariantes do Mês
+                                </h3>
+                                <p className="text-xs text-slate-500 font-medium font-sans">Acompanhamento pastoral de comunhão e aniversário</p>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                {/* Search input */}
+                                <div className="relative flex-1 sm:flex-initial">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Buscar aniversariante..." 
+                                        value={birthdaySearch}
+                                        onChange={e => setBirthdaySearch(e.target.value)}
+                                        className="w-full sm:w-44 pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs outline-none transition-all placeholder:text-slate-400"
+                                    />
+                                    {birthdaySearch && (
+                                        <button onClick={() => setBirthdaySearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs">×</button>
+                                    )}
+                                </div>
+                                
+                                {/* Month select selector */}
+                                <select 
+                                    value={selectedBirthdayMonth} 
+                                    onChange={e => setSelectedBirthdayMonth(parseInt(e.target.value))}
+                                    className="bg-white p-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none shadow-sm cursor-pointer"
+                                >
+                                    {monthNames.map((mName, idx) => (
+                                        <option key={idx} value={idx}>{mName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* List/Grid of Birthday Members */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[19.5rem] relative z-10">
+                            {filteredAniversariantes.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {filteredAniversariantes.map((m: any, index) => {
+                                        const isToday = isBirthdayToday(m.data_nascimento);
+                                        const parts = m.data_nascimento.split('-');
+                                        const dayStr = parts[2] || '';
+                                        const monthStr = parts[1] || '';
+                                        
+                                        const waMsg = encodeURIComponent(`Graça e paz, amado(a) obreiro(a) / irmão(ã) ${m.nome}! Passando em nome da liderança da nossa igreja para te desejar um feliz aniversário! Que o Senhor derrame infinitas bênçãos e saúde sobre sua vida neste dia tão especial. 🎉🎂🎈`);
+                                        const cleanPhone = (m.telefone || '').replace(/\D/g, '');
+                                        const waUrl = cleanPhone ? `https://wa.me/55${cleanPhone}?text=${waMsg}` : '';
+
+                                        return (
+                                            <div 
+                                                key={m.id || index} 
+                                                className={`group/bcard p-3 rounded-2xl border transition-all duration-300 flex items-center justify-between gap-3 ${
+                                                    isToday 
+                                                        ? 'bg-amber-50/70 border-amber-305 shadow-[0_4px_12px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30' 
+                                                        : 'bg-white/60 border-slate-105 hover:border-slate-200 hover:bg-slate-50/50'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    {/* Profile picture */}
+                                                    <div className="relative shrink-0">
+                                                        <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center transition-transform group-hover/bcard:scale-105 duration-300">
+                                                            {m.foto ? (
+                                                                <CachedImage 
+                                                                    src={m.foto} 
+                                                                    cacheKey={`membro_${m.id}_foto`} 
+                                                                    className="w-full h-full object-cover" 
+                                                                />
+                                                            ) : (
+                                                                <div className={`w-full h-full flex items-center justify-center text-sm font-black uppercase ${getPastelBg(m.nome)}`}>
+                                                                    {m.nome ? m.nome.charAt(0) : <User size={18} />}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {isToday && (
+                                                            <span className="absolute -top-1 -right-1 bg-amber-505 text-white rounded-full p-0.5 animate-bounce shadow-md" title="Aniversário é hoje!">
+                                                                🎈
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Text details */}
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-extrabold text-slate-800 tracking-tight truncate group-hover/bcard:text-indigo-600 transition-colors">
+                                                            {safeText(m.nome)}
+                                                        </h4>
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400 truncate tracking-wider">
+                                                            {safeText(m.cargo || 'Membro')}
+                                                        </p>
+                                                        <div className="mt-1.5 flex items-center gap-1.5">
+                                                            <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full ${
+                                                                isToday 
+                                                                    ? 'bg-amber-500 text-white animate-pulse' 
+                                                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                                            }`}>
+                                                                Dia {dayStr}/{monthStr}
+                                                            </span>
+                                                            {isToday && (
+                                                                <span className="text-[10px] font-black text-amber-605 uppercase tracking-widest animate-pulse">
+                                                                     Hoje! 🎉
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Action utilities (direct pastoral outreach) */}
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    {m.telefone ? (
+                                                        <>
+                                                            {waUrl && (
+                                                                <a 
+                                                                    href={waUrl} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer" 
+                                                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-200 border border-transparent hover:border-emerald-200/50 hover:scale-105" 
+                                                                    title="Mandar felicitações no WhatsApp"
+                                                                >
+                                                                    <MessageCircle size={15} />
+                                                                </a>
+                                                            )}
+                                                            <a 
+                                                                href={`tel:${m.telefone}`} 
+                                                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200 border border-transparent hover:border-indigo-200/50 hover:scale-105" 
+                                                                title="Ligar para parabenizar"
+                                                            >
+                                                                <Phone size={14} />
+                                                            </a>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-300 italic px-2">Sem fone</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center py-10 text-center">
+                                    <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mb-3">
+                                        <Award size={24} className="text-slate-300" />
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-500">Nenhum aniversariante encontrado</p>
+                                    <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                                        Nenhum membro faz aniversário em {monthNames[selectedBirthdayMonth]} {birthdaySearch && `contendo "${birthdaySearch}"`}.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    <div className="glass-modern p-6 rounded-[2.5rem] lg:col-span-2 flex flex-col">
-                        <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-                            <Calendar size={20} className="text-indigo-600"/> Agenda & Tarefas ({monthNames[currentMonth]})
-                        </h3>
-                        <div className="flex-1 grid md:grid-cols-2 gap-4 overflow-hidden">
-                            <div className="bg-white/40 rounded-2xl p-4 border border-white/50 overflow-y-auto custom-scrollbar max-h-60">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 sticky top-0 bg-white/0 backdrop-blur-sm">Eventos</h4>
-                                {agendaMes.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {agendaMes.map((evt, i) => (
-                                            <div key={i} className="flex gap-3 items-center">
-                                                <div className="bg-indigo-100 text-indigo-700 w-10 h-10 rounded-xl flex flex-col items-center justify-center leading-none shrink-0">
-                                                    <span className="text-[9px] font-bold uppercase">{monthNames[currentMonth].slice(0,3)}</span>
-                                                    <span className="text-sm font-black">{evt.data.split('-')[2]}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-slate-700">{evt.titulo}</p>
-                                                    <p className="text-[10px] text-slate-500">{evt.hora} • {evt.local}</p>
-                                                </div>
+                    {/* Estado Civil Card */}
+                    <div className="glass-modern p-6 rounded-[2.5rem] flex flex-col justify-between">
+                         <div>
+                             <h3 className="font-bold text-lg text-slate-800 mb-6 flex items-center gap-2">
+                                <Heart size={20} className="text-pink-500"/> Estado Civil
+                             </h3>
+                             <p className="text-xs text-slate-500 font-medium mb-4">Mapeamento conjugal e demográfico para aconselhamento e cursos de casais</p>
+                         </div>
+                         <div className="h-48 w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                 <PieChart>
+                                     <Pie 
+                                         data={dataEstadoCivil} 
+                                         cx="50%" 
+                                         cy="50%" 
+                                         innerRadius={40} 
+                                         outerRadius={70} 
+                                         paddingAngle={5} 
+                                         dataKey="value"
+                                     >
+                                         {dataEstadoCivil.map((entry, index) => (
+                                             <Cell key={`cell-${index}`} fill={entry.fill} />
+                                         ))}
+                                     </Pie>
+                                     <RechartsTooltip />
+                                     <Legend layout="horizontal" verticalAlign="bottom" align="center" iconType="circle" iconSize={8} wrapperStyle={{fontSize: '10px'}}/>
+                                 </PieChart>
+                             </ResponsiveContainer>
+                         </div>
+                    </div>
+                </div>
+
+                {/* Agenda & Tarefas (Expansão do Rodapé do Dashboard) */}
+                <div className="glass-modern p-6 rounded-[2.5rem] flex flex-col">
+                    <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
+                        <Calendar size={20} className="text-indigo-600"/> Agenda & Tarefas ({monthNames[currentMonth]} {currentYear})
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mb-6">Controle integrado de compromissos administrativos e escala litúrgica da congregação</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white/40 rounded-2xl p-5 border border-white/50 overflow-y-auto custom-scrollbar max-h-72">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase mb-4 sticky top-0 bg-white/0 backdrop-blur-sm">Eventos Confirmados / Atividades Litúrgicas</h4>
+                            {agendaMes.length > 0 ? (
+                                <div className="space-y-4">
+                                    {agendaMes.map((evt, i) => (
+                                        <div key={i} className="flex gap-4 items-center p-2 hover:bg-white/30 rounded-xl transition-all">
+                                            <div className="bg-indigo-100 text-indigo-700 w-11 h-11 rounded-2xl flex flex-col items-center justify-center leading-none shrink-0 border border-indigo-200/50 shadow-sm">
+                                                <span className="text-[9px] font-black uppercase tracking-wider">{monthNames[currentMonth].slice(0,3)}</span>
+                                                <span className="text-base font-black">{evt.data.split('-')[2]}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : <p className="text-xs text-slate-400 italic">Nenhum evento este mês.</p>}
-                            </div>
-                            <div className="bg-white/40 rounded-2xl p-4 border border-white/50 overflow-y-auto custom-scrollbar max-h-60">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 sticky top-0 bg-white/0 backdrop-blur-sm">Tarefas</h4>
-                                {tarefasMes.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {tarefasMes.map((task, i) => (
-                                            <div key={i} className="flex gap-3 items-center border-l-2 border-slate-300 pl-3">
-                                                <div>
-                                                    <p className="text-sm font-bold text-slate-700">{task.descricao}</p>
-                                                    <p className="text-[10px] text-slate-500">
-                                                        <span className={`uppercase font-bold ${task.status === 'Concluido' ? 'text-emerald-500' : 'text-amber-500'}`}>{task.status}</span>
-                                                        {task.data && ` • ${formatDateLocal(task.data)}`}
-                                                    </p>
-                                                </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-bold text-slate-800 truncate">{evt.titulo}</p>
+                                                <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">{evt.hora} • {evt.local}</p>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : <p className="text-xs text-slate-400 italic">Nenhuma tarefa este mês.</p>}
-                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <p className="text-xs text-slate-400 italic">Nenhum evento este mês.</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="bg-white/40 rounded-2xl p-5 border border-white/50 overflow-y-auto custom-scrollbar max-h-72">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase mb-4 sticky top-0 bg-white/0 backdrop-blur-sm">Tarefas de Gestão Obreira e Administrativas</h4>
+                            {tarefasMes.length > 0 ? (
+                                <div className="space-y-3">
+                                    {tarefasMes.map((task, i) => (
+                                        <div key={i} className="flex gap-3 items-start border-l-2 border-slate-300 hover:border-indigo-500 pl-4 py-1.5 transition-all">
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-slate-800">{task.descricao}</p>
+                                                <p className="text-[10px] text-slate-500 font-medium mt-1">
+                                                    <span className={`uppercase font-bold tracking-widest ${task.status === 'Concluido' ? 'text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md' : 'text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md'}`}>{task.status}</span>
+                                                    {task.data && ` • ${formatDateLocal(task.data)}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <p className="text-xs text-slate-400 italic">Nenhuma tarefa este mês.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
