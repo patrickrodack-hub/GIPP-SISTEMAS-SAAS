@@ -58,6 +58,34 @@ const ModuleConciliacaoBancaria = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
+
+    // Integração Real-time do DDA entre Módulos
+    const [ddaBoletos, setDdaBoletos] = useState<any[]>([]);
+    const [ddaViewMode, setDdaViewMode] = useState<'cnpj_dda' | 'contas_pagar'>('cnpj_dda');
+
+    useEffect(() => {
+        if (!appId || !dbFirestore) return;
+
+        const pathRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos');
+        
+        const unsubscribe = onSnapshot(pathRef, (snapshot) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap) => {
+                list.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            // Ordenar por data de emissão decrescente (ou vencimento)
+            list.sort((a, b) => {
+                const dateA = a.data_emissao || '';
+                const dateB = b.data_emissao || '';
+                return dateB.localeCompare(dateA);
+            });
+            setDdaBoletos(list);
+        }, (err) => {
+            console.error("Erro ao assinar boletos DDA no módulo de conciliação:", err);
+        });
+
+        return () => unsubscribe();
+    }, [appId, dbFirestore]);
     
     // Theming logic baseado no banco selecionado no Cadastro da Igreja
     const bancoNome = db.igreja?.banco || '';
@@ -333,6 +361,123 @@ const ModuleConciliacaoBancaria = () => {
         });
     };
 
+    const handleImportarEQuitarDda = async (boleto: any) => {
+        try {
+            const dataAtualQuitacao = new Date().toISOString().split('T')[0];
+            const novaSaida = {
+                tipo: 'saida',
+                status: 'pago',
+                descricao: `CONCILIAÇÃO DDA: ${boleto.beneficiario}`.toUpperCase(),
+                valor: Number(boleto.valor),
+                data_competencia: boleto.data_emissao || getTodayDate(),
+                data_vencimento: boleto.data_vencimento,
+                data_pagamento: dataAtualQuitacao,
+                categoria: boleto.tipo || 'Outras Despesas',
+                fornecedor_id: '',
+                congregacao_id: 'sede',
+                comprovante: '',
+                boleto_linha: boleto.linha_digitavel || '',
+                historico: [{
+                    usuario_nome: 'Conciliação Bancária',
+                    usuario_id: 'sistema',
+                    data: new Date().toISOString(),
+                    descricao: `Lançamento criado e liquidado via Conciliação Integrada DDA.`
+                }]
+            };
+
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
+            await addDoc(colRef, novaSaida);
+
+            await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', boleto.id), {
+                status: 'importado'
+            });
+
+            logAction('CONCILIAÇÃO_AUTO_DDA', `Importou e quitou boleto DDA para ${boleto.beneficiario} de R$ ${boleto.valor}`, 'financeiro', boleto.id);
+            addToast(`Boleto DDA de R$ ${boleto.valor} pago com sucesso!`, "success");
+        } catch (e) {
+            console.error("Erro ao importar e quitar DDA", e);
+            addToast("Erro ao processar boleto DDA.", "error");
+        }
+    };
+
+    const handleImportarDdaPendente = async (boleto: any) => {
+        try {
+            const novaSaida = {
+                tipo: 'saida',
+                status: 'pendente',
+                descricao: `BOLETO DDA: ${boleto.beneficiario}`.toUpperCase(),
+                valor: Number(boleto.valor),
+                data_competencia: boleto.data_emissao || getTodayDate(),
+                data_vencimento: boleto.data_vencimento,
+                data_pagamento: '',
+                categoria: boleto.tipo || 'Outras Despesas',
+                fornecedor_id: '',
+                congregacao_id: 'sede',
+                comprovante: '',
+                boleto_linha: boleto.linha_digitavel || '',
+                historico: [{
+                    usuario_nome: 'Conciliação Bancária',
+                    usuario_id: 'sistema',
+                    data: new Date().toISOString(),
+                    descricao: `Lançamento criado sob amortização via Conciliação Integrada DDA.`
+                }]
+            };
+
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
+            await addDoc(colRef, novaSaida);
+
+            await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', boleto.id), {
+                status: 'importado'
+            });
+
+            logAction('LANÇAMENTO_DDA', `Importou boleto DDA para contas a pagar: ${boleto.beneficiario}`, 'financeiro', boleto.id);
+            addToast("Boleto DDA integrado ao Contas a Pagar!", "success");
+        } catch (e) {
+            console.error("Erro ao importar DDA", e);
+            addToast("Erro ao processar boleto DDA.", "error");
+        }
+    };
+
+    const handleDescartarDda = async (id: string) => {
+        try {
+            await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', id), {
+                status: 'descartado'
+            });
+            logAction('DDA_DESCARTAR', `Descartou boleto DDA via Conciliação Bancária`, 'financeiro', id);
+            addToast("Boleto DDA marcado como descartado.", "success");
+        } catch (e) {
+            console.error("Erro ao descartar DDA", e);
+            addToast("Erro ao descartar boleto DDA.", "error");
+        }
+    };
+
+    const handlePaySelectedDda = () => {
+        if (selectedIds.length === 0) return addToast("Selecione pelo menos um boleto DDA.", "warning");
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: "Autorizar e Quitar Boletos DDA",
+            message: `Autorizar o pagamento de ${selectedIds.length} boleto(s) DDA detectado(s)? Esta ação importará esses boletos para o diário financeiro como pagos.`,
+            confirmText: "Quitar Todos",
+            variant: "success",
+            onConfirm: async () => {
+                try {
+                    for (let id of selectedIds) {
+                        const boleto = ddaBoletos.find(b => b.id === id);
+                        if (boleto && boleto.status === 'pendente') {
+                            await handleImportarEQuitarDda(boleto);
+                        }
+                    }
+                    addToast("Boletos DDA liquidados de forma integrada!", "success");
+                    setSelectedIds([]);
+                } catch(e) {
+                    console.error(e);
+                    addToast("Erro ao processar pagamentos integrados DDA.", "error");
+                }
+            }
+        });
+    };
+
     // --- TELA DE CARREGAMENTO DO BANCO ---
     if (connectingPhase === 1 || connectingPhase === 2) {
         return (
@@ -518,47 +663,168 @@ const ModuleConciliacaoBancaria = () => {
 
                     {tab === 2 && (
                         <div className="w-full space-y-6 animate-fadeIn h-full flex flex-col">
-                            <div className="bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-2xl shadow-sm shrink-0">
-                                <h4 className="font-bold text-amber-800 flex items-center gap-2"><AlertTriangle size={18}/> Pagamentos Pendentes (DDA / Débito Autorizado)</h4>
-                                <p className="text-sm text-amber-700 mt-1 font-medium">Selecione e autorize o pagamento dos títulos abaixo. Esta ação fará a quitação imediata de todos os selecionados registando a data de hoje.</p>
+                            <div className="bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-2xl shadow-sm shrink-0 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                                <div>
+                                    <h4 className="font-bold text-amber-800 flex items-center gap-2"><AlertTriangle size={18}/> Integração de Débitos Autorizados (DDA / Febraban)</h4>
+                                    <p className="text-sm text-amber-700 mt-1 font-medium">Você pode gerenciar os boletos varridos automaticamente via CPF/CNPJ (Febraban) ou os lançamentos manuais do contas a pagar.</p>
+                                </div>
+                                
+                                {/* Subtab Selector */}
+                                <div className="flex bg-amber-100/50 p-1 rounded-xl shrink-0 border border-amber-200">
+                                    <button
+                                        onClick={() => { setDdaViewMode('cnpj_dda'); setSelectedIds([]); }}
+                                        className={`py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                                            ddaViewMode === 'cnpj_dda'
+                                                ? 'bg-amber-600 text-white shadow-sm'
+                                                : 'text-amber-800 hover:text-amber-950 font-bold'
+                                        }`}
+                                    >
+                                        <Landmark size={12} /> Boletos DDA (Febraban)
+                                    </button>
+                                    <button
+                                        onClick={() => { setDdaViewMode('contas_pagar'); setSelectedIds([]); }}
+                                        className={`py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                                            ddaViewMode === 'contas_pagar'
+                                                ? 'bg-amber-600 text-white shadow-sm'
+                                                : 'text-amber-800 hover:text-amber-950 font-bold'
+                                        }`}
+                                    >
+                                        <FileText size={12} /> Contas a Pagar Ledger
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px]">
                                 <div className="p-5 bg-slate-50 border-b border-slate-200 flex justify-between items-center flex-wrap gap-4 shrink-0">
-                                    <span className="font-bold text-sm text-slate-700 bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2">
+                                    <span className="font-bold text-xs text-slate-500 uppercase tracking-wider bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2">
                                         <CheckSquare size={16} className="text-slate-400"/> {selectedIds.length} título(s) selecionado(s)
                                     </span>
-                                    <Button onClick={handlePaySelected} disabled={selectedIds.length === 0} style={{ backgroundColor: selectedIds.length > 0 ? theme.primary : '#cbd5e1', color: selectedIds.length > 0 ? theme.text : '#94a3b8' }} className="shadow-lg !border-0 transition-colors py-3.5 px-6">
-                                        <CheckSquare size={18}/> Autorizar & Quitar Selecionados
-                                    </Button>
+                                    
+                                    {ddaViewMode === 'cnpj_dda' ? (
+                                        <Button 
+                                            onClick={handlePaySelectedDda} 
+                                            disabled={selectedIds.length === 0} 
+                                            style={{ backgroundColor: selectedIds.length > 0 ? '#059669' : '#cbd5e1', color: '#ffffff' }} 
+                                            className="shadow-lg !border-0 transition-colors py-3 px-6 flex items-center gap-2"
+                                        >
+                                            <CheckCircle size={18}/> Liquidar Selecionados DDA
+                                        </Button>
+                                    ) : (
+                                        <Button 
+                                            onClick={handlePaySelected} 
+                                            disabled={selectedIds.length === 0} 
+                                            style={{ backgroundColor: selectedIds.length > 0 ? theme.primary : '#cbd5e1', color: selectedIds.length > 0 ? theme.text : '#94a3b8' }} 
+                                            className="shadow-lg !border-0 transition-colors py-3.5 px-6 flex items-center gap-2"
+                                        >
+                                            <CheckSquare size={18}/> Imputar Quitação Selecionados
+                                        </Button>
+                                    )}
                                 </div>
                                 
                                 <div className="flex-1 flex flex-col bg-slate-50/30">
-                                    <GenericTable 
-                                        title="" 
-                                        type="saida" 
-                                        data={pendentes} 
-                                        onSelectionChange={setSelectedIds}
-                                        columns={[
-                                            {header:'Vencimento', key:'data_vencimento', render: item => {
-                                                const isVencido = new Date(item.data_vencimento) < new Date();
-                                                return (
-                                                    <div className="whitespace-nowrap">
-                                                        <span className={`font-bold ${isVencido ? 'text-rose-600' : 'text-slate-700'}`}>{formatDateLocal(item.data_vencimento)}</span>
-                                                        {isVencido && <span className="block text-[9px] font-black uppercase text-rose-500 mt-0.5">Vencido</span>}
+                                    {ddaViewMode === 'cnpj_dda' ? (
+                                        <GenericTable 
+                                            title="" 
+                                            type="dda_boletos" 
+                                            data={ddaBoletos.filter(b => b.status === 'pendente')} 
+                                            onSelectionChange={setSelectedIds}
+                                            columns={[
+                                                {
+                                                    header: 'Emissão / Vencimento', 
+                                                    key: 'data_vencimento', 
+                                                    render: item => {
+                                                        const isVencido = new Date(item.data_vencimento) < new Date();
+                                                        return (
+                                                            <div className="whitespace-nowrap leading-tight">
+                                                                <span className={`font-black text-sm block ${isVencido ? 'text-rose-600' : 'text-slate-700'}`}>{formatDateLocal(item.data_vencimento)}</span>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">Emissão: {formatDateLocal(item.data_emissao)}</span>
+                                                                {isVencido && <span className="inline-block bg-rose-100 text-rose-800 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full mt-1">Vencido</span>}
+                                                            </div>
+                                                        )
+                                                    }
+                                                },
+                                                {
+                                                    header: 'Credor / Beneficiário', 
+                                                    key: 'beneficiario', 
+                                                    render: item => (
+                                                        <div className="max-w-xs md:max-w-sm">
+                                                            <span className="font-extrabold text-slate-800 block text-xs md:text-sm truncate">{item.beneficiario}</span>
+                                                            <span className="text-[10px] text-slate-400 font-bold block mt-0.5 uppercase tracking-wide">CNPJ: {item.cnpj_beneficiario}</span>
+                                                        </div>
+                                                    )
+                                                },
+                                                {
+                                                    header: 'Tipo de Despesa', 
+                                                    key: 'tipo', 
+                                                    render: item => (
+                                                        <div className="whitespace-nowrap">
+                                                            <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-[9px] font-black uppercase px-2 py-1 rounded-lg tracking-wider">
+                                                                {item.tipo || 'Consumo'}
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                },
+                                                {
+                                                    header: 'Valor do Boleto', 
+                                                    key: 'valor', 
+                                                    render: item => <span className="font-black text-rose-600 whitespace-nowrap text-base">R$ {parseFloat(item.valor).toFixed(2)}</span>
+                                                },
+                                                {
+                                                    header: 'Opções de Integração', 
+                                                    key: 'actions', 
+                                                    render: item => (
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleImportarEQuitarDda(item); }}
+                                                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg shadow-sm transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                                                            >
+                                                                <CheckCircle size={10} /> Pagar Direto
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleImportarDdaPendente(item); }}
+                                                                className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                                                            >
+                                                                <FileInput size={10} /> Agenda
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleDescartarDda(item.id); }}
+                                                                className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                                                title="Descartar"
+                                                            >
+                                                                <Trash size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                }
+                                            ]}
+                                        />
+                                    ) : (
+                                        <GenericTable 
+                                            title="" 
+                                            type="saida" 
+                                            data={pendentes} 
+                                            onSelectionChange={setSelectedIds}
+                                            columns={[
+                                                {header:'Vencimento', key:'data_vencimento', render: item => {
+                                                    const isVencido = new Date(item.data_vencimento) < new Date();
+                                                    return (
+                                                        <div className="whitespace-nowrap">
+                                                            <span className={`font-bold ${isVencido ? 'text-rose-600' : 'text-slate-700'}`}>{formatDateLocal(item.data_vencimento)}</span>
+                                                            {isVencido && <span className="block text-[9px] font-black uppercase text-rose-500 mt-0.5">Vencido</span>}
+                                                        </div>
+                                                    )
+                                                }},
+                                                {header:'Beneficiário / Histórico', key:'descricao', render: item => (
+                                                    <div>
+                                                        <span className="font-bold text-slate-800 block leading-tight">{item.descricao}</span>
+                                                        {item.fornecedor_id && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{db.fornecedores.find(f=>f.id===item.fornecedor_id)?.nome || 'Fornecedor'}</span>}
                                                     </div>
-                                                )
-                                            }},
-                                            {header:'Beneficiário / Histórico', key:'descricao', render: item => (
-                                                <div>
-                                                    <span className="font-bold text-slate-800 block leading-tight">{item.descricao}</span>
-                                                    {item.fornecedor_id && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{db.fornecedores.find(f=>f.id===item.fornecedor_id)?.nome || 'Fornecedor'}</span>}
-                                                </div>
-                                            )},
-                                            {header:'Documento', key:'doc', render: item => <span className="text-xs font-mono text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded">BOL-{item.id.substring(0,5)}</span>},
-                                            {header:'Valor (R$)', key:'valor', render: item => <span className="font-black text-rose-600 whitespace-nowrap text-base">R$ {parseFloat(item.valor).toFixed(2)}</span>}
-                                        ]}
-                                    />
+                                                )},
+                                                {header:'Documento', key:'doc', render: item => <span className="text-xs font-mono text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded">BOL-{item.id.substring(0,5)}</span>},
+                                                {header:'Valor (R$)', key:'valor', render: item => <span className="font-black text-rose-600 whitespace-nowrap text-base">R$ {parseFloat(item.valor).toFixed(2)}</span>}
+                                            ]}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </div>
