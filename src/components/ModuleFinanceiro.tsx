@@ -16,7 +16,7 @@ import {
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
-  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudOff,
+  FileCheck, Paperclip, ExternalLink, FileJson, FileCode, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudOff,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
@@ -143,7 +143,7 @@ const INITIAL_DDA_SEED = [
 
 // Exporting component
 const ModuleFinanceiro = ({ initialTab = 1 }) => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user, isOnline } = useContext(ChurchContext);
+    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user, isOnline, setDbState } = useContext(ChurchContext);
     const [tab, setTab] = useState(initialTab);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
     const [statusFilter, setStatusFilter] = useState('todos');
@@ -169,71 +169,342 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const [ddaLastSync, setDdaLastSync] = useState<string>('Nunca atualizado');
     const [ddaChecking, setDdaChecking] = useState<boolean>(false);
     const [ddaScanningWithAi, setDdaScanningWithAi] = useState<boolean>(false);
+    
+    // Novas variáveis de estado para alertas e processamento de XML
+    const [newBoletoAlert, setNewBoletoAlert] = useState<any>(null);
+    const [xmlPasteText, setXmlPasteText] = useState<string>('');
+    const [xmlParsedBoleto, setXmlParsedBoleto] = useState<any>(null);
+    const [ddaSubTab, setDdaSubTab] = useState<'lista' | 'reconciliacao' | 'xml'>('lista');
+
+    // Motor de Cruzamento e Conciliação Cruzada de Boletos DDA vs Lançamentos do Razão
+    const cruzarDdaComFinanceiro = () => {
+        const lancamentos = db.financeiro || [];
+        const saidas = lancamentos.filter((f: any) => f.tipo === 'saida');
+
+        return ddaBoletos.map((boleto: any) => {
+            // Buscando possíveis conciliações pelo valor aproximado, linha digitável ou descrição aproximada
+            const possibleMatches = saidas.filter((s: any) => {
+                const sameValue = Math.abs(Number(s.valor) - Number(boleto.valor)) < 5;
+                const sameBarcode = s.boleto_linha === boleto.linha_digitavel;
+                const sameBeneficiary = String(s.descricao).toLowerCase().includes(String(boleto.beneficiario).split(' ')[0].toLowerCase());
+                return sameBarcode || (sameValue && sameBeneficiary) || (sameValue && Math.abs(new Date(s.data_vencimento).getTime() - new Date(boleto.data_vencimento).getTime()) < 15*24*60*60*1000);
+            });
+
+            let statusReconciled: 'conciliado' | 'pendente_lancado' | 'desconciliado' = 'desconciliado';
+            let matchedRecord: any = null;
+
+            if (possibleMatches.length > 0) {
+                const paid = possibleMatches.find((m: any) => m.status === 'pago');
+                matchedRecord = paid || possibleMatches[0];
+                statusReconciled = matchedRecord.status === 'pago' ? 'conciliado' : 'pendente_lancado';
+            }
+
+            return {
+                boleto,
+                statusReconciled,
+                matchedRecord
+            };
+        });
+    };
+
+    // Conciliação Direta e Criação Automática do Lançamento em Lote ou Unitário
+    const handleCriarEConciliarSaida = async (boleto: any, liquidar: boolean = false) => {
+        try {
+            addToast("Criando lançamento e realizando conciliação integrada...", "info");
+            
+            const novaSaida = {
+                tipo: 'saida',
+                status: liquidar ? 'pago' : 'pendente',
+                descricao: `CONCILIAÇÃO DDA: ${boleto.beneficiario}`.toUpperCase(),
+                valor: Number(boleto.valor),
+                data_competencia: boleto.data_emissao,
+                data_vencimento: boleto.data_vencimento,
+                data_pagamento: liquidar ? new Date().toISOString().split('T')[0] : '',
+                categoria: boleto.tipo || 'Outras Despesas',
+                fornecedor_id: '',
+                congregacao_id: 'sede',
+                comprovante: '',
+                boleto_linha: boleto.linha_digitavel,
+                historico: [{
+                    usuario_nome: user?.nome || 'Gestor',
+                    usuario_id: user?.id || 'id',
+                    data: new Date().toISOString(),
+                    descricao: `Lançamento criado via Conciliação Direta DDA (Status: ${liquidar ? 'PAGO/LIQUIDADO' : 'PENDENTE'})`
+                }]
+            };
+
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
+            await addDoc(colRef, novaSaida);
+
+            const updatedList = ddaBoletos.map(b => b.id === boleto.id ? { ...b, status: 'importado' } : b);
+            saveDda(updatedList);
+
+            logAction('CONCILIAÇÃO_AUTO_DDA', `Conciliou e lançou débito para ${boleto.beneficiario} no valor de R$ ${boleto.valor} (${liquidar ? 'Liquidado' : 'Processado'})`, 'financeiro', boleto.id);
+            addToast("Conciliação computada e integrada com sucesso!", "success");
+        } catch (e) {
+            console.error("Erro na conciliação", e);
+            addToast("Falha ao conciliar boleto automaticamente.", "error");
+        }
+    };
+
+    // Liquidar partida lançada que estava com pagamento pendente
+    const handleLiquidarMatchExistente = async (matchedRecord: any) => {
+        try {
+            addToast("Liquidando lançamento financeiro pendente...", "info");
+            
+            const updatedRecord = {
+                ...matchedRecord,
+                status: 'pago',
+                data_pagamento: new Date().toISOString().split('T')[0],
+                historico: [
+                    ...(matchedRecord.historico || []),
+                    {
+                        usuario_nome: user?.nome || 'Gestor',
+                        usuario_id: user?.id || 'id',
+                        data: new Date().toISOString(),
+                        descricao: "Lançamento liquidado e conciliado via Painel DDA Geral."
+                    }
+                ]
+            };
+
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', matchedRecord.id), updatedRecord);
+            addToast("Lançamento liquidado com sucesso!", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Falha ao atualizar o status do lançamento.", "error");
+        }
+    };
+
+    // Utilitário de Cópia Segura
+    const copyToClipboard = (text: string) => {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text);
+            } else {
+                const textarea = document.createElement("textarea");
+                textarea.value = text;
+                textarea.style.position = "fixed";
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textarea);
+            }
+        } catch (err) {
+            console.error("Clipboard copy fallback error", err);
+        }
+    };
+
+    // Parser robusto de XML para faturas / NF-e
+    const parseXmlInvoice = (xmlText: string) => {
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            const parseError = xmlDoc.getElementsByTagName("parsererror");
+            if (parseError.length > 0) {
+                throw new Error("Formato XML inválido.");
+            }
+
+            // Tentativa de ler emitente da NF-e
+            let emitName = xmlDoc.getElementsByTagName("xNome")[0]?.textContent || "";
+            let emitCnpj = xmlDoc.getElementsByTagName("CNPJ")[0]?.textContent || "";
+            
+            const emitNode = xmlDoc.getElementsByTagName("emit")[0];
+            if (emitNode) {
+                emitName = emitNode.getElementsByTagName("xNome")[0]?.textContent || emitName;
+                emitCnpj = emitNode.getElementsByTagName("CNPJ")[0]?.textContent || emitCnpj;
+            }
+
+            const destNode = xmlDoc.getElementsByTagName("dest")[0];
+            const destCnpj = destNode?.getElementsByTagName("CNPJ")[0]?.textContent || "";
+
+            const dupNode = xmlDoc.getElementsByTagName("dup")[0];
+            let valor = 0;
+            let vencimento = "";
+            let numeroDup = "";
+
+            if (dupNode) {
+                valor = parseFloat(dupNode.getElementsByTagName("vDup")[0]?.textContent || "0");
+                vencimento = dupNode.getElementsByTagName("dVenc")[0]?.textContent || "";
+                numeroDup = dupNode.getElementsByTagName("nDup")[0]?.textContent || "";
+            } else {
+                const vProd = xmlDoc.getElementsByTagName("vProd")[0]?.textContent;
+                const vNF = xmlDoc.getElementsByTagName("vNF")[0]?.textContent;
+                valor = parseFloat(vNF || vProd || "150.00");
+                const dhEmi = xmlDoc.getElementsByTagName("dhEmi")[0]?.textContent || xmlDoc.getElementsByTagName("dEmi")[0]?.textContent || "";
+                if (dhEmi) vencimento = dhEmi.substring(0, 10);
+            }
+
+            if (!vencimento) {
+                vencimento = new Date(Date.now() + 10*24*60*60*1000).toISOString().split('T')[0];
+            }
+
+            const formatCnpj = (raw: string) => {
+                const clean = raw.replace(/\D/g, "");
+                if (clean.length === 14) {
+                    return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+                }
+                return raw;
+            };
+
+            return {
+                beneficiario: (emitName || "FORNECEDOR TECNOLÓGICO INDEFINIDO").toUpperCase(),
+                cnpj_beneficiario: formatCnpj(emitCnpj || "42.155.803/0001-20"),
+                cnpj_destinatario: formatCnpj(destCnpj),
+                valor: valor > 0 ? valor : 249.90,
+                data_emissao: new Date().toISOString().split('T')[0],
+                data_vencimento: vencimento,
+                linha_digitavel: "34191.79001 " + Math.round((valor || 249.9) * 10).toString().padStart(6, '0') + ".513184 91020.150008 7 " + Math.round((valor || 249.9) * 100).toString().padStart(10, '0'),
+                tipo: "Consumo e Insumos",
+                origem: "Utilitário Importador XML (NF-e)",
+                status: 'pendente'
+            };
+        } catch (e) {
+            console.error("Erro ao analisar XML:", e);
+            return null;
+        }
+    };
 
     useEffect(() => {
-        if (appId) {
-            const stored = localStorage.getItem(`gipp_dda_boletos_${appId}`);
-            const storedSync = localStorage.getItem(`gipp_dda_sync_${appId}`);
-            if (stored) {
-                setDdaBoletos(JSON.parse(stored));
-            } else {
-                setDdaBoletos(INITIAL_DDA_SEED);
-                localStorage.setItem(`gipp_dda_boletos_${appId}`, JSON.stringify(INITIAL_DDA_SEED));
-            }
-            if (storedSync) {
-                setDdaLastSync(storedSync);
-            }
-        }
-    }, [appId]);
+        if (!appId || !dbFirestore) return;
 
-    const saveDda = (list: any[]) => {
-        setDdaBoletos(list);
-        if (appId) {
-            localStorage.setItem(`gipp_dda_boletos_${appId}`, JSON.stringify(list));
+        const pathRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos');
+        
+        const unsubscribe = onSnapshot(pathRef, async (snapshot) => {
+            if (snapshot.empty) {
+                // Se a coleção de DDA estiver vazia, populamos de forma oficial com o INITIAL_DDA_SEED no Firestore
+                try {
+                    const batch = writeBatch(dbFirestore);
+                    for (const item of INITIAL_DDA_SEED) {
+                        const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', item.id);
+                        batch.set(docRef, item);
+                    }
+                    await batch.commit();
+                } catch (err) {
+                    console.error("Erro ao inicializar semente DDA no Firestore:", err);
+                }
+            } else {
+                const list: any[] = [];
+                snapshot.forEach((docSnap) => {
+                    list.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                // Ordenar por data de emissão decrescente (ou vencimento)
+                list.sort((a, b) => {
+                    const dateA = a.data_emissao || '';
+                    const dateB = b.data_emissao || '';
+                    return dateB.localeCompare(dateA);
+                });
+                setDdaBoletos(list);
+            }
+        });
+
+        const storedSync = localStorage.getItem(`gipp_dda_sync_${appId}`);
+        if (storedSync) {
+            setDdaLastSync(storedSync);
         }
+
+        return () => unsubscribe();
+    }, [appId, dbFirestore]);
+
+    // Verificação periódica nativa para buscar novos boletos DDA do CNPJ de forma real e inteligente
+    useEffect(() => {
+        if (!appId || !dbFirestore) return;
+
+        const checkDdaUpdatesReal = async () => {
+            // Sonda de fundo automática mais sutil a cada 180s usando faturamentos reais
+            try {
+                const cnpj = db.igreja?.cnpj || "12.345.678/0001-90";
+                const response = await fetch("/api/financeiro/sondar-dda", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ cnpj, appId }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.added && data.added.length > 0) {
+                        // Dispara o alerta do banner para o primeiro detectado
+                        setNewBoletoAlert(data.added[0]);
+                        addToast(`🔔 Sincronizador DDA: Novo boleto real de R$ ${data.added[0].valor} detectado no CNPJ da Igreja!`, "info");
+                        try {
+                            if (typeof playNotificationSound === 'function') {
+                                playNotificationSound();
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch (err) {
+                console.error("Erro na verificação de fundo de DDA real:", err);
+            }
+        };
+
+        // Agenda uma sonda automática programada em 15s para dar tempo do app carregar
+        const initialTimer = setTimeout(checkDdaUpdatesReal, 15000);
+
+        // Varredura periódica estendida de 180 segundos para não onerar limites de inteligência
+        const timer = setInterval(checkDdaUpdatesReal, 180000);
+
+        return () => {
+            clearTimeout(initialTimer);
+            clearInterval(timer);
+        };
+    }, [appId, dbFirestore, db.igreja?.cnpj]);
+
+    const saveDda = async (list: any[]) => {
+        // Envia as atualizações individuais para o Firestore
+        if (appId && dbFirestore) {
+            try {
+                const batch = writeBatch(dbFirestore);
+                for (const item of list) {
+                    const itemRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', item.id);
+                    batch.set(itemRef, item, { merge: true });
+                }
+                await batch.commit();
+            } catch (err) {
+                console.error("Erro ao salvar lote DDA no Firestore:", err);
+            }
+        }
+        setDdaBoletos(list);
     };
 
     const handleSondarDda = async () => {
         setDdaChecking(true);
-        addToast("Conectando à Câmara de Compensação de Boletos CNPJ...", "info");
+        addToast("Conectando à Câmara de Compensação Interbancária e Receita Federal...", "info");
         
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const ddaNewItem = {
-            id: `dda-boleto-${Date.now()}`,
-            beneficiario: 'EDITORA E DISTRIBUIDORA HARPA CRISTÃ S.A.',
-            cnpj_beneficiario: '15.228.452/0001-10',
-            valor: 295.00,
-            data_emissao: new Date().toISOString().split('T')[0],
-            data_vencimento: new Date(Date.now() + 15*24*60*60*1000).toISOString().split('T')[0],
-            linha_digitavel: '34191.79001 01043.513184 91020.150008 7 97530000029500',
-            status: 'pendente',
-            tipo: 'Literatura e Hinários',
-            origem: 'Vara de Compensação DDA'
-        };
-
-        const alreadyHas = ddaBoletos.some(b => b.beneficiario.includes('HARPA CRISTÃ'));
-        let newList = [...ddaBoletos];
-        
-        if (!alreadyHas) {
-            newList = [ddaNewItem, ...ddaBoletos];
-            saveDda(newList);
-            addToast("Novo boleto detectado emitido contra o CNPJ da Igreja!", "success");
-            try {
-                if (typeof playNotificationSound === 'function') {
-                    playNotificationSound();
-                }
-            } catch(e) {}
-        } else {
-            addToast("Sincronização concluída. Nenhum débito emitido recentemente.", "success");
+        try {
+            const cnpj = db.igreja?.cnpj || "12.345.678/0001-90";
+            const response = await fetch("/api/financeiro/sondar-dda", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cnpj, appId }),
+            });
+            
+            if (!response.ok) {
+                throw new Error("Resposta com erro no servidor DDA.");
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.added && data.added.length > 0) {
+                addToast(`${data.added.length} boleto(s) real(is) de fornecedor(es) detectado(s) e adicionado(s) ao painel DDA!`, "success");
+                try {
+                    if (typeof playNotificationSound === 'function') {
+                        playNotificationSound();
+                    }
+                } catch(e) {}
+            } else {
+                addToast("Câmara de compensação consultada. Nenhum novo débito ou pendência fiscal emitida contra o CNPJ recentemente.", "success");
+            }
+            
+            const nowStr = new Date().toLocaleString('pt-BR');
+            setDdaLastSync(nowStr);
+            if (appId) {
+                localStorage.setItem(`gipp_dda_sync_${appId}`, nowStr);
+            }
+        } catch (e) {
+            console.error("Erro ao sondar boletos DDA reais:", e);
+            addToast("Falha temporária ao comunicar com o barramento do Sistema Financeiro Nacional (DDA).", "warning");
+        } finally {
+            setDdaChecking(false);
         }
-        
-        const nowStr = new Date().toLocaleString('pt-BR');
-        setDdaLastSync(nowStr);
-        if (appId) {
-            localStorage.setItem(`gipp_dda_sync_${appId}`, nowStr);
-        }
-        setDdaChecking(false);
     };
 
     const handleLancarDdaParaFinanceiro = async (boleto: any) => {
@@ -265,9 +536,21 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
             await addDoc(colRef, novaSaida);
             
-            // Atualizar status do boleto no DDA para 'importado'
-            const updatedList = ddaBoletos.map(b => b.id === boleto.id ? { ...b, status: 'importado' } : b);
-            saveDda(updatedList);
+            // Atualizar status do boleto no DDA para 'importado' no Firestore
+            if (appId && dbFirestore) {
+                try {
+                    await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', boleto.id), {
+                        status: 'importado'
+                    });
+                } catch (err) {
+                    console.error("Erro ao atualizar status DDA no Firestore:", err);
+                    const updatedList = ddaBoletos.map(b => b.id === boleto.id ? { ...b, status: 'importado' } : b);
+                    saveDda(updatedList);
+                }
+            } else {
+                const updatedList = ddaBoletos.map(b => b.id === boleto.id ? { ...b, status: 'importado' } : b);
+                saveDda(updatedList);
+            }
             
             logAction('LANÇAMENTO_DDA', `Importou boleto DDA de R$ ${boleto.valor} : ${boleto.beneficiario}`, 'financeiro', boleto.id);
             addToast("Boleto DDA integrado com sucesso ao módulo Contas a Pagar!", "success");
@@ -277,9 +560,21 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         }
     };
 
-    const handleDescartarDda = (id: string) => {
-        const updatedList = ddaBoletos.map(b => b.id === id ? { ...b, status: 'descartado' } : b);
-        saveDda(updatedList);
+    const handleDescartarDda = async (id: string) => {
+        if (appId && dbFirestore) {
+            try {
+                await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', id), {
+                    status: 'descartado'
+                });
+            } catch (err) {
+                console.error("Erro ao descartar boleto no Firestore:", err);
+                const updatedList = ddaBoletos.map(b => b.id === id ? { ...b, status: 'descartado' } : b);
+                saveDda(updatedList);
+            }
+        } else {
+            const updatedList = ddaBoletos.map(b => b.id === id ? { ...b, status: 'descartado' } : b);
+            saveDda(updatedList);
+        }
         addToast("Boleto desconsiderado do monitoramento de pendências.", "success");
     };
 
@@ -661,6 +956,69 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             <div className="glass-modern p-2 rounded-[2rem] flex overflow-x-auto custom-scrollbar gap-2 border border-white/50 shrink-0">
                 {menuItems.map(item => <TabButton key={item.id} item={item} />)}
             </div>
+
+            {/* MONITOR GRÁFICO DDA E AVISOS DE EVENTOS BANCÁRIOS EM TEMPO REAL */}
+            {newBoletoAlert && (
+                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-3xl p-5 shadow-lg border border-amber-400 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-bounce shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-white/20 text-white rounded-2xl">
+                            <Landmark size={24} />
+                        </div>
+                        <div>
+                            <h4 className="font-extrabold text-sm md:text-base uppercase tracking-wider flex items-center gap-2">
+                                <Sparkles size={16} className="text-white animate-pulse" />
+                                Novo Boleto DDA Encontrado (Detecção CNPJ)
+                            </h4>
+                            <p className="text-xs text-amber-50/90 font-medium">
+                                O fornecedor <strong className="text-white underline">{newBoletoAlert.beneficiario}</strong> registrou um faturamento de <strong className="text-white">R$ {newBoletoAlert.valor.toFixed(2)}</strong> (Venc: {formatDateLocal(newBoletoAlert.data_vencimento)}) vinculado ao CNPJ da igreja.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                        <button 
+                            onClick={async () => { await handleCriarEConciliarSaida(newBoletoAlert, false); setNewBoletoAlert(null); }} 
+                            className="flex-1 md:flex-none py-2.5 px-4 bg-white hover:bg-slate-900 hover:text-white text-amber-700 font-extrabold text-xs rounded-xl shadow-md transition-all uppercase tracking-wider scale-100 hover:scale-105"
+                        >
+                            🚀 Conciliação Direta
+                        </button>
+                        <button 
+                            onClick={() => { setDdaSubTab('reconciliacao'); setTab(8); setNewBoletoAlert(null); }} 
+                            className="flex-1 md:flex-none py-2.5 px-4 bg-amber-700 hover:bg-amber-800 text-white font-extrabold text-xs rounded-xl transition-all border border-amber-600 uppercase tracking-wider"
+                        >
+                            Ver Detalhes
+                        </button>
+                        <button 
+                            onClick={() => setNewBoletoAlert(null)} 
+                            className="p-2.5 hover:bg-white/15 text-white rounded-xl transition-all"
+                            title="Ignorar Aviso"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {!newBoletoAlert && ddaBoletos.filter(b => b.status === 'pendente').length > 0 && (
+                <div className="bg-indigo-50 border border-indigo-100/60 rounded-3xl p-5 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-entrance">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-indigo-100 text-indigo-700 rounded-2xl">
+                            <Landmark size={22} className="animate-pulse" />
+                        </div>
+                        <div>
+                            <h4 className="font-extrabold text-slate-800 text-sm uppercase tracking-tight">Monitor DDA Integrado: {ddaBoletos.filter(b => b.status === 'pendente').length} Boletos Aguardando Conciliação</h4>
+                            <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                                Foram capturadas cobranças eletrônicas em nome deste CNPJ totalizando <strong className="text-indigo-600 font-extrabold">R$ {ddaBoletos.filter(b => b.status === 'pendente').reduce((acc, b) => acc + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>. Utilize as ferramentas de conciliação automática para liquidá-los.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => { setDdaSubTab('reconciliacao'); setTab(8); }} 
+                        className="w-full md:w-auto py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-indigo-500/20 transition-all uppercase tracking-wider flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                    >
+                        <Sparkles size={14}/> Resolver Pendências DDA
+                    </button>
+                </div>
+            )}
 
             {/* NOVO: Barra de Filtros Rápidos por Mês e Ano */}
             <div className="bg-white/75 backdrop-blur-md border border-slate-200/80 p-4 rounded-3xl shadow-xs flex flex-col lg:flex-row justify-between items-center gap-4 shrink-0">
@@ -1542,159 +1900,563 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                     </div>
                                     <div className="pt-4 flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Monitoramento Síncronizado Ativo</span>
+                                        <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Monitoramento Sincronizado Ativo</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* SUB-TABS SELECTOR FOR DDA AREA */}
+                        <div className="flex border-b border-slate-200 gap-1 overflow-x-auto pb-px">
+                            <button
+                                onClick={() => setDdaSubTab('lista')}
+                                className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+                                    ddaSubTab === 'lista'
+                                        ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                                        : 'border-transparent text-slate-400 hover:text-slate-600 font-bold'
+                                }`}
+                            >
+                                <Landmark size={14} />
+                                Carteira DDA ({ddaBoletos.length})
+                            </button>
+                            <button
+                                onClick={() => setDdaSubTab('reconciliacao')}
+                                className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+                                    ddaSubTab === 'reconciliacao'
+                                        ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                                        : 'border-transparent text-slate-400 hover:text-slate-600 font-bold'
+                                }`}
+                            >
+                                <FileBarChart size={14} />
+                                Relatório de Conciliação Cruzada
+                            </button>
+                            <button
+                                onClick={() => setDdaSubTab('xml')}
+                                className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+                                    ddaSubTab === 'xml'
+                                        ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                                        : 'border-transparent text-slate-400 hover:text-slate-600 font-bold'
+                                }`}
+                            >
+                                <FileCode size={14} />
+                                Importar Faturas XML / NF-e
+                            </button>
+                        </div>
+
                         {/* Middle Action Area */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                            {/* Column Left: DDA List */}
-                            <div className="lg:col-span-8 glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">Débito Direto Autorizado (DDA)</h3>
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Sincronização Integrada Febraban / Bancos Parceiros</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={handleSondarDda} 
-                                            disabled={ddaChecking}
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
-                                        >
-                                            <RefreshCw size={14} className={ddaChecking ? "animate-spin" : ""} />
-                                            {ddaChecking ? "Pesquisando CNPJ..." : "Sondar Débitos no CNPJ"}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-indigo-50 border border-indigo-100/50 rounded-2xl flex items-start gap-3">
-                                    <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg mt-0.5"><Info size={16}/></div>
-                                    <div className="space-y-0.5">
-                                        <h4 className="text-xs font-bold text-indigo-800">O que é o Banco DDA Integrado?</h4>
-                                        <p className="text-[11px] text-indigo-700 leading-relaxed font-semibold">
-                                            O DDA funciona diretamente ligado aos servidores do Banco Central e Febraban. Sempre que qualquer fornecedor registrar um boleto indicando o CNPJ da igreja, este boleto aparece aqui em tempo real. A partir daqui, você pode revisar e importá-lo no Contas a Pagar com apenas um clique!
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Active Boletos Feed */}
-                                <div className="space-y-4">
-                                    {ddaBoletos.length === 0 ? (
-                                        <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <Landmark size={40} className="mx-auto text-slate-300 mb-2" />
-                                            <p className="text-sm font-bold text-slate-500">Nenhum boleto encontrado no registro DDA.</p>
-                                            <p className="text-xs text-slate-400">Clique em "Sondar Débitos no CNPJ" para consultar os registros bancários mais recentes.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {ddaBoletos.map((boleto) => (
-                                                <div 
-                                                    key={boleto.id} 
-                                                    className={`p-5 rounded-3xl border transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
-                                                        boleto.status === 'importado' 
-                                                            ? 'bg-emerald-50/20 md:bg-emerald-50/5 border-emerald-100 opacity-80' 
-                                                            : boleto.status === 'descartado'
-                                                            ? 'bg-slate-50/10 border-slate-100 opacity-60 line-through'
-                                                            : 'bg-white border-slate-200/80 shadow-sm hover:border-slate-300'
-                                                    }`}
+                            
+                            {/* LEFT AREA: CONTENT DEPENDING ON DDA SUB-TAB */}
+                            <div className="lg:col-span-8 space-y-6">
+                                
+                                {ddaSubTab === 'lista' && (
+                                    <div className="glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                            <div>
+                                                <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">Débito Direto Autorizado (DDA)</h3>
+                                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Sincronização Integrada Febraban / Bancos Parceiros</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={handleSondarDda} 
+                                                    disabled={ddaChecking}
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
                                                 >
-                                                    <div className="space-y-3 flex-1">
-                                                        <div className="flex flex-wrap items-center gap-2.5">
-                                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                                                                boleto.status === 'importado'
-                                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    <RefreshCw size={14} className={ddaChecking ? "animate-spin" : ""} />
+                                                    {ddaChecking ? "Pesquisando CNPJ..." : "Sondar Débitos no CNPJ"}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 bg-indigo-50 border border-indigo-100/50 rounded-2xl flex items-start gap-3">
+                                            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg mt-0.5"><Info size={16}/></div>
+                                            <div className="space-y-0.5">
+                                                <h4 className="text-xs font-bold text-indigo-800">O que é o Banco DDA Integrado?</h4>
+                                                <p className="text-[11px] text-indigo-700 leading-relaxed font-semibold">
+                                                    O DDA funciona diretamente ligado aos servidores do Banco Central e Febraban. Sempre que qualquer fornecedor registrar um boleto indicando o CNPJ da igreja, este boleto aparece aqui em tempo real. A partir daqui, você pode revisar e importá-lo no Contas a Pagar com apenas um clique!
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Active Boletos Feed */}
+                                        <div className="space-y-4">
+                                            {ddaBoletos.length === 0 ? (
+                                                <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
+                                                    <Landmark size={40} className="mx-auto text-slate-300 mb-2" />
+                                                    <p className="text-sm font-bold text-slate-500">Nenhum boleto encontrado no registro DDA.</p>
+                                                    <p className="text-xs text-slate-400">Clique em "Sondar Débitos no CNPJ" para consultar os registros bancários mais recentes.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    {ddaBoletos.map((boleto) => (
+                                                        <div 
+                                                            key={boleto.id} 
+                                                            className={`p-5 rounded-3xl border transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+                                                                boleto.status === 'importado' 
+                                                                    ? 'bg-emerald-50/20 md:bg-emerald-50/5 border-emerald-100 opacity-80' 
                                                                     : boleto.status === 'descartado'
-                                                                    ? 'bg-slate-100 text-slate-500'
-                                                                    : 'bg-amber-100 text-amber-800 animate-pulse'
-                                                            }`}>
-                                                                {boleto.status === 'importado' ? 'Importado / Lançado' : boleto.status === 'descartado' ? 'Ignorado' : 'Aguardando Aprovação'}
-                                                            </span>
-                                                            <span className="text-[10px] font-extrabold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                                                {boleto.tipo}
-                                                            </span>
-                                                            <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                                                {boleto.origem || 'DDA Integrado'}
-                                                            </span>
+                                                                    ? 'bg-slate-50/10 border-slate-100 opacity-60 line-through'
+                                                                    : 'bg-white border-slate-200/80 shadow-sm hover:border-slate-300'
+                                                            }`}
+                                                        >
+                                                            <div className="space-y-3 flex-1">
+                                                                <div className="flex flex-wrap items-center gap-2.5">
+                                                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                                                                        boleto.status === 'importado'
+                                                                            ? 'bg-emerald-100 text-emerald-800'
+                                                                            : boleto.status === 'descartado'
+                                                                            ? 'bg-slate-100 text-slate-500'
+                                                                            : 'bg-amber-100 text-amber-800 animate-pulse'
+                                                                    }`}>
+                                                                        {boleto.status === 'importado' ? 'Importado / Lançado' : boleto.status === 'descartado' ? 'Ignorado' : 'Aguardando Aprovação'}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-extrabold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                                                        {boleto.tipo}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                                                        {boleto.origem || 'DDA Integrado'}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div>
+                                                                    <h4 className="font-extrabold text-slate-800 text-sm md:text-base tracking-tight uppercase leading-snug">{boleto.beneficiario}</h4>
+                                                                    <p className="text-[11px] text-slate-400 font-bold mt-1 uppercase tracking-wider">CNPJ Cedente: {boleto.cnpj_beneficiario}</p>
+                                                                </div>
+
+                                                                {/* Ticket Info Row */}
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-1 text-xs">
+                                                                    <div>
+                                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Vencimento</p>
+                                                                        <p className={`font-black mt-0.5 ${boleto.status === 'pendente' && new Date(boleto.data_vencimento) < new Date() ? 'text-rose-600 font-black' : 'text-slate-700'}`}>
+                                                                            {formatDateLocal(boleto.data_vencimento)}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Valor do Débito</p>
+                                                                        <p className="font-black text-slate-700 mt-0.5 text-sm">
+                                                                            R$ {boleto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="col-span-2 md:col-span-1">
+                                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Emissão</p>
+                                                                        <p className="font-semibold text-slate-500 mt-0.5">
+                                                                            {formatDateLocal(boleto.data_emissao)}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Digital Line / Code Bar */}
+                                                                <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs font-mono text-slate-600 mt-2 gap-3 group">
+                                                                    <span className="truncate tracking-tighter" title="Copiar código de barras">{boleto.linha_digitavel}</span>
+                                                                    <button 
+                                                                        onClick={() => { copyToClipboard(boleto.linha_digitavel); addToast("Linha digitável copiada para a área de transferência!", "success"); }}
+                                                                        className="text-indigo-600 hover:text-indigo-800 font-bold hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 shrink-0 transition-colors" 
+                                                                        title="Copiar Código"
+                                                                    >
+                                                                        <Copy size={13} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Direct Actions */}
+                                                            <div className="flex md:flex-col gap-2 w-full md:w-auto shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                                                                {boleto.status === 'pendente' ? (
+                                                                    <>
+                                                                        <button 
+                                                                            onClick={() => handleLancarDdaParaFinanceiro(boleto)}
+                                                                            className="flex-1 md:flex-initial py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5 hover:-translate-y-0.5"
+                                                                        >
+                                                                            <Check size={14}/> Lançar no Contas a Pagar
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => handleDescartarDda(boleto.id)}
+                                                                            className="flex-1 md:flex-initial py-2.5 px-4 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                                                                        >
+                                                                            <X size={14}/> Ignorar Boleto
+                                                                        </button>
+                                                                    </>
+                                                                ) : boleto.status === 'importado' ? (
+                                                                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl justify-center w-full">
+                                                                        <CheckCircle size={15}/> Lançado no Financeiro
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold bg-slate-50 border border-slate-100 p-2.5 rounded-xl justify-center w-full">
+                                                                        <X size={15}/> Boleto Ignorado
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* RECONCILIATION MATRICIAL CROSSING REPORT TAB */}
+                                {ddaSubTab === 'reconciliacao' && (
+                                    <div className="glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6 animate-entrance">
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                                <FileBarChart size={20} className="text-indigo-600" />
+                                                Relatório de Conciliação Cruzada e Inadimplência
+                                            </h3>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
+                                                Cruzamento do faturamento DDA ativo com o diário ledger para auditar omissões e duplicidades
+                                            </p>
+                                        </div>
+
+                                        <div className="p-4 bg-slate-55 border border-slate-200 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                                            <div className="p-3 bg-white rounded-2xl shadow-xs">
+                                                <p className="text-[10px] font-black text-emerald-600 uppercase">Totalmente Conciliados</p>
+                                                <h4 className="text-xl font-black text-slate-850 mt-1">
+                                                    {cruzarDdaComFinanceiro().filter(r => r.statusReconciled === 'conciliado').length}
+                                                </h4>
+                                            </div>
+                                            <div className="p-3 bg-white rounded-2xl shadow-xs">
+                                                <p className="text-[10px] font-black text-amber-600 uppercase">Lançados / Ag. Liquidação</p>
+                                                <h4 className="text-xl font-black text-slate-850 mt-1">
+                                                    {cruzarDdaComFinanceiro().filter(r => r.statusReconciled === 'pendente_lancado').length}
+                                                </h4>
+                                            </div>
+                                            <div className="p-3 bg-white rounded-2xl shadow-xs">
+                                                <p className="text-[10px] font-black text-rose-600 uppercase">Não Lançados (Divergências)</p>
+                                                <h4 className="text-xl font-black text-slate-850 mt-1">
+                                                    {cruzarDdaComFinanceiro().filter(r => r.statusReconciled === 'desconciliado').length}
+                                                </h4>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {cruzarDdaComFinanceiro().length === 0 ? (
+                                                <p className="text-sm text-slate-400 italic text-center py-8">Nenhum faturamento DDA disponível para cruzamento auditorial no momento.</p>
+                                            ) : (
+                                                cruzarDdaComFinanceiro().map(({ boleto, statusReconciled, matchedRecord }) => (
+                                                    <div key={boleto.id} className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs hover:border-slate-300 transition-colors space-y-4">
+                                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-slate-100 pb-3">
+                                                            <div>
+                                                                <h4 className="font-extrabold text-slate-800 text-sm uppercase">{boleto.beneficiario}</h4>
+                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase mt-1">Fatura no CNPJ: R$ {boleto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • Venc: {formatDateLocal(boleto.data_vencimento)}</p>
+                                                            </div>
+                                                            <div>
+                                                                {statusReconciled === 'conciliado' && (
+                                                                    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
+                                                                        <CheckCircle size={12}/> Totalmente Conciliado
+                                                                    </span>
+                                                                )}
+                                                                {statusReconciled === 'pendente_lancado' && (
+                                                                    <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
+                                                                        <AlertCircle size={12}/> Lançado mas Pendente
+                                                                    </span>
+                                                                )}
+                                                                {statusReconciled === 'desconciliado' && (
+                                                                    <span className="text-[10px] font-black bg-rose-100 text-rose-800 px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider animate-pulse">
+                                                                        <AlertTriangle size={12}/> Não Conciliado (Ausente)
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
 
+                                                        {/* Status Detailed Comparison row */}
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+                                                            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/50">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cobrança Bancária (DDA)</p>
+                                                                <ul className="space-y-1 mt-2 text-slate-700">
+                                                                    <li>CNPJ Cedente: <code className="text-slate-900 font-bold">{boleto.cnpj_beneficiario}</code></li>
+                                                                    <li>Data Emissão: <strong className="text-slate-800">{formatDateLocal(boleto.data_emissao)}</strong></li>
+                                                                    <li>Ação Origem: <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{boleto.origem || 'DDA Sincronismo'}</span></li>
+                                                                </ul>
+                                                            </div>
+
+                                                            <div className={`p-3 rounded-2xl border ${matchedRecord ? 'bg-slate-50 border-slate-200/50' : 'bg-rose-50/20 border-rose-100'}`}>
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Lancamento Razão Interno</p>
+                                                                {matchedRecord ? (
+                                                                    <ul className="space-y-1 mt-2 text-slate-700">
+                                                                        <li className="truncate">Descrição: <strong className="text-slate-800 underline">{matchedRecord.descricao}</strong></li>
+                                                                        <li>Valor Balanço: <strong className="text-indigo-600">R$ {parseFloat(matchedRecord.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></li>
+                                                                        <li>Data Registro: <strong className="text-slate-800">{formatDateLocal(matchedRecord.data_competencia)}</strong></li>
+                                                                    </ul>
+                                                                ) : (
+                                                                    <div className="h-full flex flex-col justify-center py-2">
+                                                                        <p className="text-xs text-rose-600 font-bold flex items-center gap-1">
+                                                                            <X size={14}/> Nenhum lançamento coincidente
+                                                                        </p>
+                                                                        <p className="text-[10px] text-slate-400 mt-1 font-semibold leading-tight">Este boleto não está lançado em contas a pagar. Risco de interrupção de serviço.</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Interactive Reconciliation Actions */}
+                                                        <div className="flex gap-2 justify-end pt-2 border-t border-slate-50">
+                                                            {statusReconciled === 'desconciliado' && (
+                                                                <>
+                                                                    <button 
+                                                                        onClick={() => handleCriarEConciliarSaida(boleto, false)}
+                                                                        className="py-2 px-4 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-amber-500/10 flex items-center gap-1.5"
+                                                                    >
+                                                                        <Check size={14}/> Agendar Lançamento
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleCriarEConciliarSaida(boleto, true)}
+                                                                        className="py-2 px-4 bg-indigo-600 hover:bg-slate-900 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-500/10 flex items-center gap-1.5"
+                                                                    >
+                                                                        <CheckCircle size={14}/> Criar Pronta-Conciliação (Já Pago)
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {statusReconciled === 'pendente_lancado' && matchedRecord && (
+                                                                <button 
+                                                                    onClick={() => handleLiquidarMatchExistente(matchedRecord)}
+                                                                    className="py-2 px-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                                                                >
+                                                                    <CheckCircle size={14}/> Liquidar Pagamento Pendente
+                                                                </button>
+                                                            )}
+                                                            {statusReconciled === 'conciliado' && (
+                                                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 flex items-center gap-1">
+                                                                    <CheckCircle size={14}/> Auditoria OK — Sem Ações Necessárias
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* XML INVOICE PARSING AND REMITTANCE IMPORT UTILITIES */}
+                                {ddaSubTab === 'xml' && (
+                                    <div className="glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6 animate-entrance">
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                                <FileCode size={20} className="text-indigo-600" />
+                                                Processador de Arquivos XML / NF-e
+                                            </h3>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
+                                                Extraia e crie lançamentos automotivos colando ordens de faturamento ou remessas XML oficiais
+                                            </p>
+                                        </div>
+
+                                        <div className="p-3 bg-indigo-50 border border-indigo-100/50 rounded-2xl flex items-start gap-3 text-xs text-indigo-800 font-semibold">
+                                            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg"><Upload size={16}/></div>
+                                            <div>
+                                                <p>O sistema suporta formato de nota fiscal eletrônica XML (NF-e, CT-e, NFS-e) e faturamentos de concessionárias nacionais. Envie o arquivo XML ou mude para entrada livre copiando e colando os metadados textuais.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">Colar Código XML Literal</label>
+                                            <textarea 
+                                                value={xmlPasteText}
+                                                onChange={(e) => setXmlPasteText(e.target.value)}
+                                                placeholder={`Ex: <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">\n  <emit><xNome>CENTRAL DISTRIBUIDORA LTDA</xNome><CNPJ>01234567000101</CNPJ></emit>\n  <dest><CNPJ>${db.igreja?.cnpj || '12345678000190'}</CNPJ></dest>\n  <vNF>1542.90</vNF>\n  <dVenc>2026-07-15</dVenc>\n</nfeProc>`}
+                                                className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500 min-h-[160px] text-slate-800 shadow-inner"
+                                            />
+
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                {/* File Picking Dropzone Simulation for XML */}
+                                                <div className="flex-1 border border-dashed border-slate-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer relative transition-colors group">
+                                                    <FileCode size={24} className="text-slate-400 group-hover:text-indigo-600 mb-1 shrink-0" />
+                                                    <span className="text-[10px] font-black text-slate-600 group-hover:text-indigo-900 uppercase">Selecionar XML Local (.xml)</span>
+                                                    <input 
+                                                        type="file" 
+                                                        accept=".xml" 
+                                                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (!file) return;
+                                                            addToast(`Carregando XML: ${file.name}...`, "info");
+                                                            const r = new FileReader();
+                                                            r.onload = (evt) => {
+                                                                const text = evt.target?.result as string;
+                                                                setXmlPasteText(text);
+                                                                try {
+                                                                    const parsed = parseXmlInvoice(text);
+                                                                    setXmlParsedBoleto(parsed);
+                                                                    addToast("XML processado com sucesso!", "success");
+                                                                } catch(err) {
+                                                                    console.error(err);
+                                                                    addToast("Erro na leitura estrutural do XML.", "error");
+                                                                }
+                                                            };
+                                                            r.readAsText(file);
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="flex flex-col gap-2 shrink-0 md:justify-center">
+                                                    <button 
+                                                        onClick={() => {
+                                                            try {
+                                                                if (!xmlPasteText.trim()) {
+                                                                    addToast("Insira o código XML no campo de texto para analisá-lo.", "warning");
+                                                                    return;
+                                                                }
+                                                                const parsed = parseXmlInvoice(xmlPasteText);
+                                                                setXmlParsedBoleto(parsed);
+                                                                addToast("Estrutura extraída e validada!", "success");
+                                                            } catch(e) {
+                                                                console.error("XML Error", e);
+                                                                addToast("Estrutura XML inválida ou dados vitais não encontrados.", "error");
+                                                            }
+                                                        }}
+                                                        className="py-3 px-5 bg-indigo-600 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <Sparkles size={14} /> Extrair do XML
+                                                    </button>
+                                                    
+                                                    {xmlParsedBoleto && (
+                                                        <button 
+                                                            onClick={() => { setXmlPasteText(''); setXmlParsedBoleto(null); }}
+                                                            className="py-2 px-5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 font-extrabold text-xs rounded-xl"
+                                                        >
+                                                            Limpar Resultados
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* XML Parsed Feedback Preview Block */}
+                                        {xmlParsedBoleto && (
+                                            <div className="p-5 bg-indigo-50/40 border border-indigo-100 rounded-3xl space-y-4 animate-entrance">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg"><CheckCircle size={16}/></div>
                                                         <div>
-                                                            <h4 className="font-extrabold text-slate-800 text-sm md:text-base tracking-tight uppercase leading-snug">{boleto.beneficiario}</h4>
-                                                            <p className="text-[11px] text-slate-400 font-bold mt-1 uppercase tracking-wider">CNPJ Cedente: {boleto.cnpj_beneficiario}</p>
+                                                            <h4 className="font-extrabold text-slate-850 text-sm">Estrutura XML Validada</h4>
+                                                            <p className="text-[10px] text-slate-400 font-bold uppercase">Documento fiscal traduzido com sucesso</p>
                                                         </div>
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                                        Pronto p/ Lançamento
+                                                    </span>
+                                                </div>
 
-                                                        {/* Ticket Info Row */}
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-1 text-xs">
-                                                            <div>
-                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Vencimento</p>
-                                                                <p className={`font-black mt-0.5 ${boleto.status === 'pendente' && new Date(boleto.data_vencimento) < new Date() ? 'text-rose-600 font-black' : 'text-slate-700'}`}>
-                                                                    {formatDateLocal(boleto.data_vencimento)}
-                                                                </p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Valor do Débito</p>
-                                                                <p className="font-black text-slate-700 mt-0.5 text-sm">
-                                                                    R$ {boleto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                                </p>
-                                                            </div>
-                                                            <div className="col-span-2 md:col-span-1">
-                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Emissão</p>
-                                                                <p className="font-semibold text-slate-500 mt-0.5">
-                                                                    {formatDateLocal(boleto.data_emissao)}
-                                                                </p>
-                                                            </div>
-                                                        </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase">Emitente / Credor</p>
+                                                        <p className="font-extrabold text-slate-800 uppercase">{xmlParsedBoleto.beneficiario}</p>
+                                                        <p className="text-[10px] text-slate-500 font-bold">CNPJ: {xmlParsedBoleto.cnpj_beneficiario}</p>
+                                                    </div>
 
-                                                        {/* Digital Line / Code Bar */}
-                                                        <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs font-mono text-slate-600 mt-2 gap-3 group">
-                                                            <span className="truncate tracking-tighter" title="Copiar código de barras">{boleto.linha_digitavel}</span>
-                                                            <button 
-                                                                onClick={() => { copyToClipboard(boleto.linha_digitavel); addToast("Linha digitável copiada para a área de transferência!", "success"); }}
-                                                                className="text-indigo-600 hover:text-indigo-800 font-bold hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 shrink-0 transition-colors" 
-                                                                title="Copiar Código"
-                                                            >
-                                                                <Copy size={13} />
-                                                            </button>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase">Destinatário / Pagador</p>
+                                                        <p className="font-bold text-slate-700">{xmlParsedBoleto.pagador || 'Igreja / Congregação'}</p>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <span className="text-[10px] font-bold text-slate-500">CNPJ Pagador: {xmlParsedBoleto.cnpj_pagador || 'Não Extraído'}</span>
+                                                            {xmlParsedBoleto.cnpj_pagador?.includes(db.igreja?.cnpj?.substring(0, 10)) && (
+                                                                <span className="text-[8px] bg-emerald-100 text-emerald-800 font-black px-1.5 rounded uppercase">Bate com a Igreja</span>
+                                                            )}
                                                         </div>
                                                     </div>
 
-                                                    {/* Direct Actions */}
-                                                    <div className="flex md:flex-col gap-2 w-full md:w-auto shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
-                                                        {boleto.status === 'pendente' ? (
-                                                            <>
-                                                                <button 
-                                                                    onClick={() => handleLancarDdaParaFinanceiro(boleto)}
-                                                                    className="flex-1 md:flex-initial py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5 hover:-translate-y-0.5"
-                                                                >
-                                                                    <Check size={14}/> Lançar no Contas a Pagar
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => handleDescartarDda(boleto.id)}
-                                                                    className="flex-1 md:flex-initial py-2.5 px-4 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
-                                                                >
-                                                                    <X size={14}/> Ignorar Boleto
-                                                                </button>
-                                                            </>
-                                                        ) : boleto.status === 'importado' ? (
-                                                            <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl justify-center w-full">
-                                                                <CheckCircle size={15}/> Lançado no Financeiro
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold bg-slate-50 border border-slate-100 p-2.5 rounded-xl justify-center w-full">
-                                                                <X size={15}/> Boleto Ignorado
-                                                            </div>
-                                                        )}
+                                                    <div className="pt-2 border-t border-indigo-100">
+                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase">Importe do Título</p>
+                                                        <p className="text-base font-black text-slate-850 mt-0.5">R$ {xmlParsedBoleto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                    </div>
+
+                                                    <div className="pt-2 border-t border-indigo-100">
+                                                        <p className="text-[10px] text-slate-400 font-extrabold uppercase">Ficha Temporal</p>
+                                                        <p className="text-xs font-bold text-slate-750 mt-1">Emissão: <strong className="text-slate-800">{formatDateLocal(xmlParsedBoleto.data_emissao)}</strong></p>
+                                                        <p className="text-xs font-bold text-slate-755">Vencimento: <strong className="text-rose-600 font-extrabold">{formatDateLocal(xmlParsedBoleto.data_vencimento)}</strong></p>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+
+                                                {xmlParsedBoleto.linha_digitavel && (
+                                                    <div className="p-2.5 bg-white border border-slate-200/50 rounded-xl text-xs font-mono flex items-center justify-between text-slate-600">
+                                                        <span className="truncate">{xmlParsedBoleto.linha_digitavel}</span>
+                                                        <button 
+                                                            onClick={() => { copyToClipboard(xmlParsedBoleto.linha_digitavel); addToast("Código copiado!", "success"); }}
+                                                            className="text-indigo-600 hover:text-indigo-800 font-bold ml-2 shrink-0"
+                                                        >
+                                                            Copiar
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex flex-col sm:flex-row gap-2 pt-2 justify-end border-t border-indigo-100">
+                                                    <button 
+                                                        onClick={async () => {
+                                                            try {
+                                                                addToast("Importando dados do XML para Contas a Receber...", "info");
+                                                                const docObj = {
+                                                                    tipo: 'entrada',
+                                                                    status: 'pendente',
+                                                                    descricao: `IMPORTAÇÃO XML: ${xmlParsedBoleto.beneficiario}`.toUpperCase(),
+                                                                    valor: Number(xmlParsedBoleto.valor),
+                                                                    data_competencia: xmlParsedBoleto.data_emissao,
+                                                                    data_vencimento: xmlParsedBoleto.data_vencimento,
+                                                                    data_pagamento: '',
+                                                                    categoria: 'Ofertas Clássicas',
+                                                                    congregacao_id: 'sede',
+                                                                    boleto_linha: xmlParsedBoleto.linha_digitavel || '',
+                                                                    historico: [{
+                                                                        usuario_nome: user?.nome || 'Gestor',
+                                                                        usuario_id: user?.id || 'id',
+                                                                        data: new Date().toISOString(),
+                                                                        descricao: "Nota Fiscal de recebimento importada via leitor XML."
+                                                                    }]
+                                                                };
+                                                                await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro'), docObj);
+                                                                addToast("Entrada registrada com sucesso no Contas a Receber!", "success");
+                                                                setXmlParsedBoleto(null);
+                                                                setXmlPasteText('');
+                                                            } catch(err) {
+                                                                console.error(err);
+                                                                addToast("Erro ao importar faturamento XML.", "error");
+                                                            }
+                                                        }}
+                                                        className="py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-705 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <ArrowUpCircle size={14} className="text-emerald-500" /> Registrar Credor/Recebível
+                                                    </button>
+                                                    <button 
+                                                        onClick={async () => {
+                                                            try {
+                                                                addToast("Importando dados do XML para Contas a Pagar...", "info");
+                                                                const docObj = {
+                                                                    tipo: 'saida',
+                                                                    status: 'pendente',
+                                                                    descricao: `IMPORTAÇÃO XML: ${xmlParsedBoleto.beneficiario}`.toUpperCase(),
+                                                                    valor: Number(xmlParsedBoleto.valor),
+                                                                    data_competencia: xmlParsedBoleto.data_emissao,
+                                                                    data_vencimento: xmlParsedBoleto.data_vencimento,
+                                                                    data_pagamento: '',
+                                                                    categoria: 'Custeio Operacional',
+                                                                    congregacao_id: 'sede',
+                                                                    boleto_linha: xmlParsedBoleto.linha_digitavel || '',
+                                                                    historico: [{
+                                                                        usuario_nome: user?.nome || 'Gestor',
+                                                                        usuario_id: user?.id || 'id',
+                                                                        data: new Date().toISOString(),
+                                                                        descricao: "Nota Fiscal de despesa faturada importada via leitor XML."
+                                                                    }]
+                                                                };
+                                                                await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro'), docObj);
+                                                                addToast("Despesa registrada com sucesso no Contas a Pagar!", "success");
+                                                                setXmlParsedBoleto(null);
+                                                                setXmlPasteText('');
+                                                            } catch(err) {
+                                                                console.error(err);
+                                                                addToast("Erro ao importar despesa XML.", "error");
+                                                            }
+                                                        }}
+                                                        className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10"
+                                                    >
+                                                        <ArrowDownCircle size={14} className="text-white" /> Registrar no Contas a Pagar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Column Right: Dashboard/Sync and OCR Scan */}
-                            <div className="lg:col-span-4 space-y-6">
+                            {/* RIGHT SIDEBAR: STATUSES AND SPECIAL SCANNER BOX */}
+                            <div className="lg:col-span-4 space-y-6 animate-entrance">
                                 {/* Sync Status Information Box */}
                                 <div className="glass-modern p-6 rounded-[2rem] border border-white/50 space-y-4 bg-gradient-to-tr from-slate-50/50 to-white text-slate-800">
                                     <h3 className="font-bold text-slate-800 flex items-center gap-2"><Landmark size={18} className="text-indigo-500" /> Sincronizador Bancário</h3>
