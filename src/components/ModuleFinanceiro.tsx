@@ -523,6 +523,11 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                     }
                 }
                 addToast(`${data.added.length} boleto(s) real(is) de fornecedor(es) detectado(s) e adicionado(s) ao painel DDA!`, "success");
+                if (data.message) {
+                    setTimeout(() => {
+                        addToast(data.message, "info");
+                    }, 1000);
+                }
                 try {
                     if (typeof playNotificationSound === 'function') {
                         playNotificationSound();
@@ -537,9 +542,10 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             if (appId) {
                 localStorage.setItem(`gipp_dda_sync_${appId}`, nowStr);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Erro ao sondar boletos DDA reais:", e);
-            addToast("Falha temporária ao comunicar com o barramento do Sistema Financeiro Nacional (DDA).", "warning");
+            const errMsg = e?.message || "Falha temporária ao comunicar com o barramento do Sistema Financeiro Nacional (DDA).";
+            addToast(errMsg, "warning");
         } finally {
             setDdaChecking(false);
         }
