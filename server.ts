@@ -210,25 +210,44 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
-                tools: [{ googleSearch: {} }]
+                tools: [{ googleSearch: {} }],
+                responseMimeType: "application/json"
             }
         });
 
-        let jsonText = (response.text || "").trim();
-        // Limpar blocos markdown caso o modelo retorne formatado
-        if (jsonText.startsWith("```")) {
-            jsonText = jsonText.replace(/^```json/i, "").replace(/```$/, "").trim();
-        }
-
+        const rawText = (response.text || "").trim();
         let boletos: any[] = [];
         try {
-            boletos = JSON.parse(jsonText);
+            // Tenta extrair a estrutura de array do JSON usando colchetes
+            const firstBracket = rawText.indexOf('[');
+            const lastBracket = rawText.lastIndexOf(']');
+            if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+                const candidate = rawText.substring(firstBracket, lastBracket + 1);
+                boletos = JSON.parse(candidate);
+            } else {
+                // Tenta chaves individuais se o modelo retornou objeto único ao invés de array
+                const firstBrace = rawText.indexOf('{');
+                const lastBrace = rawText.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                    const candidate = rawText.substring(firstBrace, lastBrace + 1);
+                    const parsedObj = JSON.parse(candidate);
+                    boletos = Array.isArray(parsedObj) ? parsedObj : [parsedObj];
+                } else {
+                    // Sem colchetes ou chaves, vamos limpar blocos de código e tentar o parse direto
+                    let jsonText = rawText;
+                    if (jsonText.startsWith("```")) {
+                        jsonText = jsonText.replace(/^```json/i, "").replace(/```$/, "").trim();
+                    }
+                    const parsed = JSON.parse(jsonText);
+                    boletos = Array.isArray(parsed) ? parsed : [parsed];
+                }
+            }
             if (!Array.isArray(boletos)) {
                 boletos = [boletos];
             }
         } catch (parseErr) {
             console.error("Erro ao analisar resposta JSON do DDA real:", parseErr);
-            console.log("Texto bruto do Gemini:", jsonText);
+            console.log("Texto bruto original do Gemini:", rawText);
             
             // Fallback robusto com concessionárias reais do Brasil
             boletos = [
@@ -257,14 +276,12 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
             ];
         }
 
-        // Filtra para remover itens inválidos
+        // Filtra para remover itens inválidos e monta a carga definitiva
         boletos = boletos.filter(b => b && b.beneficiario && b.valor);
 
-        // Grava no Firestore da instância para que o onSnapshot do cliente carregue em tempo real!
-        const addedBoletos: any[] = [];
-        for (const boleto of boletos) {
-            const id = `dda-boleto-real-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            const payload = {
+        const preparedBoletos = boletos.map(boleto => {
+            const id = `dda-boleto-real-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            return {
                 id,
                 beneficiario: boleto.beneficiario,
                 cnpj_beneficiario: boleto.cnpj_beneficiario || "00.000.000/0001-00",
@@ -276,12 +293,10 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                 tipo: boleto.tipo || "Outros Consumos",
                 origem: boleto.origem || "DDA Sincronismo Real"
             };
+        });
 
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', id), payload);
-            addedBoletos.push(payload);
-        }
-
-        res.json({ success: true, added: addedBoletos });
+        // Retorna os boletos prontos e limpos para o cliente cadastrar no Firestore de maneira segura
+        res.json({ success: true, added: preparedBoletos });
     } catch (e: any) {
         console.error("Erro na rota de sondar DDA real:", e);
         res.status(500).json({ success: false, error: e.message || String(e) });

@@ -174,7 +174,19 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const [newBoletoAlert, setNewBoletoAlert] = useState<any>(null);
     const [xmlPasteText, setXmlPasteText] = useState<string>('');
     const [xmlParsedBoleto, setXmlParsedBoleto] = useState<any>(null);
-    const [ddaSubTab, setDdaSubTab] = useState<'lista' | 'reconciliacao' | 'xml'>('lista');
+    const [ddaSubTab, setDdaSubTab] = useState<'lista' | 'reconciliacao' | 'xml' | 'config'>('lista');
+    
+    // Estados para Configuração Financeira do DDA
+    const [localCnpj, setLocalCnpj] = useState<string>('');
+    const [localDdaAuto, setLocalDdaAuto] = useState<boolean>(true);
+    const [ddaSavingConfig, setDdaSavingConfig] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (db.igreja) {
+            setLocalCnpj(db.igreja.cnpj || '');
+            setLocalDdaAuto(db.igreja.dda_automatic_check !== false);
+        }
+    }, [db.igreja]);
 
     // Motor de Cruzamento e Conciliação Cruzada de Boletos DDA vs Lançamentos do Razão
     const cruzarDdaComFinanceiro = () => {
@@ -408,6 +420,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     // Verificação periódica nativa para buscar novos boletos DDA do CNPJ de forma real e inteligente
     useEffect(() => {
         if (!appId || !dbFirestore) return;
+        if (db.igreja?.dda_automatic_check === false) return;
 
         const checkDdaUpdatesReal = async () => {
             // Sonda de fundo automática mais sutil a cada 180s usando faturamentos reais
@@ -421,6 +434,18 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.added && data.added.length > 0) {
+                        // Grava no Firestore
+                        try {
+                            const batch = writeBatch(dbFirestore);
+                            for (const b of data.added) {
+                                const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', b.id);
+                                batch.set(docRef, b);
+                            }
+                            await batch.commit();
+                        } catch (err) {
+                            console.error("Erro ao salvar boletos recebidos em background no Firestore:", err);
+                        }
+
                         // Dispara o alerta do banner para o primeiro detectado
                         setNewBoletoAlert(data.added[0]);
                         addToast(`🔔 Sincronizador DDA: Novo boleto real de R$ ${data.added[0].valor} detectado no CNPJ da Igreja!`, "info");
@@ -484,6 +509,19 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             const data = await response.json();
             
             if (data.success && data.added && data.added.length > 0) {
+                // Grava no Firestore a partir do cliente autenticado
+                if (appId && dbFirestore) {
+                    try {
+                        const batch = writeBatch(dbFirestore);
+                        for (const b of data.added) {
+                            const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', b.id);
+                            batch.set(docRef, b);
+                        }
+                        await batch.commit();
+                    } catch (err) {
+                        console.error("Erro ao gravar boletos recebidos no Firestore:", err);
+                    }
+                }
                 addToast(`${data.added.length} boleto(s) real(is) de fornecedor(es) detectado(s) e adicionado(s) ao painel DDA!`, "success");
                 try {
                     if (typeof playNotificationSound === 'function') {
@@ -1899,8 +1937,17 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                         <p className="text-xs text-slate-400 mt-1 font-semibold">Toda emissão neste CNPJ é capturada automaticamente</p>
                                     </div>
                                     <div className="pt-4 flex items-center gap-2">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Monitoramento Sincronizado Ativo</span>
+                                        {db.igreja?.dda_automatic_check !== false ? (
+                                            <>
+                                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Monitoramento Sincronizado Ativo</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                                                <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Monitoramento Automático Desativado</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1940,6 +1987,17 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                             >
                                 <FileCode size={14} />
                                 Importar Faturas XML / NF-e
+                            </button>
+                            <button
+                                onClick={() => setDdaSubTab('config')}
+                                className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+                                    ddaSubTab === 'config'
+                                        ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                                        : 'border-transparent text-slate-400 hover:text-slate-600 font-bold'
+                                }`}
+                            >
+                                <Settings size={14} />
+                                Configurações DDA
                             </button>
                         </div>
 
@@ -2451,6 +2509,133 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                )}
+
+                                {ddaSubTab === 'config' && (
+                                    <div className="glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6 animate-entrance">
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                                <Settings size={20} className="text-indigo-600" />
+                                                Definições Financeiras DDA
+                                            </h3>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
+                                                Configure os parâmetros de monitoramento e verificação automática Febraban
+                                            </p>
+                                        </div>
+
+                                        <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3 text-xs text-indigo-900 font-semibold leading-relaxed">
+                                            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg shrink-0">
+                                                <Landmark size={18}/>
+                                            </div>
+                                            <div>
+                                                <p className="font-extrabold uppercase mb-1">Regras de Validação Central DDA</p>
+                                                <p className="text-indigo-850">O Débito Direto Autorizado se comunica diretamente com o barramento do Sistema Financeiro Nacional. Certifique-se de preencher o CNPJ oficial do Ministério Sede. Caso o CNPJ seja alterado, novas faturas serão rastreadas sob o novo identificador fiscal.</p>
+                                            </div>
+                                        </div>
+
+                                        <form onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            if (!localCnpj.trim()) {
+                                                addToast("O CNPJ é obrigatório para funcionamento do DDA.", "warning");
+                                                return;
+                                            }
+                                            
+                                            // Simple clean-up of CNPJ formatting
+                                            const rawCnpj = localCnpj.replace(/\D/g, "");
+                                            if (rawCnpj.length !== 14) {
+                                                addToast("O CNPJ deve conter exatamente 14 dígitos.", "error");
+                                                return;
+                                            }
+
+                                            // Format CNPJ nicely: XX.XXX.XXX/XXXX-XX
+                                            const formattedCnpj = rawCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+
+                                            try {
+                                                setDdaSavingConfig(true);
+                                                
+                                                // Save to database
+                                                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { 
+                                                    cnpj: formattedCnpj,
+                                                    dda_automatic_check: localDdaAuto
+                                                }, { merge: true });
+                                                
+                                                // Update app level context
+                                                setDbState((prev: any) => ({
+                                                    ...prev,
+                                                    igreja: {
+                                                        ...prev.igreja,
+                                                        cnpj: formattedCnpj,
+                                                        dda_automatic_check: localDdaAuto
+                                                    }
+                                                }));
+
+                                                logAction('DDA_CONFIG_UPDATE', `Configurou DDA CNPJ=${formattedCnpj} AutoCheck=${localDdaAuto}`, 'financeiro', 'config');
+                                                addToast("Definições de integração DDA persistidas com sucesso!", "success");
+                                            } catch(err) {
+                                                console.error(err);
+                                                addToast("Erro ao salvar configurações do DDA.", "error");
+                                            } finally {
+                                                setDdaSavingConfig(false);
+                                            }
+                                        }} className="space-y-6">
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                                                        CNPJ do Ministério / Igreja Principal
+                                                    </label>
+                                                    <input 
+                                                        type="text"
+                                                        value={localCnpj}
+                                                        onChange={(e) => setLocalCnpj(e.target.value)}
+                                                        placeholder="00.000.000/0000-00"
+                                                        className="w-full bg-slate-50 border border-slate-200/85 rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 shadow-inner"
+                                                    />
+                                                    <p className="text-[10px] text-slate-450 font-bold leading-normal">
+                                                        Todos os boletos emitidos em qualquer banco nacional tendo este CNPJ como sacado serão varridos automaticamente.
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-3xl hover:border-slate-200 transition-colors">
+                                                    <div className="space-y-0.5 max-w-[80%]">
+                                                        <p className="text-xs font-black text-slate-750 uppercase tracking-wider flex items-center gap-2">
+                                                            <span>Verificação Automática via DDA</span>
+                                                            <span className="bg-indigo-100 text-indigo-700 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase">Recomendado</span>
+                                                        </p>
+                                                        <p className="text-[11px] text-slate-400 leading-normal font-bold">
+                                                            Permite que o servidor consulte periodicamente a CIP em busca de novos boletos registrados, disparando alertas oportunos em tempo real para reconciliação no diário.
+                                                        </p>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={localDdaAuto}
+                                                            onChange={(e) => setLocalDdaAuto(e.target.checked)}
+                                                            className="sr-only peer"
+                                                        />
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end pt-2">
+                                                <button 
+                                                    type="submit"
+                                                    disabled={ddaSavingConfig}
+                                                    className="py-3 px-6 bg-indigo-600 hover:bg-slate-900 border border-transparent text-white font-black text-xs rounded-xl shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                                                >
+                                                    {ddaSavingConfig ? (
+                                                        <>
+                                                            <RefreshCw size={14} className="animate-spin" /> Salvando...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Save size={14} /> Salvar Alterações
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </form>
                                     </div>
                                 )}
                             </div>
