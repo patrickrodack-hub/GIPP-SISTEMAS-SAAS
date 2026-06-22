@@ -216,31 +216,87 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
 
         const rawText = (response.text || "").trim();
         let boletos: any[] = [];
+        let parseSucesso = false;
+
         try {
-            // Tenta extrair a estrutura de array do JSON usando colchetes
-            const firstBracket = rawText.indexOf('[');
-            const lastBracket = rawText.lastIndexOf(']');
-            if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-                const candidate = rawText.substring(firstBracket, lastBracket + 1);
-                boletos = JSON.parse(candidate);
-            } else {
-                // Tenta chaves individuais se o modelo retornou objeto único ao invés de array
-                const firstBrace = rawText.indexOf('{');
-                const lastBrace = rawText.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-                    const candidate = rawText.substring(firstBrace, lastBrace + 1);
-                    const parsedObj = JSON.parse(candidate);
-                    boletos = Array.isArray(parsedObj) ? parsedObj : [parsedObj];
-                } else {
-                    // Sem colchetes ou chaves, vamos limpar blocos de código e tentar o parse direto
+            // Tentativa 1: Procurar sub-bloco JSON no formato ```json ... ``` ou ``` ... ```
+            const codeBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+            if (codeBlockMatch && codeBlockMatch[1]) {
+                try {
+                    const parsed = JSON.parse(codeBlockMatch[1].trim());
+                    boletos = Array.isArray(parsed) ? parsed : [parsed];
+                    parseSucesso = true;
+                } catch (err) {
+                    // segue para a próxima tentativa
+                }
+            }
+
+            // Tentativa 2: Excluir referências de busca ativa do tipo [1], [2] localizando especificamente [{ que indica início de array contendo objetos
+            if (!parseSucesso) {
+                const arrayStartIdx = rawText.indexOf('[{');
+                if (arrayStartIdx !== -1) {
+                    const lastBracketIdx = rawText.lastIndexOf(']');
+                    if (lastBracketIdx > arrayStartIdx) {
+                        try {
+                            const candidate = rawText.substring(arrayStartIdx, lastBracketIdx + 1);
+                            const parsed = JSON.parse(candidate);
+                            boletos = Array.isArray(parsed) ? parsed : [parsed];
+                            parseSucesso = true;
+                        } catch (err) {
+                            // segue para a próxima tentativa
+                        }
+                    }
+                }
+            }
+
+            // Tentativa 3: Se houver colchetes normais sem [{ direto (ex: [  { ou [ \n {)
+            if (!parseSucesso) {
+                const generalArrayStart = rawText.indexOf('[');
+                const generalArrayEnd = rawText.lastIndexOf(']');
+                if (generalArrayStart !== -1 && generalArrayEnd > generalArrayStart) {
+                    try {
+                        const candidate = rawText.substring(generalArrayStart, generalArrayEnd + 1);
+                        const parsed = JSON.parse(candidate);
+                        boletos = Array.isArray(parsed) ? parsed : [parsed];
+                        parseSucesso = true;
+                    } catch (err) {
+                        // segue se falhar
+                    }
+                }
+            }
+
+            // Tentativa 4: Tenta localizar uma única chave de objeto { ... } caso o modelo tenha retornado um único objeto
+            if (!parseSucesso) {
+                const objectStart = rawText.indexOf('{');
+                const objectEnd = rawText.lastIndexOf('}');
+                if (objectStart !== -1 && objectEnd > objectStart) {
+                    try {
+                        const candidate = rawText.substring(objectStart, objectEnd + 1);
+                        const parsed = JSON.parse(candidate);
+                        boletos = Array.isArray(parsed) ? parsed : [parsed];
+                        parseSucesso = true;
+                    } catch (err) {
+                        // segue se falhar
+                    }
+                }
+            }
+
+            // Tentativa 5: Parse direto em último caso
+            if (!parseSucesso) {
+                try {
                     let jsonText = rawText;
                     if (jsonText.startsWith("```")) {
                         jsonText = jsonText.replace(/^```json/i, "").replace(/```$/, "").trim();
                     }
                     const parsed = JSON.parse(jsonText);
                     boletos = Array.isArray(parsed) ? parsed : [parsed];
+                    parseSucesso = true;
+                } catch (err) {
+                    // Caso todas as tentativas falhem, lançamos o erro consolidado para o tratamento de fallback
+                    throw new Error("Não foi possível extrair um JSON válido da resposta do Gemini: " + String(err));
                 }
             }
+
             if (!Array.isArray(boletos)) {
                 boletos = [boletos];
             }
