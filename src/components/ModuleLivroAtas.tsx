@@ -131,7 +131,7 @@ const INITIAL_REGISTROS_SEED = [
 ];
 
 export default function ModuleLivroAtas() {
-  const { db, dbFirestore, appId, addToast, user } = useContext(ChurchContext);
+  const { db, dbFirestore, appId, addToast, user, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
 
   // States
   const [livros, setLivros] = useState<any[]>([]);
@@ -278,14 +278,22 @@ export default function ModuleLivroAtas() {
   };
 
   const handleDeleteBook = async (id: string) => {
-    if (!confirm("A exclusão deste livro indisponibilizará permanentemente seus registros físicos. Deseja prosseguir?")) return;
-    try {
-      await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'livro_atas_livros', id));
-      addToast("Livro de atas removido com êxito.", "success");
-    } catch (err) {
-      console.error(err);
-      addToast("Erro ao excluir livro de atas.", "error");
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Confirmar Exclusão de Livro",
+      message: "A exclusão deste livro indisponibilizará permanentemente seus registros físicos. Deseja prosseguir com essa ação irreversível?",
+      confirmText: "Excluir Livro",
+      cancelText: "Desistir",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'livro_atas_livros', id));
+          addToast("Livro de atas removido com êxito.", "success");
+        } catch (err) {
+          console.error(err);
+          addToast("Erro ao excluir livro de atas.", "error");
+        }
+      }
+    });
   };
 
   // Record state handles
@@ -371,14 +379,22 @@ export default function ModuleLivroAtas() {
   };
 
   const handleDeleteRegistro = async (id: string) => {
-    if (!confirm("Excluir definitivamente este termo de registro? A ação é permanente e violará a ordem sequencial se impresso.")) return;
-    try {
-      await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'livro_atas_registros', id));
-      addToast("Termo removido com sucesso.", "success");
-    } catch (err) {
-      console.error(err);
-      addToast("Erro eclesiástico na exclusão do registro.", "error");
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Excluir Termo de Registro",
+      message: "Tem certeza que deseja excluir definitivamente este termo de registro? Esta ação é permanente e violará a ordem sequencial se impresso.",
+      confirmText: "Sim, Excluir",
+      cancelText: "Não, Manter",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'livro_atas_registros', id));
+          addToast("Termo removido com sucesso.", "success");
+        } catch (err) {
+          console.error(err);
+          addToast("Erro eclesiástico na exclusão do registro.", "error");
+        }
+      }
+    });
   };
 
   // callGeminiAI integration for drafting minutes using standard pentecostal assembly rules
@@ -1102,6 +1118,30 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                                 className="p-1 px-2.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-800 border border-slate-200 text-slate-600 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 uppercase"
                               >
                                 <Edit size={11} /> Editar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  playMenuSound();
+                                  setPrintData({ item, igreja: db.igreja });
+                                  setPrintMode('livro_ata_registro');
+                                  setPreviewOpen(true);
+                                }}
+                                className="p-1 px-2.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 border border-slate-200 text-slate-600 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 uppercase"
+                                title="Baixar assentamento oficial em PDF"
+                              >
+                                <FileText size={11} /> PDF
+                              </button>
+                              <button
+                                onClick={() => {
+                                  playMenuSound();
+                                  setPrintData({ item, igreja: db.igreja });
+                                  setPrintMode('livro_ata_registro');
+                                  setPreviewOpen(true);
+                                }}
+                                className="p-1 px-2.5 bg-slate-100 hover:bg-rose-100 hover:text-rose-800 border border-slate-200 text-slate-600 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 uppercase"
+                                title="Imprimir assentamento oficial"
+                              >
+                                <Printer size={11} /> Imprimir
                               </button>
                               <button
                                 onClick={() => handleDeleteRegistro(item.id)}

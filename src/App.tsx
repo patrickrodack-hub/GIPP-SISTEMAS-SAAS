@@ -7663,6 +7663,154 @@ export const PrintSystem = ({
         );
     }
 
+    // --- NOVO: IMPRESSÃO DE INDIVIDUOS DO LIVRO DE ATAS / ASSENTAMENTOS ---
+    if (mode === 'livro_ata_registro') {
+        const item = data.item || {};
+        const igreja = data.igreja || {};
+        const logo = igreja.logo || '';
+
+        const customHeaderAta = (
+            <div className="text-center mb-8 pb-4 border-b-4 border-slate-900">
+                <p className="text-xs font-black tracking-[0.25em] uppercase text-amber-800">Igreja Evangélica Assembleia de Deus no Brasil</p>
+                <h1 className="font-serif text-2xl font-black uppercase text-slate-900 leading-tight mt-1">{igreja.nome || 'Ministério Central'}</h1>
+                <p className="text-xs text-slate-650 font-medium mt-1">Declaração de Fé da CGADB • CNPJ: {igreja.cnpj || 'Sem CNPJ'} | {igreja.endereco} - {igreja.cidade}/{igreja.uf}</p>
+            </div>
+        );
+
+        return (
+            <PageContainer customHeader={customHeaderAta}>
+                <div className="space-y-6 text-slate-900 font-sans">
+                    <div className="text-center pb-4 border-b border-slate-200">
+                        <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/50">
+                            TERMO OFICIAL REGISTRADO EM LIVRO DOURADO
+                        </span>
+                        <h2 className="text-lg font-black uppercase tracking-wide text-slate-950 mt-3">
+                            {item.titulo || 'Assentamento Eclesiástico'}
+                        </h2>
+                        <p className="text-xs font-semibold uppercase text-slate-500 tracking-wider mt-1">
+                            LAVRADO SOB NÚMERO DE PÁGINA {item.pagina_numero || '1'} • EM {item.data_registro ? formatDateLocal(item.data_registro) : 'Sem Data'}
+                        </p>
+                    </div>
+
+                    <div className="font-serif text-[15px] leading-relaxed text-justify whitespace-pre-wrap text-slate-800 space-y-6">
+                        {item.tipo === 'ata_assembleia' && (
+                            <div className="space-y-4">
+                                <p className="indent-12 leading-loose text-justify">{item.conteudo_completo}</p>
+                                <div className="pt-6 font-sans text-xs leading-relaxed text-slate-600 space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
+                                    <p><strong>Moderador / Celebrante:</strong> {item.moderador}</p>
+                                    <p><strong>Secretário Responsável:</strong> {item.secretario}</p>
+                                    <p><strong>Presentes Assinados:</strong> {item.membros_presentes_quant || 0} membros em comunhão oficiante.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {item.tipo === 'ceia_do_senhor' && (
+                            <div className="space-y-4">
+                                <p className="indent-12 leading-loose italic text-justify">{item.conteudo_completo || 'Sob reverência e comunhão eclesiástica, celebrou-se a Santa Ceia do Senhor.'}</p>
+                                {item.membros_participantes && item.membros_participantes.length > 0 && (
+                                    <div className="pt-4 font-sans space-y-2">
+                                        <p className="text-[10px] font-black uppercase text-rose-700 tracking-wider">
+                                            Rol de Membros Comungantes Autorizados (CGADB):
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 p-3 bg-rose-50/20 rounded-xl border border-rose-100">
+                                            {item.membros_participantes.map((mp: any, idx: number) => (
+                                                <span key={mp.id || idx} className="text-[10px] font-bold uppercase bg-white border border-rose-150 text-slate-800 px-2.5 py-1 rounded-md">
+                                                    [{mp.cargo || 'Membro'}] {mp.nome}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="pt-4 font-sans text-xs leading-relaxed text-slate-600 space-y-1 border-t border-dashed border-slate-200 mt-4">
+                                    <p><strong>Ministrante / Celebrante:</strong> {item.celebrante}</p>
+                                    <p><strong>Secretário de Ofício:</strong> {item.secretario}</p>
+                                    <p><strong>Membros Presentes no Memorial:</strong> {item.membros_presentes_quant || 0} em comunhão de fé (Declaração de Fé CGADB - Cap. 14).</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {item.tipo === 'casamento' && (
+                            <div className="space-y-4">
+                                <p className="indent-12 leading-loose">
+                                    No dia correspondente aos atos registrados, sob as bençãos divinas do Altíssimo e em conformidade estrita com o Capítulo 24 da Declaração de Fé da CGADB (sobre a Família), perante o digno Celebrante <strong>{item.celebrante || 'Pastor Celebrante'}</strong>, compareceram os contraentes habilitados sob matrimônio civil para o enlace eclesiástico solene de casamento nesta igreja.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 pt-4 font-sans text-xs bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                    <div>
+                                        <p className="font-extrabold uppercase text-[10px] text-slate-500 tracking-wider">Noivo (Varão)</p>
+                                        <p className="font-bold text-slate-900 mt-0.5">{item.noivo_nome || 'Não especificado'}</p>
+                                        <p className="text-[10px] text-slate-500">Documento/CPF: {item.noivo_documento || 'Não especificado'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-extrabold uppercase text-[10px] text-slate-500 tracking-wider">Noiva (Varoa)</p>
+                                        <p className="font-bold text-slate-900 mt-0.5">{item.noiva_nome || 'Não especificado'}</p>
+                                        <p className="text-[10px] text-slate-500">Documento/CPF: {item.noiva_documento || 'Não especificado'}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-4 font-sans text-xs space-y-1 text-slate-600 leading-normal">
+                                    <p><strong>Testemunhas / Padrinhos Oficiais:</strong> {item.testemunhas || 'Não especificado'}</p>
+                                    <p className="border-t border-dashed border-slate-200 mt-2 pt-2">
+                                        <strong>Cartório do Registro Civil:</strong> {item.cartorio_nome || 'Próprio Oficial'}
+                                    </p>
+                                    <p><strong>Certidão de Enlace Civil / Termo de Casamento:</strong> {item.casamento_civil_numero || 'Registrado Localmente'}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {item.tipo === 'batismo' && (
+                            <div className="space-y-4 font-serif text-[15px] leading-loose">
+                                <p className="indent-12 text-justify">
+                                    Certificamos para fins de arquivos eclesiásticos que conforme a Sagrada Comissão de Jesus Cristo em Mateus 28:19 e o dogma confessional constante no Capítulo 11 e 12 da Declaração de Fé da CGADB, o candidato <strong>{item.candidato_nome}</strong>, nascido em {item.candidato_data_nascimento ? formatDateLocal(item.candidato_data_nascimento) : 'Não Informada'}, filho de {item.candidato_filiacao || 'Não Informado'}, desceu às águas pelo santo sacramento do batismo exclusivamente por imersão total na data de {item.data_batismo ? formatDateLocal(item.data_batismo) : 'Não Informada'}, sendo oficiante o Pastor <strong>{item.batizador || 'Pastor Oficiante'}</strong> na localidade de {item.local_batismo || 'Templo Central'}.
+                                </p>
+                            </div>
+                        )}
+
+                        {item.tipo === 'consagracao' && (
+                            <div className="space-y-4">
+                                <p className="indent-12 leading-loose text-justify">
+                                    Para fins de ordenação, provisão e outorga eclesiástica, em cumprimento solene das sagradas escrituras e aos preceitos regimentais previstos na CGADB (Capítulo 20 - Dons Espirituais e Ministério), certifica-se a honrada ordenação e consagração do obreiro <strong>{item.obreiro_nome}</strong>, inscrito no CPF {item.obreiro_documento || 'Sem Documento'}, habilitado e separado para o santo ministério no cargo de <strong>{item.cargo?.toUpperCase() || 'Oficial'}</strong>.
+                                </p>
+                                <div className="pt-4 font-sans text-xs space-y-1 text-slate-600 leading-normal bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
+                                    <p><strong>Data de Solenidade de Consagração:</strong> {item.data_consagracao ? formatDateLocal(item.data_consagracao) : 'Não Informada'}</p>
+                                    <p><strong>Conselho Ordenador Presbiteral:</strong> {item.conselho_ordenador || 'Mesa Diretora do Ministério'}</p>
+                                    <p><strong>Convenção Regional / Regional GIPP:</strong> {item.convencao_regional || 'GIPP CGADB'}</p>
+                                    <p><strong>Número de Registro Oficial CGADB:</strong> {item.registro_cgadb || 'Oficiando termo local'}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Tamper proof barcode / validation block */}
+                    <div className="pt-6 font-sans border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-slate-500 text-[10px] uppercase tracking-wider leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100 mt-6">
+                        <div>
+                            <p className="font-extrabold text-slate-700">Chave de Assentamento Digital (GIPP CGADB)</p>
+                            <p className="text-[10px] font-mono text-slate-800 break-all mt-0.5">{item.hash_validacao || 'Pendente de validação'}</p>
+                        </div>
+                        <div className="sm:text-right">
+                            <p className="font-extrabold text-slate-700">Status Ministerial</p>
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-black uppercase tracking-wider block mt-1 w-max sm:ml-auto">
+                                {item.status || 'Emitido'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Assinaturas */}
+                    <div className="mt-16 pt-8 flex justify-between gap-10 px-6 avoid-break font-sans">
+                        <div className="flex-1 text-center">
+                            <div className="border-b border-black w-full mb-2"></div>
+                            <p className="font-black uppercase text-[11px] tracking-wider text-slate-900">{igreja.pastor || 'Pastor Presidente'}</p>
+                            <p className="text-[9px] uppercase text-slate-500 font-extrabold tracking-widest mt-0.5">Moderador / Pastor Presidente</p>
+                        </div>
+                        <div className="flex-1 text-center">
+                            <div className="border-b border-black w-full mb-2"></div>
+                            <p className="font-black uppercase text-[11px] tracking-wider text-slate-900">{igreja.secretario1 || 'Secretário Oficial'}</p>
+                            <p className="text-[9px] uppercase text-slate-500 font-extrabold tracking-widest mt-0.5">1º Secretário de Atos</p>
+                        </div>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
     return null;
 };
 
