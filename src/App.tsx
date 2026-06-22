@@ -63,6 +63,7 @@ import ModuleGestaoCursos from './components/ModuleGestaoCursos';
 import ModuleTeologia from './components/ModuleTeologia';
 import ModuleRedeSocial from './components/ModuleRedeSocial';
 import ModuleConfiguracoesGerais from './components/ModuleConfiguracoesGerais';
+import { DiagnosticsDashboard } from './components/DiagnosticsDashboard';
 import ModuleConfiguracoesSistemas, { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
 import ModuleConfigVisual from './components/ModuleConfigVisual';
 import ModuleBackup from './components/ModuleBackup';
@@ -12742,6 +12743,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
 
             {/* Bloco de Inicialização do Sistema (Console & Barra de Progresso) */}
             <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-lg px-8 flex flex-col z-20">
+                {/* Console Log Executável */}
                 <div className="w-full space-y-2 mb-5 h-[155px] overflow-hidden flex flex-col justify-end bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-lg">
                      {steps.map((s, index) => {
                          const show = s.status !== 'pending' || (index > 0 && steps[index - 1].status !== 'pending') || index === 0;
@@ -12762,7 +12764,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         <div className="absolute inset-0 bg-white/30 w-full h-full" style={{ animation: 'slideRight 1s infinite linear' }}></div>
                     </div>
                 </div>
-                <p className="text-[9px] text-white/50 uppercase tracking-[0.4em] mt-4 font-bold text-center drop-shadow-md">
+                <p className="text-[8px] text-white/40 uppercase tracking-[0.3em] mt-2 font-black text-center drop-shadow-md">
                     Processando Motores de Inicialização Real
                 </p>
             </div>

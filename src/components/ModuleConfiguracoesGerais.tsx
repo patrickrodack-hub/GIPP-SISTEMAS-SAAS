@@ -12,6 +12,7 @@ import { ChurchContext } from '../App';
 import { validateEmail, validateWhatsApp, formatWhatsApp } from '../utils/validation';
 import { GlobalFooter } from './GlobalFooter';
 import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
+import { DiagnosticsDashboard } from './DiagnosticsDashboard';
 
 // Constantes de Mapeamento do Portal de Membros por Função Administrativa
 import { 
@@ -1432,88 +1433,8 @@ const ModuleConfiguracoesGerais = () => {
 
                 {/* DIAGNOSTIC SPEEDTEST CHANNELS */}
                 {activeTab === 'conexao' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-entrance text-slate-800">
-                        {/* Selector sidebar test */}
-                        <div className="bg-white border border-slate-205 p-6 rounded-[2rem] shadow-xs flex flex-col justify-between">
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 pb-3 border-b">
-                                    <Server size={20} className="text-indigo-600" />
-                                    <h3 className="text-sm font-black text-slate-850 uppercase tracking-widest leading-none">Canal de Sondagem</h3>
-                                </div>
-                                <p className="text-slate-500 text-xs font-medium leading-relaxed">Mede a latência síncrona real do seu navegador com os servidores do Google Cloud Firestore de forma direta.</p>
-                                
-                                <div className="p-4 bg-indigo-50/20 border rounded-2xl flex items-center justify-center gap-2">
-                                    <span className="relative flex h-3.5 w-3.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-                                    </span>
-                                    <span className="text-xs font-black uppercase text-slate-750">Modo OnLine Ativo</span>
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={handleRunConnTest}
-                                disabled={connTesting}
-                                className="w-full mt-6 py-4 bg-indigo-650 text-white rounded-2xl text-xs font-bold uppercase hover:bg-indigo-700 shadow"
-                            >
-                                {connTesting ? 'Estabelecendo Handshake...' : 'Testar Conexão Google Cloud'}
-                            </button>
-                        </div>
-
-                        {/* Testing Checkpoints list */}
-                        <div className="md:col-span-2 bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] shadow-xs">
-                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-6">Ficha de Integridade de Conexão</h3>
-
-                            {!connResults && !connTesting ? (
-                                <div className="h-52 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-slate-400 space-y-2">
-                                    <Wifi size={32} className="text-slate-300" />
-                                    <span className="text-xs font-semibold">Nenhum diagnóstico de latência efetuado.</span>
-                                </div>
-                            ) : null}
-
-                            {connTesting ? (
-                                <div className="h-52 flex flex-col items-center justify-center text-slate-550 space-y-2">
-                                    <Loader2 className="animate-spin text-indigo-650" size={32} />
-                                    <span className="text-xs font-black uppercase tracking-widest animate-pulse">Sondando Servidores Firebase & GCP...</span>
-                                </div>
-                            ) : null}
-
-                            {connResults && !connTesting ? (
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center border-b pb-3 border-slate-100">
-                                        <div className="space-y-0.5">
-                                            <h4 className="text-xs font-bold">Acesso à Rede Global</h4>
-                                            <p className="text-[10px] text-slate-400">Verificação de DNS e Gateway local de internet.</p>
-                                        </div>
-                                        <span className="text-[10px] bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-150 font-black uppercase">OnLine</span>
-                                    </div>
-                                    <div className="flex justify-between items-center border-b pb-3 border-slate-100">
-                                        <div className="space-y-0.5">
-                                            <h4 className="text-xs font-bold">Latência do Firebase (RTT)</h4>
-                                            <p className="text-[10px] text-slate-400">Tempo de ida e volta para leitura de nós.</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-black text-slate-800">{connResults.latency}</span>
-                                            <span className="text-[10px] bg-indigo-50 border border-indigo-150 text-indigo-700 px-3 py-1 rounded-full font-black uppercase">{connResults.latencyRating}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center border-b pb-3 border-slate-100">
-                                        <div className="space-y-0.5">
-                                            <h4 className="text-xs font-bold">Servidores Eclesiásticos GIPP Sede</h4>
-                                            <p className="text-[10px] text-slate-400">Nós primários SaaS resolvidos e ativos.</p>
-                                        </div>
-                                        <span className="text-xs font-semibold">{connResults.apiRes}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <div className="space-y-0.5">
-                                            <h4 className="text-xs font-bold">Consistência Cache local offline</h4>
-                                            <p className="text-[10px] text-slate-400">IndexedDB local de segurança pronto.</p>
-                                        </div>
-                                        <span className="text-xs font-semibold">{connResults.cacheState}</span>
-                                    </div>
-                                </div>
-                            ) : null}
-                        </div>
+                    <div className="bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] shadow-xs animate-entrance">
+                        <DiagnosticsDashboard />
                     </div>
                 )}
 

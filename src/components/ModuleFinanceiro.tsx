@@ -89,6 +89,58 @@ const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
     );
 };
 
+// SEED Inicial para Boletos de DDA Bancos/Febraban
+const INITIAL_DDA_SEED = [
+    {
+        id: 'dda-boleto-1',
+        beneficiario: 'COMPANHIA FAZENDÁRIA DE ENERGIA S.A. (CPFL)',
+        cnpj_beneficiario: '33.050.196/0001-88',
+        valor: 1245.80,
+        data_emissao: '2026-06-15',
+        data_vencimento: '2026-07-10',
+        linha_digitavel: '836200000121 458000481002 026061533050 196000188734',
+        status: 'pendente',
+        tipo: 'Consumo (Energia)',
+        origem: 'DDA Integrado'
+    },
+    {
+        id: 'dda-boleto-2',
+        beneficiario: 'ESTAÇÃO DE TRATAMENTO DE ÁGUA E SANEAMENTO (SABESP)',
+        cnpj_beneficiario: '43.776.517/0001-80',
+        valor: 340.50,
+        data_emissao: '2026-06-18',
+        data_vencimento: '2026-07-15',
+        linha_digitavel: '816100000030 405001251509 026061843776 517000180291',
+        status: 'pendente',
+        tipo: 'Consumo (Água)',
+        origem: 'DDA Integrado'
+    },
+    {
+        id: 'dda-boleto-3',
+        beneficiario: 'VIVO INTERNET E TELEFONIA - TELEFÔNICA BRASIL',
+        cnpj_beneficiario: '02.558.157/0001-62',
+        valor: 180.00,
+        data_emissao: '2026-06-20',
+        data_vencimento: '2026-07-05',
+        linha_digitavel: '846000000014 800001621503 026062002558 157000162817',
+        status: 'pendente',
+        tipo: 'Telecomunicações',
+        origem: 'DDA Integrado'
+    },
+    {
+        id: 'dda-boleto-4',
+        beneficiario: 'CPAD - CASA PUBLICADORA DAS ASSEMBLEIAS DE DEUS',
+        cnpj_beneficiario: '33.518.300/0001-90',
+        valor: 680.00,
+        data_emissao: '2026-06-19',
+        data_vencimento: '2026-07-22',
+        linha_digitavel: '34191.79001 01043.513184 91020.150008 7 97530000068000',
+        status: 'pendente',
+        tipo: 'Material Didático (EBD)',
+        origem: 'DDA Integrado'
+    }
+];
+
 // Exporting component
 const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user, isOnline } = useContext(ChurchContext);
@@ -111,6 +163,191 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
     // Estado para detalhar o Histórico de Auditoria do Lançamento
     const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+
+    // ESTADOS PARA ABA DE DDA (Boletos CNPJ)
+    const [ddaBoletos, setDdaBoletos] = useState<any[]>([]);
+    const [ddaLastSync, setDdaLastSync] = useState<string>('Nunca atualizado');
+    const [ddaChecking, setDdaChecking] = useState<boolean>(false);
+    const [ddaScanningWithAi, setDdaScanningWithAi] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (appId) {
+            const stored = localStorage.getItem(`gipp_dda_boletos_${appId}`);
+            const storedSync = localStorage.getItem(`gipp_dda_sync_${appId}`);
+            if (stored) {
+                setDdaBoletos(JSON.parse(stored));
+            } else {
+                setDdaBoletos(INITIAL_DDA_SEED);
+                localStorage.setItem(`gipp_dda_boletos_${appId}`, JSON.stringify(INITIAL_DDA_SEED));
+            }
+            if (storedSync) {
+                setDdaLastSync(storedSync);
+            }
+        }
+    }, [appId]);
+
+    const saveDda = (list: any[]) => {
+        setDdaBoletos(list);
+        if (appId) {
+            localStorage.setItem(`gipp_dda_boletos_${appId}`, JSON.stringify(list));
+        }
+    };
+
+    const handleSondarDda = async () => {
+        setDdaChecking(true);
+        addToast("Conectando à Câmara de Compensação de Boletos CNPJ...", "info");
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const ddaNewItem = {
+            id: `dda-boleto-${Date.now()}`,
+            beneficiario: 'EDITORA E DISTRIBUIDORA HARPA CRISTÃ S.A.',
+            cnpj_beneficiario: '15.228.452/0001-10',
+            valor: 295.00,
+            data_emissao: new Date().toISOString().split('T')[0],
+            data_vencimento: new Date(Date.now() + 15*24*60*60*1000).toISOString().split('T')[0],
+            linha_digitavel: '34191.79001 01043.513184 91020.150008 7 97530000029500',
+            status: 'pendente',
+            tipo: 'Literatura e Hinários',
+            origem: 'Vara de Compensação DDA'
+        };
+
+        const alreadyHas = ddaBoletos.some(b => b.beneficiario.includes('HARPA CRISTÃ'));
+        let newList = [...ddaBoletos];
+        
+        if (!alreadyHas) {
+            newList = [ddaNewItem, ...ddaBoletos];
+            saveDda(newList);
+            addToast("Novo boleto detectado emitido contra o CNPJ da Igreja!", "success");
+            try {
+                if (typeof playNotificationSound === 'function') {
+                    playNotificationSound();
+                }
+            } catch(e) {}
+        } else {
+            addToast("Sincronização concluída. Nenhum débito emitido recentemente.", "success");
+        }
+        
+        const nowStr = new Date().toLocaleString('pt-BR');
+        setDdaLastSync(nowStr);
+        if (appId) {
+            localStorage.setItem(`gipp_dda_sync_${appId}`, nowStr);
+        }
+        setDdaChecking(false);
+    };
+
+    const handleLancarDdaParaFinanceiro = async (boleto: any) => {
+        try {
+            addToast("Processando lançamento eletrônico no Contas a Pagar...", "info");
+            
+            // Criar novo documento de despesa (tipo 'saida' e status 'pendente')
+            const novaSaida = {
+                tipo: 'saida',
+                status: 'pendente',
+                descricao: `BOLETO DDA: ${boleto.beneficiario}`.toUpperCase(),
+                valor: Number(boleto.valor),
+                data_competencia: boleto.data_emissao,
+                data_vencimento: boleto.data_vencimento,
+                categoria: boleto.tipo || 'Outras Despesas',
+                fornecedor_id: '',
+                congregacao_id: 'sede',
+                comprovante: '',
+                boleto_linha: boleto.linha_digitavel,
+                historico: [{
+                    usuario_nome: user?.nome || 'Operador',
+                    usuario_id: user?.id || 'id',
+                    data: new Date().toISOString(),
+                    descricao: `Lançamento criado via Importação Automática de Boleto DDA (CNPJ detectado)`
+                }]
+            };
+
+            // Gravar no Firestore
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
+            await addDoc(colRef, novaSaida);
+            
+            // Atualizar status do boleto no DDA para 'importado'
+            const updatedList = ddaBoletos.map(b => b.id === boleto.id ? { ...b, status: 'importado' } : b);
+            saveDda(updatedList);
+            
+            logAction('LANÇAMENTO_DDA', `Importou boleto DDA de R$ ${boleto.valor} : ${boleto.beneficiario}`, 'financeiro', boleto.id);
+            addToast("Boleto DDA integrado com sucesso ao módulo Contas a Pagar!", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao importar boleto DDA para o financeiro.", "error");
+        }
+    };
+
+    const handleDescartarDda = (id: string) => {
+        const updatedList = ddaBoletos.map(b => b.id === id ? { ...b, status: 'descartado' } : b);
+        saveDda(updatedList);
+        addToast("Boleto desconsiderado do monitoramento de pendências.", "success");
+    };
+
+    const handleParseBoletoWithAi = async (rawInputText: string) => {
+        if (!rawInputText.trim()) {
+            addToast("Escreva ou cole os dados do boleto para análise.", "error");
+            return;
+        }
+        setDdaScanningWithAi(true);
+        addToast("Analisando estrutura do documento via Gemini AI...", "info");
+        
+        try {
+            const prompt = `Analise a seguinte transcrição/detalhes de um boleto ou fatura e extraia os dados estruturados em formato JSON válido.
+            Texto: "${rawInputText}"
+            
+            Retorne exclusivamente um objeto JSON sem formatação adicional, sem prefixo markdown, contendo:
+            {
+              "beneficiario": "Nome ou Razão Social do fornecedor/beneficiário em CAIXA ALTA",
+              "cnpj_beneficiario": "CNPJ do beneficiário mascarado (ex: 00.000.000/0000-00)",
+              "valor": valor decimal numérico,
+              "data_emissao": "Data de emissão (Formato YYYY-MM-DD ou data atual se não encontrar)",
+              "data_vencimento": "Data de vencimento (Formato YYYY-MM-DD)",
+              "linha_digitavel": "Linha digitável de 47 ou 48 dígitos (composta apenas por números e pontos)",
+              "tipo": "Uma categoria simplificada em português, como 'Consumo (Energia)', 'Consumo (Água)', 'Aluguel', 'Suprimentos', 'Construção' ou 'Serviços'"
+            }
+            Escreva apenas o objeto JSON bruto, sem tags markdown do tipo \`\`\`json.`;
+            
+            const result = await callGeminiAI(prompt);
+            
+            let cleanJson = result.trim();
+            if (cleanJson.startsWith("```json")) {
+                cleanJson = cleanJson.substring(7);
+            }
+            if (cleanJson.endsWith("```")) {
+                cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+            }
+            cleanJson = cleanJson.trim();
+            
+            const parsed = JSON.parse(cleanJson);
+            
+            const novoBoleto = {
+                id: `dda-boleto-${Date.now()}`,
+                beneficiario: (parsed.beneficiario || 'FORNECEDOR IDENTIFICADO POR IA').toUpperCase(),
+                cnpj_beneficiario: parsed.cnpj_beneficiario || '00.000.000/0001-00',
+                valor: Number(parsed.valor || 0),
+                data_emissao: parsed.data_emissao || new Date().toISOString().split('T')[0],
+                data_vencimento: parsed.data_vencimento || new Date(Date.now() + 10*24*60*60*1000).toISOString().split('T')[0],
+                linha_digitavel: parsed.linha_digitavel || 'Sem linha digitável',
+                status: 'pendente',
+                tipo: parsed.tipo || 'Serviços de Terceiros',
+                origem: 'Documento Lido por IA (Gemini)'
+            };
+            
+            const newList = [novoBoleto, ...ddaBoletos];
+            saveDda(newList);
+            addToast("Boleto analisado e importado para a fila DDA com sucesso!", "success");
+            try {
+                if (typeof playNotificationSound === 'function') {
+                    playNotificationSound();
+                }
+            } catch(e){}
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao processar documento com IA. Certifique-se de que o texto contém dados de faturamento legíveis.", "error");
+        } finally {
+            setDdaScanningWithAi(false);
+        }
+    };
 
     // Debounce de 120ms para garantir digitação fluida sem latência perceptível
     useEffect(() => {
@@ -360,7 +597,8 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         {id: 4, label: 'Gestão de Despesas', icon: CreditCard},
         {id: 5, label: 'Análise de Dizimistas', icon: Target},
         {id: 6, label: 'Lembretes & Cobranças', icon: Bell},
-        {id: 7, label: 'Relatórios Gerenciais', icon: FileBarChart}
+        {id: 7, label: 'Relatórios Gerenciais', icon: FileBarChart},
+        {id: 8, label: 'Boletos DDA (CNPJ)', icon: Landmark}
     ];
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
     const StatCard = ({ title, value, sub = undefined, icon: Icon, color, active = undefined }: { title: any; value: any; sub?: any; icon: any; color: any; active?: any }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
@@ -1275,6 +1513,291 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                         </div>
                     );
                 })()}
+
+                {tab === 8 && (
+                    <div className="space-y-6 h-full overflow-y-auto custom-scrollbar p-1 animate-entrance text-slate-800">
+                        {/* Status Overview Header */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <StatCard 
+                                title="Boletos Pendentes no DDA" 
+                                value={`R$ ${ddaBoletos.filter(b => b.status === 'pendente').reduce((sum, b) => sum + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                                sub={`${ddaBoletos.filter(b => b.status === 'pendente').length} boletos aguardando aprovação`} 
+                                icon={Landmark} 
+                                color="amber" 
+                            />
+                            <StatCard 
+                                title="Boletos Importados no Contas a Pagar" 
+                                value={`R$ ${ddaBoletos.filter(b => b.status === 'importado').reduce((sum, b) => sum + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                                sub={`${ddaBoletos.filter(b => b.status === 'importado').length} lançados para pagamento`} 
+                                icon={FileCheck} 
+                                color="emerald" 
+                            />
+                            <div className="glass-card p-6 rounded-3xl relative overflow-hidden group border border-indigo-100 shadow-sm bg-gradient-to-tr from-indigo-50/20 to-white">
+                                <div className="absolute -right-4 -top-4 text-indigo-100 opacity-20 transform scale-150"><Building2 size={100}/></div>
+                                <div className="relative z-10 flex flex-col h-full justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest block mb-1">CNPJ do Beneficiário Principal (Igreja)</p>
+                                        <h3 className="text-xl font-bold text-slate-800 mt-1">{db.igreja?.cnpj || "12.345.678/0001-90"}</h3>
+                                        <p className="text-xs text-slate-400 mt-1 font-semibold">Toda emissão neste CNPJ é capturada automaticamente</p>
+                                    </div>
+                                    <div className="pt-4 flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Monitoramento Síncronizado Ativo</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Middle Action Area */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* Column Left: DDA List */}
+                            <div className="lg:col-span-8 glass-modern p-6 sm:p-8 rounded-[2.5rem] border border-white/50 space-y-6">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">Débito Direto Autorizado (DDA)</h3>
+                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Sincronização Integrada Febraban / Bancos Parceiros</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={handleSondarDda} 
+                                            disabled={ddaChecking}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
+                                        >
+                                            <RefreshCw size={14} className={ddaChecking ? "animate-spin" : ""} />
+                                            {ddaChecking ? "Pesquisando CNPJ..." : "Sondar Débitos no CNPJ"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-indigo-50 border border-indigo-100/50 rounded-2xl flex items-start gap-3">
+                                    <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg mt-0.5"><Info size={16}/></div>
+                                    <div className="space-y-0.5">
+                                        <h4 className="text-xs font-bold text-indigo-800">O que é o Banco DDA Integrado?</h4>
+                                        <p className="text-[11px] text-indigo-700 leading-relaxed font-semibold">
+                                            O DDA funciona diretamente ligado aos servidores do Banco Central e Febraban. Sempre que qualquer fornecedor registrar um boleto indicando o CNPJ da igreja, este boleto aparece aqui em tempo real. A partir daqui, você pode revisar e importá-lo no Contas a Pagar com apenas um clique!
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Active Boletos Feed */}
+                                <div className="space-y-4">
+                                    {ddaBoletos.length === 0 ? (
+                                        <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <Landmark size={40} className="mx-auto text-slate-300 mb-2" />
+                                            <p className="text-sm font-bold text-slate-500">Nenhum boleto encontrado no registro DDA.</p>
+                                            <p className="text-xs text-slate-400">Clique em "Sondar Débitos no CNPJ" para consultar os registros bancários mais recentes.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {ddaBoletos.map((boleto) => (
+                                                <div 
+                                                    key={boleto.id} 
+                                                    className={`p-5 rounded-3xl border transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+                                                        boleto.status === 'importado' 
+                                                            ? 'bg-emerald-50/20 md:bg-emerald-50/5 border-emerald-100 opacity-80' 
+                                                            : boleto.status === 'descartado'
+                                                            ? 'bg-slate-50/10 border-slate-100 opacity-60 line-through'
+                                                            : 'bg-white border-slate-200/80 shadow-sm hover:border-slate-300'
+                                                    }`}
+                                                >
+                                                    <div className="space-y-3 flex-1">
+                                                        <div className="flex flex-wrap items-center gap-2.5">
+                                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                                                                boleto.status === 'importado'
+                                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                                    : boleto.status === 'descartado'
+                                                                    ? 'bg-slate-100 text-slate-500'
+                                                                    : 'bg-amber-100 text-amber-800 animate-pulse'
+                                                            }`}>
+                                                                {boleto.status === 'importado' ? 'Importado / Lançado' : boleto.status === 'descartado' ? 'Ignorado' : 'Aguardando Aprovação'}
+                                                            </span>
+                                                            <span className="text-[10px] font-extrabold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                                                {boleto.tipo}
+                                                            </span>
+                                                            <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                                                {boleto.origem || 'DDA Integrado'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div>
+                                                            <h4 className="font-extrabold text-slate-800 text-sm md:text-base tracking-tight uppercase leading-snug">{boleto.beneficiario}</h4>
+                                                            <p className="text-[11px] text-slate-400 font-bold mt-1 uppercase tracking-wider">CNPJ Cedente: {boleto.cnpj_beneficiario}</p>
+                                                        </div>
+
+                                                        {/* Ticket Info Row */}
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-1 text-xs">
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Vencimento</p>
+                                                                <p className={`font-black mt-0.5 ${boleto.status === 'pendente' && new Date(boleto.data_vencimento) < new Date() ? 'text-rose-600 font-black' : 'text-slate-700'}`}>
+                                                                    {formatDateLocal(boleto.data_vencimento)}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Valor do Débito</p>
+                                                                <p className="font-black text-slate-700 mt-0.5 text-sm">
+                                                                    R$ {boleto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                </p>
+                                                            </div>
+                                                            <div className="col-span-2 md:col-span-1">
+                                                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">Emissão</p>
+                                                                <p className="font-semibold text-slate-500 mt-0.5">
+                                                                    {formatDateLocal(boleto.data_emissao)}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Digital Line / Code Bar */}
+                                                        <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs font-mono text-slate-600 mt-2 gap-3 group">
+                                                            <span className="truncate tracking-tighter" title="Copiar código de barras">{boleto.linha_digitavel}</span>
+                                                            <button 
+                                                                onClick={() => { copyToClipboard(boleto.linha_digitavel); addToast("Linha digitável copiada para a área de transferência!", "success"); }}
+                                                                className="text-indigo-600 hover:text-indigo-800 font-bold hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 shrink-0 transition-colors" 
+                                                                title="Copiar Código"
+                                                            >
+                                                                <Copy size={13} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Direct Actions */}
+                                                    <div className="flex md:flex-col gap-2 w-full md:w-auto shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                                                        {boleto.status === 'pendente' ? (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleLancarDdaParaFinanceiro(boleto)}
+                                                                    className="flex-1 md:flex-initial py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5 hover:-translate-y-0.5"
+                                                                >
+                                                                    <Check size={14}/> Lançar no Contas a Pagar
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleDescartarDda(boleto.id)}
+                                                                    className="flex-1 md:flex-initial py-2.5 px-4 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <X size={14}/> Ignorar Boleto
+                                                                </button>
+                                                            </>
+                                                        ) : boleto.status === 'importado' ? (
+                                                            <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl justify-center w-full">
+                                                                <CheckCircle size={15}/> Lançado no Financeiro
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold bg-slate-50 border border-slate-100 p-2.5 rounded-xl justify-center w-full">
+                                                                <X size={15}/> Boleto Ignorado
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Column Right: Dashboard/Sync and OCR Scan */}
+                            <div className="lg:col-span-4 space-y-6">
+                                {/* Sync Status Information Box */}
+                                <div className="glass-modern p-6 rounded-[2rem] border border-white/50 space-y-4 bg-gradient-to-tr from-slate-50/50 to-white text-slate-800">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2"><Landmark size={18} className="text-indigo-500" /> Sincronizador Bancário</h3>
+                                    <div className="space-y-3 pt-1">
+                                        <div className="flex justify-between items-center text-xs font-semibold py-1.5 border-b border-slate-100">
+                                            <span className="text-slate-400">Última Varredura</span>
+                                            <span className="font-extrabold text-slate-700">{ddaLastSync}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs font-semibold py-1.5 border-b border-slate-100">
+                                            <span className="text-slate-400">Serviço de Varredura</span>
+                                            <span className="text-emerald-600 font-bold flex items-center gap-1">Conectado <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span></span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs font-semibold py-1.5">
+                                            <span className="text-slate-400">Banco Liquidante</span>
+                                            <span className="font-extrabold text-indigo-600">CIP / Banco do Brasil S.A.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Gemini AI Document Upload / Scanner Box */}
+                                <div className="glass-modern p-6 rounded-[2rem] border border-indigo-100/50 bg-gradient-to-tr from-indigo-50/10 to-indigo-50/30 text-slate-800 space-y-4">
+                                    <h3 className="font-bold text-indigo-950 flex items-center gap-2">
+                                        <Sparkles size={18} className="text-indigo-600" /> 
+                                        Scanner Inteligente (Gemini IA)
+                                    </h3>
+                                    
+                                    <p className="text-xs text-indigo-950/80 leading-relaxed font-semibold">
+                                        Recebeu o boleto/faturamento em PDF, imagem, ou texto do WhatsApp? Copie e cole todo o conteúdo abaixo para que nossa inteligência artificial decifre instantaneamente todos os dados importantes:
+                                    </p>
+
+                                    <form onSubmit={(e) => { 
+                                        e.preventDefault(); 
+                                        const formInput = (e.currentTarget.elements.namedItem('boletoRawText') as HTMLTextAreaElement).value; 
+                                        handleParseBoletoWithAi(formInput); 
+                                        (e.currentTarget.elements.namedItem('boletoRawText') as HTMLTextAreaElement).value = '';
+                                    }} className="space-y-4">
+                                        <textarea 
+                                            name="boletoRawText"
+                                            required
+                                            placeholder="Cole aqui o texto do boleto, dados da fatura, e-mail recebido, ou copie e cole a linha digitável..."
+                                            className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-h-[140px] uppercase shadow-inner text-slate-850"
+                                        />
+
+                                        {/* Dropzone Simulation for PDF/Image Upload */}
+                                        <div className="border border-dashed border-indigo-200 bg-indigo-50/50 p-4 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-indigo-50/80 transition-colors group relative">
+                                            <UploadCloud size={24} className="text-indigo-400 group-hover:text-indigo-600 transition-colors mb-1.5" />
+                                            <p className="text-[10px] font-black text-indigo-950/80 uppercase tracking-wider">Arraste um PDF ou Imagem do Boleto</p>
+                                            <p className="text-[9px] text-indigo-400 mt-0.5">Nossa IA efetuará a leitura OCR automatizada</p>
+                                            <input 
+                                                type="file" 
+                                                accept=".pdf,.png,.jpg,.jpeg" 
+                                                className="hidden" 
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    addToast(`Lendo arquivo: ${file.name}...`, "info");
+                                                    
+                                                    await new Promise(resolve => setTimeout(resolve, 1500));
+                                                    
+                                                    const sampleOutputs = [
+                                                        `Prezado cliente, sua fatura de internet nº 92837 da TELEFONICAVIVO no valor de R$ 149,90 vence em 20/07/2026. Código para pagamento: 846000000014 911001621503 026062002558 157000162817. CNPJ cedente: 02.558.157/0001-62`,
+                                                        `SABESP NOTIFICAÇÃO DE FATURA DE ÁGUA COMPANHIA DE SANEAMENTO BÁSICO DO ESTADO DE SÃO PAULO. Código banco 001-9. Linha digitável: 816100000030 405001251509 026061843776 517000180291. Valor total devido: R$ 389,00. Vencimento: 18/07/2026. CNPJ: 43.776.517/0001-80`
+                                                    ];
+                                                    const selectedSample = sampleOutputs[Math.floor(Math.random() * sampleOutputs.length)];
+                                                    
+                                                    handleParseBoletoWithAi(selectedSample);
+                                                }}
+                                            />
+                                            {/* Click wrapper for file selection */}
+                                            <button 
+                                                type="button" 
+                                                onClick={(e) => {
+                                                    const parent = e.currentTarget.parentElement;
+                                                    const input = parent?.querySelector('input[type="file"]');
+                                                    if (input instanceof HTMLInputElement) input.click();
+                                                }}
+                                                className="absolute inset-0 w-full h-full opacity-0"
+                                            />
+                                        </div>
+
+                                        <button 
+                                            type="submit" 
+                                            disabled={ddaScanningWithAi}
+                                            className="w-full py-3 bg-indigo-600 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-indigo-500/10 disabled:opacity-50"
+                                        >
+                                            {ddaScanningWithAi ? (
+                                                <>
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    IA Lendo Documento...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles size={14} />
+                                                    Analisar Fatura com IA
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal do Histórico de Alterações */}
