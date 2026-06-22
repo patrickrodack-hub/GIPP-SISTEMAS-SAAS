@@ -87,6 +87,7 @@ import ModulePatrimonio from './components/ModulePatrimonio';
 import ModuleFrotas from './components/ModuleFrotas';
 import ModuleCelulas from './components/ModuleCelulas';
 import ModuleBoletim from './components/ModuleBoletim';
+import ModuleLivroAtas from './components/ModuleLivroAtas';
 const ModuleManualUsuario = lazy(() => import('./components/ModuleManualUsuario'));
 const ModuleAmparoLegal = lazy(() => import('./components/ModuleAmparoLegal'));
 const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSoftware'));
@@ -8251,9 +8252,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -8440,6 +8441,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {checkPlan('biblia') && <MenuItem id="biblia" icon={Book} label="Bíblia de Estudo" />}
                     {hasPermission('access_email') && checkPlan('email_interno') && <MenuItem id="email_interno" icon={Mail} label="Webmail Direto" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
+                    {hasPermission('access_sec_agenda') && checkPlan('secretaria_livro_atas') && <MenuItem id="secretaria_livro_atas" icon={BookOpen} label="Livro Digital de Atas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
                     {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
@@ -12379,6 +12381,7 @@ const AppLayout = () => {
         'ministerio_louvor': { component: ModuleMinisterios, props: { initialTab: 5 }, access: 'access_ministerios' },
         'ministerio_midia': { component: ModuleMinisterios, props: { initialTab: 6 }, access: 'access_ministerios' },
         'secretaria_integrada': { component: ModuleSecretariaIntegrada, access: 'access_sec_agenda' },
+        'secretaria_livro_atas': { component: ModuleLivroAtas, access: 'access_sec_agenda' },
         'secretaria_certificados': { component: ModuleCertificados, access: 'access_sec_certificados' },
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },
         'credencial_lote': { component: ModuleCredencial, access: 'access_sec_certificados' },
