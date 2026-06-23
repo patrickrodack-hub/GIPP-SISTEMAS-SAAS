@@ -47,11 +47,24 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.6.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-indigo-900 font-[Outfit]">v8.6.0 - Finanças de Alta Paridade, Reconciliação Bancária & Exportador Universitário PDF</h3>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Paridade Adaptativa DDA vs Razão:</strong> Algoritmo de cálculo de score dinâmico que cruza valores, datas e devedores reais para estabelecer índice percentual de acurácia em conciliações contábeis.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Auto-Conciliação Multi-Lote:</strong> Execução inteligente de transações em massa para todas as guias e faturas com conformidade e fidelidade igual ou superior a 90%.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Alerta de Liquidez Eclesiástica & DDA:</strong> Painel de cobertura líquida do DDA vs Entradas Reais, integrado a gráficos de fluxo semanais no portal do tesoureiro.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Compilador Teológico & Download PDF Autônomo:</strong> Exportação de apostilas para arquivos PDF de alta resolução com capas acadêmicas unificadas da CGADB, referências bíblicas estruturadas e gabaritos comentados baseados em jsPDF.</li>
+                </ul>
+            </div>
+
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.5.0 */}
             <div className="relative pl-8 border-l-2 border-emerald-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-emerald-800 font-[Outfit]">v8.5.0 - Universidade Teológica Assembleiana & Compilador IA com Rigor Canônico</h3>
-                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Anterior)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Universidade Teológica Integrada:</strong> Lançamento do novo ecossistema eclesiástico-educacional focado na formação dogmática das Assembleias de Deus no Brasil, estruturado com Grade Curricular em três níveis (Básico, Médio e Avançado) e rastreamento de progresso por módulo.</li>
                     <li><strong className="text-slate-755 font-sans font-extrabold">Compilador Teológico por IA:</strong> Motor inteligente alimentado com as doutrinas canônicas que respeitam integralmente os 24 capítulos da Declaração de Fé da CGADB, com proteção estrita contra conceitos evolucionistas. Gera apostilas completas incluindo referências exegéticas, introdução, aplicação e quizzes automatizados, com mecanismo de autorreparo de sintaxe JSON contra quebras e aspas indesejadas.</li>

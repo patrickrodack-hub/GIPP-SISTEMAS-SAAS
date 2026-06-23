@@ -198,6 +198,43 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const [localBankApiKey, setLocalBankApiKey] = useState<string>('');
     const [localBankSandbox, setLocalBankSandbox] = useState<boolean>(true);
     const [ddaSavingConfig, setDdaSavingConfig] = useState<boolean>(false);
+
+    // DDA Interactive Cash Flow Comparison memo
+    const ddaChartData = useMemo(() => {
+        const saidasDda = filteredDdaBoletos.filter((b: any) => b.status === 'pendente');
+        const entradasReal = (db.financeiro || []).filter((f: any) => f.tipo === 'entrada');
+
+        const daysMap: Record<string, { dia: string, entradas: number, contasDda: number }> = {};
+        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        days.forEach(d => {
+            daysMap[d] = { dia: d, entradas: 0, contasDda: 0 };
+        });
+
+        entradasReal.forEach((f: any) => {
+            const date = new Date(f.data_competencia || getTodayDate());
+            const dayName = days[date.getDay()] || 'Seg';
+            if (daysMap[dayName]) {
+                daysMap[dayName].entradas += Number(f.valor || 0);
+            }
+        });
+
+        saidasDda.forEach((f: any) => {
+            const date = new Date(f.data_vencimento || getTodayDate());
+            const dayName = days[date.getDay()] || 'Seg';
+            if (daysMap[dayName]) {
+                daysMap[dayName].contasDda += Number(f.valor || 0);
+            }
+        });
+
+        return Object.values(daysMap);
+    }, [filteredDdaBoletos, db.financeiro]);
+
+    const liquidityRatio = useMemo(() => {
+        const totalEntradas = ddaChartData.reduce((acc, curr) => acc + curr.entradas, 0);
+        const totalDda = ddaChartData.reduce((acc, curr) => acc + curr.contasDda, 0);
+        if (totalDda === 0) return 2.0; // Comfort
+        return totalEntradas / totalDda;
+    }, [ddaChartData]);
     const [ddaLogs, setDdaLogs] = useState<any[]>([]);
     const [isAsaasEnvLoaded, setIsAsaasEnvLoaded] = useState<boolean>(false);
 
@@ -2319,6 +2356,67 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
                                                 Cruzamento do faturamento DDA ativo com o diário ledger para auditar omissões e duplicidades
                                             </p>
+                                        </div>
+
+                                        {/* PAINEL DE ALERTA DE LIQUIDEZ INTELIGENTE */}
+                                        <div className={`p-4 border rounded-3xl ${
+                                            liquidityRatio < 1.0 
+                                                ? 'bg-rose-50/80 border-rose-200/50 text-rose-800' 
+                                                : 'bg-emerald-50/80 border-emerald-200/50 text-emerald-800'
+                                        } flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm`}>
+                                            <div className="flex items-start gap-3">
+                                                <div className={`p-2 rounded-xl mt-0.5 ${liquidityRatio < 1.0 ? 'bg-rose-100' : 'bg-emerald-100'}`}>
+                                                    {liquidityRatio < 1.0 ? <AlertTriangle className="text-rose-600" size={20} /> : <CheckCircle className="text-emerald-600" size={20} />}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-extrabold text-sm uppercase tracking-wide">
+                                                        {liquidityRatio < 1.0 ? 'ALERTA DE LIQUIDEZ CRÍTICA' : 'LIQUIDEZ OPERACIONAL SAUDÁVEL'}
+                                                    </h4>
+                                                    <p className="text-xs opacity-90 mt-0.5">
+                                                        {liquidityRatio < 1.0 
+                                                            ? 'Atenção! As cobranças DDA mapeadas no CNPJ para os próximos dias excedem o histórico médio de entradas dízimos/ofertas. Priorize alongamentos ou use o fundo de reserva da igreja.' 
+                                                            : 'Excelente paridade de fluxo. O volume previsto de dízimos e ofertas ordinárias cobre as obrigações no banco.'
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right whitespace-nowrap bg-white/80 px-4 py-2 rounded-2xl border border-inherit">
+                                                <span className="text-[10px] font-bold uppercase block text-slate-400">Relação de Caixa</span>
+                                                <span className={`text-base font-black ${liquidityRatio < 1.0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                    {liquidityRatio.toFixed(2)}x Cobertura
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* COMPARATIVO DE FLUXO DIÁRIO DDA VS ENTRADAS LANÇADAS */}
+                                        <div className="p-5 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                                            <div className="mb-4">
+                                                <h4 className="font-extrabold text-slate-700 text-xs uppercase tracking-wider">Fluxo Comparativo DDA vs Entradas da Semana</h4>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Estimativa de liquidez por dia útil contra as obrigações ativas do sacado eletrônico</p>
+                                            </div>
+                                            <div className="h-64 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <AreaChart data={ddaChartData}>
+                                                        <defs>
+                                                            <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                                            </linearGradient>
+                                                            <linearGradient id="colorDda" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
+                                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                        <XAxis dataKey="dia" stroke="#94a3b8" fontSize={10} fontWeight="bold" />
+                                                        <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" />
+                                                        <RechartsTooltip />
+                                                        <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                                                        <Area name="Dízimos e Ofertas" type="monotone" dataKey="entradas" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorEntradas)" />
+                                                        <Area name="Cobranças DDA" type="monotone" dataKey="contasDda" stroke="#f43f5e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDda)" />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </div>
 
                                         <div className="p-4 bg-slate-55 border border-slate-200 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-4 text-center">

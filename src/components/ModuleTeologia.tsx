@@ -3,9 +3,11 @@ import { ChurchContext, Button, playMenuSound, playNotificationSound } from '../
 import { 
     BookOpen, GraduationCap, ChevronRight, CheckCircle, Lock, Award, ArrowLeft, 
     Shield, Printer, Sparkles, Brain, Trash2, Download, Plus, Search, 
-    BookOpenText, FileText, RotateCcw, Check, HelpCircle, Loader2, ClipboardList
+    BookOpenText, FileText, RotateCcw, Check, HelpCircle, Loader2, ClipboardList,
+    Play, Pause, Volume2, X
 } from 'lucide-react';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
+import { jsPDF } from 'jspdf';
 
 export default function ModuleTeologia() {
     const { user, addToast, setPrintMode, setPrintData } = useContext(ChurchContext);
@@ -20,8 +22,179 @@ export default function ModuleTeologia() {
     // Quiz state
     const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
 
-    // E-Reader Specific States
+    // Audio Player States
+    const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [selectedVoice, setSelectedVoice] = useState('pastor');
+    const [audioProgress, setAudioProgress] = useState(0);
+
+    // Certificate / Diploma Modal State
+    const [showCertificateModal, setShowCertificateModal] = useState<boolean>(false);
+    const [certifiedCourse, setCertifiedCourse] = useState<any>(null);
+
+    // E-Reader Specific States (Moved up to prevent hoisting errors)
     const [currentPage, setCurrentPage] = useState<number>(0);
+
+    // Audio Speach Synthesis Controller
+    useEffect(() => {
+        if (!isPlayingAudio) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            return;
+        }
+
+        let tempProgressInterval: any;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            
+            // Extract textual contents to be read
+            const contentElement = document.querySelector('.font-serif');
+            const rawText = contentElement ? contentElement.textContent || '' : 'Iniciando leitura da aula teológica.';
+            
+            // Limit to avoid overflow
+            const textToSpeak = rawText.substring(0, 1200);
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'pt-BR';
+            utterance.rate = playbackSpeed;
+            
+            // Voice matching heuristics
+            const voices = window.speechSynthesis.getVoices();
+            let matchedVoice = voices.find(v => v.lang.startsWith('pt'));
+            if (matchedVoice) {
+                utterance.voice = matchedVoice;
+            }
+
+            utterance.onend = () => {
+                setIsPlayingAudio(false);
+                setAudioProgress(100);
+            };
+
+            utterance.onerror = () => {
+                setIsPlayingAudio(false);
+            };
+
+            // Simulating progressive bar for speech tracking
+            let simProgress = 0;
+            tempProgressInterval = setInterval(() => {
+                simProgress += 1.5 * playbackSpeed;
+                if (simProgress >= 100) {
+                    clearInterval(tempProgressInterval);
+                    simProgress = 100;
+                }
+                setAudioProgress(Math.floor(simProgress));
+            }, 500);
+
+            window.speechSynthesis.speak(utterance);
+        } else {
+            // Simulated Audio playback for unsupported clients
+            let simProgress = 0;
+            tempProgressInterval = setInterval(() => {
+                simProgress += 2 * playbackSpeed;
+                if (simProgress >= 100) {
+                    clearInterval(tempProgressInterval);
+                    setIsPlayingAudio(false);
+                    simProgress = 100;
+                }
+                setAudioProgress(Math.floor(simProgress));
+            }, 500);
+        }
+
+        return () => {
+            if (tempProgressInterval) clearInterval(tempProgressInterval);
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        };
+    }, [isPlayingAudio, playbackSpeed, selectedVoice, currentPage]);
+
+    const handleDownloadCertificate = (courseTitle: string) => {
+        try {
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Draw golden frame
+            doc.setDrawColor(217, 119, 6);
+            doc.setLineWidth(1.5);
+            doc.rect(10, 10, 277, 190);
+            
+            doc.setDrawColor(30, 41, 59);
+            doc.setLineWidth(0.5);
+            doc.rect(13, 13, 271, 184);
+
+            // Watermark text background
+            doc.setTextColor(248, 250, 252);
+            doc.setFontSize(40);
+            doc.setFont('helvetica', 'bold');
+            doc.text("CGADB - DOUTRINA OFICIAL", 148, 110, { align: "center", angle: 25 });
+
+            // Title
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(28);
+            doc.setFont('times', 'bold');
+            doc.text("UNIVERSIDADE TEOLOGICA GIPP", 148, 40, { align: "center" });
+
+            // Subtitle
+            doc.setTextColor(180, 83, 9);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text("CONVENCAO GERAL DAS ASSEMBLEIAS DE DEUS NO BRASIL", 148, 50, { align: "center" });
+
+            // Credential Header
+            doc.setTextColor(71, 85, 105);
+            doc.setFontSize(9);
+            doc.text("CREDENCIAIS E REGISTRO DE FORMACAO ACADEMICA ECLESIASTICA", 148, 60, { align: "center" });
+
+            // Body text
+            doc.setTextColor(51, 65, 85);
+            doc.setFontSize(13);
+            doc.text("Certificamos para fins de registro teológico e instrução doutrinária,", 148, 85, { align: "center" });
+            
+            // Student name
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(22);
+            doc.setFont('times', 'italic');
+            doc.text(user?.nome ? user.nome.toUpperCase() : "OBREIRO EM FORMACAO ACADEMICA", 148, 100, { align: "center" });
+
+            // Completing course description
+            doc.setTextColor(51, 65, 85);
+            doc.setFontSize(13);
+            doc.setFont('times', 'normal');
+            doc.text(`concluiu com aproveitamento e zelo eclesiástico estrito a trilha curricular de:`, 148, 115, { align: "center" });
+            
+            doc.setTextColor(79, 70, 229);
+            doc.setFontSize(17);
+            doc.setFont('times', 'bold');
+            doc.text(courseTitle.toUpperCase(), 148, 126, { align: "center" });
+
+            // Endorsement footer
+            doc.setTextColor(100, 116, 139);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'italic');
+            doc.text("Em conformidade doutrinária eclesiástica plena com as Diretrizes da Declaração de Fé da CGADB.", 148, 138, { align: "center" });
+
+            // Signature Lines
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.4);
+            doc.line(40, 168, 120, 168);
+            doc.line(170, 168, 250, 168);
+
+            doc.setTextColor(71, 85, 105);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text("PASTOR PRESIDENTE DA INSTITUICAO", 80, 174, { align: "center" });
+            doc.text("DIRETOR DA BANCA TEOLOGICA", 210, 174, { align: "center" });
+
+            doc.save(`Certificado_Teologia_${courseTitle.replace(/\s+/g, "_")}.pdf`);
+            addToast("Certificado de Teologia baixado com sucesso!", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao processar as credenciais do PDF.", "error");
+        }
+    };
+
+    // E-Reader Specific States
     const [readerTheme, setReaderTheme] = useState<'white' | 'sepia' | 'dark'>('white');
     const [readerFontSize, setReaderFontSize] = useState<'base' | 'lg' | 'xl' | '2xl'>('lg');
     const [studentNotes, setStudentNotes] = useState<Record<string, string>>({});
@@ -398,6 +571,79 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 
                         {/* Column 4: Student Toolbar / Notes & Controls */}
                         <div className="lg:col-span-1 space-y-5 print:hidden">
+                            {/* 🔊 Professor Particular de Teologia - Áudio-Aula */}
+                            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-5 rounded-3xl border border-indigo-200/60 shadow-xs space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Volume2 className="text-indigo-600" size={18} />
+                                        <span className="font-extrabold text-slate-800 text-xs uppercase tracking-tight">Áudio-Aula Exegética</span>
+                                    </div>
+                                    {isPlayingAudio && (
+                                        <span className="flex gap-0.5 items-end h-3">
+                                            <span className="w-0.5 bg-indigo-600 h-2 rounded-full animate-bounce"></span>
+                                            <span className="w-0.5 bg-indigo-500 h-3 rounded-full animate-bounce delay-150"></span>
+                                            <span className="w-0.5 bg-indigo-600 h-1.5 rounded-full animate-bounce delay-300"></span>
+                                        </span>
+                                    )}
+                                </div>
+
+                                <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                                    Ouça os ensinamentos, referências exegéticas e fundamentação CGADB desta lição narrados por voz sintetizada de alta fidelidade.
+                                </p>
+
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                                    <button
+                                        onClick={() => {
+                                            playMenuSound();
+                                            setIsPlayingAudio(!isPlayingAudio);
+                                        }}
+                                        className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 border-0 shadow-md ${
+                                            isPlayingAudio 
+                                                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-550/10' 
+                                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-550/10'
+                                        }`}
+                                    >
+                                        {isPlayingAudio ? (
+                                            <>
+                                                <Pause size={14} /> Pausar Aula
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Play size={14} /> Ouvir Aula
+                                            </>
+                                        )}
+                                    </button>
+
+                                    <div className="flex gap-1 justify-center">
+                                        {[1, 1.25, 1.5, 2].map(speed => (
+                                            <button
+                                                key={speed}
+                                                onClick={() => { playMenuSound(); setPlaybackSpeed(speed); }}
+                                                className={`px-2 py-1.5 text-[9px] font-bold rounded-lg border transition-all ${
+                                                    playbackSpeed === speed 
+                                                        ? 'bg-indigo-600 border-indigo-700 text-white' 
+                                                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-350'
+                                                }`}
+                                            >
+                                                {speed}x
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {audioProgress > 0 && (
+                                    <div className="space-y-1">
+                                        <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                                            <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${audioProgress}%` }}></div>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[8px] font-extrabold uppercase text-slate-400">
+                                            <span>Sintetizador Narrativo</span>
+                                            <span>{audioProgress}% Concluído</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Toolbar Panel */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                                 <h4 className="font-bold text-xs uppercase tracking-widest text-slate-400 block">Estilo de Leitura</h4>
@@ -705,18 +951,14 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                 Certificado de formação reconhecido pela diretoria local. Atribui honras acadêmicas básicas em teologia.
                             </p>
                             <Button 
-                                className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold" 
+                                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all animate-pulse" 
                                 onClick={() => {
-                                    setPrintData({ 
-                                        nome_curso: "Módulo Profissional de " + course.title,
-                                        membro_id: user?.id,
-                                        tipo_certificado: "DIPLOMA TEOLÓGICO",
-                                        horas: course.lessons.length * 10
-                                    });
-                                    setPrintMode('cert_curso');
+                                    playMenuSound();
+                                    setCertifiedCourse(course);
+                                    setShowCertificateModal(true);
                                 }}
                             >
-                                Imprimir Diploma PDF
+                                <Award size={16} /> Emitir Credencial Oficial
                             </Button>
                         </div>
                     </div>
@@ -787,6 +1029,244 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                     setSelectedGeneratedIndex(null);
                     setCurrentPage(0);
                     addToast("Apostila teológica removida.", "success");
+                }
+            };
+
+            const handleDownloadBookletPdf = (bk: any) => {
+                try {
+                    const docJson = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+
+                    // PAGE 1: COVER PAGE
+                    docJson.setDrawColor(30, 41, 59);
+                    docJson.setLineWidth(1);
+                    docJson.rect(10, 10, 190, 277);
+                    
+                    docJson.setDrawColor(217, 119, 6);
+                    docJson.setLineWidth(0.5);
+                    docJson.rect(12, 12, 186, 273);
+
+                    // Watermark background
+                    docJson.setTextColor(248, 250, 252);
+                    docJson.setFontSize(28);
+                    docJson.setFont('helvetica', 'bold');
+                    docJson.text("UNIVERSIDADE TEOLOGICA GIPP", 105, 145, { align: "center", angle: 45 });
+
+                    // College header
+                    docJson.setTextColor(15, 23, 42);
+                    docJson.setFontSize(16);
+                    docJson.setFont('times', 'bold');
+                    docJson.text("UNIVERSIDADE TEOLOGICA GIPP", 105, 45, { align: "center" });
+
+                    docJson.setTextColor(180, 83, 9);
+                    docJson.setFontSize(9);
+                    docJson.setFont('helvetica', 'bold');
+                    docJson.text("CONVENCAO GERAL DAS ASSEMBLEIAS DE DEUS NO BRASIL (CGADB)", 105, 51, { align: "center" });
+
+                    docJson.setDrawColor(226, 232, 240);
+                    docJson.setLineWidth(0.5);
+                    docJson.line(40, 56, 170, 56);
+
+                    // Title
+                    docJson.setTextColor(15, 23, 42);
+                    docJson.setFontSize(20);
+                    docJson.setFont('times', 'bold');
+                    const titleText = (bk.title || bk.theme || "Apostila de Teologia").toUpperCase();
+                    const bookletTitleLines = docJson.splitTextToSize(titleText, 160);
+                    docJson.text(bookletTitleLines, 105, 95, { align: "center" });
+
+                    // Level and Theme details
+                    docJson.setTextColor(100, 116, 139);
+                    docJson.setFontSize(11);
+                    docJson.setFont('helvetica', 'italic');
+                    docJson.text(`Materia de Referencia: ${bk.theme || 'Teologia e Dogmatica'}`, 105, 130, { align: "center" });
+
+                    docJson.setTextColor(15, 23, 42);
+                    docJson.setFontSize(11);
+                    docJson.setFont('helvetica', 'bold');
+                    docJson.text(`PROGRAMA ACADEMICO: RIGOR ${bk.level ? bk.level.toUpperCase() : 'AVANCADO'}`, 105, 140, { align: "center" });
+
+                    // Endorsement
+                    docJson.setDrawColor(217, 119, 6);
+                    docJson.setLineWidth(0.6);
+                    docJson.line(65, 195, 145, 195);
+
+                    docJson.setTextColor(180, 83, 9);
+                    docJson.setFontSize(9);
+                    docJson.setFont('helvetica', 'bold');
+                    docJson.text("DECLARACAO DE FE DA CGADB OFICIAL", 105, 203, { align: "center" });
+
+                    docJson.setTextColor(100, 116, 139);
+                    docJson.setFontSize(8);
+                    docJson.setFont('helvetica', 'normal');
+                    docJson.text("Material desenvolvido e homologado digitalmente para capacitacao", 105, 209, { align: "center" });
+                    docJson.text(`Data de Emissao: ${new Date().toLocaleDateString('pt-BR')} - GIPP SISTEMAS`, 105, 215, { align: "center" });
+
+                    // Helper for paginating sections
+                    const appendSection = (sectionTitle: string, rawText: string, bullets?: string[]) => {
+                        docJson.addPage();
+                        
+                        // Page border
+                        docJson.setDrawColor(226, 232, 240);
+                        docJson.setLineWidth(0.5);
+                        docJson.rect(10, 10, 190, 277);
+
+                        // Header on content pages
+                        docJson.setTextColor(180, 83, 9);
+                        docJson.setFontSize(9);
+                        docJson.setFont('helvetica', 'bold');
+                        docJson.text("UNIVERSIDADE TEOLOGICA GIPP", 15, 19);
+
+                        docJson.setTextColor(148, 163, 184);
+                        docJson.setFontSize(8.5);
+                        docJson.text("Apostila Eletronica de Capacitacao Pastoral", 195, 19, { align: "right" });
+
+                        docJson.setDrawColor(226, 232, 240);
+                        docJson.setLineWidth(0.4);
+                        docJson.line(15, 21, 195, 21);
+
+                        // Chapter title
+                        docJson.setTextColor(15, 23, 42);
+                        docJson.setFontSize(14);
+                        docJson.setFont('times', 'bold');
+                        docJson.text(sectionTitle, 15, 30);
+
+                        let yCursor = 39;
+
+                        if (rawText) {
+                            docJson.setTextColor(51, 65, 85);
+                            docJson.setFontSize(10.5);
+                            docJson.setFont('times', 'normal');
+                            const chunkLines = docJson.splitTextToSize(rawText, 175);
+                            chunkLines.forEach((ln: string) => {
+                                if (yCursor + 6 > 265) {
+                                    docJson.addPage();
+                                    // Header on new sheet
+                                    docJson.setDrawColor(226, 232, 240);
+                                    docJson.setLineWidth(0.5);
+                                    docJson.rect(10, 10, 190, 277);
+                                    docJson.setTextColor(180, 83, 9);
+                                    docJson.setFontSize(9);
+                                    docJson.setFont('helvetica', 'bold');
+                                    docJson.text("UNIVERSIDADE TEOLOGICA GIPP", 15, 19);
+                                    docJson.setDrawColor(226, 232, 240);
+                                    docJson.line(15, 21, 195, 21);
+                                    yCursor = 30;
+                                }
+                                docJson.text(ln, 15, yCursor);
+                                yCursor += 5.8;
+                            });
+                        }
+
+                        if (bullets && bullets.length > 0) {
+                            bullets.forEach((bull: string, bIdx: number) => {
+                                if (yCursor + 12 > 265) {
+                                    docJson.addPage();
+                                    yCursor = 30;
+                                }
+                                docJson.setTextColor(180, 83, 9);
+                                docJson.setFontSize(11);
+                                docJson.setFont('times', 'bold');
+                                docJson.text(`Referencia Exegetica #${bIdx + 1}:`, 15, yCursor);
+
+                                docJson.setTextColor(51, 65, 85);
+                                docJson.setFontSize(10.5);
+                                docJson.setFont('times', 'normal');
+                                const linesToFold = docJson.splitTextToSize(bull, 172);
+                                linesToFold.forEach((lFold: string) => {
+                                    if (yCursor + 6 > 265) {
+                                        docJson.addPage();
+                                        yCursor = 30;
+                                    }
+                                    docJson.text(lFold, 17, yCursor + 5);
+                                    yCursor += 5.8;
+                                });
+                                yCursor += 8;
+                            });
+                        }
+                    };
+
+                    // Add content pages
+                    appendSection("1. INTRODUCAO HISTORICA", bk.introduction || "Conteudo de introducao.");
+                    appendSection("2. FUNDAMENTACAO DOUTRINARIA (CGADB)", bk.doctrinalFoundation || "Conteudo de fundamentacao.");
+                    appendSection("3. REFERENCIAS BIBLICAS DO TEMA", "", bk.biblicalReferences);
+                    appendSection("4. APLICACAO PRATICA NA VIDA CRISTA", bk.practicalApplication || "Aplicacao pratica pastoral recomendada.");
+
+                    // Quiz Page
+                    docJson.addPage();
+                    docJson.setDrawColor(226, 232, 240);
+                    docJson.setLineWidth(0.5);
+                    docJson.rect(10, 10, 190, 277);
+
+                    docJson.setTextColor(180, 83, 9);
+                    docJson.setFontSize(9);
+                    docJson.setFont('helvetica', 'bold');
+                    docJson.text("UNIVERSIDADE TEOLOGICA GIPP", 15, 19);
+                    docJson.setDrawColor(226, 232, 240);
+                    docJson.line(15, 21, 195, 21);
+
+                    docJson.setTextColor(15, 23, 42);
+                    docJson.setFontSize(14);
+                    docJson.setFont('times', 'bold');
+                    docJson.text("5. QUESTIONARIO E FIXACAO DE DOUTRINA", 15, 30);
+
+                    let qCursorY = 42;
+                    if (bk.quiz && bk.quiz.length > 0) {
+                        bk.quiz.forEach((qObj: any, qIdx: number) => {
+                            if (qCursorY + 45 > 265) {
+                                docJson.addPage();
+                                qCursorY = 30;
+                            }
+                            docJson.setTextColor(15, 23, 42);
+                            docJson.setFontSize(11);
+                            docJson.setFont('times', 'bold');
+                            const foldedQText = docJson.splitTextToSize(`Questao ${qIdx + 1}: ${qObj.question}`, 175);
+                            docJson.text(foldedQText, 15, qCursorY);
+                            qCursorY += (foldedQText.length * 5) + 2;
+
+                            docJson.setFont('times', 'normal');
+                            docJson.setTextColor(71, 85, 105);
+                            docJson.setFontSize(10.5);
+                            qObj.options.forEach((opt: string, oIdx: number) => {
+                                const isCorrect = oIdx === qObj.correctIndex;
+                                docJson.text(`[ ${isCorrect ? 'X' : ' '} ]  ${opt}`, 20, qCursorY);
+                                qCursorY += 5.5;
+                            });
+
+                            if (qObj.explanation) {
+                                qCursorY += 1.5;
+                                docJson.setTextColor(180, 83, 9);
+                                docJson.setFontSize(9.5);
+                                docJson.setFont('times', 'bold');
+                                docJson.text("Gabarito Comentado Oficial:", 15, qCursorY);
+                                
+                                docJson.setTextColor(115, 115, 115);
+                                docJson.setFont('times', 'normal');
+                                const explFolded = docJson.splitTextToSize(qObj.explanation, 175);
+                                explFolded.forEach((eLine: string) => {
+                                    if (qCursorY + 5 > 265) {
+                                        docJson.addPage();
+                                        qCursorY = 30;
+                                    }
+                                    docJson.text(eLine, 15, qCursorY + 4.5);
+                                    qCursorY += 5.5;
+                                });
+                            }
+                            qCursorY += 10;
+                        });
+                    }
+
+                    // Save file
+                    const slug = (bk.theme || "apostila").toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+                    docJson.save(`Apostila_GIPP_${slug}.pdf`);
+                    playNotificationSound();
+                    addToast("Apostila Teológica salva em PDF no seu computador!", "success");
+                } catch (err) {
+                    console.error("Failure exporting pdf", err);
+                    addToast("Erro operacional ao exportar PDF.", "error");
                 }
             };
 
@@ -879,8 +1359,15 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                             </div>
 
                             <button
+                                onClick={() => handleDownloadBookletPdf(booklet)}
+                                className="w-full mt-2 flex items-center justify-center gap-2 p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md border-0"
+                            >
+                                <Download size={14} /> Baixar Apostila PDF
+                            </button>
+
+                            <button
                                 onClick={handleDeleteBooklet}
-                                className="w-full mt-4 flex items-center justify-center gap-2 p-2.5 border border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 bg-red-50/10 text-xs font-bold rounded-xl transition-all"
+                                className="w-full mt-1 flex items-center justify-center gap-2 p-2.5 border border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 bg-red-50/10 text-xs font-bold rounded-xl transition-all"
                             >
                                 <Trash2 size={14} /> Excluir Apostila
                             </button>
@@ -1553,6 +2040,90 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                             ))}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Golden Elegant Certificate / Diploma Modal overlay */}
+            {showCertificateModal && certifiedCourse && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn font-sans text-xs">
+                    <div className="bg-white max-w-4xl w-full rounded-3xl border border-slate-200 shadow-2xl p-6 md:p-8 space-y-6 relative overflow-hidden">
+                        <button 
+                            onClick={() => { playMenuSound(); setShowCertificateModal(false); }}
+                            className="absolute right-5 top-5 p-1.5 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <div className="text-center space-y-1">
+                            <h2 className="text-lg font-black text-slate-900 uppercase tracking-wider flex items-center justify-center gap-2">
+                                <Award className="text-amber-500" size={20} /> Credencial Certificada de Formação
+                            </h2>
+                            <p className="text-xs text-slate-500 font-semibold">Pré-visualização do diploma acadêmico sob os requisitos doutrinários CGADB</p>
+                        </div>
+
+                        {/* Interactive Certificate Paper Frame */}
+                        <div id="teologia-diploma-paper" className="border-[8px] border-double border-amber-600 p-8 md:p-12 relative bg-neutral-50/50 rounded-2xl flex flex-col justify-between items-center text-center space-y-6 shadow-inner min-h-[360px] select-none">
+                            {/* Watermark Seal */}
+                            <div className="absolute text-slate-100 font-extrabold text-7xl select-none pointer-events-none uppercase tracking-widest opacity-25 flex items-center justify-center inset-0">
+                                GIPP TEOLOGIA
+                            </div>
+
+                            <div className="space-y-1">
+                                <h1 className="text-2xl md:text-3xl font-black font-serif text-slate-800 leading-tight">UNIVERSIDADE TEOLÓGICA GIPP</h1>
+                                <h3 className="text-[10px] md:text-xs font-bold text-amber-700 uppercase tracking-widest">Convenção Geral das Assembleias de Deus no Brasil — CGADB</h3>
+                            </div>
+
+                            <div className="space-y-3 max-w-lg relative z-10">
+                                <p className="text-xs md:text-sm text-slate-500 italic">Conferimos solenemente ao aluno(a)</p>
+                                <h2 className="text-xl md:text-2xl font-black font-serif text-slate-900 underline decoration-amber-500 decoration-2 underline-offset-4">
+                                    {user?.nome ? user.nome.toUpperCase() : "OBREIRO EM FORMAÇÃO ACADÊMICA"}
+                                </h2>
+                                <p className="text-xs md:text-sm text-slate-500 leading-relaxed font-serif">
+                                    o presente diploma de conclusão contendo honras teológicas acadêmicas de excelência, por haver concluído com maestria de estudos o módulo curricular avançado de:
+                                </p>
+                                <h3 className="text-base md:text-lg font-extrabold text-indigo-700 uppercase tracking-wide">
+                                    {certifiedCourse.title}
+                                </h3>
+                            </div>
+
+                            <div className="space-y-1">
+                                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 max-w-md uppercase tracking-wider">
+                                    Registrado sob os termos da comissão docente acadêmica teológica GIPP — em total fidelidade com os 24 capítulos da Declaração de Fé da CGADB.
+                                </p>
+                            </div>
+
+                            <div className="w-full grid grid-cols-2 gap-8 pt-8 border-t border-slate-200/50">
+                                <div className="space-y-1">
+                                    <div className="h-0.5 bg-slate-300 w-32 md:w-48 mx-auto"></div>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase">Presidente Congregacional</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="h-0.5 bg-slate-300 w-32 md:w-48 mx-auto"></div>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase">Diretor De Cursos</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Interactive UI Action bars */}
+                        <div className="flex gap-3 pt-2">
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => { playMenuSound(); setShowCertificateModal(false); }}
+                                className="flex-1 font-bold"
+                            >
+                                Fechar Lousa
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    playNotificationSound();
+                                    handleDownloadCertificate(certifiedCourse.title);
+                                }}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold gap-2 shadow-md flex items-center justify-center py-2.5"
+                            >
+                                <Download size={15} /> Baixar PDF Certificado
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

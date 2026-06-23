@@ -672,6 +672,79 @@ const ModuleConciliacaoBancaria = () => {
         });
     };
 
+    const calculateMatchScore = (boleto: any) => {
+        if (!db?.financeiro) return { score: 0, reason: "Sem lançamentos" };
+        const localSaidas = db.financeiro.filter((f: any) => f.tipo === 'saida');
+        
+        const exactMatch = localSaidas.find((f: any) => 
+            Number(f.valor) === Number(boleto.valor) && 
+            f.data_vencimento === boleto.data_vencimento
+        );
+        if (exactMatch) {
+            return { score: 100, reason: "Paridade Exata (Valor/Vencto)", matchedId: exactMatch.id };
+        }
+        
+        const monthMatch = localSaidas.find((f: any) => {
+            if (Number(f.valor) !== Number(boleto.valor)) return false;
+            const bMonth = boleto.data_vencimento?.substring(0, 7);
+            const fMonth = f.data_vencimento?.substring(0, 7);
+            return bMonth === fMonth;
+        });
+        if (monthMatch) {
+            return { score: 90, reason: "Mês e Valor idênticos", matchedId: monthMatch.id };
+        }
+
+        const valueMatch = localSaidas.find((f: any) => Number(f.valor) === Number(boleto.valor));
+        if (valueMatch) {
+            return { score: 70, reason: "Valor Coincidente", matchedId: valueMatch.id };
+        }
+
+        return { score: 0, reason: "Sem correspondência" };
+    };
+
+    const handleBatchAutoReconcileDda = async () => {
+        playMenuSound();
+        const pendingBoletos = filteredDdaBoletos.filter((b: any) => b.status === 'pendente');
+        if (pendingBoletos.length === 0) {
+            addToast("Não existem boletos DDA pendentes para auto-conciliação.", "info");
+            return;
+        }
+
+        let reconcileCount = 0;
+        addToast("Autenticando auditoria de conciliação por paridade...", "info");
+
+        for (const boleto of pendingBoletos) {
+            const match = calculateMatchScore(boleto);
+            if (match.score >= 90) {
+                try {
+                    if (match.matchedId) {
+                        await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', match.matchedId), {
+                            status: 'pago',
+                            conciliado: true,
+                            data_conciliacao: new Date().toISOString()
+                        });
+                    }
+                    
+                    await updateDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', boleto.id), {
+                        status: 'importado'
+                    });
+                    
+                    reconcileCount++;
+                } catch(err) {
+                    console.error("Erro na auto-conciliação", err);
+                }
+            }
+        }
+
+        if (reconcileCount > 0) {
+            playNotificationSound();
+            addToast(`Auditoria Concluída! ${reconcileCount} boleto(s) DDA integrados e reconciliados por paridade doutrinária financeira.`, "success");
+            logAction('CONCILIACAO_LOTE_DDA', `Auto-conciliação estruturou paridade com ${reconcileCount} boletos.`, 'dda', 'batch');
+        } else {
+            addToast("Não foram encontrados pares com pontuação de fidelidade >= 90% para conciliar em lote.", "warning");
+        }
+    };
+
     // --- TELA DE CARREGAMENTO DO BANCO ---
     if (connectingPhase === 1 || connectingPhase === 2) {
         return (
@@ -922,14 +995,24 @@ const ModuleConciliacaoBancaria = () => {
                                                 </div>
 
                                                 {/* BOTÃO DE ATUALIZAÇÃO MANUAL DE ACORDO COM O REQUISITO */}
-                                                <Button 
-                                                    onClick={() => triggerRealDdaSync(true)} 
-                                                    disabled={ddaCheckingReal}
-                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wide uppercase px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 border-0"
-                                                >
-                                                    <RefreshCw size={14} className={ddaCheckingReal ? "animate-spin" : ""} />
-                                                    {ddaCheckingReal ? 'Sondando...' : 'Atualizar DDA'}
-                                                </Button>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <Button 
+                                                        onClick={() => triggerRealDdaSync(true)} 
+                                                        disabled={ddaCheckingReal}
+                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wide uppercase px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 border-0"
+                                                    >
+                                                        <RefreshCw size={14} className={ddaCheckingReal ? "animate-spin" : ""} />
+                                                        {ddaCheckingReal ? 'Sondando...' : 'Atualizar DDA'}
+                                                    </Button>
+
+                                                    <Button 
+                                                        onClick={handleBatchAutoReconcileDda}
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs tracking-wide uppercase px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 border-0"
+                                                    >
+                                                        <CheckCheck size={14} />
+                                                        Auto-Conciliar Lote
+                                                    </Button>
+                                                </div>
                                             </>
                                         )}
                                     </div>
@@ -997,6 +1080,31 @@ const ModuleConciliacaoBancaria = () => {
                                                             </span>
                                                         </div>
                                                     )
+                                                },
+                                                {
+                                                    header: 'Paridade Razão', 
+                                                    key: 'match', 
+                                                    render: item => {
+                                                        const match = calculateMatchScore(item);
+                                                        return (
+                                                            <div className="leading-none whitespace-nowrap">
+                                                                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-extrabold border ${
+                                                                    match.score === 100 
+                                                                        ? 'bg-emerald-50 border-emerald-250 text-emerald-700' 
+                                                                        : match.score === 90
+                                                                            ? 'bg-indigo-50 border-indigo-250 text-indigo-700'
+                                                                            : match.score === 70
+                                                                                ? 'bg-amber-50 border-amber-250 text-amber-700'
+                                                                                : 'bg-slate-50 border-slate-200 text-slate-500'
+                                                                }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                        match.score >= 90 ? 'bg-emerald-500' : match.score === 70 ? 'bg-amber-500' : 'bg-slate-400'
+                                                                    }`} />
+                                                                    {match.score}% - {match.reason}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    }
                                                 },
                                                 {
                                                     header: 'Valor do Boleto', 
