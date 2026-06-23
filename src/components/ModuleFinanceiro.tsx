@@ -504,8 +504,30 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                         logAction('DDA_FETCH_FAILURE', `Erro ao sondar DDA em background via ${gateway.toUpperCase()}: ${data.error || 'Resposta não sucedida'}`, 'dda', 'auto_check_fail');
                     }
                 } else {
-                    const errData = await response.json().catch(() => ({}));
-                    const errMsg = errData.error || "Erro interno do servidor na varredura programada.";
+                    let errMsg = "Erro interno do servidor na varredura programada.";
+                    try {
+                        const errText = await response.text();
+                        try {
+                            const errData = JSON.parse(errText);
+                            if (errData && errData.error) {
+                                errMsg = errData.error;
+                            } else if (errData && errData.message) {
+                                errMsg = errData.message;
+                            }
+                        } catch (e) {
+                            if (errText && errText.trim()) {
+                                if (errText.includes("<html") || errText.includes("<body")) {
+                                    const titleMatch = errText.match(/<title>([\s\S]*?)<\/title>/i);
+                                    const h1Match = errText.match(/<h1>([\s\S]*?)<\/h1>/i);
+                                    errMsg = (h1Match ? h1Match[1] : titleMatch ? titleMatch[1] : "Página de erro do servidor de integração").trim();
+                                } else {
+                                    errMsg = errText.trim().substring(0, 180);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Erro ao tratar texto de erro em background:", e);
+                    }
                     logAction('DDA_FETCH_FAILURE', `Falha de comunicação no servidor DDA em background via ${gateway.toUpperCase()}: ${errMsg}`, 'dda', 'auto_check_fail');
                 }
             } catch (err: any) {
@@ -565,12 +587,36 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             });
             
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                const errMsg = errData.error || "Explicação do gateway: Resposta com erro de servidor DDA.";
+                let errMsg = "Explicação do gateway: Resposta com erro de servidor DDA.";
+                try {
+                    const errText = await response.text();
+                    try {
+                        const errData = JSON.parse(errText);
+                        if (errData && errData.error) {
+                            errMsg = errData.error;
+                        } else if (errData && errData.message) {
+                            errMsg = errData.message;
+                        }
+                    } catch (e) {
+                        if (errText && errText.trim()) {
+                            if (errText.includes("<html") || errText.includes("<body")) {
+                                const titleMatch = errText.match(/<title>([\s\S]*?)<\/title>/i);
+                                const h1Match = errText.match(/<h1>([\s\S]*?)<\/h1>/i);
+                                errMsg = (h1Match ? h1Match[1] : titleMatch ? titleMatch[1] : "Página de erro do servidor de integração").trim();
+                            } else {
+                                errMsg = errText.trim().substring(0, 180);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Erro ao tratar texto de erro manual:", e);
+                }
                 logAction('DDA_FETCH_FAILURE', `Sondagem manual via ${gateway.toUpperCase()} falhou: ${errMsg}`, 'dda', 'manual_check_fail');
                 throw new Error(errMsg);
             }
             
+            // Note: Since we consumed the response stream with `.text()` above, we should parse the data from that stream if it succeeded.
+            // Oh, but if response was ok, we DID NOT call response.text() yet! So calling response.json() now is perfectly fine.
             const data = await response.json();
             
             if (data.success && data.added && data.added.length > 0) {
