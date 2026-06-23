@@ -535,6 +535,7 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                     id: `dda-real-${stableId}`,
                     beneficiario: String(boleto.beneficiario).toUpperCase(),
                     cnpj_beneficiario: boleto.cnpj_beneficiario || "00.000.000/0001-00",
+                    cnpj_igreja: cnpj,
                     valor: Number(boleto.valor),
                     data_emissao: boleto.data_emissao || new Date().toISOString().split('T')[0],
                     data_vencimento: boleto.data_vencimento || new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

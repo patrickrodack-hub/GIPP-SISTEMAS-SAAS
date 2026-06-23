@@ -166,6 +166,19 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
     // ESTADOS PARA ABA DE DDA (Boletos CNPJ)
     const [ddaBoletos, setDdaBoletos] = useState<any[]>([]);
+
+    const configuredCnpj = db.igreja?.cnpj;
+    const isCnpjConfigured = useMemo(() => {
+        return configuredCnpj && configuredCnpj.trim() !== "" && configuredCnpj !== "12.345.678/0001-90";
+    }, [configuredCnpj]);
+
+    const filteredDdaBoletos = useMemo(() => {
+        if (isCnpjConfigured) {
+            return ddaBoletos.filter(b => b.cnpj_igreja === configuredCnpj);
+        } else {
+            return ddaBoletos.filter(b => !b.cnpj_igreja || b.cnpj_igreja === "12.345.678/0001-90");
+        }
+    }, [ddaBoletos, configuredCnpj, isCnpjConfigured]);
     const [ddaLastSync, setDdaLastSync] = useState<string>('Nunca atualizado');
     const [ddaChecking, setDdaChecking] = useState<boolean>(false);
     const [ddaScanningWithAi, setDdaScanningWithAi] = useState<boolean>(false);
@@ -243,7 +256,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         const lancamentos = db.financeiro || [];
         const saidas = lancamentos.filter((f: any) => f.tipo === 'saida');
 
-        return ddaBoletos.map((boleto: any) => {
+        return filteredDdaBoletos.map((boleto: any) => {
             // Buscando possíveis conciliações pelo valor aproximado, linha digitável ou descrição aproximada
             const possibleMatches = saidas.filter((s: any) => {
                 const sameValue = Math.abs(Number(s.valor) - Number(boleto.valor)) < 5;
@@ -1180,16 +1193,16 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 </div>
             )}
 
-            {!newBoletoAlert && ddaBoletos.filter(b => b.status === 'pendente').length > 0 && (
+            {!newBoletoAlert && filteredDdaBoletos.filter(b => b.status === 'pendente').length > 0 && (
                 <div className="bg-indigo-50 border border-indigo-100/60 rounded-3xl p-5 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-entrance">
                     <div className="flex items-center gap-3">
                         <div className="p-3 bg-indigo-100 text-indigo-700 rounded-2xl">
                             <Landmark size={22} className="animate-pulse" />
                         </div>
                         <div>
-                            <h4 className="font-extrabold text-slate-800 text-sm uppercase tracking-tight">Monitor DDA Integrado: {ddaBoletos.filter(b => b.status === 'pendente').length} Boletos Aguardando Conciliação</h4>
+                            <h4 className="font-extrabold text-slate-800 text-sm uppercase tracking-tight">Monitor DDA Integrado: {filteredDdaBoletos.filter(b => b.status === 'pendente').length} Boletos Aguardando Conciliação</h4>
                             <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                                Foram capturadas cobranças eletrônicas em nome deste CNPJ totalizando <strong className="text-indigo-600 font-extrabold">R$ {ddaBoletos.filter(b => b.status === 'pendente').reduce((acc, b) => acc + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>. Utilize as ferramentas de conciliação automática para liquidá-los.
+                                Foram capturadas cobranças eletrônicas em nome deste CNPJ totalizando <strong className="text-indigo-600 font-extrabold">R$ {filteredDdaBoletos.filter(b => b.status === 'pendente').reduce((acc, b) => acc + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>. Utilize as ferramentas de conciliação automática para liquidá-los.
                             </p>
                         </div>
                     </div>
@@ -2060,15 +2073,15 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <StatCard 
                                 title="Boletos Pendentes no DDA" 
-                                value={`R$ ${ddaBoletos.filter(b => b.status === 'pendente').reduce((sum, b) => sum + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
-                                sub={`${ddaBoletos.filter(b => b.status === 'pendente').length} boletos aguardando aprovação`} 
+                                value={`R$ ${filteredDdaBoletos.filter(b => b.status === 'pendente').reduce((sum, b) => sum + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                                sub={`${filteredDdaBoletos.filter(b => b.status === 'pendente').length} boletos aguardando aprovação`} 
                                 icon={Landmark} 
                                 color="amber" 
                             />
                             <StatCard 
                                 title="Boletos Importados no Contas a Pagar" 
-                                value={`R$ ${ddaBoletos.filter(b => b.status === 'importado').reduce((sum, b) => sum + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
-                                sub={`${ddaBoletos.filter(b => b.status === 'importado').length} lançados para pagamento`} 
+                                value={`R$ ${filteredDdaBoletos.filter(b => b.status === 'importado').reduce((sum, b) => sum + b.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                                sub={`${filteredDdaBoletos.filter(b => b.status === 'importado').length} lançados para pagamento`} 
                                 icon={FileCheck} 
                                 color="emerald" 
                             />
@@ -2108,7 +2121,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                 }`}
                             >
                                 <Landmark size={14} />
-                                Carteira DDA ({ddaBoletos.length})
+                                Carteira DDA ({filteredDdaBoletos.length})
                             </button>
                             <button
                                 onClick={() => setDdaSubTab('reconciliacao')}
@@ -2182,7 +2195,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
                                         {/* Active Boletos Feed */}
                                         <div className="space-y-4">
-                                            {ddaBoletos.length === 0 ? (
+                                            {filteredDdaBoletos.length === 0 ? (
                                                 <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
                                                     <Landmark size={40} className="mx-auto text-slate-300 mb-2" />
                                                     <p className="text-sm font-bold text-slate-500">Nenhum boleto encontrado no registro DDA.</p>
@@ -2190,7 +2203,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                 </div>
                                             ) : (
                                                 <div className="space-y-4">
-                                                    {ddaBoletos.map((boleto) => (
+                                                    {filteredDdaBoletos.map((boleto) => (
                                                         <div 
                                                             key={boleto.id} 
                                                             className={`p-5 rounded-3xl border transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${

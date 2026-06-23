@@ -87,6 +87,19 @@ const ModuleConciliacaoBancaria = () => {
         return () => unsubscribe();
     }, [appId, dbFirestore]);
 
+    const configuredCnpj = db.igreja?.cnpj;
+    const isCnpjConfigured = useMemo(() => {
+        return configuredCnpj && configuredCnpj.trim() !== "" && configuredCnpj !== "12.345.678/0001-90";
+    }, [configuredCnpj]);
+
+    const filteredDdaBoletos = useMemo(() => {
+        if (isCnpjConfigured) {
+            return ddaBoletos.filter(b => b.cnpj_igreja === configuredCnpj);
+        } else {
+            return ddaBoletos.filter(b => !b.cnpj_igreja || b.cnpj_igreja === "12.345.678/0001-90");
+        }
+    }, [ddaBoletos, configuredCnpj, isCnpjConfigured]);
+
     const [ddaCheckingReal, setDdaCheckingReal] = useState(false);
 
     const triggerRealDdaSync = async (isManualCall: boolean = false) => {
@@ -644,7 +657,7 @@ const ModuleConciliacaoBancaria = () => {
             onConfirm: async () => {
                 try {
                     for (let id of selectedIds) {
-                        const boleto = ddaBoletos.find(b => b.id === id);
+                        const boleto = filteredDdaBoletos.find(b => b.id === id);
                         if (boleto && boleto.status === 'pendente') {
                             await handleImportarEQuitarDda(boleto);
                         }
@@ -947,7 +960,7 @@ const ModuleConciliacaoBancaria = () => {
                                         <GenericTable 
                                             title="" 
                                             type="dda_boletos" 
-                                            data={ddaBoletos.filter(b => b.status === 'pendente')} 
+                                            data={filteredDdaBoletos.filter(b => b.status === 'pendente')} 
                                             onSelectionChange={setSelectedIds}
                                             columns={[
                                                 {

@@ -264,6 +264,37 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
     status: 'Pendente'
   });
 
+  // Sincronização automática do CNPJ e Nome da Igreja nas guias e formulários do Departamento Pessoal
+  useEffect(() => {
+    if (db && db.igreja) {
+      const churchCnpj = db.igreja.cnpj || '';
+      const churchName = db.igreja.razao_social || db.igreja.nome || 'INSTITUIÇÃO SEDE / MATRIZ';
+      
+      const isCnpjValid = churchCnpj && churchCnpj.trim() !== '' && churchCnpj !== '12.345.678/0001-90' && churchCnpj !== '00.000.000/0001-00';
+      
+      const activeCnpj = isCnpjValid ? churchCnpj : '12.345.678/0001-99';
+      const activeName = isCnpjValid ? churchName.toUpperCase() : 'INSTITUIÇÃO SEDE / MATRIZ GIPP';
+      
+      setDarfForm(prev => {
+        if (prev.cnpj === activeCnpj && prev.razaoSocial === activeName) return prev;
+        return {
+          ...prev,
+          cnpj: activeCnpj,
+          razaoSocial: activeName
+        };
+      });
+      
+      setFgtsForm(prev => {
+        if (prev.cnpj === activeCnpj && prev.razaoSocial === activeName) return prev;
+        return {
+          ...prev,
+          cnpj: activeCnpj,
+          razaoSocial: activeName
+        };
+      });
+    }
+  }, [db, db?.igreja?.cnpj, db?.igreja?.razao_social, db?.igreja?.nome]);
+
   const handlePrintDarf = (darfData: any) => {
     addToast("Gerando visualização da Guia DARF para impressão física...", "info");
     const iframe = document.createElement('iframe');
