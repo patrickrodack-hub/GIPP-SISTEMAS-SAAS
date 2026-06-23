@@ -199,13 +199,21 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
 
         const currentGateway = bankGateway || 'inter';
         const isSandbox = bankSandbox !== false;
-        console.log(`DDA Real-Time: Consultando CNPJ ${cnpj} via ${currentGateway} (Modo Sandbox/Homologação: ${isSandbox})`);
+        
+        let hasCredentials = false;
+        if (currentGateway === 'inter' && bankClientId && bankClientSecret) {
+            hasCredentials = true;
+        } else if ((currentGateway === 'asaas' || currentGateway === 'pluggy') && bankApiKey) {
+            hasCredentials = true;
+        }
+
+        console.log(`DDA Real-Time: Consultando CNPJ ${cnpj} via ${currentGateway} (Modo Sandbox/Homologação: ${isSandbox}, Credenciais configuradas: ${hasCredentials})`);
 
         let boletos: any[] = [];
         let successMessage = "";
 
-        if (isSandbox) {
-            // No modo de Sandbox / Homologação, respondemos com os boletos reais estruturados de teste
+        if (isSandbox && !hasCredentials) {
+            // No modo de Sandbox sem credenciais, respondemos com os boletos realistas estruturados de teste
             // para que a diretoria financeira / pastor possa validar o fluxo de entrada e liquidação.
             // Os boletos são modelados com CNPJs e emissores válidos brasileiros (Sabesp, CPFL, VIVO, CPAD).
             boletos = [
@@ -242,22 +250,22 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
             ];
             successMessage = `🔌 Conexão DDA Ativa (${currentGateway.toUpperCase()}). Sincronizado em ambiente de SIMULAÇÃO DE VOO (Sandbox) para o CNPJ ${cnpj}.`;
         } else {
-            // MODO DE PRODUÇÃO REAL - REQUER CREDENCIAIS AUTÊNTICAS
+            // MODO REAL-TIME (PRODUÇÃO OU SANDBOX AUTÊNTICO COM CHAVES DO USUÁRIO)
             if (currentGateway === 'inter') {
-                if (!bankClientId || !bankClientSecret) {
-                    throw new Error("Credenciais em falta: Para o Banco Inter (Produção), os campos 'Client ID' e 'Client Secret' são obrigatórios.");
-                }
+                const interUrl = isSandbox 
+                    ? "https://cdpj-sandbox.partners.bancointer.com.br"
+                    : "https://cdpj.partners.bancointer.com.br";
 
                 try {
-                    console.log("DDA Production: Efetuando autenticação mTLS/OAuth2 junto ao Banco Inter...");
-                    const tokenResponse = await fetch("https://cdpj.partners.bancointer.com.br/oauth/v2/token", {
+                    console.log(`DDA Production: Efetuando autenticação mTLS/OAuth2 junto ao Banco Inter (${interUrl})...`);
+                    const tokenResponse = await fetch(`${interUrl}/oauth/v2/token`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/x-www-form-urlencoded"
                         },
                         body: new URLSearchParams({
-                            client_id: bankClientId,
-                            client_secret: bankClientSecret,
+                            client_id: bankClientId || "",
+                            client_secret: bankClientSecret || "",
                             grant_type: "client_credentials",
                             scope: "boleto-recebido.read"
                         }).toString()
@@ -265,14 +273,14 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
 
                     if (!tokenResponse.ok) {
                         const errTxt = await tokenResponse.text();
-                        throw new Error(`Erro na autenticação (Cóg: ${tokenResponse.status}): ${errTxt}`);
+                        throw new Error(`Erro na autenticação Inter (Cóg: ${tokenResponse.status}): ${errTxt}`);
                     }
 
                     const tokenData: any = await tokenResponse.json();
                     const accessToken = tokenData.access_token;
 
                     console.log(`DDA Production: Pesquisando boletos sacados para o CNPJ: ${cnpj}`);
-                    const ddaResponse = await fetch(`https://cdpj.partners.bancointer.com.br/cobranca/v3/boletos/sacado?cpfCnpj=${cnpj.replace(/\D/g, "")}`, {
+                    const ddaResponse = await fetch(`${interUrl}/cobranca/v3/boletos/sacado?cpfCnpj=${cnpj.replace(/\D/g, "")}`, {
                         method: "GET",
                         headers: {
                             "Authorization": `Bearer ${accessToken}`,
@@ -294,62 +302,111 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                             data_emissao: b.dataEmissao || new Date().toISOString().split('T')[0],
                             data_vencimento: b.dataVencimento || new Date().toISOString().split('T')[0],
                             linha_digitavel: b.linhaDigitavel || b.codigoBarras || "",
-                            tipo: "Boleto DDA"
+                            tipo: "Boleto DDA",
+                            origem: `Banco Inter API (${isSandbox ? "Sandbox" : "Produção"})`
                         }));
                     }
-                    successMessage = `✔ Conectado ao Gateway Banco Inter Sede. Varredura DDA real concluída com sucesso para o CNPJ ${cnpj}!`;
+                    successMessage = `✔ Conectado ao Gateway Banco Inter Sede (${isSandbox ? "Sandbox" : "Produção"}). Varredura DDA real concluída com sucesso para o CNPJ ${cnpj}!`;
                 } catch (interErr: any) {
-                    throw new Error(`Falha ao estabelecer conexão mTLS com Banco Inter: ${interErr.message}. Verifique a validade de suas chaves da API de Parceiros.`);
+                    throw new Error(`Falha ao estabelecer conexão com Banco Inter: ${interErr.message}`);
                 }
 
             } else if (currentGateway === 'asaas') {
-                if (!bankApiKey) {
-                    throw new Error("Credencial em falta: Para o Asaas (Produção), a sua 'Chave de API / Access Token' é obrigatória.");
-                }
-
                 try {
-                    console.log("DDA Production: Consultando faturamentos reais via API Asaas corporativo...");
-                    const asaasResponse = await fetch("https://www.asaas.com/api/v3/payments?status=PENDING&limit=30", {
+                    const asaasBaseUrl = isSandbox 
+                        ? "https://sandbox.asaas.com/api/v3"
+                        : "https://www.asaas.com/api/v3";
+
+                    const extractAsaasErrorMessage = (status: number, text: string) => {
+                        try {
+                            const parsed = JSON.parse(text);
+                            if (parsed.errors && parsed.errors.length > 0) {
+                                const mainError = parsed.errors[0];
+                                if (mainError.code === 'invalid_environment') {
+                                    return `Ambiente Incompatível: A sua Chave de API Asaas não pertence ao ambiente de ${isSandbox ? "Sandbox/Homologação" : "Produção"}. Mude o interruptor "Conexão Real (Modo Sandbox)" correspondente a este token ou configure a chave correta.`;
+                                }
+                                return `${mainError.description || mainError.code}`;
+                            }
+                        } catch (e) {
+                            // ignore parsing error
+                        }
+                        if (status === 401) {
+                            return "Chave de acesso (Token) inválida ou não autorizada no Asaas. Por favor, revise sua chave de API e tente novamente.";
+                        }
+                        return `Erro na API Asaas (Cóg: ${status}): ${text}`;
+                    };
+
+                    console.log(`DDA Real-Time: Consultando gateway Asaas em ${asaasBaseUrl}/dda/boletos...`);
+                    const asaasResponse = await fetch(`${asaasBaseUrl}/dda/boletos`, {
                         method: "GET",
                         headers: {
-                            "access_token": bankApiKey,
+                            "access_token": bankApiKey || "",
                             "Accept": "application/json"
                         }
                     });
 
                     if (!asaasResponse.ok) {
-                        const errTxt = await asaasResponse.text();
-                        throw new Error(`Erro na API Asaas (Cóg: ${asaasResponse.status}): ${errTxt}`);
+                        // Se for erro de autenticação ou ambiente inválido (401/403), falha imediatamente com mensagem amigável sem tentar fallback
+                        if (asaasResponse.status === 401 || asaasResponse.status === 403) {
+                            const errTxt = await asaasResponse.text();
+                            const cleanErr = extractAsaasErrorMessage(asaasResponse.status, errTxt);
+                            throw new Error(cleanErr);
+                        }
+
+                        // Plano B/Fallback: Se o endpoint nativo DDA não estiver liberado na conta Asaas do usuário,
+                        // tentamos listar as faturas gerais emitidas no perfil da sandbox/produção
+                        console.log(`DDA Asaas nativo respondeu com código ${asaasResponse.status}. Tentando pagamentos gerais recebidos/emitidos como contingência...`);
+                        const fallbackResponse = await fetch(`${asaasBaseUrl}/payments?status=PENDING&limit=30`, {
+                            method: "GET",
+                            headers: {
+                                "access_token": bankApiKey || "",
+                                "Accept": "application/json"
+                            }
+                        });
+
+                        if (!fallbackResponse.ok) {
+                            const errTxt = await fallbackResponse.text();
+                            const cleanErr = extractAsaasErrorMessage(fallbackResponse.status, errTxt);
+                            throw new Error(cleanErr);
+                        }
+
+                        const asaasData: any = await fallbackResponse.json();
+                        boletos = (asaasData.data || []).map((p: any) => ({
+                            beneficiario: p.description?.toUpperCase() || "ASAAS PARCEIROS COBRANÇA",
+                            cnpj_beneficiario: p.corporateIdentifier || "02.558.157/0001-62",
+                            valor: Number(p.value) || 0,
+                            data_emissao: p.paymentDate || new Date().toISOString().split('T')[0],
+                            data_vencimento: p.dueDate || new Date().toISOString().split('T')[0],
+                            linha_digitavel: p.identificationField || p.nossoNumero || "",
+                            tipo: "Asaas Cobrança / DDA",
+                            origem: `Asaas API (${isSandbox ? "Sandbox" : "Produção"})`
+                        }));
+                    } else {
+                        const ddaData: any = await asaasResponse.json();
+                        boletos = (ddaData.data || ddaData.boletos || []).map((b: any) => ({
+                            beneficiario: b.companyName || b.beneficiaryName || b.description || "EMISSOR ASAAS DDA",
+                            cnpj_beneficiario: b.companyCnpj || b.beneficiaryCnpj || b.cnpj || "00.000.000/0001-00",
+                            valor: Number(b.value || b.amount) || 0,
+                            data_emissao: b.issuedDate || b.dateCreated || new Date().toISOString().split('T')[0],
+                            data_vencimento: b.dueDate || new Date().toISOString().split('T')[0],
+                            linha_digitavel: b.identificationField || b.barCode || b.digitableLine || "",
+                            tipo: b.type || "Boleto DDA Asaas",
+                            origem: `Asaas DDA API (${isSandbox ? "Sandbox" : "Produção"})`
+                        }));
                     }
 
-                    const asaasData: any = await asaasResponse.json();
-                    
-                    boletos = (asaasData.data || []).map((p: any) => ({
-                        beneficiario: p.description?.toUpperCase() || "ASAAS PARCEIROS COBRANÇA",
-                        cnpj_beneficiario: p.corporateIdentifier || "02.558.157/0001-62",
-                        valor: Number(p.value) || 0,
-                        data_emissao: p.paymentDate || new Date().toISOString().split('T')[0],
-                        data_vencimento: p.dueDate || new Date().toISOString().split('T')[0],
-                        linha_digitavel: p.identificationField || p.nossoNumero || "",
-                        tipo: "Asaas Cobrança / DDA"
-                    }));
-
-                    successMessage = `✔ Conectado ao Gateway Asaas S.A. Varredura DDA real concluída com sucesso para o CNPJ ${cnpj}!`;
+                    successMessage = `✔ Conectado ao Gateway Asaas S.A. (${isSandbox ? "Sandbox" : "Produção"}). Varredura de boletos realizada com sucesso para o CNPJ ${cnpj}!`;
                 } catch (asaasErr: any) {
-                    throw new Error(`Falha de comunicação com o gateway Asaas: ${asaasErr.message}`);
+                    throw new Error(`Falha de comunicação integral com o gateway Asaas: ${asaasErr.message}`);
                 }
 
             } else if (currentGateway === 'pluggy') {
-                if (!bankApiKey) {
-                    throw new Error("Credencial em falta: Para o Pluggy (Produção), o cabeçalho 'X-API-KEY' é obrigatório.");
-                }
-
                 try {
                     console.log("DDA Production: Efetuando varredura unificada via Pluggy HUB Open Banking...");
                     const pluggyResponse = await fetch("https://api.pluggy.ai/bills", {
                         method: "GET",
                         headers: {
-                            "X-API-KEY": bankApiKey,
+                            "X-API-KEY": bankApiKey || "",
                             "Accept": "application/json"
                         }
                     });
@@ -367,7 +424,8 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                         data_emissao: b.issuedDate || new Date().toISOString().split('T')[0],
                         data_vencimento: b.dueDate || new Date().toISOString().split('T')[0],
                         linha_digitavel: b.barCode || b.digitableLine || "",
-                        tipo: "Pluggy Open Banking"
+                        tipo: "Pluggy Open Banking",
+                        origem: `Pluggy HUB (${isSandbox ? "Sandbox" : "Produção"})`
                     }));
 
                     successMessage = `✔ Conectado ao Pluggy Open Finance Hub. Detecção DDA finalizada com sucesso!`;

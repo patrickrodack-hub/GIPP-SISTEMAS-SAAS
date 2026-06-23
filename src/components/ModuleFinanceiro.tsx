@@ -185,6 +185,28 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const [localBankApiKey, setLocalBankApiKey] = useState<string>('');
     const [localBankSandbox, setLocalBankSandbox] = useState<boolean>(true);
     const [ddaSavingConfig, setDdaSavingConfig] = useState<boolean>(false);
+    const [ddaLogs, setDdaLogs] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!appId || !dbFirestore) return;
+        const logsRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'auditoria_logs');
+        const unsubscribe = onSnapshot(logsRef, (snapshot) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.acao && (data.acao.startsWith('DDA_') || data.tipo_item === 'dda' || (data.detalhes && data.detalhes.includes('DDA')))) {
+                    list.push({ id: docSnap.id, ...data });
+                }
+            });
+            list.sort((a, b) => {
+                const timeA = a.data_hora || '';
+                const timeB = b.data_hora || '';
+                return timeB.localeCompare(timeA);
+            });
+            setDdaLogs(list);
+        });
+        return () => unsubscribe();
+    }, [appId, dbFirestore]);
 
     useEffect(() => {
         if (db.igreja) {
@@ -434,6 +456,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
         const checkDdaUpdatesReal = async () => {
             // Sonda de fundo automática mais sutil a cada 180s usando faturamentos reais
+            const gateway = db.igreja?.bank_gateway || 'inter';
             try {
                 const cnpj = db.igreja?.cnpj || "12.345.678/0001-90";
                 const response = await fetch("/api/financeiro/sondar-dda", {
@@ -442,7 +465,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                     body: JSON.stringify({ 
                         cnpj, 
                         appId,
-                        bankGateway: db.igreja?.bank_gateway || 'inter',
+                        bankGateway: gateway,
                         bankClientId: db.igreja?.bank_client_id || '',
                         bankClientSecret: db.igreja?.bank_client_secret || '',
                         bankApiKey: db.igreja?.bank_api_key || '',
@@ -451,31 +474,43 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success && data.added && data.added.length > 0) {
-                        // Grava no Firestore
-                        try {
-                            const batch = writeBatch(dbFirestore);
-                            for (const b of data.added) {
-                                const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', b.id);
-                                batch.set(docRef, b);
+                    if (data.success) {
+                        // Log success
+                        logAction('DDA_FETCH_SUCCESS', `Varredura automática via ${gateway.toUpperCase()} em background: ${data.added?.length || 0} boletos novos detectados. Sincronização OK.`, 'dda', 'auto_check');
+                        if (data.added && data.added.length > 0) {
+                            // Grava no Firestore
+                            try {
+                                const batch = writeBatch(dbFirestore);
+                                for (const b of data.added) {
+                                    const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', b.id);
+                                    batch.set(docRef, b);
+                                }
+                                await batch.commit();
+                            } catch (err) {
+                                console.error("Erro ao salvar boletos recebidos em background no Firestore:", err);
                             }
-                            await batch.commit();
-                        } catch (err) {
-                            console.error("Erro ao salvar boletos recebidos em background no Firestore:", err);
-                        }
 
-                        // Dispara o alerta do banner para o primeiro detectado
-                        setNewBoletoAlert(data.added[0]);
-                        addToast(`🔔 Sincronizador DDA: Novo boleto real de R$ ${data.added[0].valor} detectado no CNPJ da Igreja!`, "info");
-                        try {
-                            if (typeof playNotificationSound === 'function') {
-                                playNotificationSound();
-                            }
-                        } catch(e) {}
+                            // Dispara o alerta do banner para o primeiro detectado
+                            setNewBoletoAlert(data.added[0]);
+                            addToast(`🔔 Sincronizador DDA: Novo boleto real de R$ ${data.added[0].valor} detectado no CNPJ da Igreja!`, "info");
+                            try {
+                                if (typeof playNotificationSound === 'function') {
+                                    playNotificationSound();
+                                }
+                            } catch(e) {}
+                        }
+                    } else {
+                        // Log failure returned inside a success response
+                        logAction('DDA_FETCH_FAILURE', `Erro ao sondar DDA em background via ${gateway.toUpperCase()}: ${data.error || 'Resposta não sucedida'}`, 'dda', 'auto_check_fail');
                     }
+                } else {
+                    const errData = await response.json().catch(() => ({}));
+                    const errMsg = errData.error || "Erro interno do servidor na varredura programada.";
+                    logAction('DDA_FETCH_FAILURE', `Falha de comunicação no servidor DDA em background via ${gateway.toUpperCase()}: ${errMsg}`, 'dda', 'auto_check_fail');
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Erro na verificação de fundo de DDA real:", err);
+                logAction('DDA_FETCH_FAILURE', `Erro de exceção na varredura automática DDA via ${gateway.toUpperCase()}: ${err.message || String(err)}`, 'dda', 'auto_check_fail');
             }
         };
 
@@ -511,6 +546,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const handleSondarDda = async () => {
         setDdaChecking(true);
         addToast("Conectando à Câmara de Compensação Interbancária e Receita Federal...", "info");
+        const gateway = db.igreja?.bank_gateway || 'inter';
         
         try {
             const cnpj = db.igreja?.cnpj || "12.345.678/0001-90";
@@ -520,7 +556,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 body: JSON.stringify({ 
                     cnpj, 
                     appId,
-                    bankGateway: db.igreja?.bank_gateway || 'inter',
+                    bankGateway: gateway,
                     bankClientId: db.igreja?.bank_client_id || '',
                     bankClientSecret: db.igreja?.bank_client_secret || '',
                     bankApiKey: db.igreja?.bank_api_key || '',
@@ -529,12 +565,18 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             });
             
             if (!response.ok) {
-                throw new Error("Resposta com erro no servidor DDA.");
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = errData.error || "Explicação do gateway: Resposta com erro de servidor DDA.";
+                logAction('DDA_FETCH_FAILURE', `Sondagem manual via ${gateway.toUpperCase()} falhou: ${errMsg}`, 'dda', 'manual_check_fail');
+                throw new Error(errMsg);
             }
             
             const data = await response.json();
             
             if (data.success && data.added && data.added.length > 0) {
+                // Log manual success
+                logAction('DDA_FETCH_SUCCESS', `Sondagem manual via ${gateway.toUpperCase()} bem-sucedida. Encontrados ${data.added.length} novos boletos para o CNPJ ${cnpj}.`, 'dda', 'manual_check_success');
+                
                 // Grava no Firestore a partir do cliente autenticado
                 if (appId && dbFirestore) {
                     try {
@@ -559,8 +601,14 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                         playNotificationSound();
                     }
                 } catch(e) {}
-            } else {
+            } else if (data.success) {
+                // Log manual success (but nothing found)
+                logAction('DDA_FETCH_SUCCESS', `Sondagem manual via ${gateway.toUpperCase()} concluída. Nenhum novo débito em aberto no CNPJ ${cnpj}.`, 'dda', 'manual_check_success');
                 addToast("Câmara de compensação consultada. Nenhum novo débito ou pendência fiscal emitida contra o CNPJ recentemente.", "success");
+            } else {
+                const errMsg = data.error || "Operação rejeitada pelo gateway bancário.";
+                logAction('DDA_FETCH_FAILURE', `Sondagem manual via ${gateway.toUpperCase()} recusada: ${errMsg}`, 'dda', 'manual_check_fail');
+                throw new Error(errMsg);
             }
             
             const nowStr = new Date().toLocaleString('pt-BR');
@@ -2746,6 +2794,25 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                         </div>
                                                     )}
 
+                                                    {localBankGateway === 'asaas' && (
+                                                        <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-[11px] text-slate-700 space-y-3 font-medium leading-relaxed mt-2 animate-entrance">
+                                                            <h5 className="font-extrabold uppercase text-[10px] text-indigo-700 flex items-center gap-1">
+                                                                <Sliders size={12} /> Guia de Integração Oficial Asaas API
+                                                            </h5>
+                                                            <ul className="space-y-2 list-decimal list-inside text-slate-600 font-semibold">
+                                                                <li>
+                                                                    <strong className="text-slate-800 font-extrabold">Pesquisa do CNPJ:</strong> O sistema buscará faturas associadas ao CNPJ oficial da igreja de forma eletrônica.
+                                                                </li>
+                                                                <li>
+                                                                    <strong className="text-slate-800 font-extrabold">Obtenção da Chave:</strong> No painel Asaas, aceda a <span className="text-slate-800 underline font-extrabold">Minha Conta &gt; Integrações</span> para gerar o Token de Produção ou Homologação (Sandbox).
+                                                                </li>
+                                                                <li>
+                                                                    <strong className="text-slate-800 font-extrabold">Armazenamento Criptografado:</strong> Sua chave é protegida per-tenant em nosso banco Firestore. Toda chamada à API ocorre server-to-server sem expor dados ao navegador.
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    )}
+
                                                     <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2 text-[10px] text-amber-900 font-semibold leading-normal">
                                                         <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
                                                         <div>
@@ -2774,6 +2841,62 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                 </button>
                                             </div>
                                         </form>
+
+                                        {/* AUDIT LOG TABLE OF SUCCESSFUL VS FAILED FETCHES */}
+                                        <div className="pt-6 border-t border-slate-100 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                                                        <History size={14} className="text-indigo-600" />
+                                                        Logs de Auditoria do Sincronizador DDA ({ddaLogs.length})
+                                                    </h4>
+                                                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider">
+                                                        Histórico de rastreio de varreduras sucessos/falhas
+                                                    </p>
+                                                </div>
+                                                <span className="bg-slate-100 text-slate-600 text-[9px] font-black px-2 py-0.5 rounded-full">
+                                                    DDA Monitor
+                                                </span>
+                                            </div>
+
+                                            {ddaLogs.length === 0 ? (
+                                                <div className="p-6 border border-dashed border-slate-200 rounded-2xl text-center text-slate-400 font-bold text-xs">
+                                                    Nenhum log de varredura ou auditoria financeira registrado para esta igreja.
+                                                </div>
+                                            ) : (
+                                                <div className="max-h-60 overflow-y-auto border border-slate-150/60 rounded-3xl divide-y divide-slate-100 custom-scrollbar bg-slate-50/20 shadow-xs">
+                                                    {ddaLogs.slice(0, 15).map((log) => {
+                                                        const isSuccess = log.acao === 'DDA_FETCH_SUCCESS';
+                                                        const isFailure = log.acao === 'DDA_FETCH_FAILURE';
+                                                        return (
+                                                            <div key={log.id} className="p-3 text-[11px] space-y-1 hover:bg-white transition-colors">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                                                            isSuccess ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : isFailure ? 'bg-rose-500 animate-pulse' : 'bg-blue-500'
+                                                                        }`} />
+                                                                        <span className="font-extrabold text-slate-800 uppercase tracking-tight text-[10px]">
+                                                                            {isSuccess ? 'Varredura Bem-Sucedida' : isFailure ? 'Sondagem Rejeitada' : log.acao}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="font-mono text-slate-400 text-[9px]">
+                                                                        {log.data_hora ? log.data_hora.slice(11, 19) || log.data_hora : 'Data Indefinida'}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-slate-600 leading-normal font-semibold text-[11px] pr-2">
+                                                                    {log.detalhes || log.mensagem || "Transação DDA validada com o barramento bancário."}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 text-[9px] text-slate-400 font-bold">
+                                                                    <span>Gestor: {log.usuario_nome || 'Sistema (Scheduler)'}</span>
+                                                                    <span>•</span>
+                                                                    <span>Canal: DDA-Sync</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
