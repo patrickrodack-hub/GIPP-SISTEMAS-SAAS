@@ -179,12 +179,22 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     // Estados para Configuração Financeira do DDA
     const [localCnpj, setLocalCnpj] = useState<string>('');
     const [localDdaAuto, setLocalDdaAuto] = useState<boolean>(true);
+    const [localBankGateway, setLocalBankGateway] = useState<string>('inter');
+    const [localBankClientId, setLocalBankClientId] = useState<string>('');
+    const [localBankClientSecret, setLocalBankClientSecret] = useState<string>('');
+    const [localBankApiKey, setLocalBankApiKey] = useState<string>('');
+    const [localBankSandbox, setLocalBankSandbox] = useState<boolean>(true);
     const [ddaSavingConfig, setDdaSavingConfig] = useState<boolean>(false);
 
     useEffect(() => {
         if (db.igreja) {
             setLocalCnpj(db.igreja.cnpj || '');
             setLocalDdaAuto(db.igreja.dda_automatic_check !== false);
+            setLocalBankGateway(db.igreja.bank_gateway || 'inter');
+            setLocalBankClientId(db.igreja.bank_client_id || '');
+            setLocalBankClientSecret(db.igreja.bank_client_secret || '');
+            setLocalBankApiKey(db.igreja.bank_api_key || '');
+            setLocalBankSandbox(db.igreja.bank_sandbox !== false);
         }
     }, [db.igreja]);
 
@@ -429,7 +439,15 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 const response = await fetch("/api/financeiro/sondar-dda", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ cnpj, appId }),
+                    body: JSON.stringify({ 
+                        cnpj, 
+                        appId,
+                        bankGateway: db.igreja?.bank_gateway || 'inter',
+                        bankClientId: db.igreja?.bank_client_id || '',
+                        bankClientSecret: db.igreja?.bank_client_secret || '',
+                        bankApiKey: db.igreja?.bank_api_key || '',
+                        bankSandbox: db.igreja?.bank_sandbox !== false
+                    }),
                 });
                 if (response.ok) {
                     const data = await response.json();
@@ -499,7 +517,15 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
             const response = await fetch("/api/financeiro/sondar-dda", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cnpj, appId }),
+                body: JSON.stringify({ 
+                    cnpj, 
+                    appId,
+                    bankGateway: db.igreja?.bank_gateway || 'inter',
+                    bankClientId: db.igreja?.bank_client_id || '',
+                    bankClientSecret: db.igreja?.bank_client_secret || '',
+                    bankApiKey: db.igreja?.bank_api_key || '',
+                    bankSandbox: db.igreja?.bank_sandbox !== false
+                }),
             });
             
             if (!response.ok) {
@@ -2563,7 +2589,12 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                 // Save to database
                                                 await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { 
                                                     cnpj: formattedCnpj,
-                                                    dda_automatic_check: localDdaAuto
+                                                    dda_automatic_check: localDdaAuto,
+                                                    bank_gateway: localBankGateway,
+                                                    bank_client_id: localBankClientId,
+                                                    bank_client_secret: localBankClientSecret,
+                                                    bank_api_key: localBankApiKey,
+                                                    bank_sandbox: localBankSandbox
                                                 }, { merge: true });
                                                 
                                                 // Update app level context
@@ -2572,7 +2603,12 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                     igreja: {
                                                         ...prev.igreja,
                                                         cnpj: formattedCnpj,
-                                                        dda_automatic_check: localDdaAuto
+                                                        dda_automatic_check: localDdaAuto,
+                                                        bank_gateway: localBankGateway,
+                                                        bank_client_id: localBankClientId,
+                                                        bank_client_secret: localBankClientSecret,
+                                                        bank_api_key: localBankApiKey,
+                                                        bank_sandbox: localBankSandbox
                                                     }
                                                 }));
 
@@ -2621,6 +2657,102 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                         />
                                                         <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                                                     </label>
+                                                </div>
+
+                                                {/* NOVA INTEGRAÇÃO BANCÁRIA REAL DDA */}
+                                                <div className="p-6 bg-slate-50 border border-slate-200/60 rounded-[2rem] space-y-4">
+                                                    <div>
+                                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                                                            <Key size={14} className="text-amber-500" />
+                                                            Integração Gateway de DDA Real
+                                                        </h4>
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
+                                                            Autenticação direta com o Barramento Bancário Credenciado
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="space-y-1.5">
+                                                            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                                                Provedor / Gateway Bancário
+                                                            </label>
+                                                            <select
+                                                                value={localBankGateway}
+                                                                onChange={(e) => setLocalBankGateway(e.target.value)}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                                                            >
+                                                                <option value="inter">Banco Inter (Parceiros Corporativo)</option>
+                                                                <option value="asaas">Asaas (BaaS Integrado)</option>
+                                                                <option value="pluggy">Pluggy HUB (Open Finance Multi-Bancos)</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="space-y-1.5">
+                                                            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                                                Ambiente de Conexão
+                                                            </label>
+                                                            <select
+                                                                value={localBankSandbox ? "sandbox" : "production"}
+                                                                onChange={(e) => setLocalBankSandbox(e.target.value === "sandbox")}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                                                            >
+                                                                <option value="sandbox">Sandbox / Homologação (Dados de Teste Reais)</option>
+                                                                <option value="production">Produção Real (Chaves Autênticas do Banco)</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    {localBankGateway === 'inter' && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-entrance">
+                                                            <div className="space-y-1.5">
+                                                                <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                                                    Banco Inter Client ID
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={localBankClientId}
+                                                                    onChange={(e) => setLocalBankClientId(e.target.value)}
+                                                                    placeholder="Ex: 5beab829-f831-4191-884c-..."
+                                                                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-1.5">
+                                                                <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                                                    Banco Inter Client Secret
+                                                                </label>
+                                                                <input
+                                                                    type="password"
+                                                                    value={localBankClientSecret}
+                                                                    onChange={(e) => setLocalBankClientSecret(e.target.value)}
+                                                                    placeholder="••••••••••••••••"
+                                                                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {(localBankGateway === 'asaas' || localBankGateway === 'pluggy') && (
+                                                        <div className="space-y-1.5 animate-entrance">
+                                                            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                                                {localBankGateway === 'asaas' ? 'Chave de API / Access Token Asaas' : 'Chave de API Pluggy (X-API-KEY)'}
+                                                            </label>
+                                                            <input
+                                                                type="password"
+                                                                value={localBankApiKey}
+                                                                onChange={(e) => setLocalBankApiKey(e.target.value)}
+                                                                placeholder="Insira a chave obtida no painel de desenvolvedor do seu provedor"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2 text-[10px] text-amber-900 font-semibold leading-normal">
+                                                        <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                                                        <div>
+                                                            <span className="font-extrabold block">Garantia de Segurança mTLS & AES-256</span>
+                                                            Suas credenciais bancárias são transmitidas sob criptografia de ponta a ponta e salvas diretamente no seu tenant privado do banco de dados, prontas para realizar chamadas seguras em servidor.
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
