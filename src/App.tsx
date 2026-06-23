@@ -23,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -8747,6 +8747,119 @@ const ThemeToggle = ({ variant = 'default', className = "" }) => {
     );
 };
 
+// --- ALERTAS DE PAGAMENTOS E CARNÊS VENCENDO ---
+const MemberPaymentAlerts = () => {
+    const { user, db, setView } = useContext(ChurchContext);
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    if (!user || user.nivel === 'master' || user.nivel === 'pastor' || user.nivel === 'admin') return null;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayTime = new Date(todayStr).getTime();
+
+    // Encontrar carnês vencendo nos próximos 3 dias ou atrasados
+    const meusCarnes = (db.carnes || []).filter((c: any) => c.membro_id === user.id);
+    let expiredOrExpiring: any[] = [];
+
+    meusCarnes.forEach((c: any) => {
+        const parcelas = c.parcelas || [];
+        parcelas.forEach((p: any) => {
+            if (p.status === 'pendente' && p.data_vencimento) {
+                const vencTime = new Date(p.data_vencimento).getTime();
+                const diffDays = (vencTime - todayTime) / (1000 * 3600 * 24);
+                if (diffDays <= 3) {
+                    expiredOrExpiring.push({
+                        carne_titulo: c.titulo,
+                        ...p,
+                        diffDays
+                    });
+                }
+            }
+        });
+    });
+
+    if (expiredOrExpiring.length === 0) return null;
+
+    expiredOrExpiring.sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="relative p-2 rounded-2xl hover:bg-slate-100 text-slate-600 hover:text-rose-600 transition-colors dark:text-slate-300 dark:hover:bg-slate-800"
+                title="Alertas de Vencimento"
+            >
+                <AlertTriangle size={20} className="animate-pulse text-amber-500" />
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+            </button>
+
+            {isOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 z-50 overflow-hidden glass-panel origin-top-right animate-scale-up">
+                    <div className="p-4 bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-between">
+                        <div>
+                            <h3 className="font-black text-white tracking-tight flex items-center gap-2">
+                                <CalendarClock size={16} /> Vencimentos Próximos
+                            </h3>
+                            <p className="text-amber-100 text-xs mt-0.5">Carnês ou Dízimos nos próximos 3 dias</p>
+                        </div>
+                        <span className="bg-white/20 text-white text-xs font-black px-2 py-0.5 rounded-lg border border-white/20 shadow-inner">
+                            {expiredOrExpiring.length} pendências
+                        </span>
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto custom-scrollbar p-3 space-y-2">
+                        {expiredOrExpiring.map((p, idx) => (
+                            <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                                <div className="flex justify-between items-start mb-1">
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate pr-2">
+                                        {p.carne_titulo}
+                                    </h4>
+                                    <span className="text-xs font-black text-rose-500 shrink-0">
+                                        {formatBRL(p.valor)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs text-slate-500">
+                                    <span className="font-medium">Parcela {p.numero}</span>
+                                    {p.diffDays < 0 ? (
+                                        <span className="text-rose-500 font-bold bg-rose-50 dark:bg-rose-500/10 px-1.5 py-0.5 rounded">Vencido há {Math.abs(p.diffDays)} dias</span>
+                                    ) : p.diffDays === 0 ? (
+                                        <span className="text-amber-600 font-bold bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded">Vence hoje</span>
+                                    ) : (
+                                        <span className="text-slate-500 font-bold">Vence em {p.diffDays} dia(s)</span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="p-3 bg-slate-50/80 dark:bg-slate-800/80 border-t border-slate-200/50 dark:border-slate-700/50">
+                        <button 
+                            onClick={() => {
+                                setIsOpen(false);
+                                setView('portal_financas');
+                            }}
+                            className="w-full py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white text-xs font-bold rounded-xl transition-all shadow-md flex justify-center items-center gap-2"
+                        >
+                            Ir para Área Financeira <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // --- CENTRAL DE NOTIFICAÇÕES INTELIGENTE ---
 // Contém o sub-componente de histórico e o de preferências de canais (Escalas, Kids, Financeiro)
 const NotificationCenter = () => {
@@ -12322,6 +12435,7 @@ const MemberPortalLayout = () => {
                     <OsThemeToggle variant="mobile" />
                     <AnimBgToggle variant="mobile" />
                     <ThemeToggle variant="mobile" />
+                    <MemberPaymentAlerts />
                     <NotificationCenter />
                     <FullScreenToggle variant="mobile" />
                     <button onClick={logout} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"><LogOut size={18}/></button>
@@ -12347,6 +12461,7 @@ const MemberPortalLayout = () => {
                             <OsThemeToggle />
                             <AnimBgToggle />
                             <ThemeToggle />
+                            <MemberPaymentAlerts />
                             <NotificationCenter />
                             <FullScreenToggle />
                         </div>
