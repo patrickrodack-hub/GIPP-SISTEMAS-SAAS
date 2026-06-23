@@ -188,6 +188,17 @@ function getDdaFallback() {
     ];
 }
 
+// ==================== SERVIÇO DE CONFIGURAÇÃO CENTRALIZADO DO ASAAS ====================
+app.get("/api/financeiro/asaas-config", (req, res) => {
+    const hasEnvKey = !!(process.env.ASAAS_API_KEY && process.env.ASAAS_API_KEY.trim());
+    res.json({
+        configured: hasEnvKey,
+        provider: "Asaas API",
+        connectionMode: hasEnvKey ? "Variável de Ambiente Segura" : "Chave Própria do Banco de Dados",
+        status: "Inicializado"
+    });
+});
+
 // ==================== ROTA REAL DE INTEGRAÇÃO BANCÁRIA DDA GATEWAY ====================
 app.post("/api/financeiro/sondar-dda", async (req, res) => {
     try {
@@ -200,10 +211,21 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
         const currentGateway = bankGateway || 'inter';
         const isSandbox = bankSandbox !== false;
         
+        // Resolve Asaas API key using centralized config logic
+        let resolvedAsaasKey = bankApiKey;
+        if (currentGateway === 'asaas') {
+            const envKey = process.env.ASAAS_API_KEY;
+            if (envKey && envKey.trim()) {
+                resolvedAsaasKey = envKey.trim();
+            }
+        }
+
         let hasCredentials = false;
         if (currentGateway === 'inter' && bankClientId && bankClientSecret) {
             hasCredentials = true;
-        } else if ((currentGateway === 'asaas' || currentGateway === 'pluggy') && bankApiKey) {
+        } else if (currentGateway === 'asaas' && (resolvedAsaasKey || "").trim()) {
+            hasCredentials = true;
+        } else if (currentGateway === 'pluggy' && bankApiKey) {
             hasCredentials = true;
         }
 
@@ -344,7 +366,7 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                     let asaasResponse = await fetch(`${asaasBaseUrl}/dda/boletos`, {
                         method: "GET",
                         headers: {
-                            "access_token": bankApiKey || "",
+                            "access_token": resolvedAsaasKey || "",
                             "Accept": "application/json"
                         }
                     });
@@ -366,7 +388,7 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                         const retryResponse = await fetch(`${asaasBaseUrl}/dda/boletos`, {
                             method: "GET",
                             headers: {
-                                "access_token": bankApiKey || "",
+                                "access_token": resolvedAsaasKey || "",
                                 "Accept": "application/json"
                             }
                         });
@@ -393,7 +415,7 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                         let fallbackResponse = await fetch(`${asaasBaseUrl}/payments?status=PENDING&limit=30`, {
                             method: "GET",
                             headers: {
-                                "access_token": bankApiKey || "",
+                                "access_token": resolvedAsaasKey || "",
                                 "Accept": "application/json"
                             }
                         });
@@ -415,7 +437,7 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                             const retryFbResponse = await fetch(`${asaasBaseUrl}/payments?status=PENDING&limit=30`, {
                                 method: "GET",
                                 headers: {
-                                    "access_token": bankApiKey || "",
+                                    "access_token": resolvedAsaasKey || "",
                                     "Accept": "application/json"
                                 }
                             });

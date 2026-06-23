@@ -186,6 +186,24 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const [localBankSandbox, setLocalBankSandbox] = useState<boolean>(true);
     const [ddaSavingConfig, setDdaSavingConfig] = useState<boolean>(false);
     const [ddaLogs, setDdaLogs] = useState<any[]>([]);
+    const [isAsaasEnvLoaded, setIsAsaasEnvLoaded] = useState<boolean>(false);
+
+    useEffect(() => {
+        const fetchAsaasConfig = async () => {
+            try {
+                const res = await fetch("/api/financeiro/asaas-config");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.configured) {
+                        setIsAsaasEnvLoaded(true);
+                    }
+                }
+            } catch (err) {
+                console.error("Erro ao sondar asaas-config central:", err);
+            }
+        };
+        fetchAsaasConfig();
+    }, []);
 
     useEffect(() => {
         if (!appId || !dbFirestore) return;
@@ -2828,13 +2846,14 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                     {(localBankGateway === 'asaas' || localBankGateway === 'pluggy') && (
                                                         <div className="space-y-1.5 animate-entrance">
                                                             <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider">
-                                                                {localBankGateway === 'asaas' ? 'Chave de API / Access Token Asaas' : 'Chave de API Pluggy (X-API-KEY)'}
+                                                                {localBankGateway === 'asaas' ? (isAsaasEnvLoaded ? '✓ Chave de API Asaas Ativa via Configuração Cental (ENV)' : 'Chave de API / Access Token Asaas') : 'Chave de API Pluggy (X-API-KEY)'}
                                                             </label>
                                                             <input
                                                                 type="password"
-                                                                value={localBankApiKey}
+                                                                value={localBankGateway === 'asaas' && isAsaasEnvLoaded ? '••••••••••••••••••••' : localBankApiKey}
                                                                 onChange={(e) => setLocalBankApiKey(e.target.value)}
-                                                                placeholder="Insira a chave obtida no painel de desenvolvedor do seu provedor"
+                                                                disabled={localBankGateway === 'asaas' && isAsaasEnvLoaded}
+                                                                placeholder={localBankGateway === 'asaas' && isAsaasEnvLoaded ? "Configurado com segurança na variável de ambiente global!" : "Insira a chave obtida no painel de desenvolvedor do seu provedor"}
                                                                 className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
                                                             />
                                                         </div>

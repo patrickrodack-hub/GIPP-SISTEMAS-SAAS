@@ -86,6 +86,177 @@ const ModuleConciliacaoBancaria = () => {
 
         return () => unsubscribe();
     }, [appId, dbFirestore]);
+
+    const [ddaCheckingReal, setDdaCheckingReal] = useState(false);
+
+    const triggerRealDdaSync = async (isManualCall: boolean = false) => {
+        if (ddaCheckingReal) return;
+        setDdaCheckingReal(true);
+        if (isManualCall) {
+            addToast("Iniciando faturamento DDA real na Receita Federal e Asaas API...", "info");
+        }
+
+        const gateway = db.igreja?.bank_gateway || 'asaas';
+        const cnpj = db.igreja?.cnpj;
+
+        if (!cnpj || cnpj.trim() === "" || cnpj === "12.345.678/0001-90") {
+            const errorText = "Erro: CNPJ da Igreja inválido ou placeholder padrão. Por favor, configure o CNPJ correto nas Configurações Financeiras.";
+            addToast(errorText, "error");
+            logAction('DDA_FETCH_FAILURE', `Erro de validação de CNPJ: ${cnpj || 'vazio'}. Consulta cancelada.`, 'dda', 'manual_validation_fail');
+            
+            if (!isManualCall) {
+                setTerminalLines(prev => [
+                    ...prev,
+                    `[ERRO] CNPJ DA IGREJA É OBRIGATÓRIO PARA CONSULTA DDA REAL.`,
+                    `[ERRO] CNPJ ATUAL: ${cnpj || 'NÃO CONFIGURADO'}`,
+                    `> CONEXÃO INTEGRAL ABORTADA.`
+                ]);
+            }
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
+                    dda_sync_state: "Erro",
+                    dda_last_sync: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
+                }, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar DDA status:", err);
+            }
+            setDdaCheckingReal(false);
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/financeiro/sondar-dda", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    cnpj, 
+                    appId,
+                    bankGateway: gateway,
+                    bankClientId: db.igreja?.bank_client_id || '',
+                    bankClientSecret: db.igreja?.bank_client_secret || '',
+                    bankApiKey: db.igreja?.bank_api_key || '',
+                    bankSandbox: db.igreja?.bank_sandbox !== false
+                }),
+            });
+
+            const statusCode = response.status;
+            let responseData: any = null;
+            let errMsg = null;
+
+            if (response.ok) {
+                responseData = await response.json();
+                if (responseData && responseData.success) {
+                    const boletosAdicionados = responseData.added || [];
+                    
+                    if (boletosAdicionados.length > 0) {
+                        try {
+                            const batch = writeBatch(dbFirestore);
+                            for (const b of boletosAdicionados) {
+                                const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dda_boletos', b.id);
+                                batch.set(docRef, b);
+                            }
+                            await batch.commit();
+                        } catch (err) {
+                            console.error("Erro ao salvar lote DDA no Firestore:", err);
+                        }
+                    }
+
+                    await logAction(
+                        'DDA_FETCH_SUCCESS', 
+                        `Faturamento e varredura de boletos DDA via gateway ${gateway.toUpperCase()} concluída. ${boletosAdicionados.length} boletos novos identificados de forma segura sob o CNPJ ${cnpj}.`, 
+                        'dda', 
+                        `status_code_${statusCode}`
+                    );
+
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
+                        dda_sync_state: "Sincronizado",
+                        dda_last_sync: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
+                    }, { merge: true });
+
+                    addToast(`✔ Sincronização DDA realizada! ${boletosAdicionados.length} boletos novos inseridos.`, "success");
+
+                    if (!isManualCall) {
+                        setTerminalLines(prev => [
+                            ...prev,
+                            `> EFETUANDO VARREDURA REAL NA API DO ${gateway.toUpperCase()}... [OK]`,
+                            `> SUCESSO: ${boletosAdicionados.length} BOLETOS SEGUROS MAPEADOS NO CNPJ ${cnpj}`,
+                            `> TRILHA DE AUDITORIA GRAVADA COM STATUS ${statusCode}.`
+                        ]);
+                    }
+                } else {
+                    errMsg = responseData?.error || responseData?.message || "Erro desconhecido na API do banco.";
+                }
+            } else {
+                try {
+                    const errText = await response.text();
+                    try {
+                        const parsed = JSON.parse(errText);
+                        errMsg = parsed.error || parsed.message;
+                    } catch (e) {
+                        if (errText.includes("<title>") || errText.includes("<body")) {
+                            errMsg = "Erro interno do servidor gateway bancário (500).";
+                        } else {
+                            errMsg = errText.substring(0, 150);
+                        }
+                    }
+                } catch(e) {
+                    errMsg = `Erro HTTP código ${statusCode}`;
+                }
+            }
+
+            if (errMsg) {
+                addToast(`Erro na varredura DDA: ${errMsg}`, "error");
+
+                await logAction(
+                    'DDA_FETCH_FAILURE', 
+                    `Sondagem DDA de boletos no gateway ${gateway.toUpperCase()} falhou para o CNPJ ${cnpj}. Código: ${statusCode}. Detalhe: ${errMsg}`, 
+                    'dda', 
+                    `status_code_${statusCode}`
+                );
+
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
+                    dda_sync_state: "Erro",
+                    dda_last_sync: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
+                }, { merge: true });
+
+                if (!isManualCall) {
+                    setTerminalLines(prev => [
+                        ...prev,
+                        `[ERRO NA API DO ${gateway.toUpperCase()}] CÓDIGO BANCÁRIO RETORNADO: ${statusCode}`,
+                        `[DETALHE DO ERRO] ${errMsg}`,
+                        `> CONEXÃO ABORTADA.`
+                    ]);
+                }
+            }
+
+        } catch (err: any) {
+            console.error("Erro geral no DDA real:", err);
+            const msg = err.message || String(err);
+            addToast(`Exceção ao carregar DDA: ${msg}`, "error");
+
+            await logAction(
+                'DDA_FETCH_FAILURE', 
+                `Exceção grave e falha na requisição DDA via ${gateway.toUpperCase()}: ${msg}`, 
+                'dda', 
+                'network_err'
+            );
+
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), {
+                dda_sync_state: "Erro",
+                dda_last_sync: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
+            }, { merge: true });
+
+            if (!isManualCall) {
+                setTerminalLines(prev => [
+                    ...prev,
+                    `[EXCEÇÃO SEVERA DE SUB-ROTINA]: ${msg}`,
+                    `> CONEXÃO ABORTADA.`
+                ]);
+            }
+        } finally {
+            setDdaCheckingReal(false);
+        }
+    };
     
     // Theming logic baseado no banco selecionado no Cadastro da Igreja
     const bancoNome = db.igreja?.banco || '';
@@ -171,9 +342,19 @@ const ModuleConciliacaoBancaria = () => {
                 setTerminalLines(prev => [...prev, logs[i]]);
             } else {
                 clearInterval(interval);
-                setTimeout(() => setConnectingPhase(3), 1000); // Finaliza após 1s lendo tudo
+                // Conecta e sonda o DDA real na API
+                (async () => {
+                    setTerminalLines(prev => [
+                        ...prev,
+                        `> [INTEGRAÇÃO REAL] INICIANDO VARREDURA DE COMPENSAÇÃO DDA (FEBRABAN)...`,
+                        `> PORTA DE ENTRADA DO GATEWAY: SELECIONADO BANCO DE HOMOLOGAÇÃO/SANDBOX`,
+                        `> SOLICITANDO ACESSO INTEGRAL AOS TÍTULOS DDA DO CNPJ DA IGREJA...`
+                    ]);
+                    await triggerRealDdaSync(false);
+                    setTimeout(() => setConnectingPhase(3), 1800);
+                })();
             }
-        }, 400); // 10 logs * 400ms = 4 segundos + 1s = 5 segundos
+        }, 350); 
 
         return () => clearInterval(interval);
     }, [connectingPhase, bancoNome]);
@@ -696,9 +877,49 @@ const ModuleConciliacaoBancaria = () => {
 
                             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px]">
                                 <div className="p-5 bg-slate-50 border-b border-slate-200 flex justify-between items-center flex-wrap gap-4 shrink-0">
-                                    <span className="font-bold text-xs text-slate-500 uppercase tracking-wider bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2">
-                                        <CheckSquare size={16} className="text-slate-400"/> {selectedIds.length} título(s) selecionado(s)
-                                    </span>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <span className="font-bold text-xs text-slate-500 uppercase tracking-wider bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2">
+                                            <CheckSquare size={16} className="text-slate-400"/> {selectedIds.length} título(s) selecionado(s)
+                                        </span>
+
+                                        {ddaViewMode === 'cnpj_dda' && (
+                                            <>
+                                                {/* INDICADOR VISUAL DDA DE ACORDO COM O REQUISITO */}
+                                                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100 text-xs font-semibold">
+                                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">DDA STATUS:</span>
+                                                    {(db.igreja?.dda_sync_state === 'Sincronizado' || db.igreja?.dda_sync_state === 'sincronizado') ? (
+                                                        <span className="text-emerald-700 font-black flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 text-[11px] uppercase">
+                                                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block animate-pulse"></span>
+                                                            Sincronizado
+                                                        </span>
+                                                    ) : (db.igreja?.dda_sync_state === 'Erro' || db.igreja?.dda_sync_state === 'erro') ? (
+                                                        <span className="text-rose-700 font-black flex items-center gap-1 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100 text-[11px] uppercase">
+                                                            <AlertCircle size={12} className="text-rose-500" />
+                                                            Erro
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-amber-700 font-black flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100 text-[11px] uppercase">
+                                                            <Clock size={12} className="text-amber-500" />
+                                                            Pendente
+                                                        </span>
+                                                    )}
+                                                    <span className="text-slate-400 font-extrabold text-[10px]">
+                                                        (Última: {db.igreja?.dda_last_sync || 'Nunca'})
+                                                    </span>
+                                                </div>
+
+                                                {/* BOTÃO DE ATUALIZAÇÃO MANUAL DE ACORDO COM O REQUISITO */}
+                                                <Button 
+                                                    onClick={() => triggerRealDdaSync(true)} 
+                                                    disabled={ddaCheckingReal}
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wide uppercase px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 border-0"
+                                                >
+                                                    <RefreshCw size={14} className={ddaCheckingReal ? "animate-spin" : ""} />
+                                                    {ddaCheckingReal ? 'Sondando...' : 'Atualizar DDA'}
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
                                     
                                     {ddaViewMode === 'cnpj_dda' ? (
                                         <Button 
