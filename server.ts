@@ -313,17 +313,21 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
 
             } else if (currentGateway === 'asaas') {
                 try {
-                    const asaasBaseUrl = isSandbox 
+                    let actualSandbox = isSandbox;
+                    let asaasBaseUrl = actualSandbox 
                         ? "https://sandbox.asaas.com/api/v3"
                         : "https://www.asaas.com/api/v3";
 
-                    const extractAsaasErrorMessage = (status: number, text: string) => {
+                    const extractAsaasErrorMessage = (status: number, textOrData: any, currentEnvSandbox: boolean) => {
                         try {
-                            const parsed = JSON.parse(text);
-                            if (parsed.errors && parsed.errors.length > 0) {
+                            let parsed = textOrData;
+                            if (typeof textOrData === 'string') {
+                                parsed = JSON.parse(textOrData);
+                            }
+                            if (parsed && parsed.errors && parsed.errors.length > 0) {
                                 const mainError = parsed.errors[0];
                                 if (mainError.code === 'invalid_environment') {
-                                    return `Ambiente Incompatível: A sua Chave de API Asaas não pertence ao ambiente de ${isSandbox ? "Sandbox/Homologação" : "Produção"}. Mude o interruptor "Conexão Real (Modo Sandbox)" correspondente a este token ou configure a chave correta.`;
+                                    return `Ambiente Incompatível: A sua Chave de API Asaas não pertence ao ambiente de ${currentEnvSandbox ? "Sandbox/Homologação" : "Produção"}. Mude o interruptor "Conexão Real (Modo Sandbox)" correspondente a este token ou configure a chave correta.`;
                                 }
                                 return `${mainError.description || mainError.code}`;
                             }
@@ -333,11 +337,11 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                         if (status === 401) {
                             return "Chave de acesso (Token) inválida ou não autorizada no Asaas. Por favor, revise sua chave de API e tente novamente.";
                         }
-                        return `Erro na API Asaas (Cóg: ${status}): ${text}`;
+                        return `Erro na API Asaas (Cóg: ${status}): ${typeof textOrData === 'string' ? textOrData : JSON.stringify(textOrData)}`;
                     };
 
                     console.log(`DDA Real-Time: Consultando gateway Asaas em ${asaasBaseUrl}/dda/boletos...`);
-                    const asaasResponse = await fetch(`${asaasBaseUrl}/dda/boletos`, {
+                    let asaasResponse = await fetch(`${asaasBaseUrl}/dda/boletos`, {
                         method: "GET",
                         headers: {
                             "access_token": bankApiKey || "",
@@ -345,18 +349,48 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                         }
                     });
 
+                    let responseText = await asaasResponse.text();
+                    let responseData: any = null;
+                    try {
+                        responseData = JSON.parse(responseText);
+                    } catch (e) {}
+
+                    // Caso haja incompatibilidade de ambiente ('invalid_environment'), tentamos trocar automaticamente para contornar
+                    if (!asaasResponse.ok && responseData && responseData.errors && responseData.errors.some((e: any) => e.code === 'invalid_environment')) {
+                        console.log(`DDA Asaas Auto-Switch: Detectado erro de ambiente. Trocando de ${actualSandbox ? 'Sandbox' : 'Produção'} para ${!actualSandbox ? 'Sandbox' : 'Produção'}.`);
+                        actualSandbox = !actualSandbox;
+                        asaasBaseUrl = actualSandbox 
+                            ? "https://sandbox.asaas.com/api/v3"
+                            : "https://www.asaas.com/api/v3";
+                        
+                        const retryResponse = await fetch(`${asaasBaseUrl}/dda/boletos`, {
+                            method: "GET",
+                            headers: {
+                                "access_token": bankApiKey || "",
+                                "Accept": "application/json"
+                            }
+                        });
+                        
+                        asaasResponse = retryResponse;
+                        responseText = await asaasResponse.text();
+                        try {
+                            responseData = JSON.parse(responseText);
+                        } catch (e) {
+                            responseData = null;
+                        }
+                    }
+
                     if (!asaasResponse.ok) {
                         // Se for erro de autenticação ou ambiente inválido (401/403), falha imediatamente com mensagem amigável sem tentar fallback
                         if (asaasResponse.status === 401 || asaasResponse.status === 403) {
-                            const errTxt = await asaasResponse.text();
-                            const cleanErr = extractAsaasErrorMessage(asaasResponse.status, errTxt);
+                            const cleanErr = extractAsaasErrorMessage(asaasResponse.status, responseData || responseText, actualSandbox);
                             throw new Error(cleanErr);
                         }
 
                         // Plano B/Fallback: Se o endpoint nativo DDA não estiver liberado na conta Asaas do usuário,
                         // tentamos listar as faturas gerais emitidas no perfil da sandbox/produção
-                        console.log(`DDA Asaas nativo respondeu com código ${asaasResponse.status}. Tentando pagamentos gerais recebidos/emitidos como contingência...`);
-                        const fallbackResponse = await fetch(`${asaasBaseUrl}/payments?status=PENDING&limit=30`, {
+                        console.log(`DDA Asaas nativo respondeu com código ${asaasResponse.status}. Tentando pagamentos gerais recebidos/emitidos como contingência na URL ${asaasBaseUrl}...`);
+                        let fallbackResponse = await fetch(`${asaasBaseUrl}/payments?status=PENDING&limit=30`, {
                             method: "GET",
                             headers: {
                                 "access_token": bankApiKey || "",
@@ -364,14 +398,43 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                             }
                         });
 
+                        let fallbackText = await fallbackResponse.text();
+                        let fallbackData: any = null;
+                        try {
+                            fallbackData = JSON.parse(fallbackText);
+                        } catch (e) {}
+
+                        // Caso retorne erro de ambiente na fallback, também tentamos auto-switch
+                        if (!fallbackResponse.ok && fallbackData && fallbackData.errors && fallbackData.errors.some((e: any) => e.code === 'invalid_environment')) {
+                            console.log(`DDA Asaas Fallback Auto-Switch: Detectado erro de ambiente. Trocando de ${actualSandbox ? 'Sandbox' : 'Produção'} para ${!actualSandbox ? 'Sandbox' : 'Produção'}.`);
+                            actualSandbox = !actualSandbox;
+                            asaasBaseUrl = actualSandbox 
+                                ? "https://sandbox.asaas.com/api/v3"
+                                : "https://www.asaas.com/api/v3";
+
+                            const retryFbResponse = await fetch(`${asaasBaseUrl}/payments?status=PENDING&limit=30`, {
+                                method: "GET",
+                                headers: {
+                                    "access_token": bankApiKey || "",
+                                    "Accept": "application/json"
+                                }
+                            });
+
+                            fallbackResponse = retryFbResponse;
+                            fallbackText = await fallbackResponse.text();
+                            try {
+                                fallbackData = JSON.parse(fallbackText);
+                            } catch (e) {
+                                fallbackData = null;
+                            }
+                        }
+
                         if (!fallbackResponse.ok) {
-                            const errTxt = await fallbackResponse.text();
-                            const cleanErr = extractAsaasErrorMessage(fallbackResponse.status, errTxt);
+                            const cleanErr = extractAsaasErrorMessage(fallbackResponse.status, fallbackData || fallbackText, actualSandbox);
                             throw new Error(cleanErr);
                         }
 
-                        const asaasData: any = await fallbackResponse.json();
-                        boletos = (asaasData.data || []).map((p: any) => ({
+                        boletos = (fallbackData?.data || []).map((p: any) => ({
                             beneficiario: p.description?.toUpperCase() || "ASAAS PARCEIROS COBRANÇA",
                             cnpj_beneficiario: p.corporateIdentifier || "02.558.157/0001-62",
                             valor: Number(p.value) || 0,
@@ -379,11 +442,10 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                             data_vencimento: p.dueDate || new Date().toISOString().split('T')[0],
                             linha_digitavel: p.identificationField || p.nossoNumero || "",
                             tipo: "Asaas Cobrança / DDA",
-                            origem: `Asaas API (${isSandbox ? "Sandbox" : "Produção"})`
+                            origem: `Asaas API (${actualSandbox ? "Sandbox" : "Produção"})`
                         }));
                     } else {
-                        const ddaData: any = await asaasResponse.json();
-                        boletos = (ddaData.data || ddaData.boletos || []).map((b: any) => ({
+                        boletos = (responseData?.data || responseData?.boletos || []).map((b: any) => ({
                             beneficiario: b.companyName || b.beneficiaryName || b.description || "EMISSOR ASAAS DDA",
                             cnpj_beneficiario: b.companyCnpj || b.beneficiaryCnpj || b.cnpj || "00.000.000/0001-00",
                             valor: Number(b.value || b.amount) || 0,
@@ -391,11 +453,11 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
                             data_vencimento: b.dueDate || new Date().toISOString().split('T')[0],
                             linha_digitavel: b.identificationField || b.barCode || b.digitableLine || "",
                             tipo: b.type || "Boleto DDA Asaas",
-                            origem: `Asaas DDA API (${isSandbox ? "Sandbox" : "Produção"})`
+                            origem: `Asaas DDA API (${actualSandbox ? "Sandbox" : "Produção"})`
                         }));
                     }
 
-                    successMessage = `✔ Conectado ao Gateway Asaas S.A. (${isSandbox ? "Sandbox" : "Produção"}). Varredura de boletos realizada com sucesso para o CNPJ ${cnpj}!`;
+                    successMessage = `✔ Conectado ao Gateway Asaas S.A. (${actualSandbox ? "Sandbox" : "Produção"}). Varredura de boletos realizada com sucesso para o CNPJ ${cnpj}!`;
                 } catch (asaasErr: any) {
                     throw new Error(`Falha de comunicação integral com o gateway Asaas: ${asaasErr.message}`);
                 }
