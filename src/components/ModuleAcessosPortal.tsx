@@ -42,12 +42,19 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+import { DEFAULT_PORTAL_PERMISSIONS, PORTAL_MODULES } from './ModuleConfiguracoesSistemas';
+
 // Exporting component
 const ModuleAcessosPortal = () => {
     const { db, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
     const [selectedMember, setSelectedMember] = useState(null);
     const [newPassword, setNewPassword] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Personalizações de Acesso
+    const [selectedMemberForPerms, setSelectedMemberForPerms] = useState(null);
+    const [isPermModalOpen, setIsPermModalOpen] = useState(false);
+    const [memberPerms, setMemberPerms] = useState<string[]>([]);
 
     const handleOpenChangePass = (member) => {
         setSelectedMember(member);
@@ -76,6 +83,71 @@ const ModuleAcessosPortal = () => {
             addToast("Erro ao atualizar status de acesso.", "error");
         }
     };
+
+    const handleOpenPerms = (member) => {
+        setSelectedMemberForPerms(member);
+        const userFuncaoAdm = (member.funcao_administrativa || 'NENHUMA').toUpperCase();
+        const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+        const roleModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+        
+        const currentPerms = member.portal_permissoes_personalizadas || roleModules;
+        setMemberPerms(currentPerms);
+        setIsPermModalOpen(true);
+    };
+
+    const handleToggleMemberPerm = (id: string) => {
+        setMemberPerms(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    };
+
+    const handleSavePerms = async () => {
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', selectedMemberForPerms.id), { 
+                portal_permissoes_personalizadas: memberPerms 
+            }, { merge: true });
+            addToast(`Acessos de ${selectedMemberForPerms.nome} atualizados com sucesso!`, "success");
+            setIsPermModalOpen(false);
+        } catch (e) {
+            addToast("Erro ao salvar acessos personalizados.", "error");
+        }
+    };
+
+    const handleResetPerms = async () => {
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', selectedMemberForPerms.id), { 
+                portal_permissoes_personalizadas: null 
+            }, { merge: true });
+            addToast(`Acessos de ${selectedMemberForPerms.nome} redefinidos para o padrão!`, "success");
+            setIsPermModalOpen(false);
+        } catch (e) {
+            addToast("Erro ao redefinir acessos para o padrão.", "error");
+        }
+    };
+
+    const getIconForPortal = (iconId: string) => {
+        switch (iconId) {
+            case 'MessageSquare': return <MessageSquare size={16} />;
+            case 'Newspaper': return <Newspaper size={16} />;
+            case 'BookOpen': return <BookOpen size={16} />;
+            case 'Mail': return <Mail size={16} />;
+            case 'Calendar': return <Calendar size={16} />;
+            case 'CheckSquare': return <CheckSquare size={16} />;
+            case 'DollarSign': return <DollarSign size={16} />;
+            case 'BookOpenText': return <BookOpenText size={16} />;
+            case 'GraduationCap': return <GraduationCap size={16} />;
+            case 'UserCheck': return <UserCheck size={16} />;
+            case 'Baby': return <Baby size={16} />;
+            case 'IdCard': return <IdCard size={16} />;
+            case 'Shield': return <Shield size={16} />;
+            case 'ShieldCheck': return <ShieldCheck size={16} />;
+            default: return <BookOpen size={16} />;
+        }
+    };
+
+    // Obter módulos liberados na Configuração Geral para a função administrativa do membro selecionado
+    const userFuncaoAdm = (selectedMemberForPerms?.funcao_administrativa || 'NENHUMA').toUpperCase();
+    const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+    const roleModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const availableModules = PORTAL_MODULES.filter(m => roleModules.includes(m.id));
 
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance">
@@ -107,7 +179,10 @@ const ModuleAcessosPortal = () => {
                                     {isLiberado ? <Ban size={18}/> : <CheckCircle size={18}/>}
                                 </button>
                                 {isLiberado && (
-                                    <button onClick={() => handleOpenChangePass(item)} className="p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-200" title="Alterar Senha do Portal"><Key size={18}/></button>
+                                    <>
+                                        <button onClick={() => handleOpenPerms(item)} className="p-2.5 bg-sky-50 text-sky-600 hover:bg-sky-500 hover:text-white rounded-xl transition-all shadow-sm border border-sky-200" title="Personalizar Acessos do Portal"><Sliders size={18}/></button>
+                                        <button onClick={() => handleOpenChangePass(item)} className="p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-200" title="Alterar Senha do Portal"><Key size={18}/></button>
+                                    </>
                                 )}
                             </div>
                         );
@@ -131,10 +206,99 @@ const ModuleAcessosPortal = () => {
                 </div>,
                 document.body
             )}
+
+            {isPermModalOpen && createPortal(
+                <div className="fixed inset-0 bg-slate-900/60 z-[11000] flex items-center justify-center p-4 animate-entrance backdrop-blur-sm">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden p-8 border border-slate-200 flex flex-col max-h-[90vh]">
+                        <div className="flex items-start justify-between mb-4">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                    <ShieldCheck className="text-indigo-600" size={24} /> 
+                                    Personalizar Acessos do Portal
+                                </h3>
+                                <p className="text-sm text-slate-500 mt-1">
+                                    Membro: <strong className="text-slate-800">{selectedMemberForPerms?.nome}</strong> | 
+                                    Função: <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-bold ml-1 uppercase">{selectedMemberForPerms?.funcao_administrativa || 'NENHUMA'}</span>
+                                </p>
+                            </div>
+                            <button onClick={() => setIsPermModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="bg-indigo-50/60 border border-indigo-100/80 rounded-2xl p-4 mb-6">
+                            <p className="text-xs text-indigo-950 font-medium leading-relaxed">
+                                Habilite ou desabilite os módulos visíveis para este membro no portal de autoatendimento. 
+                                <br />
+                                <strong className="text-indigo-800">Importante:</strong> As opções abaixo respeitam estritamente as regras globais definidas para a função <strong className="text-indigo-700">{(selectedMemberForPerms?.funcao_administrativa || 'NENHUMA').toUpperCase()}</strong> em "Portal & Permissões" nas Configurações Gerais.
+                            </p>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto pr-1 space-y-4 min-h-[250px]">
+                            {availableModules.length === 0 ? (
+                                <div className="text-center py-12 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+                                    <AlertCircle className="mx-auto text-amber-500 mb-2 animate-bounce" size={32} />
+                                    <p className="text-sm font-bold text-slate-700">Nenhum módulo liberado para esta função</p>
+                                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                                        Para habilitar a personalização, ative os módulos para a função de <span className="font-extrabold text-indigo-600 uppercase">{(selectedMemberForPerms?.funcao_administrativa || 'NENHUMA').toUpperCase()}</span> em "Portal & Permissões" nas Configurações Gerais do sistema.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                    {availableModules.map(mod => {
+                                        const isChecked = memberPerms.includes(mod.id);
+                                        return (
+                                            <button 
+                                                key={mod.id}
+                                                onClick={() => handleToggleMemberPerm(mod.id)}
+                                                className={`p-4 border rounded-2xl text-left transition-all flex items-start gap-3.5 relative overflow-hidden group ${
+                                                    isChecked 
+                                                    ? 'border-indigo-500 bg-indigo-50/20 text-slate-900 shadow-sm' 
+                                                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                                                    isChecked ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-200' : 'bg-slate-100 text-slate-500'
+                                                }`}>
+                                                    {getIconForPortal(mod.iconId)}
+                                                </div>
+                                                <div className="flex-1 min-w-0 pr-6">
+                                                    <h4 className={`text-xs font-bold leading-none mb-1 transition-colors ${isChecked ? 'text-indigo-950 font-black' : 'text-slate-800'}`}>{mod.label}</h4>
+                                                    <p className="text-[10px] text-slate-450 dark:text-slate-550 leading-tight line-clamp-2">{mod.desc}</p>
+                                                </div>
+                                                <div className="absolute top-4 right-4">
+                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${isChecked ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
+                                                        {isChecked && <Check size={12} strokeWidth={4} />}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-3 mt-6 pt-4 border-t border-slate-100 shrink-0">
+                            <Button 
+                                variant="ghost" 
+                                onClick={handleResetPerms} 
+                                className="border border-rose-200 text-rose-600 hover:bg-rose-50/60 flex items-center gap-2 text-xs"
+                                disabled={!selectedMemberForPerms?.portal_permissoes_personalizadas}
+                            >
+                                <RefreshCw size={14} /> Restaurar Padrão do Cargo
+                            </Button>
+                            <div className="flex-1" />
+                            <div className="flex gap-3 w-full md:w-auto">
+                                <Button variant="ghost" onClick={() => setIsPermModalOpen(false)} className="flex-1 md:flex-initial border border-slate-200 text-xs">Cancelar</Button>
+                                <Button variant="primary" onClick={handleSavePerms} className="flex-1 md:flex-initial shadow-indigo-500/30 text-xs" disabled={availableModules.length === 0}>Salvar Alterações</Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
-
-// --- NOVO: MÓDULO CREDENCIAL (EM LOTE) ---
 
 export default ModuleAcessosPortal;

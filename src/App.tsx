@@ -8751,7 +8751,25 @@ const ThemeToggle = ({ variant = 'default', className = "" }) => {
 const MemberPaymentAlerts = () => {
     const { user, db, setView } = useContext(ChurchContext);
     const [isOpen, setIsOpen] = useState(false);
+    const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (user?.id) {
+            const saved = localStorage.getItem(`gipp_alertas_cientes_${user.id}`);
+            if (saved) {
+                try { setDismissedAlerts(JSON.parse(saved)); } catch (e) {}
+            }
+        }
+    }, [user?.id]);
+
+    const handleDismiss = (alertId: string) => {
+        const updated = [...dismissedAlerts, alertId];
+        setDismissedAlerts(updated);
+        if (user?.id) {
+            localStorage.setItem(`gipp_alertas_cientes_${user.id}`, JSON.stringify(updated));
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -8779,11 +8797,15 @@ const MemberPaymentAlerts = () => {
                 const vencTime = new Date(p.data_vencimento).getTime();
                 const diffDays = (vencTime - todayTime) / (1000 * 3600 * 24);
                 if (diffDays <= 3) {
-                    expiredOrExpiring.push({
-                        carne_titulo: c.titulo,
-                        ...p,
-                        diffDays
-                    });
+                    const alertId = `${c.id}_${p.numero}`;
+                    if (!dismissedAlerts.includes(alertId)) {
+                        expiredOrExpiring.push({
+                            alertId,
+                            carne_titulo: c.titulo,
+                            ...p,
+                            diffDays
+                        });
+                    }
                 }
             }
         });
@@ -8820,9 +8842,9 @@ const MemberPaymentAlerts = () => {
 
                     <div className="max-h-72 overflow-y-auto custom-scrollbar p-3 space-y-2">
                         {expiredOrExpiring.map((p, idx) => (
-                            <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                            <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl relative group">
                                 <div className="flex justify-between items-start mb-1">
-                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate pr-2">
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate pr-6">
                                         {p.carne_titulo}
                                     </h4>
                                     <span className="text-xs font-black text-rose-500 shrink-0">
@@ -8839,6 +8861,13 @@ const MemberPaymentAlerts = () => {
                                         <span className="text-slate-500 font-bold">Vence em {p.diffDays} dia(s)</span>
                                     )}
                                 </div>
+                                <button
+                                    onClick={() => handleDismiss(p.alertId)}
+                                    className="absolute top-2.5 right-2.5 text-slate-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full p-1 shadow-sm border border-slate-200 dark:border-slate-700"
+                                    title="Marcar como Ciente"
+                                >
+                                    <Check size={14} strokeWidth={3} />
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -8872,10 +8901,15 @@ const NotificationCenter = () => {
     const [pushPrefs, setPushPrefs] = useState({
         escalas: localStorage.getItem('gipp_push_pref_escalas') !== 'false',
         kids: localStorage.getItem('gipp_push_pref_kids') !== 'false',
-        financeiro: localStorage.getItem('gipp_push_pref_financeiro') !== 'false'
+        financeiro: localStorage.getItem('gipp_push_pref_financeiro') !== 'false',
+        agenda: localStorage.getItem('gipp_push_pref_agenda') !== 'false',
+        mural: localStorage.getItem('gipp_push_pref_mural') !== 'false',
+        mensagens: localStorage.getItem('gipp_push_pref_mensagens') !== 'false',
+        ebd: localStorage.getItem('gipp_push_pref_ebd') !== 'false',
+        cursos: localStorage.getItem('gipp_push_pref_cursos') !== 'false'
     });
 
-    const handleTogglePref = async (key: 'escalas' | 'kids' | 'financeiro') => {
+    const handleTogglePref = async (key: 'escalas' | 'kids' | 'financeiro' | 'agenda' | 'mural' | 'mensagens' | 'ebd' | 'cursos') => {
         const newVal = !pushPrefs[key];
         const updatedPrefs = { ...pushPrefs, [key]: newVal };
         setPushPrefs(updatedPrefs);
@@ -8990,56 +9024,32 @@ const NotificationCenter = () => {
                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-2">Desative canais específicos para filtrar suas notificações na barra do sistema:</p>
                                 
                                 <div className="space-y-3">
-                                    {/* Canal Escalas */}
-                                    <div className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
-                                        <div>
-                                            <span className="text-xs font-black text-slate-700 block">🔔 Escalas de Voluntários</span>
-                                            <span className="text-[9px] text-slate-400 font-semibold block">Avisos de novas escalas e convocações</span>
+                                    {[
+                                        { key: 'escalas', title: '🔔 Escalas de Voluntários', desc: 'Avisos de novas escalas e convocações' },
+                                        { key: 'kids', title: '👶 Ministério Kids', desc: 'Ocorrências, chamadas e avisos de crianças' },
+                                        { key: 'financeiro', title: '💰 Financeiro & Dízimos', desc: 'Lembretes de carnês, dízimos e doações' },
+                                        { key: 'agenda', title: '📅 Agenda & Programações', desc: 'Avisos de novos cultos, programações e ensaios' },
+                                        { key: 'mural', title: '📣 Mural de Avisos', desc: 'Informativos e notícias oficiais da secretaria' },
+                                        { key: 'mensagens', title: '✉️ Mensagens Internas', desc: 'Comunicados e recados diretos de líderes' },
+                                        { key: 'ebd', title: '📖 Escola Dominical (EBD)', desc: 'Avisos de lições, relatórios e eventos da classe' },
+                                        { key: 'cursos', title: '🎓 Cursos & Capacitação', desc: 'Notificações de apostilas, módulos e avaliações' }
+                                    ].map((item) => (
+                                        <div key={item.key} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
+                                            <div>
+                                                <span className="text-xs font-black text-slate-700 block">{item.title}</span>
+                                                <span className="text-[9px] text-slate-400 font-semibold block">{item.desc}</span>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={pushPrefs[item.key as keyof typeof pushPrefs]} 
+                                                    onChange={() => handleTogglePref(item.key as any)}
+                                                    className="sr-only peer" 
+                                                />
+                                                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
+                                            </label>
                                         </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={pushPrefs.escalas} 
-                                                onChange={() => handleTogglePref('escalas')}
-                                                className="sr-only peer" 
-                                            />
-                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
-                                        </label>
-                                    </div>
-
-                                    {/* Canal Kids */}
-                                    <div className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
-                                        <div>
-                                            <span className="text-xs font-black text-slate-700 block">👶 Ministério Kids</span>
-                                            <span className="text-[9px] text-slate-400 font-semibold block">Ocorrências, chamadas e avisos de crianças</span>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={pushPrefs.kids} 
-                                                onChange={() => handleTogglePref('kids')}
-                                                className="sr-only peer" 
-                                            />
-                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
-                                        </label>
-                                    </div>
-
-                                    {/* Canal Financeiro */}
-                                    <div className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 flex justify-between items-center transition-all">
-                                        <div>
-                                            <span className="text-xs font-black text-slate-700 block">💰 Financeiro & Dízimos</span>
-                                            <span className="text-[9px] text-slate-400 font-semibold block">Lembretes de carnês, dízimos e doações</span>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={pushPrefs.financeiro} 
-                                                onChange={() => handleTogglePref('financeiro')}
-                                                className="sr-only peer" 
-                                            />
-                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:height-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 h-5 w-9"></div>
-                                        </label>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -9368,7 +9378,10 @@ const PortalHome = ({ user, db, setView }) => {
 
     const userFuncaoAdmHome = (currentUser.funcao_administrativa || 'NENHUMA').toUpperCase();
     const portalAcessosFuncaoHome = db.igreja?.portal_acessos_funcao || {};
-    const allowedModulesHome = portalAcessosFuncaoHome[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const defaultModulesHome = portalAcessosFuncaoHome[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const allowedModulesHome = currentUser?.portal_permissoes_personalizadas 
+        ? defaultModulesHome.filter((mId: string) => currentUser.portal_permissoes_personalizadas.includes(mId))
+        : defaultModulesHome;
 
     const isProfessor = (currentUser.cargo || '').toLowerCase().includes('professor') || 
                         (currentUser.funcao || '').toLowerCase().includes('professor') || 
@@ -12304,9 +12317,13 @@ const MemberPortalLayout = () => {
                           (db.igreja?.tesoureiro1 && user?.nome && db.igreja.tesoureiro1.toLowerCase().trim() === user.nome.toLowerCase().trim()) || 
                           (db.igreja?.tesoureiro2 && user?.nome && db.igreja.tesoureiro2.toLowerCase().trim() === user.nome.toLowerCase().trim());
 
-    const userFuncaoAdm = (user?.funcao_administrativa || 'NENHUMA').toUpperCase();
+    const currentUserNav = db.membros.find((m: any) => m.id === user?.id) || user;
+    const userFuncaoAdm = (currentUserNav?.funcao_administrativa || 'NENHUMA').toUpperCase();
     const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-    const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const allowedModules = currentUserNav?.portal_permissoes_personalizadas 
+        ? defaultModules.filter((mId: string) => currentUserNav.portal_permissoes_personalizadas.includes(mId))
+        : defaultModules;
 
     const isProfessor = (user?.cargo || '').toLowerCase().includes('professor') || 
                         (user?.funcao || '').toLowerCase().includes('professor') || 
@@ -14398,7 +14415,10 @@ export default function App() {
               if (foundMember.senha_portal === passDigitada) {
                   const userFuncaoAdm = (foundMember.funcao_administrativa || 'NENHUMA').toUpperCase();
                   const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-                  const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+                  const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+                  const allowedModules = foundMember.portal_permissoes_personalizadas 
+                      ? defaultModules.filter((mId: string) => foundMember.portal_permissoes_personalizadas.includes(mId))
+                      : defaultModules;
                   setUser({ 
                       ...foundMember, 
                       tipo: 'membro',
@@ -14697,7 +14717,10 @@ export default function App() {
       if (!firstAccessSuccessData) return;
       const userFuncaoAdm = (firstAccessSuccessData.funcao_administrativa || 'NENHUMA').toUpperCase();
       const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-      const allowedModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+      const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+      const allowedModules = firstAccessSuccessData.portal_permissoes_personalizadas 
+          ? defaultModules.filter((mId: string) => firstAccessSuccessData.portal_permissoes_personalizadas.includes(mId))
+          : defaultModules;
       setUser({ 
           ...firstAccessSuccessData, 
           tipo: 'membro',
