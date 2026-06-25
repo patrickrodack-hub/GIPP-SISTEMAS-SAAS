@@ -23,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -74,6 +74,7 @@ import ModulePortalTesoureiro from './components/ModulePortalTesoureiro';
 const ModuleSobre = lazy(() => import('./components/ModuleSobre'));
 const ModuleRelatorios = lazy(() => import('./components/ModuleRelatorios'));
 import ModuleMinisterios from './components/ModuleMinisterios';
+import ModuleFamilia from './components/ModuleFamilia';
 const ModuleMissoes = lazy(() => import('./components/ModuleMissoes'));
 const ModuleCarnes = lazy(() => import('./components/ModuleCarnes'));
 const ModuleLixeira = lazy(() => import('./components/ModuleLixeira'));
@@ -1664,6 +1665,7 @@ export const getModuleColor = (id) => {
         cad_departamento: 'pink',
         ministerio_louvor: 'violet',
         ministerio_midia: 'teal',
+        ministerio_familia: 'rose',
         fin_entrada: 'emerald',
         fin_saida: 'rose',
         fin_dre: 'blue',
@@ -7811,6 +7813,89 @@ export const PrintSystem = ({
         );
     }
 
+    // --- NOVO: RELATÓRIOS DO MINISTÉRIO DA FAMÍLIA (IA) ---
+    if (mode === 'rel_ia_aconselhamento') {
+        const { aco, strategy, familia, lider, igreja } = data;
+        return (
+            <PageContainer title="Estratégia Pastoral de Aconselhamento IA" subtitle={`Família: ${familia?.nome || 'Família'} - Tema: ${aco?.tema || 'Tema'}`}>
+                <div className="space-y-6 text-slate-800 text-sm font-sans">
+                    <div className="bg-rose-50/20 border border-rose-100 p-4 rounded-xl space-y-1">
+                        <p className="font-bold text-xs text-rose-700 uppercase tracking-wider">Metadados do Aconselhamento</p>
+                        <p><strong>Mentor/Conselheiro:</strong> {lider?.nome || 'Pastor Local'}</p>
+                        <p><strong>Família Assistida:</strong> {familia?.nome || 'Não informada'}</p>
+                        <p><strong>Data da Orientação:</strong> {aco?.data ? new Date(aco.data).toLocaleDateString('pt-BR') : 'Data não informada'}</p>
+                        <p><strong>Status Atual:</strong> {aco?.status === 'concluido' ? 'Concluído' : 'Em Andamento'}</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h3 className="text-base font-bold text-indigo-900 border-b border-indigo-100 pb-2">Estratégia Pastoral e Roteiro Exegético</h3>
+                        <div className="whitespace-pre-line leading-relaxed text-slate-700 bg-slate-50 p-6 border border-slate-150 rounded-2xl">
+                            {strategy}
+                        </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-slate-200 flex flex-col items-center">
+                        <p className="text-xs text-slate-500 mb-8">{igreja?.cidade || 'Sede'}, {new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'})}</p>
+                        <div className="border-b border-slate-300 w-64 mb-1"></div>
+                        <p className="font-bold text-xs uppercase tracking-wide text-slate-700">{lider?.nome || 'Pastor Presidente / Conselheiro'}</p>
+                        <p className="text-[10px] text-slate-400">Assinatura do Conselheiro Responsável</p>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
+    if (mode === 'rel_ia_culto_domestico') {
+        const { devResult, devProfile, igreja } = data;
+        return (
+            <PageContainer title="Roteiro de Culto Doméstico com IA" subtitle={`Altar Familiar - Adaptado para: ${devProfile?.replace(/_/g, ' ') || 'Família'}`}>
+                <div className="space-y-6 text-slate-800 text-sm font-sans">
+                    <div className="border-b border-slate-200 pb-4 text-center">
+                        <h2 className="text-xl font-black text-indigo-900 uppercase tracking-tight">{devResult?.titulo_devocional}</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-rose-50/15 border border-rose-100 rounded-xl space-y-1">
+                            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">Leitura Bíblica Recomendada:</span>
+                            <p className="font-black text-slate-800 italic">{devResult?.leitura_biblica}</p>
+                        </div>
+
+                        <div className="p-4 bg-indigo-50/15 border border-indigo-100 rounded-xl space-y-1">
+                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Quebra-Gelo / Atividade Inicial:</span>
+                            <p className="text-slate-700 font-medium leading-relaxed">{devResult?.quebra_gelo}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Breve Mensagem e Aplicação Doutrinária:</span>
+                        <p className="font-medium text-slate-700 whitespace-pre-line leading-relaxed">{devResult?.explicacao_teologica}</p>
+                    </div>
+
+                    <div className="p-4 bg-purple-50/15 border border-purple-100 rounded-xl">
+                        <span className="text-[10px] font-bold text-purple-700 uppercase block mb-1">Pergunta para Diálogo em Família:</span>
+                        <p className="font-medium text-slate-700">{devResult?.pergunta_dialogo}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-emerald-50/15 border border-emerald-100 rounded-xl">
+                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">Motivos e Oração Sugerida:</span>
+                            <p className="font-medium text-slate-700">{devResult?.oracao_proposta}</p>
+                        </div>
+
+                        <div className="p-4 bg-amber-50/15 border border-amber-100 rounded-xl">
+                            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block mb-1">Desafio Prático da Semana:</span>
+                            <p className="font-medium text-slate-700">{devResult?.desafio_pratico}</p>
+                        </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-slate-200 text-center">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">"Eu e a minha casa serviremos ao Senhor" — Josué 24:15</p>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
     return null;
 };
 
@@ -8393,16 +8478,16 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
     // --- NOVO: LÓGICA DE VERIFICAÇÃO DE PLANOS (SaaS) ---
     const checkPlan = (moduleId) => {
         let targetModuleId = moduleId;
-        if (moduleId === 'ministerio_louvor' || moduleId === 'ministerio_midia') {
+        if (moduleId === 'ministerio_louvor' || moduleId === 'ministerio_midia' || moduleId === 'ministerio_familia') {
             targetModuleId = 'cad_departamento';
         }
         if (user?.id === 'dev') return true; // O Desenvolvedor acede a tudo para testar
         const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -8453,6 +8538,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         cad_departamento: 'group-hover:text-pink-500',
         ministerio_louvor: 'group-hover:text-violet-500',
         ministerio_midia: 'group-hover:text-teal-500',
+        ministerio_familia: 'group-hover:text-rose-500',
         fin_entrada: 'group-hover:text-emerald-500',
         fin_saida: 'group-hover:text-rose-500',
         fin_dre: 'group-hover:text-blue-500',
@@ -8569,6 +8655,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_ministerios') && checkPlan('cad_departamento') && <MenuItem id="cad_departamento" icon={Briefcase} label="Ministério (Deptos)" />}
                         {hasPermission('access_ministerios') && checkPlan('ministerio_louvor') && <MenuItem id="ministerio_louvor" icon={Music} label="Ministério de Louvor" />}
                         {hasPermission('access_ministerios') && checkPlan('ministerio_midia') && <MenuItem id="ministerio_midia" icon={Video} label="Ministério de Mídia" />}
+                        {hasPermission('access_ministerios') && checkPlan('ministerio_familia') && <MenuItem id="ministerio_familia" icon={Heart} label="Ministério da Família" />}
                         {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                     </div>
                 )}
@@ -8848,7 +8935,7 @@ const MemberPaymentAlerts = () => {
                                         {p.carne_titulo}
                                     </h4>
                                     <span className="text-xs font-black text-rose-500 shrink-0">
-                                        {formatBRL(p.valor)}
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(p.valor))}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs text-slate-500">
@@ -12663,6 +12750,7 @@ const AppLayout = () => {
         'cad_departamento': { component: ModuleMinisterios, props: { initialTab: 1 }, access: 'access_ministerios' },
         'ministerio_louvor': { component: ModuleMinisterios, props: { initialTab: 5 }, access: 'access_ministerios' },
         'ministerio_midia': { component: ModuleMinisterios, props: { initialTab: 6 }, access: 'access_ministerios' },
+        'ministerio_familia': { component: ModuleFamilia, access: 'access_ministerios' },
         'secretaria_integrada': { component: ModuleSecretariaIntegrada, access: 'access_sec_agenda' },
         'secretaria_livro_atas': { component: ModuleLivroAtas, access: 'access_sec_agenda' },
         'secretaria_certificados': { component: ModuleCertificados, access: 'access_sec_certificados' },
