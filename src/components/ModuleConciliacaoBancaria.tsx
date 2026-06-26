@@ -48,6 +48,17 @@ const ModuleConciliacaoBancaria = () => {
     const [tab, setTab] = useState(1);
     const [selectedIds, setSelectedIds] = useState([]);
     
+    // --- Estados para Auditoria Inteligente de Extrato por IA ---
+    const [isAnalyzingStatement, setIsAnalyzingStatement] = useState(false);
+    const [statementFileName, setStatementFileName] = useState('');
+    const [showAuditModal, setShowAuditModal] = useState(false);
+    const [auditTab, setAuditTab] = useState<'missing' | 'matched' | 'discrepancies'>('missing');
+    const [auditMatches, setAuditMatches] = useState<any[]>([]);
+    const [auditDiscrepancies, setAuditDiscrepancies] = useState<any[]>([]);
+    const [auditMissing, setAuditMissing] = useState<any[]>([]);
+    const [isSavingAutoTransactions, setIsSavingAutoTransactions] = useState(false);
+    const [selectedMissingToImport, setSelectedMissingToImport] = useState<any[]>([]);
+    
     // --- Novos Estados (Animação e Filtro) ---
     const [connectingPhase, setConnectingPhase] = useState(1); // 1 = GUI Loading, 2 = Terminal, 3 = Concluído
     const [terminalLines, setTerminalLines] = useState([]);
@@ -503,6 +514,215 @@ const ModuleConciliacaoBancaria = () => {
         }, 500);
     };
 
+    const handleUploadStatementFile = async (file: File) => {
+        if (!file) return;
+        
+        // Check size: limit to 15MB
+        if (file.size > 15 * 1024 * 1024) {
+            addToast("O tamanho do arquivo excede o limite recomendado de 15MB.", "warning");
+            return;
+        }
+
+        setIsAnalyzingStatement(true);
+        setStatementFileName(file.name);
+
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Data = e.target?.result as string;
+                if (!base64Data) {
+                    addToast("Erro ao ler conteúdo do arquivo.", "error");
+                    setIsAnalyzingStatement(false);
+                    return;
+                }
+
+                try {
+                    const response = await fetch("/api/financeiro/analisar-extrato", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            fileData: base64Data,
+                            mimeType: file.type || 'application/pdf'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error || "Erro desconhecido na análise.");
+                    }
+
+                    const extractedTransactions = await response.json();
+                    
+                    if (!Array.isArray(extractedTransactions)) {
+                        throw new Error("Formato de retorno inválido da inteligência artificial.");
+                    }
+
+                    // --- Processamento de Auditoria e Cruzamento com Ledger ---
+                    const matchesList: any[] = [];
+                    const discrepanciesList: any[] = [];
+                    const missingList: any[] = [];
+
+                    const currentLedger = db.financeiro || [];
+
+                    extractedTransactions.forEach((stmtItem: any) => {
+                        const val = Number(stmtItem.valor) || 0;
+                        const stmtDate = stmtItem.data; // format YYYY-MM-DD
+                        const type = stmtItem.tipo || 'saida';
+
+                        // 1. Encontra candidatos com mesmo tipo e valor exato
+                        const candidates = currentLedger.filter((f: any) => {
+                            const fType = f.tipo || 'saida';
+                            const fVal = Number(f.valor) || 0;
+                            return fType === type && Math.abs(fVal - val) < 0.05;
+                        });
+
+                        if (candidates.length === 0) {
+                            // Sem registro correspondente
+                            missingList.push({
+                                ...stmtItem,
+                                id: 'stmt_missing_' + Math.random().toString(36).substring(2, 9),
+                                status: 'missing'
+                            });
+                        } else {
+                            // Temos candidatos de mesmo valor! Vamos checar proximidade de data (máximo 3 dias)
+                            const perfectMatch = candidates.find((f: any) => {
+                                const fDate = f.data_pagamento || f.data_competencia || f.data_vencimento || '';
+                                if (!fDate) return false;
+                                const diffDays = Math.abs(new Date(fDate).getTime() - new Date(stmtDate).getTime()) / (1000 * 60 * 60 * 24);
+                                return diffDays <= 3;
+                            });
+
+                            if (perfectMatch) {
+                                matchesList.push({
+                                    statement: stmtItem,
+                                    system: perfectMatch,
+                                    status: 'matched'
+                                });
+                            } else {
+                                // Temos o valor, mas a data está distante ou descrição é discrepante
+                                discrepanciesList.push({
+                                    statement: stmtItem,
+                                    systemCandidates: candidates,
+                                    status: 'discrepancy'
+                                });
+                            }
+                        }
+                    });
+
+                    setAuditMatches(matchesList);
+                    setAuditDiscrepancies(discrepanciesList);
+                    setAuditMissing(missingList);
+                    setSelectedMissingToImport(missingList.map(m => m.id));
+                    setAuditTab('missing');
+                    setShowAuditModal(true);
+                    addToast("Auditoria de extrato por IA concluída com sucesso!", "success");
+                } catch (error: any) {
+                    console.error("Erro ao analisar extrato com a IA:", error);
+                    addToast(`Falha na Auditoria IA: ${error.message || error}`, "error");
+                } finally {
+                    setIsAnalyzingStatement(false);
+                }
+            };
+
+            reader.onerror = () => {
+                addToast("Falha ao carregar o arquivo local.", "error");
+                setIsAnalyzingStatement(false);
+            };
+
+            reader.readAsDataURL(file);
+        } catch (e: any) {
+            console.error(e);
+            addToast("Erro crítico ao inicializar leitura do arquivo.", "error");
+            setIsAnalyzingStatement(false);
+        }
+    };
+
+    const handleImportMissingTransactions = async () => {
+        if (selectedMissingToImport.length === 0) {
+            addToast("Selecione pelo menos um lançamento ausente para registrar.", "warning");
+            return;
+        }
+
+        setIsSavingAutoTransactions(true);
+        try {
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
+            let count = 0;
+
+            for (const item of auditMissing) {
+                if (!selectedMissingToImport.includes(item.id)) continue;
+
+                const isEntrada = item.tipo === 'entrada';
+                const transData: any = {
+                    tipo: item.tipo,
+                    status: 'pago',
+                    descricao: `[CONCILIADO IA] ${item.descricao}`.toUpperCase(),
+                    valor: Number(item.valor),
+                    data_competencia: item.data,
+                    data_vencimento: item.data,
+                    data_pagamento: item.data,
+                    categoria: item.categoria || (isEntrada ? 'Dízimo' : 'Outras Despesas'),
+                    congregacao_id: 'sede',
+                    comprovante: '',
+                    conciliado: true,
+                    data_conciliacao: new Date().toISOString().split('T')[0],
+                    historico: [{
+                        usuario_nome: 'Conciliação IA',
+                        usuario_id: 'sistema_ia',
+                        data: new Date().toISOString(),
+                        descricao: `Lançamento criado e conciliado automaticamente via Auditoria Inteligente de Extrato Bancário.`
+                    }]
+                };
+
+                if (isEntrada) {
+                    transData.membro_id = '';
+                } else {
+                    transData.fornecedor_id = '';
+                    transData.boleto_linha = item.documento || '';
+                }
+
+                await addDoc(colRef, transData);
+                count++;
+            }
+
+            addToast(`Sucesso! ${count} lançamentos ausentes foram registrados e conciliados automaticamente no sistema.`, "success");
+            logAction('AUDITORIA_EXTRATO_IA', `Importou automaticamente ${count} transações ausentes do extrato bancário`, 'financeiro', 'import_ia');
+            
+            // Remove the imported ones from the missing list
+            setAuditMissing(prev => prev.filter(m => !selectedMissingToImport.includes(m.id)));
+            setSelectedMissingToImport([]);
+            setShowAuditModal(false);
+        } catch (e: any) {
+            console.error("Erro ao salvar lançamentos automáticos:", e);
+            addToast("Erro ao registrar os lançamentos automáticos no financeiro.", "error");
+        } finally {
+            setIsSavingAutoTransactions(false);
+        }
+    };
+
+    const handleReconcileAllMatchedPending = async () => {
+        const pendingMatches = auditMatches.filter(m => m.system.conciliado === false);
+        if (pendingMatches.length === 0) {
+            addToast("Não há lançamentos pendentes de conciliação entre os itens encontrados.", "info");
+            return;
+        }
+
+        try {
+            const dataAtual = new Date().toISOString().split('T')[0];
+            for (const m of pendingMatches) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', m.system.id), {
+                    conciliado: true,
+                    data_conciliacao: dataAtual
+                }, { merge: true });
+                logAction('CONCILIAÇÃO_IA', `Conciliou lançamento encontrado no extrato`, 'financeiro', m.system.id);
+            }
+            addToast(`${pendingMatches.length} lançamentos pendentes foram conciliados com sucesso!`, "success");
+            setShowAuditModal(false);
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao conciliar os lançamentos encontrados.", "error");
+        }
+    };
+
     const handleValidateSelected = () => {
         if (selectedIds.length === 0) return addToast("Selecione pelo menos um registro.", "warning");
         
@@ -895,6 +1115,56 @@ const ModuleConciliacaoBancaria = () => {
                                 <div className="flex-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Débitos (Visíveis)</p>
                                     <h3 className="text-2xl font-black text-rose-600">R$ {totalSaidasPeriodo.toFixed(2)}</h3>
+                                </div>
+                            </div>
+
+                            {/* SEÇÃO DE IMPORTAÇÃO E AUDITORIA DE EXTRATO VIA IA */}
+                            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col lg:flex-row items-center gap-6 animate-fadeIn shrink-0">
+                                <div className="lg:flex-1 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-indigo-600 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-full tracking-wider animate-pulse">Auditoria Ativa</span>
+                                        <h4 className="font-black text-lg text-slate-800 tracking-tight flex items-center gap-1.5">
+                                            <Sparkles size={20} className="text-indigo-500" /> Conciliador e Auditor de Extratos por IA
+                                        </h4>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-2xl">
+                                        Carregue o extrato bancário oficial da igreja (<b>PDF ou Imagem/Foto</b>) do fechamento do mês. A Inteligência Artificial irá varrer todas as transações, cruzar os dados com o GIPP, apontar divergências e permitir que você lance lançamentos ausentes automaticamente de forma cirúrgica.
+                                    </p>
+                                    <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-[11px] text-indigo-700 font-semibold flex items-center gap-2 max-w-2xl">
+                                        <Info size={14} className="shrink-0" />
+                                        <span><b>Importância Contábil:</b> É fundamental que as informações do extrato bancário sejam conferidas em todo fechamento mensal para garantir a transparência da tesouraria.</span>
+                                    </div>
+                                </div>
+
+                                <div className="w-full lg:w-96 shrink-0">
+                                    {isAnalyzingStatement ? (
+                                        <div className="bg-white border-2 border-dashed border-indigo-300 rounded-2xl p-6 text-center space-y-3 flex flex-col items-center justify-center h-44 animate-pulse shadow-inner">
+                                            <Loader2 size={36} className="text-indigo-600 animate-spin" />
+                                            <div>
+                                                <p className="text-xs font-black text-slate-700 uppercase tracking-wider animate-bounce">Processando Extrato via IA...</p>
+                                                <p className="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[200px]">Arquivo: {statementFileName}</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <label className="group cursor-pointer block border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-white hover:bg-indigo-50/10 rounded-2xl p-6 text-center space-y-2 transition-all shadow-sm hover:shadow-md h-44 flex flex-col items-center justify-center relative overflow-hidden">
+                                            <input 
+                                                type="file" 
+                                                accept=".pdf, image/*" 
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) handleUploadStatementFile(file);
+                                                }}
+                                                className="hidden" 
+                                            />
+                                            <div className="p-3 bg-slate-50 group-hover:bg-indigo-50 rounded-full text-slate-400 group-hover:text-indigo-600 transition-colors">
+                                                <UploadCloud size={28} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-extrabold text-slate-700 uppercase tracking-wide group-hover:text-indigo-700 transition-colors">Importar Extrato (PDF ou Imagem)</p>
+                                                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-widest">Arraste ou clique para selecionar</p>
+                                            </div>
+                                        </label>
+                                    )}
                                 </div>
                             </div>
 
@@ -1296,6 +1566,331 @@ const ModuleConciliacaoBancaria = () => {
                     )}
                 </div>
             </div>
+
+            {showAuditModal && createPortal(
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[11000] flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-5xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-scale-in border border-slate-200 flex flex-col max-h-[90vh]">
+                        
+                        {/* Header do Painel */}
+                        <div className="bg-slate-900 px-8 py-6 text-white flex justify-between items-center shrink-0">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-indigo-500 rounded-lg text-white">
+                                        <Sparkles size={20} />
+                                    </div>
+                                    <h3 className="text-xl font-black tracking-tight">Painel de Auditoria e Fechamento Bancário por IA</h3>
+                                </div>
+                                <p className="text-xs text-slate-400 font-medium">Extrato analisado: <span className="font-bold text-slate-200">{statementFileName}</span></p>
+                            </div>
+                            <button 
+                                onClick={() => setShowAuditModal(false)}
+                                className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Indicadores / Estatísticas */}
+                        <div className="bg-slate-50 border-b border-slate-200 p-6 grid grid-cols-1 sm:grid-cols-4 gap-4 shrink-0">
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Total no Extrato</span>
+                                <h4 className="text-2xl font-black text-slate-800">{auditMatches.length + auditDiscrepancies.length + auditMissing.length}</h4>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm border-l-4 border-l-emerald-500">
+                                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">Conciliados (Encontrados)</span>
+                                <h4 className="text-2xl font-black text-emerald-600">{auditMatches.length}</h4>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm border-l-4 border-l-amber-500">
+                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block mb-1">Divergências Encontradas</span>
+                                <h4 className="text-2xl font-black text-amber-500">{auditDiscrepancies.length}</h4>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-rose-100 shadow-sm border-l-4 border-l-rose-500 animate-pulse">
+                                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block mb-1">Ausentes no Sistema (IA)</span>
+                                <h4 className="text-2xl font-black text-rose-600">{auditMissing.length}</h4>
+                            </div>
+                        </div>
+
+                        {/* Menu de Tabs da Auditoria */}
+                        <div className="bg-white border-b border-slate-200 px-6 py-2 flex gap-4 shrink-0 overflow-x-auto">
+                            <button
+                                onClick={() => setAuditTab('missing')}
+                                className={`px-4 py-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${
+                                    auditTab === 'missing' ? 'border-rose-500 text-rose-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                <AlertTriangle size={16} /> Lançamentos Ausentes ({auditMissing.length})
+                            </button>
+                            <button
+                                onClick={() => setAuditTab('matched')}
+                                className={`px-4 py-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${
+                                    auditTab === 'matched' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                <CheckCircle size={16} /> Itens Conciliados ({auditMatches.length})
+                            </button>
+                            <button
+                                onClick={() => setAuditTab('discrepancies')}
+                                className={`px-4 py-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${
+                                    auditTab === 'discrepancies' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                <Info size={16} /> Divergências ({auditDiscrepancies.length})
+                            </button>
+                        </div>
+
+                        {/* Conteúdo das Listas */}
+                        <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50">
+                            
+                            {auditTab === 'missing' && (
+                                <div className="space-y-4">
+                                    <div className="bg-rose-50/60 border border-rose-100 p-4 rounded-2xl flex items-start gap-3">
+                                        <AlertTriangle size={20} className="text-rose-500 shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-rose-800 uppercase tracking-wide">Atenção Tesoureiro</p>
+                                            <p className="text-xs text-rose-700 font-medium leading-relaxed">
+                                                Estes lançamentos foram detectados no extrato bancário oficial do mês, mas <b>NÃO</b> constam no livro caixa ou contas a pagar do sistema GIPP. Para efetivar a conciliação perfeita e fechar as contas com saldo real do banco, selecione e aprove esses lançamentos automáticos abaixo.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {auditMissing.length === 0 ? (
+                                        <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-2">
+                                            <CheckCircle size={40} className="text-emerald-500 mx-auto" />
+                                            <h5 className="font-black text-slate-800">Parabéns! Nenhum Lançamento Ausente</h5>
+                                            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">Todas as transações do seu extrato bancário já estão devidamente registradas no financeiro do GIPP.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center px-2">
+                                                <div className="flex items-center gap-2">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedMissingToImport.length === auditMissing.length}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedMissingToImport(auditMissing.map(m => m.id));
+                                                            } else {
+                                                                setSelectedMissingToImport([]);
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-xs font-bold text-slate-600">Selecionar Todos ({auditMissing.length})</span>
+                                                </div>
+                                                <button 
+                                                    onClick={handleImportMissingTransactions}
+                                                    disabled={isSavingAutoTransactions || selectedMissingToImport.length === 0}
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    {isSavingAutoTransactions ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} 
+                                                    Auto-Lançar e Reconciliar ({selectedMissingToImport.length})
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {auditMissing.map((item) => (
+                                                    <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-rose-200 transition-colors">
+                                                        <div className="flex items-center gap-3">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedMissingToImport.includes(item.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedMissingToImport(prev => [...prev, item.id]);
+                                                                    } else {
+                                                                        setSelectedMissingToImport(prev => prev.filter(id => id !== item.id));
+                                                                    }
+                                                                }}
+                                                                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                                                            />
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                                        item.tipo === 'entrada' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                                                    }`}>
+                                                                        {item.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold text-slate-400">{formatDateLocal(item.data)}</span>
+                                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-extrabold">{item.forma_pagamento || 'PIX'}</span>
+                                                                </div>
+                                                                <p className="font-extrabold text-slate-800 text-sm">{item.descricao}</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold">Categoria Estimada: <span className="text-indigo-600 font-black">{item.categoria || 'Dízimo'}</span></p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-right">
+                                                            <p className={`font-black text-base ${item.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                {item.tipo === 'entrada' ? '+' : '-'} R$ {parseFloat(item.valor).toFixed(2)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {auditTab === 'matched' && (
+                                <div className="space-y-4">
+                                    <div className="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex items-start gap-3">
+                                        <CheckCircle size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Conciliação Auditada com Sucesso</p>
+                                            <p className="text-xs text-emerald-700 font-medium leading-relaxed">
+                                                Estes lançamentos existem exatamente iguais no extrato do banco e no livro caixa da igreja GIPP. Se houver itens na lista que constam como "Pendentes de Validação", você pode aprová-los para conciliação imediata em lote.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {auditMatches.length === 0 ? (
+                                        <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-2">
+                                            <AlertCircle size={40} className="text-slate-400 mx-auto" />
+                                            <h5 className="font-black text-slate-800">Nenhum Match Encontrado</h5>
+                                            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">As transações do extrato não bateram de forma idêntica com as transações cadastradas no sistema.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {auditMatches.some(m => !m.system.conciliado) && (
+                                                <div className="flex justify-end px-2">
+                                                    <button 
+                                                        onClick={handleReconcileAllMatchedPending}
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                                                    >
+                                                        <CheckCheck size={14} /> Reconciliar Todos os Pendentes Encontrados
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                {auditMatches.map((m, idx) => (
+                                                    <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:border-emerald-200 transition-colors">
+                                                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                                            <div className="space-y-1">
+                                                                <span className="text-[9px] font-black uppercase text-indigo-500 tracking-wider block">No Extrato Bancário</span>
+                                                                <p className="font-black text-slate-800 text-sm truncate max-w-xs">{m.statement.descricao}</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold">{formatDateLocal(m.statement.data)} • R$ {parseFloat(m.statement.valor).toFixed(2)}</p>
+                                                            </div>
+                                                            <div className="space-y-1 pt-2 md:pt-0 md:pl-4">
+                                                                <span className="text-[9px] font-black uppercase text-emerald-500 tracking-wider block">No Sistema GIPP</span>
+                                                                <p className="font-black text-slate-800 text-sm truncate max-w-xs">{m.system.descricao}</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold">{formatDateLocal(m.system.data_pagamento || m.system.data_competencia)} • R$ {parseFloat(m.system.valor).toFixed(2)}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-3 justify-end">
+                                                            {m.system.conciliado ? (
+                                                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1">
+                                                                    <Check size={12} /> Conciliado
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const dataAtual = new Date().toISOString().split('T')[0];
+                                                                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', m.system.id), {
+                                                                            conciliado: true,
+                                                                            data_conciliacao: dataAtual
+                                                                        }, { merge: true });
+                                                                        logAction('CONCILIAÇÃO_IA', `Conciliou lançamento tempo-real`, 'financeiro', m.system.id);
+                                                                        addToast("Lançamento reconciliado!", "success");
+                                                                        setShowAuditModal(false);
+                                                                    }}
+                                                                    className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-[10px] font-black uppercase px-2.5 py-1 rounded-full transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <AlertTriangle size={12} /> Reconciliar Item
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {auditTab === 'discrepancies' && (
+                                <div className="space-y-4">
+                                    <div className="bg-amber-50/60 border border-amber-100 p-4 rounded-2xl flex items-start gap-3">
+                                        <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">Divergências de Data ou Descrição</p>
+                                            <p className="text-xs text-amber-700 font-medium leading-relaxed">
+                                                A IA detectou transações no extrato bancário com valores correspondentes no sistema GIPP, porém as datas ou descrições estão desalinhadas. Revise manualmente essas possíveis conciliações.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {auditDiscrepancies.length === 0 ? (
+                                        <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-2">
+                                            <CheckCircle size={40} className="text-emerald-500 mx-auto" />
+                                            <h5 className="font-black text-slate-800">Nenhuma Divergência Encontrada</h5>
+                                            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">Parabéns! Todas as transações com valores correspondentes possuem alinhamento contábil.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {auditDiscrepancies.map((item, idx) => (
+                                                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm hover:border-amber-200 transition-colors">
+                                                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                                                        <div>
+                                                            <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Possível Correspondência</span>
+                                                            <p className="text-xs text-slate-400 font-bold mt-1">Lançamento no Extrato: <b className="text-slate-700">{item.statement.descricao}</b> em <b>{formatDateLocal(item.statement.data)}</b> por <b>R$ {parseFloat(item.statement.valor).toFixed(2)}</b></p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selecione o registro do sistema para validar e conciliar:</p>
+                                                        <div className="grid grid-cols-1 gap-2">
+                                                            {item.systemCandidates.map((cand: any) => (
+                                                                <div key={cand.id} className="bg-slate-50 hover:bg-amber-50/25 border border-slate-200 hover:border-amber-300 rounded-xl p-3 flex items-center justify-between transition-colors">
+                                                                    <div>
+                                                                        <p className="font-extrabold text-slate-800 text-xs">{cand.descricao}</p>
+                                                                        <p className="text-[10px] text-slate-400 font-medium">Data Lançamento: {formatDateLocal(cand.data_pagamento || cand.data_competencia)} • Categoria: {cand.categoria}</p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const dataAtual = new Date().toISOString().split('T')[0];
+                                                                            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', cand.id), {
+                                                                                conciliado: true,
+                                                                                data_conciliacao: dataAtual,
+                                                                                descricao: `[RECONCILIADO IA] ${cand.descricao}`.toUpperCase()
+                                                                            }, { merge: true });
+                                                                            logAction('CONCILIAÇÃO_IA', `Resolveu divergência e conciliou com item do extrato`, 'financeiro', cand.id);
+                                                                            addToast("Divergência resolvida e item conciliado!", "success");
+                                                                            setShowAuditModal(false);
+                                                                        }}
+                                                                        className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                                                                    >
+                                                                        Vincular e Conciliar
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Footer */}
+                        <div className="bg-slate-50 border-t border-slate-200 px-8 py-5 flex justify-between items-center shrink-0">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">GIPP Auditoria Integrada de Tesouraria</span>
+                            <button 
+                                onClick={() => setShowAuditModal(false)}
+                                className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-6 py-3 rounded-2xl transition-all shadow-md"
+                            >
+                                Fechar Auditoria
+                            </button>
+                        </div>
+
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

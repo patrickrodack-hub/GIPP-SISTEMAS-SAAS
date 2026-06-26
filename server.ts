@@ -5,7 +5,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import webpush from "web-push";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore";
@@ -27,7 +27,8 @@ const dbFirestore = getFirestore(firebaseApp);
 
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Load or generate VAPID keys
 let vapidPublicKey = (process.env.VAPID_PUBLIC_KEY || "").trim().replace(/^['"]|['"]$/g, "");
@@ -156,6 +157,92 @@ app.post("/api/gemini/generate", async (req, res) => {
         res.json({ text: response.text });
     } catch (error: any) {
         console.error("Gemini API server route error:", error);
+        res.status(500).json({ error: String(error.message || error) });
+    }
+});
+
+app.post("/api/financeiro/analisar-extrato", async (req, res) => {
+    try {
+        const { fileData, mimeType } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+        if (!fileData || !mimeType) {
+            res.status(400).json({ error: "Parâmetros 'fileData' (base64) e 'mimeType' são obrigatórios." });
+            return;
+        }
+
+        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+            res.status(400).json({
+                error: "A chave de API do Gemini ('GEMINI_API_KEY') não foi definida. Por favor, adicione-a nas configurações do GIPP."
+            });
+            return;
+        }
+
+        const ai = new GoogleGenAI({
+            apiKey: apiKey,
+            httpOptions: {
+                headers: {
+                    'User-Agent': 'aistudio-build-server',
+                }
+            }
+        });
+
+        // Extrai a parte base64 pura caso o cliente envie com o prefixo data:...
+        const base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData;
+
+        const filePart = {
+            inlineData: {
+                data: base64Data,
+                mimeType: mimeType
+            }
+        };
+
+        const textPart = {
+            text: "Analise com precisão absoluta o extrato bancário fornecido (em formato PDF ou Imagem). " +
+                  "Sua tarefa é extrair todas as transações financeiras reais (créditos e débitos) do período de fechamento. " +
+                  "Descarte qualquer linha que corresponda a saldos anteriores, limites de crédito, somatórios, taxas simuladas ou metadados de cabeçalhos. " +
+                  "Para cada lançamento, retorne:\n" +
+                  "- data: Data exata da transação no formato AAAA-MM-DD (ex: 2026-06-25)\n" +
+                  "- descricao: Descrição oficial/histórico do lançamento no extrato (ex: PIX RECEBIDO - PAULO S., TAR DOC ELETRONICO)\n" +
+                  "- tipo: 'entrada' (para créditos/depósitos/recebimentos) ou 'saida' (para débitos/pagamentos/tarifas)\n" +
+                  "- valor: Valor numérico positivo absoluto (ex: 150.00)\n" +
+                  "- documento: Número do documento, autenticação ou NSU se disponível (opcional, pode ser vazio)\n" +
+                  "- categoria: Categoria estimada compatível com o financeiro da igreja (ex: 'Dízimo', 'Oferta', 'Água/Luz', 'Aluguel', 'Taxa Bancária', 'Ministério', 'Outros')\n" +
+                  "- forma_pagamento: Forma de pagamento estimada (ex: 'PIX', 'Transferência', 'Boleto', 'Dinheiro', 'Cartão' ou 'Outro')"
+        };
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3.5-flash",
+            contents: [filePart, textPart],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            data: { type: Type.STRING, description: "Data no formato YYYY-MM-DD" },
+                            descricao: { type: Type.STRING, description: "Histórico completo ou descrição" },
+                            tipo: { type: Type.STRING, description: "Tipo: 'entrada' ou 'saida'" },
+                            valor: { type: Type.NUMBER, description: "Valor absoluto (positivo)" },
+                            documento: { type: Type.STRING, description: "ID de documento ou transação se houver" },
+                            categoria: { type: Type.STRING, description: "Categoria estimada" },
+                            forma_pagamento: { type: Type.STRING, description: "Forma de pagamento estimada" }
+                        },
+                        required: ["data", "descricao", "tipo", "valor", "categoria", "forma_pagamento"]
+                    }
+                }
+            }
+        });
+
+        const textResponse = response.text;
+        if (!textResponse) {
+            throw new Error("Resposta vazia da API do Gemini.");
+        }
+
+        res.json(JSON.parse(textResponse.trim()));
+    } catch (error: any) {
+        console.error("Erro no processamento do extrato via IA:", error);
         res.status(500).json({ error: String(error.message || error) });
     }
 });

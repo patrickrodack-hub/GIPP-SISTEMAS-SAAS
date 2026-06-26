@@ -105,6 +105,11 @@ const ModuleDesenvolvedor = () => {
     ]);
     const [visualPushAlert, setVisualPushAlert] = useState<{ title: string; body: string } | null>(null);
 
+    // ESTADOS PARA EXCLUSÃO DE IGREJA NO SAAS
+    const [tenantToDelete, setTenantToDelete] = useState<any>(null);
+    const [deleteReason, setDeleteReason] = useState<string>('');
+    const [isDeletingTenant, setIsDeletingTenant] = useState<boolean>(false);
+
     // Limpa o alerta visual simulado de push recebido após alguns segundos
     useEffect(() => {
         if (visualPushAlert) {
@@ -623,6 +628,28 @@ const ModuleDesenvolvedor = () => {
         }
     };
 
+    const handleExecuteDeleteTenant = async () => {
+        if (!tenantToDelete) return;
+        if (!deleteReason.trim()) {
+            addToast("Por favor, digite a justificativa da exclusão.", "warning");
+            return;
+        }
+
+        setIsDeletingTenant(true);
+        try {
+            // Remove o registro da igreja do painel de controle mestre do SaaS
+            await deleteDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', tenantToDelete.id));
+            addToast(`Igreja "${tenantToDelete.nome}" excluída com sucesso! Justificativa: ${deleteReason}`, "success");
+            setTenantToDelete(null);
+            setDeleteReason('');
+        } catch (e) {
+            console.error(e);
+            addToast("Erro ao excluir o registro do cliente.", "error");
+        } finally {
+            setIsDeletingTenant(false);
+        }
+    };
+
     const handleEmitirNota = (t) => {
         const p = t.plano || 'avancado';
         // Procura o valor no banco atual. Se não existir usa os valores padrões definidos no state.
@@ -1119,6 +1146,13 @@ const ModuleDesenvolvedor = () => {
                                                 <a href={`?id=${t.id}`} target="_blank" className="inline-flex items-center justify-center p-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl transition-colors shadow-sm" title="Acessar Painel">
                                                     <ExternalLink size={16}/>
                                                 </a>
+                                                <button 
+                                                    onClick={() => setTenantToDelete(t)} 
+                                                    className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 border border-rose-100 rounded-xl transition-colors shadow-sm" 
+                                                    title="Excluir Igreja permanentemente"
+                                                >
+                                                    <Trash2 size={16}/>
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -2831,6 +2865,73 @@ const ModuleDesenvolvedor = () => {
 
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {tenantToDelete && createPortal(
+                <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[12000] flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white w-full max-w-lg rounded-[2rem] overflow-hidden shadow-2xl animate-scaleUp border border-rose-200">
+                        <div className="bg-rose-600 p-6 text-center relative overflow-hidden text-white">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                            <AlertTriangle size={48} className="text-white opacity-90 mx-auto mb-3 animate-pulse"/>
+                            <h2 className="text-xl font-black uppercase tracking-wider relative z-10">Excluir Conta de Igreja</h2>
+                            <p className="text-rose-100 mt-1 text-xs font-bold uppercase tracking-widest relative z-10">Confirmação de Risco Extremo</p>
+                        </div>
+                        
+                        <div className="p-6 space-y-4">
+                            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-800 space-y-2">
+                                <p className="font-bold uppercase tracking-wider flex items-center gap-1.5"><AlertCircle size={14}/> Risco de Perda de Dados e Acesso:</p>
+                                <ul className="list-disc list-inside space-y-1 font-medium">
+                                    <li>Esta ação irá excluir <b>permanentemente</b> o registro de acesso mestre do SaaS.</li>
+                                    <li>O identificador único de App (ID: <strong className="font-mono text-rose-600">{tenantToDelete.id}</strong>) será desvinculado e o acesso à igreja será imediatamente bloqueado.</li>
+                                    <li>Esta ação é <b>totalmente irreversível</b> e afetará todos os usuários e dados associados a este cadastro criado indevidamente.</li>
+                                </ul>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Identificação da Igreja:</label>
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                    <p className="text-sm font-extrabold text-slate-800 uppercase">{tenantToDelete.nome}</p>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{tenantToDelete.cidade} - {tenantToDelete.uf || 'UF'}</p>
+                                    <p className="text-[10px] text-indigo-600 font-mono font-bold mt-1">APP ID: {tenantToDelete.id}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Justificativa / Causa da Exclusão *</label>
+                                <textarea 
+                                    value={deleteReason}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    placeholder="Ex: Cadastro criado duplicado, CNPJ incorreto, testes indevidos, etc."
+                                    className="w-full bg-slate-50 border-2 border-slate-200 focus:border-rose-500 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 outline-none h-24 shadow-inner transition-colors resize-none uppercase"
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                                <Button 
+                                    type="button"
+                                    onClick={() => { setTenantToDelete(null); setDeleteReason(''); }} 
+                                    className="flex-1 py-3 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                                >
+                                    <X size={16}/> Cancelar
+                                </Button>
+                                <Button 
+                                    type="button"
+                                    onClick={handleExecuteDeleteTenant}
+                                    disabled={isDeletingTenant || !deleteReason.trim()}
+                                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-lg shadow-rose-500/20 transition-all cursor-pointer"
+                                >
+                                    {isDeletingTenant ? (
+                                        <><Loader2 size={16} className="animate-spin"/> Excluindo...</>
+                                    ) : (
+                                        <><Trash2 size={16}/> Confirmar Exclusão</>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>,
