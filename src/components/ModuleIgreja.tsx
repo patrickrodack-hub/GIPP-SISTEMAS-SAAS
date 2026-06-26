@@ -106,7 +106,7 @@ const ModuleIgreja = () => {
         if (db.igreja) {
             const defaults = {
                 canon_denom: 'ASSEMBLEIAS DE DEUS',
-                canon_convencao_nacional: 'CONVENÇÃO GERAL DAS ASSEMBLEIAS DE DEUS NO BRASIL (CGADB)',
+                canon_convencao_nacional: db.igreja?.nome ? `CONVENÇÃO GERAL - ${db.igreja.nome.toUpperCase()}` : 'CONVENÇÃO DA IGREJA DO CADASTRO',
                 canon_convencao_estadual: 'CONVENÇÃO ESTADUAL DOS MINISTROS DAS ASSEMBLEIAS DE DEUS',
                 canon_declaracao_fe: 'TRINITÁRIA E PENTECOSTAL (DECLARAÇÃO DE FÉ DAS ASSEMBLEIAS DE DEUS)',
                 canon_fundadores: 'GUNNAR VINGREN E DANIEL BERG',
@@ -510,7 +510,7 @@ const ModuleIgreja = () => {
                                         <h3 className="font-bold text-sm text-amber-800 uppercase tracking-wider">2. Dados Canônicos da Denominação</h3>
                                     </div>
                                     <FormInput label="Organização Eclesiástica" value={data.canon_denom} onChange={v=>setData({...data, canon_denom:v})} placeholder="Ex: Assembleia de Deus" />
-                                    <FormInput label="Convenção Geral / Nacional" value={data.canon_convencao_nacional} onChange={v=>setData({...data, canon_convencao_nacional:v})} placeholder="Ex: CGADB" />
+                                    <FormInput label="Convenção Geral / Nacional" value={data.canon_convencao_nacional} onChange={v=>setData({...data, canon_convencao_nacional:v})} placeholder="Ex: Convenção Geral" />
                                     <FormInput label="Convenção Estadual / Regional" value={data.canon_convencao_estadual} onChange={v=>setData({...data, canon_convencao_estadual:v})} placeholder="Ex: Convenção de Pastores do Estado" />
                                     <FormInput label="Declaração de Fé Canônica" value={data.canon_declaracao_fe} onChange={v=>setData({...data, canon_declaracao_fe:v})} />
                                     <div className="grid grid-cols-2 gap-4">

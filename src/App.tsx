@@ -7675,7 +7675,7 @@ export const PrintSystem = ({
             <div className="text-center mb-8 pb-4 border-b-4 border-slate-900">
                 <p className="text-xs font-black tracking-[0.25em] uppercase text-amber-800">Igreja Evangélica Assembleia de Deus no Brasil</p>
                 <h1 className="font-serif text-2xl font-black uppercase text-slate-900 leading-tight mt-1">{igreja.nome || 'Ministério Central'}</h1>
-                <p className="text-xs text-slate-650 font-medium mt-1">Declaração de Fé da CGADB • CNPJ: {igreja.cnpj || 'Sem CNPJ'} | {igreja.endereco} - {igreja.cidade}/{igreja.uf}</p>
+                <p className="text-xs text-slate-650 font-medium mt-1">Declaração de Fé de {igreja.nome || 'Igreja'} • CNPJ: {igreja.cnpj || 'Sem CNPJ'} | {igreja.endereco} - {igreja.cidade}/{igreja.uf}</p>
             </div>
         );
 
@@ -7712,7 +7712,7 @@ export const PrintSystem = ({
                                 {item.membros_participantes && item.membros_participantes.length > 0 && (
                                     <div className="pt-4 font-sans space-y-2">
                                         <p className="text-[10px] font-black uppercase text-rose-700 tracking-wider">
-                                            Rol de Membros Comungantes Autorizados (CGADB):
+                                            Rol de Membros Comungantes Autorizados ({igreja.nome || 'Igreja'}):
                                         </p>
                                         <div className="flex flex-wrap gap-2 p-3 bg-rose-50/20 rounded-xl border border-rose-100">
                                             {item.membros_participantes.map((mp: any, idx: number) => (
@@ -7726,7 +7726,7 @@ export const PrintSystem = ({
                                 <div className="pt-4 font-sans text-xs leading-relaxed text-slate-600 space-y-1 border-t border-dashed border-slate-200 mt-4">
                                     <p><strong>Ministrante / Celebrante:</strong> {item.celebrante}</p>
                                     <p><strong>Secretário de Ofício:</strong> {item.secretario}</p>
-                                    <p><strong>Membros Presentes no Memorial:</strong> {item.membros_presentes_quant || 0} em comunhão de fé (Declaração de Fé CGADB - Cap. 14).</p>
+                                    <p><strong>Membros Presentes no Memorial:</strong> {item.membros_presentes_quant || 0} em comunhão de fé (Declaração de Fé de {igreja.nome || 'Igreja'} - Cap. 14).</p>
                                 </div>
                             </div>
                         )}
@@ -7734,7 +7734,7 @@ export const PrintSystem = ({
                         {item.tipo === 'casamento' && (
                             <div className="space-y-4">
                                 <p className="indent-12 leading-loose">
-                                    No dia correspondente aos atos registrados, sob as bençãos divinas do Altíssimo e em conformidade estrita com o Capítulo 24 da Declaração de Fé da CGADB (sobre a Família), perante o digno Celebrante <strong>{item.celebrante || 'Pastor Celebrante'}</strong>, compareceram os contraentes habilitados sob matrimônio civil para o enlace eclesiástico solene de casamento nesta igreja.
+                                    No dia correspondente aos atos registrados, sob as bençãos divinas do Altíssimo e em conformidade estrita com o Capítulo 24 da Declaração de Fé de {igreja.nome || 'Igreja'} (sobre a Família), perante o digno Celebrante <strong>{item.celebrante || 'Pastor Celebrante'}</strong>, compareceram os contraentes habilitados sob matrimônio civil para o enlace eclesiástico solene de casamento nesta igreja.
                                 </p>
                                 <div className="grid grid-cols-2 gap-4 pt-4 font-sans text-xs bg-slate-50 rounded-xl p-4 border border-slate-200">
                                     <div>
@@ -7761,7 +7761,7 @@ export const PrintSystem = ({
                         {item.tipo === 'batismo' && (
                             <div className="space-y-4 font-serif text-[15px] leading-loose">
                                 <p className="indent-12 text-justify">
-                                    Certificamos para fins de arquivos eclesiásticos que conforme a Sagrada Comissão de Jesus Cristo em Mateus 28:19 e o dogma confessional constante no Capítulo 11 e 12 da Declaração de Fé da CGADB, o candidato <strong>{item.candidato_nome}</strong>, nascido em {item.candidato_data_nascimento ? formatDateLocal(item.candidato_data_nascimento) : 'Não Informada'}, filho de {item.candidato_filiacao || 'Não Informado'}, desceu às águas pelo santo sacramento do batismo exclusivamente por imersão total na data de {item.data_batismo ? formatDateLocal(item.data_batismo) : 'Não Informada'}, sendo oficiante o Pastor <strong>{item.batizador || 'Pastor Oficiante'}</strong> na localidade de {item.local_batismo || 'Templo Central'}.
+                                    Certificamos para fins de arquivos eclesiásticos que conforme a Sagrada Comissão de Jesus Cristo em Mateus 28:19 e o dogma confessional constante no Capítulo 11 e 12 da Declaração de Fé de {igreja.nome || 'Igreja'}, o candidato <strong>{item.candidato_nome}</strong>, nascido em {item.candidato_data_nascimento ? formatDateLocal(item.candidato_data_nascimento) : 'Não Informada'}, filho de {item.candidato_filiacao || 'Não Informado'}, desceu às águas pelo santo sacramento do batismo exclusivamente por imersão total na data de {item.data_batismo ? formatDateLocal(item.data_batismo) : 'Não Informada'}, sendo oficiante o Pastor <strong>{item.batizador || 'Pastor Oficiante'}</strong> na localidade de {item.local_batismo || 'Templo Central'}.
                                 </p>
                             </div>
                         )}
@@ -7769,13 +7769,13 @@ export const PrintSystem = ({
                         {item.tipo === 'consagracao' && (
                             <div className="space-y-4">
                                 <p className="indent-12 leading-loose text-justify">
-                                    Para fins de ordenação, provisão e outorga eclesiástica, em cumprimento solene das sagradas escrituras e aos preceitos regimentais previstos na CGADB (Capítulo 20 - Dons Espirituais e Ministério), certifica-se a honrada ordenação e consagração do obreiro <strong>{item.obreiro_nome}</strong>, inscrito no CPF {item.obreiro_documento || 'Sem Documento'}, habilitado e separado para o santo ministério no cargo de <strong>{item.cargo?.toUpperCase() || 'Oficial'}</strong>.
+                                    Para fins de ordenação, provisão e outorga eclesiástica, em cumprimento solene das sagradas escrituras e aos preceitos regimentais previstos na {igreja.nome || 'Igreja'} (Capítulo 20 - Dons Espirituais e Ministério), certifica-se a honrada ordenação e consagração do obreiro <strong>{item.obreiro_nome}</strong>, inscrito no CPF {item.obreiro_documento || 'Sem Documento'}, habilitado e separado para o santo ministério no cargo de <strong>{item.cargo?.toUpperCase() || 'Oficial'}</strong>.
                                 </p>
                                 <div className="pt-4 font-sans text-xs space-y-1 text-slate-600 leading-normal bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
                                     <p><strong>Data de Solenidade de Consagração:</strong> {item.data_consagracao ? formatDateLocal(item.data_consagracao) : 'Não Informada'}</p>
                                     <p><strong>Conselho Ordenador Presbiteral:</strong> {item.conselho_ordenador || 'Mesa Diretora do Ministério'}</p>
-                                    <p><strong>Convenção Regional / Regional GIPP:</strong> {item.convencao_regional || 'GIPP CGADB'}</p>
-                                    <p><strong>Número de Registro Oficial CGADB:</strong> {item.registro_cgadb || 'Oficiando termo local'}</p>
+                                    <p><strong>Convenção Regional / Regional GIPP:</strong> {item.convencao_regional || ('GIPP ' + (igreja.nome || 'Igreja'))}</p>
+                                    <p><strong>Número de Registro Oficial:</strong> {item.registro_cgadb || 'Oficiando termo local'}</p>
                                 </div>
                             </div>
                         )}
@@ -7784,7 +7784,7 @@ export const PrintSystem = ({
                     {/* Tamper proof barcode / validation block */}
                     <div className="pt-6 font-sans border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-slate-500 text-[10px] uppercase tracking-wider leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100 mt-6">
                         <div>
-                            <p className="font-extrabold text-slate-700">Chave de Assentamento Digital (GIPP CGADB)</p>
+                            <p className="font-extrabold text-slate-700">Chave de Assentamento Digital (GIPP {igreja.nome || 'Igreja'})</p>
                             <p className="text-[10px] font-mono text-slate-800 break-all mt-0.5">{item.hash_validacao || 'Pendente de validação'}</p>
                         </div>
                         <div className="sm:text-right">

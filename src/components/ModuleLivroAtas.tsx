@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { 
   collection, doc, addDoc, updateDoc, deleteDoc, 
   onSnapshot, writeBatch, setDoc
@@ -134,8 +134,27 @@ export default function ModuleLivroAtas() {
   const { db, dbFirestore, appId, addToast, user, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
 
   // States
-  const [livros, setLivros] = useState<any[]>([]);
-  const [registros, setRegistros] = useState<any[]>([]);
+  const [rawLivros, setLivros] = useState<any[]>([]);
+  const [rawRegistros, setRegistros] = useState<any[]>([]);
+
+  const livros = useMemo(() => {
+    const churchName = db?.igreja?.nome || "(Igreja do Cadastro)";
+    return rawLivros.map(b => ({
+      ...b,
+      termo_abertura: b.termo_abertura?.replace(/CGADB/g, churchName),
+      termo_encerramento: b.termo_encerramento?.replace(/CGADB/g, churchName)
+    }));
+  }, [rawLivros, db?.igreja?.nome]);
+
+  const registros = useMemo(() => {
+    const churchName = db?.igreja?.nome || "(Igreja do Cadastro)";
+    return rawRegistros.map(r => ({
+      ...r,
+      conteudo_completo: r.conteudo_completo?.replace(/CGADB/g, churchName),
+      convencao_regional: r.convencao_regional?.replace(/CGADB/g, churchName),
+      registro_cgadb: r.registro_cgadb?.replace(/CGADB/g, churchName)
+    }));
+  }, [rawRegistros, db?.igreja?.nome]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'livros' | 'registros' | 'livro_virtual' | 'assistant_ia'>('dashboard');
 
@@ -414,10 +433,10 @@ export default function ModuleLivroAtas() {
       const styleGuide = draftStyle === 'notarial' 
         ? "Estilo Notarial solene (prosa corrida legal, por extenso, sem abreviaturas, numerais descritos também em palavras, linguagem exegética formal e arcaísmo jurídico/eclesiástico sutil)."
         : draftStyle === 'solene' 
-        ? "Estilo Pentecostal solene clássico (início tradicional, menção à graça divina, saudações formais, reverência ministerial das Assembleias de Deus e CGADB)."
+        ? `Estilo Pentecostal solene clássico (início tradicional, menção à graça divina, saudoes formais, reverência ministerial das Assembleias de Deus e ${db?.igreja?.nome || 'sua convenção'}).`
         : "Estilo Objetivo Moderno (parágrafos claros, resoluções diretas pontuadas para ata administrativa rápida).";
 
-      const promptCommand = `Você é o redator oficial do Livro de Atas de uma igreja evangélica da Assembleia de Deus (CGADB). Pegue os seguintes pontos anotados durante a reunião ministerial e redija uma Ata Eclesiástica Oficial deslumbrante em português formal.
+      const promptCommand = `Você é o redator oficial do Livro de Atas de uma igreja evangélica da Assembleia de Deus (${db?.igreja?.nome || 'Convenção'}). Pegue os seguintes pontos anotados durante a reunião ministerial e redija uma Ata Eclesiástica Oficial deslumbrante em português formal.
   
 Regras a seguir:
 1. Inicie com termos formais adequados ("Ao vigésimo primeiro dia do mês...", "reuniram-se sob a invocação divina...").
@@ -559,7 +578,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                 Livro Digital de Atas Profissional
               </h1>
               <p className="text-xs font-black uppercase text-amber-600 tracking-wider mt-1 flex items-center gap-1">
-                <span>Tradição, Fé e Validade Documental Eclesiástica — CGADB</span>
+                <span>Tradição, Fé e Validade Documental Eclesiástica — {db?.igreja?.nome || 'Convenção'}</span>
               </p>
             </div>
           </div>
@@ -679,7 +698,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                 <div className="space-y-1">
                   <h4 className="text-sm font-black text-amber-900 uppercase tracking-wide">Fidelidade Documental e Prática Eclesiástica</h4>
                   <p className="text-xs text-amber-800/80 leading-relaxed font-semibold">
-                    Os Livros de Atas digitais criados no GIPP respeitam a tradição assembleiana do ministério e das igrejas ligadas à CGADB. Cada entrada gera um Hash de Autenticidade inviolável que impede alterações manuais posteriores e valida a integridade do livro para escrituração civil de acordo com as leis notariais brasileiras.
+                    Os Livros de Atas digitais criados no GIPP respeitam a tradição assembleiana do ministério e das igrejas ligadas à {db?.igreja?.nome || 'Convenção'}. Cada entrada gera um Hash de Autenticidade inviolável que impede alterações manuais posteriores e valida a integridade do livro para escrituração civil de acordo com as leis notariais brasileiras.
                   </p>
                 </div>
               </div>
@@ -1215,7 +1234,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                       <p className="text-xs font-black tracking-[0.25em] uppercase text-amber-800">Igreja Evangélica Assembleia de Deus no Brasil</p>
                       <h4 className="text-lg font-black tracking-wider uppercase text-slate-900">{db.igreja?.nome || "Ministério Sede Geral"}</h4>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Declaração de Fé da CGADB • CNPJ: {db.igreja?.cnpj || 'Sem Identificador Fiscal'}
+                        Declaração de Fé - {db.igreja?.nome || 'Igreja Sede'} • CNPJ: {db.igreja?.cnpj || 'Sem Identificador Fiscal'}
                       </p>
                     </div>
 
@@ -1271,7 +1290,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                                 {activeBookRegistros[virtualPage].membros_participantes && activeBookRegistros[virtualPage].membros_participantes.length > 0 && (
                                   <div className="pt-4 font-sans space-y-2">
                                     <p className="text-[10px] font-black uppercase text-rose-700 tracking-wider flex items-center gap-1.5">
-                                      <Users size={12} /> Rol de Membros Comungantes Autorizados (CGADB):
+                                      <Users size={12} /> Rol de Membros Comungantes Autorizados ({db?.igreja?.nome || 'Igreja'}):
                                     </p>
                                     <div className="flex flex-wrap gap-2 p-4 bg-rose-50/40 rounded-2xl border border-rose-100">
                                       {activeBookRegistros[virtualPage].membros_participantes.map((mp: any, idx: number) => (
@@ -1286,7 +1305,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                                 <div className="pt-6 font-sans text-[11px] leading-relaxed text-slate-500 space-y-1 border-t border-dashed border-slate-200 mt-4">
                                   <p><strong>Ministrante / Celebrante:</strong> {activeBookRegistros[virtualPage].celebrante}</p>
                                   <p><strong>Secretário de Ofício:</strong> {activeBookRegistros[virtualPage].secretario}</p>
-                                  <p><strong>Membros Presentes no Memorial:</strong> {activeBookRegistros[virtualPage].membros_presentes_quant} em comunhão de fé (Declaração de Fé CGADB - Cap. 14).</p>
+                                  <p><strong>Membros Presentes no Memorial:</strong> {activeBookRegistros[virtualPage].membros_presentes_quant} em comunhão de fé (Declaração de Fé {db?.igreja?.nome || 'Igreja'} - Cap. 14).</p>
                                 </div>
                               </div>
                             )}
@@ -1335,8 +1354,8 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                                 <div className="pt-4 font-sans text-[11px] space-y-1 text-slate-500 leading-normal bg-slate-50/50 p-4 rounded-xl border border-slate-200/50">
                                   <p><strong>Data de Consagração / Posse:</strong> {formatDateLocal(activeBookRegistros[virtualPage].data_consagracao)}</p>
                                   <p><strong>Conselho Ordenador / Ministério:</strong> {activeBookRegistros[virtualPage].conselho_ordenador || 'Mesa Diretora Local'}</p>
-                                  <p><strong>Convenção Regional Vinculada:</strong> {activeBookRegistros[virtualPage].convencao_regional || 'GIPP CGADB'}</p>
-                                  <p><strong>Código de Registro CGADB:</strong> {activeBookRegistros[virtualPage].registro_cgadb || 'Aguardando Credencial'}</p>
+                                  <p><strong>Convenção Regional Vinculada:</strong> {activeBookRegistros[virtualPage].convencao_regional || ('GIPP ' + (db?.igreja?.nome || 'Convenção'))}</p>
+                                  <p><strong>Código de Registro:</strong> {activeBookRegistros[virtualPage].registro_cgadb || 'Aguardando Credencial'}</p>
                                 </div>
                               </div>
                             )}
@@ -1414,7 +1433,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                   </span>
                   <h2 className="text-2xl font-black tracking-tight leading-none">Inteligência Eclesiástica para Práticas Atuariais</h2>
                   <p className="text-xs text-indigo-100 leading-relaxed font-semibold">
-                    Evite erros gramaticais e atenda às demandas notariais. Escreva notas de tópicos rápidos ou palavras-chave discutidas em sua diretoria/assembleia, e deixe a Inteligência Eclética redigir integralmente a ata oficial do Livro com termos solenes recomendados pelas Convenções Gerais (CGADB).
+                    Evite erros gramaticais e atenda às demandas notariais. Escreva notas de tópicos rápidos ou palavras-chave discutidas em sua diretoria/assembleia, e deixe a Inteligência Eclética redigir integralmente a ata oficial do Livro com termos solenes recomendados pela {db?.igreja?.nome || 'Convenção'}.
                   </p>
                 </div>
 
@@ -1988,12 +2007,12 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-black uppercase tracking-wider text-slate-600">Registro CGADB Geral</label>
+                      <label className="block text-xs font-black uppercase tracking-wider text-slate-600">Registro Geral ({db?.igreja?.nome || 'Igreja'})</label>
                       <input
                         type="text"
                         value={editingRegistro.registro_cgadb}
                         onChange={(e) => setEditingRegistro({ ...editingRegistro, registro_cgadb: e.target.value })}
-                        placeholder="Ex: CGADB-22441-A"
+                        placeholder={`Ex: REG-${db?.igreja?.nome ? db.igreja.nome.substring(0,3).toUpperCase() : 'IG'}-22441-A`}
                         className="w-full bg-slate-50 border border-slate-200/85 rounded-xl p-3 text-xs font-bold text-slate-700"
                       />
                     </div>
@@ -2144,7 +2163,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                             ? ` com a comunhão nominal registradas dos seguintes irmãos: ${editingRegistro.membros_participantes.map((m: any) => `${m.nome} (${m.cargo || 'Membro'})`).join(', ')}.`
                             : ' com expressiva cooperação e presença do corpo de membros da Sede.';
                           
-                          const defaultText = `Sob a graça do Nosso Senhor Jesus Cristo e de acordo com o Capítulo 14 da Declaração de Fé da CGADB (sobre a Ceia do Senhor), realizou-se em termo solene a cerimônia de Santa Ceia no Templo Central nesta data de ${dateStr}. O ato solene teve início às ${editingRegistro.horario_inicio || '18:00'} e encerrou-se em plena fraternidade às ${editingRegistro.horario_fim || '20:15'}, sob a presidência do digno Celebrante Pastor ${editingRegistro.celebrante || 'Presidente'}. Registrou-se a presença de ${editingRegistro.membros_presentes_quant || 0} membros em plena comunhão, ${listStr} Sob louvores da Harpa Cristã e a ministração santa da Palavra, foram consagradas as frações do Pão e do Fruto da Videira, partilhados aos obreiros e à membresia, em perene memorial à morte vicária, ressurreição e iminente retorno da Segunda Vinda Pré-tribulacionista de Cristo Jesus Senhor Nosso.`;
+                          const defaultText = `Sob a graça do Nosso Senhor Jesus Cristo e de acordo com o Capítulo 14 da Declaração de Fé da ${db?.igreja?.nome || 'Igreja'} (sobre a Ceia do Senhor), realizou-se em termo solene a cerimônia de Santa Ceia no Templo Central nesta data de ${dateStr}. O ato solene teve início às ${editingRegistro.horario_inicio || '18:00'} e encerrou-se em plena fraternidade às ${editingRegistro.horario_fim || '20:15'}, sob a presidência do digno Celebrante Pastor ${editingRegistro.celebrante || 'Presidente'}. Registrou-se a presença de ${editingRegistro.membros_presentes_quant || 0} membros em plena comunhão, ${listStr} Sob louvores da Harpa Cristã e a ministração santa da Palavra, foram consagradas as frações do Pão e do Fruto da Videira, partilhados aos obreiros e à membresia, em perene memorial à morte vicária, ressurreição e iminente retorno da Segunda Vinda Pré-tribulacionista de Cristo Jesus Senhor Nosso.`;
                           
                           setEditingRegistro({ ...editingRegistro, conteudo_completo: defaultText });
                           addToast("Redação eclesiástica descrita no livro com sucesso!", "success");

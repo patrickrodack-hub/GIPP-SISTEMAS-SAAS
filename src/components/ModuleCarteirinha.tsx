@@ -174,6 +174,23 @@ interface FieldState {
 const ModuleCarteirinha = () => {
   const { db, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
   
+  const PRESET_TEMPLATES_DYNAMIC = useMemo(() => {
+    const churchName = db?.igreja?.nome || '(Igreja do Cadastro)';
+    return PRESET_TEMPLATES.map(t => {
+      const name = t.name.replace(/CGADB/g, churchName);
+      const fields = t.fields.map(f => {
+        let label = f.label;
+        if (label) {
+          label = label.replace(/CGADB/g, churchName)
+                       .replace(/C\.G\.A\.D\.B\./g, churchName.toUpperCase())
+                       .replace(/CONVENÇÃO GERAL DAS ASSEMBLEIAS DE DEUS NO BRASIL/g, `CONVENÇÃO DE ${churchName.toUpperCase()}`);
+        }
+        return { ...f, label };
+      });
+      return { ...t, name, fields };
+    });
+  }, [db?.igreja?.nome]);
+
   // High-level controls
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [activeTab, setActiveTab] = useState<'editor' | 'batch_print' | 'projects'>('editor');
@@ -203,7 +220,7 @@ const ModuleCarteirinha = () => {
     return {
       bg: '#0f172a',
       bgImage: null,
-      fields: PRESET_TEMPLATES[0].fields as FieldState[]
+      fields: PRESET_TEMPLATES_DYNAMIC[0].fields as FieldState[]
     };
   });
 
@@ -756,7 +773,7 @@ const ModuleCarteirinha = () => {
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-2">Modelos Rápidos GIPP</label>
                   <div className="space-y-2">
-                    {PRESET_TEMPLATES.map(p => (
+                    {PRESET_TEMPLATES_DYNAMIC.map(p => (
                       <button 
                         key={p.id}
                         onClick={() => {

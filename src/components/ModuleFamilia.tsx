@@ -85,6 +85,7 @@ interface MaterialDevocional {
 
 const ModuleFamilia: React.FC = () => {
   const { db, addToast, callGeminiAI, user, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+  const churchName = db?.igreja?.nome || 'Assembleia de Deus';
   const dbMembros = db?.membros || [];
 
   const [tab, setTab] = useState<number>(1);
@@ -171,7 +172,7 @@ const ModuleFamilia: React.FC = () => {
       const defaultLid: LiderFamilia[] = [
         { id: 'lid_1', nome: 'Pr. Marcos Souza & Pra. Ester', funcao: 'geral', formacao: 'Bacharel em Teologia (FAETAD) & Psicologia', telefone: '(11) 91111-2222', familiasCuidado: ['fam_1', 'fam_2'], relatoriosAtividades: ['Planejamento Anual Concluído', 'Sessão com conselho de casais'] },
         { id: 'lid_2', nome: 'Ev. Roberto Silva & Ir. Ruth', funcao: 'crise', formacao: 'Capelania e Aconselhamento Pastoral', telefone: '(11) 93333-4444', familiasCuidado: ['fam_2'], relatoriosAtividades: ['Visitas emergenciais realizadas no lar do Ricardo Pereira'] },
-        { id: 'lid_3', nome: 'Pb. André Costa & Ir. Clara', funcao: 'casais', formacao: 'Curso de Especialização da Família CGADB', telefone: '(11) 95555-6666', familiasCuidado: ['fam_3'], relatoriosAtividades: ['Mentoria inicial com casal Fernando e Juliana'] }
+        { id: 'lid_3', nome: 'Pb. André Costa & Ir. Clara', funcao: 'casais', formacao: `Curso de Especialização da Família ${db?.igreja?.nome || 'Convenção'}`, telefone: '(11) 95555-6666', familiasCuidado: ['fam_3'], relatoriosAtividades: ['Mentoria inicial com casal Fernando e Juliana'] }
       ];
       setLideres(defaultLid);
       localStorage.setItem('mf_lideres', JSON.stringify(defaultLid));
@@ -217,7 +218,7 @@ const ModuleFamilia: React.FC = () => {
     if (localMat) setMateriais(JSON.parse(localMat));
     else {
       const defaultMat: MaterialDevocional[] = [
-        { id: 'mat_1', titulo: 'Guia Prático do Altar Familiar (Culto Doméstico)', tipo: 'devocional', autor: 'Comissão de Família CGADB', referenciaBiblica: 'Josué 24:15', publicoAlvo: 'geral', link: 'https://cgadb.org.br/familia' },
+        { id: 'mat_1', titulo: 'Guia Prático do Altar Familiar (Culto Doméstico)', tipo: 'devocional', autor: `Comissão de Família ${db?.igreja?.nome || 'Igreja'}`, referenciaBiblica: 'Josué 24:15', publicoAlvo: 'geral', link: '#' },
         { id: 'mat_2', titulo: 'Os 5 Pilares do Lar Assembleiano', tipo: 'apostila', autor: 'Pr. Marcos Souza', referenciaBiblica: 'Provérbios 22:6, Efésios 5', publicoAlvo: 'casais', link: '#' }
       ];
       setMateriais(defaultMat);
@@ -531,7 +532,7 @@ const ModuleFamilia: React.FC = () => {
     const fam = familias.find(f => f.id === aco.familiaId);
     const lider = lideres.find(l => l.id === aco.mentorId);
 
-    const prompt = `Aconselhamento de Família com IA Pastoral (Doutrina Assembleia de Deus CGADB).
+    const prompt = `Aconselhamento de Família com IA Pastoral (Doutrina ${churchName}).
     Família: ${fam?.nome || 'Não informada'}
     Tema da Crise/Aconselhamento: ${aco.tema}
     Anotações Pastorais Confidenciais: ${aco.notasConfidenciais}
@@ -584,7 +585,7 @@ const ModuleFamilia: React.FC = () => {
       pais_solo: 'Mãe/Pai solo criando filhos sob os preceitos cristãos assembleianos'
     };
 
-    const prompt = `Como um experiente Pastor e Conselheiro de Família das Assembleias de Deus no Brasil (CGADB), crie um roteiro oficial, pedagógico e inspirador para o Culto Doméstico em Família.
+    const prompt = `Como um experiente Pastor e Conselheiro de Família de ${churchName}, crie um roteiro oficial, pedagógico e inspirador para o Culto Doméstico em Família.
     
     TEMA PRINCIPAL: ${themes[devTheme]}
     PERFIL DA FAMÍLIA: ${profiles[devProfile]}
@@ -594,7 +595,7 @@ const ModuleFamilia: React.FC = () => {
       "titulo_devocional": "Título forte e acolhedor para o altar",
       "leitura_biblica": "Referência bíblica exata (ex: Josué 24:14-15) e o texto completo do principal versículo",
       "quebra_gelo": "Uma brincadeira ou pergunta simples e rápida para iniciar com descontração",
-      "explicacao_teologica": "Explicação teológica breve e didática (2 parágrafos) alinhada com o capítulo 24 da Declaração de Fé da CGADB",
+      "explicacao_teologica": "Explicação teológica breve e didática (2 parágrafos) alinhada com o capítulo 24 da Declaração de Fé de ${churchName}",
       "pergunta_dialogo": "Uma pergunta profunda para todos os familiares responderem na mesa",
       "oracao_proposta": "Direcionamento e motivos específicos de oração para a família de mãos dadas",
       "desafio_pratico": "Um desafio prático de amor para aplicar durante a semana"
@@ -663,7 +664,7 @@ const ModuleFamilia: React.FC = () => {
             <Heart className="animate-pulse" /> Ministério da Família e Casais
           </h1>
           <p className="text-xs text-white/80 max-w-2xl font-bold uppercase tracking-wider">
-            Alinhado ao Capítulo 24 da Declaração de Fé da CGADB. Agrupamento familiar automático, mentoria de casais, altar doméstico interativo e IA Pastoral.
+            Alinhado ao Capítulo 24 da Declaração de Fé de {churchName}. Agrupamento familiar automático, mentoria de casais, altar doméstico interativo e IA Pastoral.
           </p>
         </div>
       </div>
@@ -1720,7 +1721,7 @@ const ModuleFamilia: React.FC = () => {
                   <Sparkles size={18} className="text-rose-500" />
                   Mentoria Eclesiástica, Prontuário Confidencial & IA Pastoral
                 </h2>
-                <p className="text-xs text-slate-400 font-bold uppercase">Sessões de mentoria e acompanhamento. Use nossa IA baseada na Declaração de Fé da CGADB para guiar estratégias de reconciliação.</p>
+                <p className="text-xs text-slate-400 font-bold uppercase">Sessões de mentoria e acompanhamento. Use nossa IA baseada na Declaração de Fé de {churchName} para guiar estratégias de reconciliação.</p>
               </div>
               <button 
                 onClick={()=>{
@@ -2061,7 +2062,7 @@ const ModuleFamilia: React.FC = () => {
       )}
 
       {/* ----------------------------------------------------
-          TAB 8: DOUTRINA & CAPÍTULO 24 (CGADB) - APOSTILA DE ESTUDO
+          TAB 8: DOUTRINA & CAPÍTULO 24 ({churchName}) - APOSTILA DE ESTUDO
           ---------------------------------------------------- */}
       {tab === 8 && (
         <div className="space-y-6">
@@ -2069,7 +2070,7 @@ const ModuleFamilia: React.FC = () => {
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xs p-8 max-w-4xl mx-auto space-y-6">
             <div className="border-b border-slate-200 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1 rounded-full">
-                Declaração de Fé da CGADB • Capítulo 24
+                Declaração de Fé de {churchName} • Capítulo 24
               </span>
               <h1 className="text-2xl font-black text-slate-800 uppercase mt-3">A Família na Visão Pentecostal Clássica</h1>
               <p className="text-xs text-slate-400 font-bold uppercase mt-1">Material Didático e de Estudo da Universidade Teológica.</p>
@@ -2088,7 +2089,7 @@ const ModuleFamilia: React.FC = () => {
             <div className="space-y-2">
               <h2 className="text-sm font-black text-rose-600 uppercase tracking-wider">2. Fundamentação Doutrinária Assembleiana</h2>
               <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs text-slate-600 leading-relaxed font-medium">
-                <strong>O que a denominação ensina oficialmente:</strong> Conforme o Capítulo 24 da Declaração de Fé da CGADB, o casamento é uma aliança monogâmica, heterossexual e indissolúvel até a morte de um dos cônjuges. Rejeitamos qualquer relativização dos papéis divinamente ordenados, sustentando a submissão mútua e o amor sacrificial do marido, que reflete a união entre Cristo e a Igreja. A dissolução injustificada da aliança é combatida pastoralmente em favor da reconciliação mansa.
+                <strong>O que a denominação ensina oficialmente:</strong> Conforme o Capítulo 24 da Declaração de Fé de {churchName}, o casamento é uma aliança monogâmica, heterossexual e indissolúvel até a morte de um dos cônjuges. Rejeitamos qualquer relativização dos papéis divinamente ordenados, sustentando a submissão mútua e o amor sacrificial do marido, que reflete a união entre Cristo e a Igreja. A dissolução injustificada da aliança é combatida pastoralmente em favor da reconciliação mansa.
               </div>
             </div>
 
@@ -2125,7 +2126,7 @@ const ModuleFamilia: React.FC = () => {
               <div className="space-y-6">
                 {/* Pergunta 1 */}
                 <div className="space-y-2 bg-slate-50 border border-slate-200/60 p-5 rounded-2xl">
-                  <p className="text-xs font-black text-slate-800 uppercase">Questão 1: De acordo com a CGADB (Capítulo 24), qual o papel sacerdotal primordial do homem no lar?</p>
+                  <p className="text-xs font-black text-slate-800 uppercase">Questão 1: De acordo com a Declaração de Fé de {churchName} (Capítulo 24), qual o papel sacerdotal primordial do homem no lar?</p>
                   <div className="space-y-2 text-xs">
                     {[
                       { l: 'A', t: 'Conduzir a família em oração e santidade como cabeça e sacerdote do lar, refletindo o amor de Cristo pela Igreja.' },
