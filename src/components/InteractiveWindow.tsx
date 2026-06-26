@@ -288,7 +288,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
           <div className={`absolute inset-0 bg-gradient-to-br ${headerBg} bg-[length:200%_200%] animate-pulse-glow -z-10 interactive-window-header-bg`}></div>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.12] mix-blend-overlay pointer-events-none interactive-window-header-pattern"></div>
 
-          <div className="relative z-10 flex items-center gap-4 w-full min-w-0 pr-4">
+          <div className="relative z-10 flex items-center gap-4 flex-1 min-w-0 pr-4">
             {IconComponent && (
               <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-xl border border-white/30 flex items-center justify-center text-white shrink-0 group relative shadow-inner interactive-window-icon-container">
                 <IconComponent size={24} className={`${iconColor} drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] interactive-window-icon`} />
@@ -319,15 +319,13 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
             )}
 
             {/* Minimize / Maximize */}
-            {!isMobile && (
-              <button
-                onClick={toggleFullscreen}
-                title={isFullscreen ? 'Restaurar Janela' : 'Maximizar'}
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-resize"
-              >
-                {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              </button>
-            )}
+            <button
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Restaurar Janela' : 'Maximizar'}
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-1.5 rounded-lg text-white/80 hover:text-white transition-all cursor-pointer interactive-window-btn interactive-window-btn-resize"
+            >
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
 
             {/* Close */}
             <button
