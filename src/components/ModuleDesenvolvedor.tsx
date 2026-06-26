@@ -110,6 +110,10 @@ const ModuleDesenvolvedor = () => {
     const [deleteReason, setDeleteReason] = useState<string>('');
     const [isDeletingTenant, setIsDeletingTenant] = useState<boolean>(false);
 
+    // ESTADOS PARA CHAVES API
+    const [apiKeysStatus, setApiKeysStatus] = useState<any[]>([]);
+    const [loadingApiKeys, setLoadingApiKeys] = useState(false);
+
     // Limpa o alerta visual simulado de push recebido após alguns segundos
     useEffect(() => {
         if (visualPushAlert) {
@@ -374,6 +378,27 @@ const ModuleDesenvolvedor = () => {
             setIsSavingPlanos(false);
         }
     };
+
+    const fetchApiKeysStatus = async () => {
+        setLoadingApiKeys(true);
+        try {
+            const res = await fetch("/api/admin/api-keys-status");
+            const data = await res.json();
+            if (data.success) {
+                setApiKeysStatus(data.keys);
+            }
+        } catch (e) {
+            console.error("Erro ao carregar status das chaves de API", e);
+        } finally {
+            setLoadingApiKeys(false);
+        }
+    };
+
+    useEffect(() => {
+        if (tab === 'chaves_api') {
+            fetchApiKeysStatus();
+        }
+    }, [tab]);
 
     useEffect(() => {
         setLoadingTenants(true);
@@ -836,6 +861,7 @@ const ModuleDesenvolvedor = () => {
         {id: 'simulador', label: 'Simulador MRR', icon: TrendingUp},
         {id: 'assistente', label: 'Assistente Virtual (IA)', icon: MessageSquare},
         {id: 'config', label: 'Config. do App', icon: Settings},
+        {id: 'chaves_api', label: 'Integrações e APIs', icon: Key},
         {id: 'rotinas', label: 'Rotinas DEV', icon: Activity}
     ];
 
@@ -2756,6 +2782,82 @@ const ModuleDesenvolvedor = () => {
             </div>
 
             
+                {/* === ABA: CHAVES API E INTEGRAÇÕES === */}
+                {tab === 'chaves_api' && (
+                    <div className="space-y-8 animate-fadeIn">
+                        <div className="bg-slate-900 p-8 rounded-[2rem] border-2 border-slate-800 shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-10">
+                                <Key size={120} className="text-white" />
+                            </div>
+                            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                <div>
+                                    <h3 className="text-2xl font-black text-white flex items-center gap-3">
+                                        Monitor de Integrações e APIs
+                                    </h3>
+                                    <p className="text-slate-400 mt-2 max-w-2xl font-medium leading-relaxed">
+                                        Visualize os recursos habilitados através das chaves de API fornecidas.
+                                        As chaves são configuradas nas variáveis de ambiente por questões de segurança.
+                                    </p>
+                                </div>
+                                <Button 
+                                    onClick={fetchApiKeysStatus} 
+                                    disabled={loadingApiKeys}
+                                    className="bg-indigo-600 hover:bg-indigo-500 text-white border-0 shadow-lg"
+                                >
+                                    {loadingApiKeys ? <Loader2 size={18} className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />}
+                                    Atualizar Status
+                                </Button>
+                            </div>
+                        </div>
+
+                        {loadingApiKeys ? (
+                            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+                                <Loader2 size={48} className="animate-spin text-indigo-500" />
+                                <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Carregando integrações...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {apiKeysStatus.map((api: any, idx: number) => (
+                                    <div key={idx} className={`p-6 rounded-3xl border-2 ${api.enabled ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-3 rounded-2xl ${api.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
+                                                    <Key size={24} />
+                                                </div>
+                                                <div>
+                                                    <h4 className={`text-lg font-black ${api.enabled ? 'text-emerald-900' : 'text-slate-700'}`}>{api.name}</h4>
+                                                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md inline-block mt-1 ${api.enabled ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+                                                        {api.enabled ? 'INTEGRAÇÃO ATIVA' : 'NÃO CONFIGURADO'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-6">
+                                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Recursos Gerenciados:</h5>
+                                            <ul className="space-y-2">
+                                                {api.services.map((service: string, sIdx: number) => (
+                                                    <li key={sIdx} className="flex items-start gap-2 text-sm text-slate-600 font-medium">
+                                                        <CheckCircle size={16} className={`mt-0.5 shrink-0 ${api.enabled ? 'text-emerald-500' : 'text-slate-400'}`} />
+                                                        {service}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {!api.enabled && (
+                                            <div className="mt-6 p-4 bg-white/60 rounded-xl border border-slate-200 text-xs text-slate-500 flex gap-2">
+                                                <Info size={16} className="text-indigo-400 shrink-0" />
+                                                Para ativar estes recursos, configure a chave de API correspondente nas Variáveis de Ambiente da plataforma.
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* === ABA: ROTINAS DEV === */}
                 {tab === 'rotinas' && (
                     <div className="space-y-8 animate-fadeIn">
