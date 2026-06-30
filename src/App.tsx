@@ -1641,7 +1641,7 @@ export const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [], secretaria_contatos: [] };
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
@@ -6331,6 +6331,127 @@ export const PrintSystem = ({
                 <div className="mt-8 text-center border-t-2 border-slate-300 pt-8 flex justify-center gap-20 avoid-break">
                     <div className="w-64"><div className="border-b border-slate-900 mb-2"></div><p className="text-xs font-bold uppercase">{igreja.pastor}</p><p className="text-[10px] font-serif italic text-slate-500">Pastor Presidente / Superintendente</p></div>
                 </div>
+            </PageContainer>
+        );
+    }
+
+    // --- RELATÓRIOS DE CONTATOS DA SECRETARIA ---
+    if (mode === 'ficha_secretaria_contato') {
+        const c = data.contato || {};
+        const Box = ({ label, value, span=1 }) => (<div className={`border border-slate-400 p-2 ${span > 1 ? `col-span-${span}` : ''}`}><p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p><p className="font-bold text-xs text-slate-800 uppercase">{value || '\u00A0'}</p></div>);
+        return (
+            <PageContainer title="Ficha Cadastral de Contato" subtitle={`Uso Interno Administrativo - Tipo: ${c.tipo_contato === 'PJ' ? 'Instituição' : 'Pessoa Física'}`}>
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mb-2">1. Identificação Básica</h3>
+                        <div className="grid grid-cols-6 border-l border-t border-slate-300">
+                            <Box label="Nome / Razão Social" value={c.nome} span={4} />
+                            <Box label="Tipo" value={c.tipo_contato === 'PJ' ? 'INSTITUIÇÃO' : 'PESSOA FÍSICA'} span={2} />
+                            
+                            {c.tipo_contato === 'PF' ? (
+                                <>
+                                    <Box label="Cargo Eclesiástico" value={c.cargo_eclesiastico} span={3} />
+                                    <Box label="CPF" value={c.cpf} span={3} />
+                                    <Box label="RG / Identificação" value={c.rg} span={3} />
+                                    <Box label="Data de Nascimento" value={c.data_nascimento ? formatDateLocal(c.data_nascimento) : ''} span={3} />
+                                </>
+                            ) : (
+                                <>
+                                    <Box label="Tipo de Instituição" value={c.tipo_instituicao} span={2} />
+                                    <Box label="Presidente / Líder" value={c.presidente} span={4} />
+                                    <Box label="Responsáveis / Contatos Adicionais" value={c.responsaveis} span={4} />
+                                    <Box label="CNPJ (Se houver)" value={c.cnpj} span={2} />
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mb-2">2. Endereço & Localização</h3>
+                        <div className="grid grid-cols-6 border-l border-t border-slate-300">
+                            <Box label="Endereço" value={c.endereco} span={4} />
+                            <Box label="Cidade / UF" value={c.cidade ? `${c.cidade} - ${c.uf || ''}` : ''} span={2} />
+                            <Box label="CEP" value={c.cep} span={2} />
+                            <Box label="Complemento / Bairro" value={c.bairro} span={4} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-[11px] bg-slate-800 text-white p-2 uppercase tracking-widest mb-2">3. Contatos & Comunicação</h3>
+                        <div className="grid grid-cols-6 border-l border-t border-slate-300">
+                            <Box label="Telefone Celular" value={c.telefone} span={2} />
+                            <Box label="Telefone Fixo / Outro" value={c.telefone_outro} span={2} />
+                            <Box label="E-mail" value={c.email} span={2} />
+                            <Box label="Observações de Cadastro" value={c.observacoes} span={6} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-8 text-center border-t-2 border-slate-300 pt-8 flex justify-center gap-20 avoid-break">
+                    <div className="w-64">
+                        <div className="border-b border-slate-900 mb-2"></div>
+                        <p className="text-xs font-bold uppercase">{c.tipo_contato === 'PJ' ? (c.presidente || 'PRESIDENTE / RESPONSÁVEL') : 'ASSINATURA DO DECLARANTE'}</p>
+                        <p className="text-[10px] font-serif italic text-slate-500">Declarante / Responsável pelo Cadastro</p>
+                    </div>
+                    <div className="w-64">
+                        <div className="border-b border-slate-900 mb-2"></div>
+                        <p className="text-xs font-bold uppercase">SECRETARIA DA IGREJA</p>
+                        <p className="text-[10px] font-serif italic text-slate-500">Visto / Assinatura do Secretário(a)</p>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
+    if (mode === 'rel_secretaria_contatos') {
+        const { contatos, colunasSelecionadas } = data;
+        
+        const columnMap = {
+            nome: 'Nome / Instituição',
+            tipo_contato: 'Tipo',
+            cargo_presidente: 'Cargo / Presidente',
+            telefone: 'Telefone Celular',
+            endereco: 'Endereço',
+            cidade: 'Cidade/UF',
+            email: 'E-mail',
+            cpf_cnpj: 'CPF/CNPJ'
+        };
+
+        const headers = colunasSelecionadas.map(col => ({ label: columnMap[col] || col }));
+        
+        return (
+            <PageContainer title="Relatório Personalizado de Contatos" subtitle={`Secretaria Digital • Total: ${contatos.length} Contatos Selecionados`}>
+                <Table headers={headers}>
+                    {contatos.map((c, i) => (
+                        <tr key={c.id || i} className="border-b avoid-break hover:bg-slate-50 text-xs">
+                            {colunasSelecionadas.map((col, idx) => {
+                                let val = '';
+                                if (col === 'nome') {
+                                    val = c.nome;
+                                } else if (col === 'tipo_contato') {
+                                    val = c.tipo_contato === 'PJ' ? 'INSTITUIÇÃO' : 'PESSOA FÍSICA';
+                                } else if (col === 'cargo_presidente') {
+                                    val = c.tipo_contato === 'PJ' ? (c.presidente || 'SEM REGISTRO') : (c.cargo_eclesiastico || 'NÃO SE APLICA');
+                                } else if (col === 'telefone') {
+                                    val = c.telefone;
+                                } else if (col === 'endereco') {
+                                    val = c.endereco;
+                                } else if (col === 'cidade') {
+                                    val = c.cidade ? `${c.cidade} - ${c.uf || ''}` : '';
+                                } else if (col === 'email') {
+                                    val = c.email;
+                                } else if (col === 'cpf_cnpj') {
+                                    val = c.tipo_contato === 'PJ' ? c.cnpj : c.cpf;
+                                }
+                                return (
+                                    <td key={idx} className="p-3 border-r border-slate-200 last:border-r-0">
+                                        {val || '-'}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </Table>
             </PageContainer>
         );
     }
@@ -14147,7 +14268,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {

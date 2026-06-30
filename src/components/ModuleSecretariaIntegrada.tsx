@@ -42,15 +42,175 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+import { InteractiveWindow } from './InteractiveWindow';
+
 // Exporting component
 const ModuleSecretariaIntegrada = () => {
     const { db, collection, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, setDoc, doc, logAction, deleteItem, openModal, addDoc, deleteDoc } = useContext(ChurchContext);
-    const [tab, setTab] = useState('agenda');
+    const [tab, setTab] = useState('contatos');
     const [selectedMembers, setSelectedMembers] = useState([]);
     const [msgTemplate, setMsgTemplate] = useState('');
     const [loadingAi, setLoadingAi] = useState(false);
     const [viewMode, setViewMode] = useState('kanban'); // NOVO: Controle de visualização (Lista ou Kanban)
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas'); // NOVO: Filtro de Congregação
+
+    // Form States for Contatos da Secretaria
+    const [contactForm, setContactForm] = useState({
+        nome: '',
+        tipo_contato: 'PF', // PF ou PJ
+        categoria: 'Membro', // Categoria de Contato (Membro, Fornecedor, etc.)
+        cargo_eclesiastico: '', // PF apenas
+        cpf: '', // PF apenas
+        rg: '', // PF apenas
+        data_nascimento: '', // PF apenas
+        tipo_instituicao: '', // PJ apenas (Igreja, Conjunto, Departamento, outro)
+        presidente: '', // PJ apenas
+        responsaveis: '', // PJ apenas
+        cnpj: '', // PJ apenas
+        endereco: '',
+        cidade: '',
+        uf: '',
+        cep: '',
+        bairro: '',
+        telefone: '',
+        telefone_outro: '',
+        email: '',
+        observacoes: ''
+    });
+    const [editingContactId, setEditingContactId] = useState(null);
+    const [showContactModal, setShowContactModal] = useState(false);
+    const [selectedReportColumns, setSelectedReportColumns] = useState(['nome', 'tipo_contato', 'cargo_presidente', 'telefone', 'cidade']);
+    const [showReportSelector, setShowReportSelector] = useState(false);
+    const [contactSearch, setContactSearch] = useState('');
+    const [contactTypeFilter, setContactTypeFilter] = useState('all');
+    const [contactCategoryFilter, setContactCategoryFilter] = useState('all');
+
+    const myContatos = db.secretaria_contatos || [];
+
+    const handleSaveContact = async (e) => {
+        e.preventDefault();
+        try {
+            const dataObj = {
+                ...contactForm,
+                updated_at: new Date().toISOString()
+            };
+
+            if (editingContactId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'secretaria_contatos', editingContactId), dataObj, { merge: true });
+                logAction('EDIÇÃO', `Secretaria atualizou contato "${contactForm.nome}"`, 'secretaria_contatos', editingContactId);
+                addToast("Contato atualizado com sucesso!", "success");
+            } else {
+                const docRef = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'secretaria_contatos'), {
+                    ...dataObj,
+                    created_at: new Date().toISOString()
+                });
+                logAction('CADASTRO', `Secretaria cadastrou contato "${contactForm.nome}"`, 'secretaria_contatos', docRef.id);
+                addToast("Contato cadastrado com sucesso!", "success");
+            }
+            setShowContactModal(false);
+            resetContactForm();
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao gravar contato.", "error");
+        }
+    };
+
+    const resetContactForm = () => {
+        setContactForm({
+            nome: '',
+            tipo_contato: 'PF',
+            categoria: 'Membro',
+            cargo_eclesiastico: '',
+            cpf: '',
+            rg: '',
+            data_nascimento: '',
+            tipo_instituicao: '',
+            presidente: '',
+            responsaveis: '',
+            cnpj: '',
+            endereco: '',
+            cidade: '',
+            uf: '',
+            cep: '',
+            bairro: '',
+            telefone: '',
+            telefone_outro: '',
+            email: '',
+            observacoes: ''
+        });
+        setEditingContactId(null);
+    };
+
+    const handleEditContact = (item) => {
+        setContactForm({
+            nome: item.nome || '',
+            tipo_contato: item.tipo_contato || 'PF',
+            categoria: item.categoria || 'Membro',
+            cargo_eclesiastico: item.cargo_eclesiastico || '',
+            cpf: item.cpf || '',
+            rg: item.rg || '',
+            data_nascimento: item.data_nascimento || '',
+            tipo_instituicao: item.tipo_instituicao || '',
+            presidente: item.presidente || '',
+            responsaveis: item.responsaveis || '',
+            cnpj: item.cnpj || '',
+            endereco: item.endereco || '',
+            cidade: item.cidade || '',
+            uf: item.uf || '',
+            cep: item.cep || '',
+            bairro: item.bairro || '',
+            telefone: item.telefone || '',
+            telefone_outro: item.telefone_outro || '',
+            email: item.email || '',
+            observacoes: item.observacoes || ''
+        });
+        setEditingContactId(item.id);
+        setShowContactModal(true);
+    };
+
+    const handleDeleteContact = async (id, name) => {
+        if (window.confirm(`Tem certeza que deseja remover o contato "${name}"?`)) {
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'secretaria_contatos', id));
+                logAction('EXCLUSÃO', `Secretaria removeu contato "${name}"`, 'secretaria_contatos', id);
+                addToast("Contato removido.", "info");
+            } catch (error) {
+                console.error(error);
+                addToast("Erro ao remover contato.", "error");
+            }
+        }
+    };
+
+    const handlePrintFichaContact = (item) => {
+        setPrintData({ contato: item });
+        setPrintMode('ficha_secretaria_contato');
+        setPreviewOpen(true);
+    };
+
+    const filteredContatosList = myContatos.filter(c => {
+        const nameVal = c.nome || '';
+        const telVal = c.telefone || '';
+        const presVal = c.presidente || '';
+        const cargoVal = c.cargo_eclesiastico || '';
+        const matchesSearch = nameVal.toLowerCase().includes(contactSearch.toLowerCase()) || 
+                              telVal.includes(contactSearch) ||
+                              presVal.toLowerCase().includes(contactSearch.toLowerCase()) ||
+                              cargoVal.toLowerCase().includes(contactSearch.toLowerCase());
+        const matchesType = contactTypeFilter === 'all' || c.tipo_contato === contactTypeFilter;
+        const matchesCategory = contactCategoryFilter === 'all' || c.categoria === contactCategoryFilter;
+        return matchesSearch && matchesType && matchesCategory;
+    });
+
+    const handlePrintCustomReport = () => {
+        if (filteredContatosList.length === 0) {
+            addToast("Nenhum contato na lista para gerar relatório.", "warning");
+            return;
+        }
+        setPrintData({ contatos: filteredContatosList, colunasSelecionadas: selectedReportColumns });
+        setPrintMode('rel_secretaria_contatos');
+        setPreviewOpen(true);
+        setShowReportSelector(false);
+    };
 
     // Form States for Liturgia e Série de Sermões (Mapeamento Litúrgico)
     const [liturgiaForm, setLiturgiaForm] = useState({
@@ -234,6 +394,7 @@ const ModuleSecretariaIntegrada = () => {
             </div>
             
             <div className="flex justify-start bg-white/50 p-1.5 rounded-xl w-fit">
+                <button onClick={()=>setTab('contatos')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='contatos'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Agenda de Contatos</button>
                 <button onClick={()=>setTab('agenda')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='agenda'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Agenda</button>
                 <button onClick={()=>setTab('tarefas')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='tarefas'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Tarefas & Kanban</button>
                 <button onClick={()=>setTab('whatsapp')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='whatsapp'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Mensagens & Templates</button>
@@ -463,6 +624,199 @@ const ModuleSecretariaIntegrada = () => {
                         </div>
                     </div>
                 )}
+
+                {tab === 'contatos' && (
+                    <div className="space-y-6">
+                        <div className="flex flex-wrap justify-between items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-sm animate-entrance gap-4">
+                            <div className="text-left">
+                                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                                    <Users size={20} className="text-indigo-600" /> Agenda de Contatos Integrada
+                                </h3>
+                                <p className="text-xs text-slate-400 font-medium font-sans">Cadastre pessoas físicas (membros, líderes) e instituições (igrejas, conjuntos, departamentos).</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => { setShowReportSelector(true); }}
+                                    className="px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-black text-xs rounded-xl flex items-center gap-2 transition-all border border-slate-200 cursor-pointer"
+                                >
+                                    <Printer size={16}/> Relatório Personalizado
+                                </button>
+                                <button 
+                                    onClick={() => { resetContactForm(); setShowContactModal(true); }} 
+                                    className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/10 cursor-pointer"
+                                >
+                                    <Plus size={16}/> Novo Contato
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Search & Filters */}
+                        <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm animate-entrance">
+                            <div className="relative flex-1 w-full">
+                                <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar por nome, telefone, cargo ou presidente..." 
+                                    value={contactSearch}
+                                    onChange={e => setContactSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 h-11 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white transition-all uppercase text-slate-750"
+                                />
+                            </div>
+                            <div className="w-full md:w-56 flex gap-2">
+                                <div className="flex-1">
+                                    <select 
+                                        value={contactTypeFilter} 
+                                        onChange={e => setContactTypeFilter(e.target.value)}
+                                        className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                    >
+                                        <option value="all">Todos os Tipos</option>
+                                        <option value="PF">Pessoas Físicas</option>
+                                        <option value="PJ">Instituições / Igrejas</option>
+                                    </select>
+                                </div>
+                                <div className="flex-1">
+                                    <select 
+                                        value={contactCategoryFilter} 
+                                        onChange={e => setContactCategoryFilter(e.target.value)}
+                                        className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                    >
+                                        <option value="all">Categorias (Todas)</option>
+                                        <option value="Membro">Membro</option>
+                                        <option value="Obreiro / Líder">Obreiro / Líder</option>
+                                        <option value="Igreja Parceira">Igreja Parceira</option>
+                                        <option value="Fornecedor">Fornecedor</option>
+                                        <option value="Prestador de Serviços">Prestador de Serviços</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Contacts Table Container */}
+                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-entrance">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[800px] text-slate-700">
+                                    <thead>
+                                        <tr className="bg-slate-50/75 border-b border-slate-100">
+                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[120px]">Tipo</th>
+                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Nome / Razão Social</th>
+                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px]">Categoria</th>
+                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Cargo / Presidente</th>
+                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Contato</th>
+                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Cidade / UF</th>
+                                            <th className="py-4 px-6 text-right text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px]">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredContatosList.length > 0 ? (
+                                            filteredContatosList.map((item, index) => {
+                                                const cat = item.categoria || 'Membro';
+                                                let catStyle = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                                                if (cat === 'Obreiro / Líder') catStyle = 'bg-indigo-50 text-indigo-700 border-indigo-100';
+                                                else if (cat === 'Igreja Parceira') catStyle = 'bg-purple-50 text-purple-700 border-purple-100';
+                                                else if (cat === 'Fornecedor') catStyle = 'bg-rose-50 text-rose-700 border-rose-100';
+                                                else if (cat === 'Prestador de Serviços') catStyle = 'bg-slate-50 text-slate-700 border-slate-100';
+                                                else if (cat === 'Outro') catStyle = 'bg-gray-50 text-gray-700 border-gray-100';
+
+                                                return (
+                                                    <tr key={item.id || index} className="hover:bg-slate-50/50 transition-colors group">
+                                                        <td className="py-4.5 px-6 whitespace-nowrap">
+                                                            {item.tipo_contato === 'PJ' ? (
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                                                                    <Building2 size={12}/> PJ
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                                                                    <User size={12}/> PF
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-4.5 px-6 font-sans">
+                                                            <div className="font-extrabold text-slate-800 text-xs uppercase tracking-tight line-clamp-1">
+                                                                {item.nome}
+                                                            </div>
+                                                            {item.tipo_contato === 'PJ' && item.tipo_instituicao && (
+                                                                <span className="text-[9px] font-bold text-slate-400 mt-0.5 block uppercase">
+                                                                    {item.tipo_instituicao}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-4.5 px-6 whitespace-nowrap font-sans">
+                                                            <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-full border ${catStyle}`}>
+                                                                {cat}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4.5 px-6 font-sans">
+                                                            {item.tipo_contato === 'PF' ? (
+                                                                <div className="text-xs text-slate-600 font-bold uppercase">
+                                                                    {item.cargo_eclesiastico || <span className="text-slate-300 font-normal">NÃO DEFINIDO</span>}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-slate-600 font-bold uppercase line-clamp-1">
+                                                                    {item.presidente || <span className="text-slate-300 font-normal">SEM PRESIDENTE</span>}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-4.5 px-6 whitespace-nowrap font-sans">
+                                                            <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                                                <Phone size={12} className="text-slate-400" /> {item.telefone || '-'}
+                                                            </div>
+                                                            {item.email && (
+                                                                <div className="text-[10px] text-slate-400 font-semibold mt-0.5 line-clamp-1 lowercase">
+                                                                    {item.email}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-4.5 px-6 whitespace-nowrap font-sans">
+                                                            <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                                                <MapPin size={12} className="text-slate-400" /> {item.cidade ? `${item.cidade} - ${item.uf || ''}` : '-'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4.5 px-6 text-right whitespace-nowrap">
+                                                            <div className="flex gap-1.5 justify-end">
+                                                                <button 
+                                                                    onClick={() => handlePrintFichaContact(item)} 
+                                                                    className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors border border-indigo-100 cursor-pointer" 
+                                                                    title="Visualizar Ficha Cadastral"
+                                                                >
+                                                                    <Eye size={14}/>
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleEditContact(item)} 
+                                                                    className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors border border-slate-100 cursor-pointer"
+                                                                    title="Editar"
+                                                                >
+                                                                    <Edit size={14}/>
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleDeleteContact(item.id, item.nome)} 
+                                                                    className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 transition-colors border border-rose-100 cursor-pointer"
+                                                                    title="Remover"
+                                                                >
+                                                                    <Trash2 size={14}/>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={7} className="py-12 text-center">
+                                                    <Users className="mx-auto text-slate-300 mb-4 animate-pulse" size={48}/>
+                                                    <h4 className="font-bold text-slate-600">Nenhum contato encontrado</h4>
+                                                    <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto font-sans">
+                                                        Altere os filtros de busca ou cadastre novos contatos administrativos.
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {showLiturgiaModal && createPortal(
@@ -634,6 +988,367 @@ const ModuleSecretariaIntegrada = () => {
                         </div>
                     </div>
                 </div>,
+                document.body
+            )}
+
+            {showContactModal && createPortal(
+                <InteractiveWindow
+                    id="secretaria_agenda_contato_modal"
+                    title={editingContactId ? 'Editar Contato' : 'Novo Contato'}
+                    subtitle="Agenda de Contatos da Secretaria"
+                    onClose={() => setShowContactModal(false)}
+                    headerBg="from-indigo-600 via-indigo-700 to-indigo-800"
+                    defaultWidth={680}
+                    defaultHeight={670}
+                    footer={
+                        <>
+                            <button 
+                                type="button" 
+                                onClick={() => setShowContactModal(false)} 
+                                className="px-5 py-2.5 hover:bg-slate-100 border border-slate-250 rounded-xl text-slate-600 text-sm font-semibold transition-all cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="submit" 
+                                form="contact-form-id" 
+                                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-100 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                                Salvar Contato
+                            </button>
+                        </>
+                    }
+                >
+                    <form id="contact-form-id" onSubmit={handleSaveContact} className="space-y-5 text-slate-700">
+                        {/* Toggle Type PF vs PJ */}
+                        <div>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-2">Tipo de Contato</label>
+                            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setContactForm({ ...contactForm, tipo_contato: 'PF' })} 
+                                    className={`py-2 text-xs font-bold rounded-lg transition-all ${contactForm.tipo_contato === 'PF' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    Pessoa Física (PF)
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setContactForm({ ...contactForm, tipo_contato: 'PJ' })} 
+                                    className={`py-2 text-xs font-bold rounded-lg transition-all ${contactForm.tipo_contato === 'PJ' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    Instituição / Igreja (PJ)
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Nome */}
+                        <div>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Nome Completo / Razão Social</label>
+                            <input 
+                                type="text" 
+                                value={contactForm.nome} 
+                                onChange={e => setContactForm({ ...contactForm, nome: e.target.value.toUpperCase() })} 
+                                required 
+                                placeholder="Ex: ADONIRAM BARBOSA ou SEGUNDA AD SÃO PAULO" 
+                                className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                            />
+                        </div>
+
+                        {/* Categoria */}
+                        <div>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Categoria do Contato</label>
+                            <select 
+                                value={contactForm.categoria || 'Membro'} 
+                                onChange={e => setContactForm({ ...contactForm, categoria: e.target.value })} 
+                                required
+                                className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans cursor-pointer"
+                            >
+                                <option value="Membro">Membro</option>
+                                <option value="Obreiro / Líder">Obreiro / Líder</option>
+                                <option value="Igreja Parceira">Igreja Parceira</option>
+                                <option value="Fornecedor">Fornecedor</option>
+                                <option value="Prestador de Serviços">Prestador de Serviços</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+
+                        {/* Fields specific to PF */}
+                        {contactForm.tipo_contato === 'PF' && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Cargo Eclesiástico</label>
+                                        <select 
+                                            value={contactForm.cargo_eclesiastico} 
+                                            onChange={e => setContactForm({ ...contactForm, cargo_eclesiastico: e.target.value })} 
+                                            className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans cursor-pointer"
+                                        >
+                                            <option value="">Nenhum / Não informado</option>
+                                            <option value="PASTOR">PASTOR</option>
+                                            <option value="EVANGELISTA">EVANGELISTA</option>
+                                            <option value="PRESBÍTERO">PRESBÍTERO</option>
+                                            <option value="DIÁCONO">DIÁCONO</option>
+                                            <option value="COOPERADOR">COOPERADOR</option>
+                                            <option value="AUXILIAR">AUXILIAR</option>
+                                            <option value="MISSIONÁRIO(A)">MISSIONÁRIO(A)</option>
+                                            <option value="MEMBRO">MEMBRO</option>
+                                            <option value="OUTRO">OUTRO / VISITANTE</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Data de Nascimento</label>
+                                        <input 
+                                            type="date" 
+                                            value={contactForm.data_nascimento} 
+                                            onChange={e => setContactForm({ ...contactForm, data_nascimento: e.target.value })} 
+                                            className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">CPF</label>
+                                        <input 
+                                            type="text" 
+                                            value={contactForm.cpf} 
+                                            onChange={e => setContactForm({ ...contactForm, cpf: formatCPF(e.target.value) })} 
+                                            placeholder="000.000.000-00" 
+                                            className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">RG</label>
+                                        <input 
+                                            type="text" 
+                                            value={contactForm.rg} 
+                                            onChange={e => setContactForm({ ...contactForm, rg: e.target.value.toUpperCase() })} 
+                                            placeholder="Apenas números e letras" 
+                                            className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Fields specific to PJ */}
+                        {contactForm.tipo_contato === 'PJ' && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Tipo de Instituição</label>
+                                        <select 
+                                            value={contactForm.tipo_instituicao} 
+                                            onChange={e => setContactForm({ ...contactForm, tipo_instituicao: e.target.value })} 
+                                            className="w-full h-11 px-4 text-xs font-bold rounded-xl border border-slate-200 outline-none bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans cursor-pointer"
+                                        >
+                                            <option value="">Selecione...</option>
+                                            <option value="IGREJA SEDE">IGREJA SEDE</option>
+                                            <option value="CONGREGAÇÃO / FILIAL">CONGREGAÇÃO / FILIAL</option>
+                                            <option value="CONJUNTO MUSICAL">CONJUNTO MUSICAL / MINISTÉRIO</option>
+                                            <option value="DEPARTAMENTO">DEPARTAMENTO</option>
+                                            <option value="OUTRO">OUTRO / PARCEIRO</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">CNPJ (Opcional)</label>
+                                        <input 
+                                            type="text" 
+                                            value={contactForm.cnpj} 
+                                            onChange={e => setContactForm({ ...contactForm, cnpj: e.target.value })} 
+                                            placeholder="00.000.000/0000-00" 
+                                            className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Presidente / Pastor Responsável</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.presidente} 
+                                        onChange={e => setContactForm({ ...contactForm, presidente: e.target.value.toUpperCase() })} 
+                                        placeholder="Ex: PR. SAMUEL FERREIRA" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Responsáveis / Contatos Adicionais (Vírgula para separar)</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.responsaveis} 
+                                        onChange={e => setContactForm({ ...contactForm, responsaveis: e.target.value.toUpperCase() })} 
+                                        placeholder="Ex: SECRETÁRIO, TESOUREIRO, LÍDER DE LOUVOR" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Address details */}
+                        <div className="space-y-4 pt-2 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Dados de Endereço</h4>
+                            <div>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Logradouro, Nº, Complemento</label>
+                                <input 
+                                    type="text" 
+                                    value={contactForm.endereco} 
+                                    onChange={e => setContactForm({ ...contactForm, endereco: e.target.value.toUpperCase() })} 
+                                    placeholder="Ex: AV. SÃO JOÃO, 1000 - APTO 12" 
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                />
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Cidade</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.cidade} 
+                                        onChange={e => setContactForm({ ...contactForm, cidade: e.target.value.toUpperCase() })} 
+                                        placeholder="Ex: SÃO PAULO" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">UF</label>
+                                    <input 
+                                        type="text" 
+                                        maxLength={2} 
+                                        value={contactForm.uf} 
+                                        onChange={e => setContactForm({ ...contactForm, uf: e.target.value.toUpperCase() })} 
+                                        placeholder="SP" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">CEP</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.cep} 
+                                        onChange={e => setContactForm({ ...contactForm, cep: e.target.value })} 
+                                        placeholder="00000-000" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Bairro</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.bairro} 
+                                        onChange={e => setContactForm({ ...contactForm, bairro: e.target.value.toUpperCase() })} 
+                                        placeholder="Ex: CENTRO" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 uppercase font-sans" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Contact Info */}
+                        <div className="space-y-4 pt-2 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Contatos de Comunicação</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Telefone Celular</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.telefone} 
+                                        onChange={e => setContactForm({ ...contactForm, telefone: e.target.value })} 
+                                        required 
+                                        placeholder="(00) 00000-0000" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Telefone Fixo / Outro</label>
+                                    <input 
+                                        type="text" 
+                                        value={contactForm.telefone_outro} 
+                                        onChange={e => setContactForm({ ...contactForm, telefone_outro: e.target.value })} 
+                                        placeholder="(00) 0000-0000" 
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Endereço de E-mail</label>
+                                <input 
+                                    type="email" 
+                                    value={contactForm.email} 
+                                    onChange={e => setContactForm({ ...contactForm, email: e.target.value.toLowerCase() })} 
+                                    placeholder="exemplo@email.com" 
+                                    className="w-full h-11 px-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 font-sans" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1">Observações de Cadastro</label>
+                                <textarea 
+                                    value={contactForm.observacoes} 
+                                    onChange={e => setContactForm({ ...contactForm, observacoes: e.target.value })} 
+                                    placeholder="Anote dados importantes como histórico ministerial, recomendações e contatos extras..." 
+                                    rows={3} 
+                                    className="w-full p-4 rounded-xl border border-slate-200 outline-none text-xs font-bold bg-white focus:border-indigo-500 transition-all text-slate-700 resize-none font-sans" 
+                                />
+                            </div>
+                        </div>
+                    </form>
+                </InteractiveWindow>,
+                document.body
+            )}
+
+            {showReportSelector && createPortal(
+                <InteractiveWindow
+                    id="secretaria_relatorio_colunas_modal"
+                    title="Configurar Colunas"
+                    subtitle="Relatório Personalizado"
+                    onClose={() => setShowReportSelector(false)}
+                    headerBg="from-slate-800 via-slate-900 to-slate-950"
+                    defaultWidth={450}
+                    defaultHeight={600}
+                    footer={
+                        <button 
+                            type="button"
+                            onClick={handlePrintCustomReport}
+                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-500/10 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            <Printer size={16}/> Gerar Relatório de Impressão
+                        </button>
+                    }
+                >
+                    <div className="space-y-4 text-left text-slate-700">
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Marque as colunas que deseja exibir no relatório:</p>
+                        <div className="grid grid-cols-1 gap-2.5">
+                            {[
+                                { key: 'nome', label: 'Nome / Razão Social' },
+                                { key: 'tipo_contato', label: 'Tipo (PF / PJ)' },
+                                { key: 'cargo_presidente', label: 'Cargo Eclesiástico ou Presidente' },
+                                { key: 'telefone', label: 'Telefone Celular' },
+                                { key: 'endereco', label: 'Endereço Completo' },
+                                { key: 'cidade', label: 'Cidade / UF' },
+                                { key: 'email', label: 'E-mail' },
+                                { key: 'cpf_cnpj', label: 'CPF / CNPJ' }
+                            ].map(col => {
+                                const isSelected = selectedReportColumns.includes(col.key);
+                                return (
+                                    <label key={col.key} className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-indigo-50/80 border-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
+                                        <span className="text-xs font-bold text-slate-700">{col.label}</span>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isSelected}
+                                            onChange={() => {
+                                                if (isSelected) {
+                                                    setSelectedReportColumns(selectedReportColumns.filter(x => x !== col.key));
+                                                } else {
+                                                    setSelectedReportColumns([...selectedReportColumns, col.key]);
+                                                }
+                                            }}
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                        />
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </InteractiveWindow>,
                 document.body
             )}
         </div>
