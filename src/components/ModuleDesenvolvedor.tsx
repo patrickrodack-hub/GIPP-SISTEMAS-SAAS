@@ -89,11 +89,20 @@ const ModuleDesenvolvedor = () => {
     const [simInfraCost, setSimInfraCost] = useState(10.0); // R$ de custo por igreja ao mês
 
     // ESTADOS PARA MATERIAL DE DIVULGAÇÃO SAAS (41 MÓDULOS)
-    const [divulgaNomeSistema, setDivulgaNomeSistema] = useState('GIPP');
-    const [divulgaUrlSistema, setDivulgaUrlSistema] = useState('https://gipp.com.br');
-    const [divulgaWhatsappContato, setDivulgaWhatsappContato] = useState('(11) 98765-4321');
-    const [divulgaEmailSaaS, setDivulgaEmailSaaS] = useState('contato@gipp.com.br');
-    const [divulgaNomeRevendedor, setDivulgaNomeRevendedor] = useState('PATRICK PESSOA');
+    const [divulgaNomeSistema, setDivulgaNomeSistema] = useState(() => localStorage.getItem('divulgaNomeSistema') || 'GIPP');
+    const [divulgaUrlSistema, setDivulgaUrlSistema] = useState(() => localStorage.getItem('divulgaUrlSistema') || 'https://gipp.com.br');
+    const [divulgaWhatsappContato, setDivulgaWhatsappContato] = useState(() => localStorage.getItem('divulgaWhatsappContato') || '(11) 98765-4321');
+    const [divulgaEmailSaaS, setDivulgaEmailSaaS] = useState(() => localStorage.getItem('divulgaEmailSaaS') || 'contato@gipp.com.br');
+    const [divulgaNomeRevendedor, setDivulgaNomeRevendedor] = useState(() => localStorage.getItem('divulgaNomeRevendedor') || 'PATRICK PESSOA');
+
+    const handleSaveDivulgacao = () => {
+        localStorage.setItem('divulgaNomeSistema', divulgaNomeSistema);
+        localStorage.setItem('divulgaUrlSistema', divulgaUrlSistema);
+        localStorage.setItem('divulgaWhatsappContato', divulgaWhatsappContato);
+        localStorage.setItem('divulgaEmailSaaS', divulgaEmailSaaS);
+        localStorage.setItem('divulgaNomeRevendedor', divulgaNomeRevendedor);
+        addToast("Informações do material de divulgação salvas com sucesso!", "success");
+    };
     
     const [selectedModuleId, setSelectedModuleId] = useState('secretaria');
     const [selectedChannel, setSelectedChannel] = useState('whatsapp'); // 'whatsapp' | 'email' | 'push'
@@ -113,6 +122,9 @@ const ModuleDesenvolvedor = () => {
     // ESTADOS PARA CHAVES API
     const [apiKeysStatus, setApiKeysStatus] = useState<any[]>([]);
     const [loadingApiKeys, setLoadingApiKeys] = useState(false);
+    const [clientGeminiKey, setClientGeminiKey] = useState(() => localStorage.getItem('VITE_GEMINI_API_KEY') || '');
+    const [clientAsaasKey, setClientAsaasKey] = useState(() => localStorage.getItem('VITE_ASAAS_API_KEY') || '');
+    const [clientVapidKey, setClientVapidKey] = useState(() => localStorage.getItem('VITE_VAPID_PUBLIC_KEY') || '');
 
     // Limpa o alerta visual simulado de push recebido após alguns segundos
     useEffect(() => {
@@ -383,15 +395,101 @@ const ModuleDesenvolvedor = () => {
         setLoadingApiKeys(true);
         try {
             const res = await fetch("/api/admin/api-keys-status");
-            const data = await res.json();
-            if (data.success) {
-                setApiKeysStatus(data.keys);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    setApiKeysStatus(data.keys);
+                    setLoadingApiKeys(false);
+                    return;
+                }
             }
+            throw new Error("Endpoint indisponível");
         } catch (e) {
-            console.error("Erro ao carregar status das chaves de API", e);
+            console.log("Monitor de APIs: Usando detecção client-side/hospedagem por falha na API central:", e);
+            
+            const geminiActive = !!(
+                localStorage.getItem('VITE_GEMINI_API_KEY') ||
+                localStorage.getItem('GEMINI_API_KEY') ||
+                (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+                (typeof window !== 'undefined' && (window as any).__AIS_STUDIO_ACTIVE__)
+            );
+
+            const asaasActive = !!(
+                db?.igreja?.bank_gateway === 'asaas' && (db?.igreja?.bank_api_key || db?.igreja?.bank_token || localStorage.getItem('VITE_ASAAS_API_KEY')) ||
+                localStorage.getItem('VITE_ASAAS_API_KEY') ||
+                localStorage.getItem('ASAAS_API_KEY') ||
+                db?.igreja?.bank_gateway === 'asaas'
+            );
+
+            const pushActive = !!(
+                localStorage.getItem('fcm_token') ||
+                localStorage.getItem('VITE_VAPID_PUBLIC_KEY') ||
+                (import.meta as any).env?.VITE_VAPID_PUBLIC_KEY ||
+                (typeof Notification !== 'undefined' && Notification.permission === 'granted')
+            );
+
+            setApiKeysStatus([
+                {
+                    name: "Gemini AI",
+                    keyName: "VITE_GEMINI_API_KEY",
+                    enabled: geminiActive,
+                    isClientSide: true,
+                    services: [
+                        "Assistente Pastoral IA",
+                        "Geração de Esboços e Sermões",
+                        "Planejamento de Células",
+                        "Análise de Extrato Financeiro por IA",
+                        "Aconselhamento e Mentoria IA",
+                        "Roteiro de Culto Doméstico",
+                        "Geração de Dinâmicas EBD"
+                    ]
+                },
+                {
+                    name: "Asaas Cobrança",
+                    keyName: "VITE_ASAAS_API_KEY",
+                    enabled: asaasActive,
+                    isClientSide: true,
+                    services: [
+                        "Integração de Boletos DDA (Real-time)",
+                        "Conciliação Financeira Automática",
+                        "Emissão e Cobrança de Faturas"
+                    ]
+                },
+                {
+                    name: "Notificações Push (VAPID)",
+                    keyName: "VITE_VAPID_PUBLIC_KEY",
+                    enabled: pushActive,
+                    isClientSide: true,
+                    services: [
+                        "Avisos Financeiros (Vencimentos em Atraso)",
+                        "Lembretes de Eventos na Agenda",
+                        "Comunicados Gerais da Igreja",
+                        "Avisos de Escala de Voluntários"
+                    ]
+                }
+            ]);
         } finally {
             setLoadingApiKeys(false);
         }
+    };
+
+    const handleSaveClientKey = (keyName: string, keyValue: string) => {
+        localStorage.setItem(keyName, keyValue);
+        if (keyName === 'VITE_GEMINI_API_KEY') setClientGeminiKey(keyValue);
+        if (keyName === 'VITE_ASAAS_API_KEY') setClientAsaasKey(keyValue);
+        if (keyName === 'VITE_VAPID_PUBLIC_KEY') setClientVapidKey(keyValue);
+        addToast("Chave de API salva localmente para esta hospedagem!", "success");
+        fetchApiKeysStatus();
+    };
+
+    const handleClearClientKey = (keyName: string) => {
+        localStorage.removeItem(keyName);
+        localStorage.removeItem(keyName.replace('VITE_', '')); // também limpa sem VITE_ por precaução
+        if (keyName === 'VITE_GEMINI_API_KEY') setClientGeminiKey('');
+        if (keyName === 'VITE_ASAAS_API_KEY') setClientAsaasKey('');
+        if (keyName === 'VITE_VAPID_PUBLIC_KEY') setClientVapidKey('');
+        addToast("Chave de API removida localmente.", "info");
+        fetchApiKeysStatus();
     };
 
     useEffect(() => {
@@ -2188,9 +2286,18 @@ const ModuleDesenvolvedor = () => {
                                         />
                                     </div>
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
-                                    * Qualquer alteração nestes campos refletirá instantaneamente nos links, assinaturas e corpos de e-mail de todos os 41 módulos abaixo!
-                                </p>
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+                                    <p className="text-[10px] text-slate-400 font-semibold leading-relaxed flex-1">
+                                        * Qualquer alteração nestes campos refletirá instantaneamente nos links, assinaturas e corpos de e-mail de todos os 41 módulos abaixo!
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveDivulgacao}
+                                        className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-teal-500/10 flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                                    >
+                                        <Save size={14}/> Salvar Informações
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -2816,43 +2923,118 @@ const ModuleDesenvolvedor = () => {
                                 <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Carregando integrações...</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {apiKeysStatus.map((api: any, idx: number) => (
-                                    <div key={idx} className={`p-6 rounded-3xl border-2 ${api.enabled ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-3 rounded-2xl ${api.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
-                                                    <Key size={24} />
-                                                </div>
-                                                <div>
-                                                    <h4 className={`text-lg font-black ${api.enabled ? 'text-emerald-900' : 'text-slate-700'}`}>{api.name}</h4>
-                                                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md inline-block mt-1 ${api.enabled ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
-                                                        {api.enabled ? 'INTEGRAÇÃO ATIVA' : 'NÃO CONFIGURADO'}
-                                                    </span>
-                                                </div>
-                                            </div>
+                            <div className="space-y-6">
+                                {apiKeysStatus.some(api => api.isClientSide) && (
+                                    <div className="p-5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-[2rem] flex items-start gap-3.5 shadow-sm">
+                                        <Info size={20} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                                        <div className="text-xs text-amber-900 dark:text-amber-200 font-medium space-y-1.5">
+                                            <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-800 dark:text-amber-400">⚠️ Modo Hospedagem Estática Ativo (Vercel / GitHub Pages)</p>
+                                            <p className="leading-relaxed">
+                                                Identificamos que você está executando o sistema em uma hospedagem estática, onde o servidor Node central não está disponível. 
+                                                Para habilitar a Inteligência Artificial e outros recursos avançados, você pode inserir as chaves de API diretamente em cada cartão abaixo. Elas serão salvas de forma segura e exclusiva no seu navegador.
+                                            </p>
                                         </div>
-
-                                        <div className="mt-6">
-                                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Recursos Gerenciados:</h5>
-                                            <ul className="space-y-2">
-                                                {api.services.map((service: string, sIdx: number) => (
-                                                    <li key={sIdx} className="flex items-start gap-2 text-sm text-slate-600 font-medium">
-                                                        <CheckCircle size={16} className={`mt-0.5 shrink-0 ${api.enabled ? 'text-emerald-500' : 'text-slate-400'}`} />
-                                                        {service}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-
-                                        {!api.enabled && (
-                                            <div className="mt-6 p-4 bg-white/60 rounded-xl border border-slate-200 text-xs text-slate-500 flex gap-2">
-                                                <Info size={16} className="text-indigo-400 shrink-0" />
-                                                Para ativar estes recursos, configure a chave de API correspondente nas Variáveis de Ambiente da plataforma.
-                                            </div>
-                                        )}
                                     </div>
-                                ))}
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {apiKeysStatus.map((api: any, idx: number) => (
+                                        <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col justify-between ${api.enabled ? 'bg-emerald-50/80 border-emerald-200 dark:bg-emerald-950/5 dark:border-emerald-900' : 'bg-slate-50 border-slate-200 dark:bg-slate-900/40 dark:border-slate-800'}`}>
+                                            <div>
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-3 rounded-2xl ${api.enabled ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                                            <Key size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className={`text-lg font-black ${api.enabled ? 'text-emerald-900 dark:text-emerald-100' : 'text-slate-700 dark:text-slate-300'}`}>{api.name}</h4>
+                                                            <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md inline-block mt-1 ${api.enabled ? 'bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                                                {api.enabled ? 'INTEGRAÇÃO ATIVA' : 'NÃO CONFIGURADO'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-6">
+                                                    <h5 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Recursos Gerenciados:</h5>
+                                                    <ul className="space-y-2">
+                                                        {api.services.map((service: string, sIdx: number) => (
+                                                            <li key={sIdx} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300 font-medium">
+                                                                <CheckCircle size={16} className={`mt-0.5 shrink-0 ${api.enabled ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-600'}`} />
+                                                                {service}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                {!api.enabled && !api.isClientSide && (
+                                                    <div className="mt-6 p-4 bg-white/60 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-850 text-xs text-slate-500 flex gap-2">
+                                                        <Info size={16} className="text-indigo-400 shrink-0" />
+                                                        Para ativar estes recursos, configure a chave de API correspondente nas Variáveis de Ambiente da plataforma.
+                                                    </div>
+                                                )}
+
+                                                {api.isClientSide && (
+                                                    <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-slate-800/80 space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[10px] uppercase font-extrabold text-slate-400">Configurar Chave para esta Hospedagem</span>
+                                                            {api.enabled && (
+                                                                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-extrabold text-[8px] rounded uppercase">Configurada</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="password"
+                                                                placeholder={
+                                                                    api.keyName === 'VITE_GEMINI_API_KEY' 
+                                                                        ? "Cole sua chave da API do Gemini..."
+                                                                        : api.keyName === 'VITE_ASAAS_API_KEY'
+                                                                            ? "Cole sua chave/access token do Asaas..."
+                                                                            : "Cole sua chave pública VAPID..."
+                                                                }
+                                                                value={
+                                                                    api.keyName === 'VITE_GEMINI_API_KEY' ? clientGeminiKey :
+                                                                    api.keyName === 'VITE_ASAAS_API_KEY' ? clientAsaasKey : clientVapidKey
+                                                                }
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    if (api.keyName === 'VITE_GEMINI_API_KEY') setClientGeminiKey(val);
+                                                                    if (api.keyName === 'VITE_ASAAS_API_KEY') setClientAsaasKey(val);
+                                                                    if (api.keyName === 'VITE_VAPID_PUBLIC_KEY') setClientVapidKey(val);
+                                                                }}
+                                                                className="flex-1 px-3 py-2 text-xs font-mono bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl outline-none focus:border-indigo-500"
+                                                            />
+                                                            <button 
+                                                                onClick={() => {
+                                                                    const val = 
+                                                                        api.keyName === 'VITE_GEMINI_API_KEY' ? clientGeminiKey :
+                                                                        api.keyName === 'VITE_ASAAS_API_KEY' ? clientAsaasKey : clientVapidKey;
+                                                                    handleSaveClientKey(api.keyName, val);
+                                                                }}
+                                                                className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[10px] tracking-wider uppercase rounded-xl py-2 cursor-pointer transition-all shrink-0 shadow-sm"
+                                                            >
+                                                                Salvar
+                                                            </button>
+                                                            {api.enabled && (
+                                                                <button 
+                                                                    onClick={() => handleClearClientKey(api.keyName)}
+                                                                    className="px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 font-extrabold text-[10px] uppercase rounded-xl border border-rose-200 dark:border-rose-900 cursor-pointer shrink-0"
+                                                                >
+                                                                    Limpar
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[9px] text-slate-400 font-semibold leading-relaxed">
+                                                            * Armazenado localmente com segurança apenas no seu navegador para {window.location.hostname}.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

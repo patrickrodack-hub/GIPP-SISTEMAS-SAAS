@@ -684,61 +684,61 @@ const ModuleConfiguracoesGerais = () => {
             <div className="bg-white/90 dark:bg-slate-950/40 backdrop-blur border border-slate-200/60 dark:border-slate-800 p-1.5 rounded-2xl flex flex-wrap gap-1 shadow-sm shrink-0">
                 <button 
                     onClick={() => setActiveTab('global')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'global' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'global' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Building2 size={13}/> Sede & Igreja
                 </button>
                 <button 
                     onClick={() => setActiveTab('visual')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'visual' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'visual' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Palette size={13}/> Personalização Visual
                 </button>
                 <button 
                     onClick={() => setActiveTab('backup')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'backup' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'backup' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Database size={13}/> Backups & Nuvem
                 </button>
                 <button 
                     onClick={() => setActiveTab('portal')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'portal' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'portal' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <ShieldCheck size={13}/> Portal & Permissões
                 </button>
                 <button 
                     onClick={() => setActiveTab('notificacoes')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'notificacoes' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'notificacoes' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Bell size={13}/> Avisos Push
                 </button>
                 <button 
                     onClick={() => setActiveTab('performance')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'performance' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'performance' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <RefreshCw size={13}/> Aceleração
                 </button>
                 <button 
                     onClick={() => setActiveTab('conexao')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'conexao' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'conexao' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Wifi size={13}/> Rede / Diagnósticos
                 </button>
                 <button 
                     onClick={() => setActiveTab('auditoria')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'auditoria' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'auditoria' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <FileText size={13}/> Auditorias
                 </button>
                 <button 
                     onClick={() => setActiveTab('impressora')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'impressora' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'impressora' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Printer size={13}/> Impressão
                 </button>
                 <button 
                     onClick={() => setActiveTab('suporte')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'suporte' ? 'bg-indigo-650 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'suporte' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <Headset size={13}/> Suporte Dev
                 </button>
@@ -757,7 +757,7 @@ const ModuleConfiguracoesGerais = () => {
                                         <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">Cadastro de Identidade Institucional</h3>
                                         <p className="text-xs text-slate-500">Dados fundamentais da sede que alimentam certidões, Webmail e relatórios.</p>
                                     </div>
-                                    <Globe size={22} className="text-indigo-650" />
+                                    <Globe size={22} className="text-indigo-600" />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -831,7 +831,7 @@ const ModuleConfiguracoesGerais = () => {
                                                 onChange={e => setGlobalWhatsApp(e.target.value)}
                                                 onBlur={() => setGlobalWhatsApp(formatWhatsApp(globalWhatsApp))}
                                                 placeholder="DDD + Número"
-                                                className="w-full border-2 border-slate-250 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-950 p-3 rounded-xl text-xs font-semibold focus:border-indigo-600' dark:focus:border-indigo-800 outline-none font-mono"
+                                                className="w-full border-2 border-slate-250 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-950 p-3 rounded-xl text-xs font-semibold focus:border-indigo-600 dark:focus:border-indigo-800 outline-none font-mono"
                                             />
                                         </div>
                                         <div className="space-y-1 col-span-2">
@@ -888,7 +888,7 @@ const ModuleConfiguracoesGerais = () => {
                                         type="button"
                                         onClick={handleSaveGlobalConfigs}
                                         disabled={isSavingGlobalConfigs}
-                                        className="px-6 py-3 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow"
+                                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow"
                                     >
                                         {isSavingGlobalConfigs ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                                         Salvar Identidade Sede
@@ -960,7 +960,7 @@ const ModuleConfiguracoesGerais = () => {
                 {activeTab === 'visual' && (
                     <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-[2rem] space-y-6 animate-entrance">
                         <div className="flex items-center gap-2 border-b pb-4">
-                            <Palette size={22} className="text-indigo-650" />
+                            <Palette size={22} className="text-indigo-600" />
                             <div>
                                 <h3 className="text-base font-black">Ambiente Visual & Wallpapers</h3>
                                 <p className="text-xs text-slate-500">Mude a atmosfera estética dos painéis administrativos escolhendo papéis de parede elegantes e intensidades.</p>
@@ -1000,7 +1000,7 @@ const ModuleConfiguracoesGerais = () => {
                                             setOpacityFilter(Number(e.target.value));
                                             handleSaveVisualConfig(selectedWall, selectedAnim, Number(e.target.value));
                                         }}
-                                        className="w-full accent-indigo-650 cursor-pointer"
+                                        className="w-full accent-indigo-600 cursor-pointer"
                                     />
                                     <p className="text-[9px] text-slate-400 font-semibold leading-relaxed">Maior opacidade provê maior nitidez de leitura sobre as tabelas e botões brancos.</p>
                                 </div>
@@ -1061,7 +1061,7 @@ const ModuleConfiguracoesGerais = () => {
                                                 onChange={e=>setCustomUrl(e.target.value)}
                                                 className="flex-1 border p-2.5 rounded-xl text-xs outline-none focus:border-indigo-500"
                                             />
-                                            <button type="submit" className="bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl">Aplicar</button>
+                                            <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl">Aplicar</button>
                                         </form>
                                     </div>
                                     <p className="text-[10px] text-slate-400 leading-normal font-semibold">Tamanho limite recomendado: 1MB. Utilize links estáveis para garantir renderizações offline bem-sucedidas.</p>
@@ -1078,7 +1078,7 @@ const ModuleConfiguracoesGerais = () => {
                         <div className="lg:col-span-5 bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] gap-6 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="flex items-center gap-2 pb-4 border-b">
-                                    <Database size={22} className="text-indigo-650" />
+                                    <Database size={22} className="text-indigo-600" />
                                     <div>
                                         <h3 className="text-base font-black">Exportador Local & Cloud Nuvem</h3>
                                         <p className="text-xs text-slate-500 font-medium">Pontos de restauração físicos e lógicas de exportação JSON.</p>
@@ -1094,7 +1094,7 @@ const ModuleConfiguracoesGerais = () => {
                                     <h4 className="text-xs font-black uppercase text-slate-400 pb-1">Exportador Estruturado Local</h4>
                                     <button 
                                         onClick={() => { startExport(); addToast("Exportando arquivo JSON...", 'info'); }}
-                                        className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold tracking-wider uppercase shadow active:scale-95 transition-all cursor-pointer"
+                                        className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold tracking-wider uppercase shadow active:scale-95 transition-all cursor-pointer"
                                     >
                                         <DownloadCloud size={14}/> Fazer Download de Backup Completo 
                                     </button>
@@ -1198,7 +1198,7 @@ const ModuleConfiguracoesGerais = () => {
                         {/* Selector role */}
                         <div className="lg:col-span-5 bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] space-y-6">
                             <div className="flex items-center gap-2 pb-4 border-b">
-                                <ShieldCheck size={22} className="text-indigo-650" />
+                                <ShieldCheck size={22} className="text-indigo-600" />
                                 <div>
                                     <h3 className="text-base font-black">Permissões de Acesso do Portal</h3>
                                     <p className="text-xs text-slate-500">Mapeie módulos visíveis aos membros de acordo com seu cargo.</p>
@@ -1208,7 +1208,7 @@ const ModuleConfiguracoesGerais = () => {
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Selecione o Cargo Eclesiástico:</label>
                                 <select 
-                                    className="w-full border-2 border-slate-200 focus:border-indigo-650 bg-slate-50/50 hover:bg-slate-55 p-3.5 rounded-2xl text-xs font-bold text-slate-700 capitalize"
+                                    className="w-full border-2 border-slate-200 focus:border-indigo-600 bg-slate-50/50 hover:bg-slate-55 p-3.5 rounded-2xl text-xs font-bold text-slate-700 capitalize"
                                     value={selectedRoleForPortal}
                                     onChange={e=>setSelectedRoleForPortal(e.target.value)}
                                 >
@@ -1233,7 +1233,7 @@ const ModuleConfiguracoesGerais = () => {
                                 <button 
                                     onClick={handleSavePortalConfig}
                                     disabled={isSavingPortalConfig}
-                                    className="flex-1 py-3 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 shadow"
+                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 shadow"
                                 >
                                     {isSavingPortalConfig ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                                     Salvar Ajustes
@@ -1307,7 +1307,7 @@ const ModuleConfiguracoesGerais = () => {
                 {activeTab === 'notificacoes' && (
                     <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-[2rem] max-w-4xl space-y-6 animate-entrance">
                         <div className="flex items-center gap-2 pb-4 border-b">
-                            <Bell size={22} className="text-indigo-650" />
+                            <Bell size={22} className="text-indigo-600" />
                             <div>
                                 <h3 className="text-base font-black">Lógica de Notificações Push (eSocial)</h3>
                                 <p className="text-xs text-slate-500">Mantenha os membros sempre a par de boletins litúrgicos, obrigações de escala etc.</p>
@@ -1334,7 +1334,7 @@ const ModuleConfiguracoesGerais = () => {
 
                                 <button 
                                     onClick={requestFcmPermission}
-                                    className="w-full mt-6 py-3.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold tracking-wider uppercase shadow transition-all"
+                                    className="w-full mt-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold tracking-wider uppercase shadow transition-all"
                                 >
                                     Solicitar Token Push
                                 </button>
@@ -1370,7 +1370,7 @@ const ModuleConfiguracoesGerais = () => {
                         <div className="md:col-span-1 bg-white border border-slate-200 p-6 rounded-[2rem] shadow-xs flex flex-col justify-between">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 pb-3 border-b">
-                                    <Sliders size={20} className="text-indigo-605" />
+                                    <Sliders size={20} className="text-indigo-600" />
                                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Aceleração Total</h3>
                                 </div>
                                 <p className="text-slate-500 text-xs leading-relaxed font-medium">Reorganiza a alocação de buffers IndexDB locais, limpa vazamentos de heap do runtime Javascript e minimiza redundâncias de renderização do eSocial.</p>
@@ -1394,7 +1394,7 @@ const ModuleConfiguracoesGerais = () => {
                             <button 
                                 onClick={handleRunOtimizacao}
                                 disabled={optRunning}
-                                className="w-full mt-6 py-4 bg-indigo-650 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow"
+                                className="w-full mt-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow"
                             >
                                 <RefreshCw className={optRunning ? 'animate-spin' : ''} size={14} />
                                 {optRunning ? 'Processando polimento...' : 'Otimizar Sistema Agora'}
@@ -1442,7 +1442,7 @@ const ModuleConfiguracoesGerais = () => {
                 {activeTab === 'auditoria' && (
                     <div className="bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] space-y-6 animate-entrance text-slate-850">
                         <div className="flex items-center gap-2 pb-4 border-b">
-                            <FileText size={22} className="text-indigo-650" />
+                            <FileText size={22} className="text-indigo-600" />
                             <div>
                                 <h3 className="text-base font-black">Filtro de Logs Administrativos</h3>
                                 <p className="text-xs text-slate-500">Monitore as ações efetuadas na base de dados para total regularidade fiscal.</p>
@@ -1476,7 +1476,7 @@ const ModuleConfiguracoesGerais = () => {
                             <p className="text-xs text-slate-400 font-semibold leading-relaxed max-w-lg">O estúdio de relatórios formatará os logs selecionados em uma folha A4 oficial compatível com assinaturas autógrafas dos diretores fiscais GIPP.</p>
                             <button 
                                 onClick={handlePrintAuditoria}
-                                className="px-6 py-4 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-black tracking-wider uppercase shadow active:scale-95 transition-all flex items-center gap-1.5"
+                                className="px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black tracking-wider uppercase shadow active:scale-95 transition-all flex items-center gap-1.5"
                             >
                                 <Printer size={14} /> Imprimir Auditoria
                             </button>
@@ -1488,7 +1488,7 @@ const ModuleConfiguracoesGerais = () => {
                 {activeTab === 'impressora' && (
                     <div className="bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] max-w-4xl space-y-6 animate-entrance">
                         <div className="flex items-center gap-2 pb-4 border-b">
-                            <Printer size={22} className="text-indigo-650" />
+                            <Printer size={22} className="text-indigo-600" />
                             <div>
                                 <h3 className="text-base font-black">Propriedades Globais da Impressora</h3>
                                 <p className="text-xs text-slate-500 font-medium">Configure as dimensões mecânicas para todo o motor de PDF do GIPP.</p>
@@ -1529,8 +1529,8 @@ const ModuleConfiguracoesGerais = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-black uppercase text-slate-400 flex justify-between">Escala de Conteúdo <span className="text-indigo-650 font-black">{localScale}%</span></label>
-                                <input type="range" min="80" max="120" step="5" value={localScale} onChange={e=>setLocalScale(Number(e.target.value))} className="w-full accent-indigo-650 cursor-pointer" />
+                                <label className="text-xs font-black uppercase text-slate-400 flex justify-between">Escala de Conteúdo <span className="text-indigo-600 font-black">{localScale}%</span></label>
+                                <input type="range" min="80" max="120" step="5" value={localScale} onChange={e=>setLocalScale(Number(e.target.value))} className="w-full accent-indigo-600 cursor-pointer" />
                                 <div className="flex justify-between text-[9px] text-slate-450 font-bold">
                                     <span>80% Compacto</span>
                                     <span>100% Padrão</span>
@@ -1540,7 +1540,7 @@ const ModuleConfiguracoesGerais = () => {
                         </div>
 
                         <div className="pt-4 border-t flex justify-end">
-                            <button onClick={handleSavePrinter} className="px-6 py-3 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase shadow flex items-center gap-1.5">
+                            <button onClick={handleSavePrinter} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase shadow flex items-center gap-1.5">
                                 <Save size={13}/> Persistir Ajustes de Impressão
                             </button>
                         </div>
@@ -1564,7 +1564,7 @@ const ModuleConfiguracoesGerais = () => {
                                 <div className="lg:col-span-5 bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] flex flex-col justify-between">
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-2 pb-4 border-b">
-                                            <Headset size={22} className="text-indigo-650" />
+                                            <Headset size={22} className="text-indigo-600" />
                                             <div>
                                                 <h3 className="text-base font-black">Suporte Especializado</h3>
                                                 <p className="text-xs text-slate-500">Abra demandas com telemetria direta compilada ao desenvolvedor.</p>
@@ -1578,14 +1578,25 @@ const ModuleConfiguracoesGerais = () => {
                                                 <span className="p-2.5 bg-indigo-50 rounded-xl text-indigo-700"><Mail size={16}/></span>
                                                 <div>
                                                     <h4 className="text-xs font-bold leading-none mb-1">E-mail Direto Devs</h4>
-                                                    <a href="mailto:devs@gipp-sistema.com" className="text-[10px] font-mono font-bold text-slate-500 hover:underline">devs@gipp-sistema.com</a>
+                                                    <a href={`mailto:${localStorage.getItem('divulgaEmailSaaS') || 'contato@gipp.com.br'}`} className="text-[10px] font-mono font-bold text-slate-500 hover:underline">
+                                                        {localStorage.getItem('divulgaEmailSaaS') || 'contato@gipp.com.br'}
+                                                    </a>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="p-2.5 bg-indigo-50 rounded-xl text-indigo-700"><Phone size={16}/></span>
                                                 <div>
                                                     <h4 className="text-xs font-bold leading-none mb-1">WhatsApp Plantão</h4>
-                                                    <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono font-bold text-slate-500 hover:underline hover:text-indigo-600">(11) 99999-9999</a>
+                                                    {(() => {
+                                                        const rawWhatsapp = localStorage.getItem('divulgaWhatsappContato') || '(11) 98765-4321';
+                                                        const cleanPhone = rawWhatsapp.replace(/\D/g, '');
+                                                        const waLink = cleanPhone.startsWith('55') ? `https://wa.me/${cleanPhone}` : `https://wa.me/55${cleanPhone}`;
+                                                        return (
+                                                            <a href={waLink} target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono font-bold text-slate-500 hover:underline hover:text-indigo-600">
+                                                                {rawWhatsapp}
+                                                            </a>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
@@ -1622,7 +1633,7 @@ const ModuleConfiguracoesGerais = () => {
                                     </div>
 
                                     <div className="pt-3 border-t flex justify-end">
-                                        <button type="submit" disabled={supportSubmitting} className="px-6 py-3.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase shadow flex items-center gap-1.5 tracking-wider transition-all">
+                                        <button type="submit" disabled={supportSubmitting} className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase shadow flex items-center gap-1.5 tracking-wider transition-all">
                                             {supportSubmitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                                             Submeter aos Desenvolvedores GIPP
                                         </button>

@@ -154,8 +154,37 @@ export const CachedImage = memo(({ src, cacheKey, className, alt = "", referrerP
 export const callGeminiAI = async (prompt, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
 
+  // Verifica se há chave de API cadastrada localmente para hospedagem estática
+  const clientApiKey = localStorage.getItem('VITE_GEMINI_API_KEY') || 
+                       localStorage.getItem('GEMINI_API_KEY') ||
+                       ((import.meta as any).env ? ((import.meta as any).env.VITE_GEMINI_API_KEY || "") : "");
+
   for (let i = 0; i < retries; i++) {
     try {
+      // Se tivermos chave de API no cliente, chamamos diretamente a API do Gemini
+      if (clientApiKey && clientApiKey.trim() !== "") {
+        try {
+          const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientApiKey.trim()}`;
+          const response = await fetch(directUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: String(prompt) }] }]
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (generatedText) {
+              return generatedText;
+            }
+          }
+        } catch (directErr) {
+          console.warn("Falha ao chamar Gemini diretamente pelo cliente, tentando rota de servidor...", directErr);
+        }
+      }
+
       const response = await fetch("/api/gemini/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
