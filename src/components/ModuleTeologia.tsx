@@ -10,23 +10,51 @@ import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
 
 export default function ModuleTeologia() {
-    const { user, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
     const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
     const [activeLesson, setActiveLesson] = useState<number | null>(null);
     const [quizActive, setQuizActive] = useState<boolean>(false);
     
-    // Fake progresso
-    const [courseProgress, setCourseProgress] = useState<Record<string, number>>({});
-    const [quizScore, setQuizScore] = useState<Record<string, number>>({});
+    // Real persistent progress tracking (Melhoria 1)
+    const [courseProgress, setCourseProgress] = useState<Record<string, number>>(() => {
+        try {
+            const saved = localStorage.getItem('gipp_teologia_progress');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
+    const [quizScore, setQuizScore] = useState<Record<string, number>>(() => {
+        try {
+            const saved = localStorage.getItem('gipp_teologia_quiz_scores');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
     
     // Quiz state
     const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
 
-    // Audio Player States
+    // Audio Player States & Dynamic Voices (Melhoria 3)
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
-    const [selectedVoice, setSelectedVoice] = useState('pastor');
+    const [selectedVoice, setSelectedVoice] = useState('default_pastor');
+    const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [audioProgress, setAudioProgress] = useState(0);
+
+    // Dynamic voice population
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            const updateVoices = () => {
+                const voices = window.speechSynthesis.getVoices();
+                const ptVoices = voices.filter(v => v.lang.toLowerCase().startsWith('pt'));
+                setAvailableVoices(ptVoices);
+            };
+            updateVoices();
+            window.speechSynthesis.onvoiceschanged = updateVoices;
+        }
+    }, []);
 
     // Certificate / Diploma Modal State
     const [showCertificateModal, setShowCertificateModal] = useState<boolean>(false);
@@ -58,9 +86,12 @@ export default function ModuleTeologia() {
             utterance.lang = 'pt-BR';
             utterance.rate = playbackSpeed;
             
-            // Voice matching heuristics
+            // Voice matching heuristics (Melhoria 3)
             const voices = window.speechSynthesis.getVoices();
-            let matchedVoice = voices.find(v => v.lang.startsWith('pt'));
+            let matchedVoice = voices.find(v => v.name === selectedVoice);
+            if (!matchedVoice) {
+                matchedVoice = voices.find(v => v.lang.startsWith('pt'));
+            }
             if (matchedVoice) {
                 utterance.voice = matchedVoice;
             }
@@ -387,7 +418,9 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
     const markLessonCompleted = (courseId: string, lessonNumber: number) => {
         const curProgress = courseProgress[courseId] || 0;
         if (lessonNumber > curProgress) {
-            setCourseProgress({ ...courseProgress, [courseId]: lessonNumber });
+            const updated = { ...courseProgress, [courseId]: lessonNumber };
+            setCourseProgress(updated);
+            localStorage.setItem('gipp_teologia_progress', JSON.stringify(updated));
             playNotificationSound();
             addToast(`Lição ${lessonNumber} concluída com sucesso!`, 'success');
         }
@@ -631,6 +664,42 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                     </div>
                                 </div>
 
+                                {availableVoices.length > 0 && (
+                                    <div className="space-y-1.5 pt-2 border-t border-indigo-200/40">
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-indigo-700 block">Voz do Narrador:</label>
+                                        <select
+                                            value={selectedVoice}
+                                            onChange={(e) => {
+                                                playMenuSound();
+                                                setSelectedVoice(e.target.value);
+                                                if (isPlayingAudio) {
+                                                    setIsPlayingAudio(false);
+                                                    setTimeout(() => setIsPlayingAudio(true), 150);
+                                                }
+                                            }}
+                                            className="w-full bg-white border border-indigo-200/60 rounded-xl p-2.5 text-[10px] font-extrabold text-indigo-950 outline-none focus:border-indigo-500 cursor-pointer shadow-xs"
+                                        >
+                                            <option value="default_pastor">Voz Padrão (Pastor Virtual)</option>
+                                            {availableVoices.map((v) => {
+                                                let friendlyName = v.name;
+                                                const lowerName = v.name.toLowerCase();
+                                                if (v.name.includes("Daniel") || v.name.includes("Google português do Brasil") || v.name.includes("Heloisa")) {
+                                                    friendlyName = v.name.includes("Heloisa") ? "Professora Heloisa (Feminino)" : v.name.includes("Daniel") ? "Professor Daniel (Masculino)" : "Pastor Virtual GIPP";
+                                                } else if (lowerName.includes("maria") || lowerName.includes("female") || lowerName.includes("zira") || lowerName.includes("francisca") || lowerName.includes("heloisa") || lowerName.includes("solange")) {
+                                                    friendlyName = `${v.name.split(" ")[0].replace("Microsoft", "").replace("Google", "").trim()} (Missionária / Feminino)`;
+                                                } else {
+                                                    friendlyName = `${v.name.replace("Microsoft", "").replace("Google", "").trim()} (Masculino)`;
+                                                }
+                                                return (
+                                                    <option key={v.name} value={v.name}>
+                                                        {friendlyName}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    </div>
+                                )}
+
                                 {audioProgress > 0 && (
                                     <div className="space-y-1">
                                         <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
@@ -775,7 +844,9 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 
                 if (score >= 70) {
                     playNotificationSound();
-                    setQuizScore({ ...quizScore, [selectedCourse]: score });
+                    const updatedScores = { ...quizScore, [selectedCourse]: score };
+                    setQuizScore(updatedScores);
+                    localStorage.setItem('gipp_teologia_quiz_scores', JSON.stringify(updatedScores));
                     addToast(`Aprovado! Nota: ${score}`, "success");
                     setQuizActive(false);
                 } else {
@@ -2108,12 +2179,12 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                             </div>
                         </div>
 
-                        {/* Interactive UI Action bars */}
-                        <div className="flex gap-3 pt-2">
+                        {/* Interactive UI Action bars (Melhoria 2) */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2 w-full">
                             <Button 
                                 variant="ghost" 
                                 onClick={() => { playMenuSound(); setShowCertificateModal(false); }}
-                                className="flex-1 font-bold"
+                                className="font-bold border border-slate-200"
                             >
                                 Fechar Lousa
                             </Button>
@@ -2122,9 +2193,25 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                     playNotificationSound();
                                     handleDownloadCertificate(certifiedCourse.title);
                                 }}
-                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold gap-2 shadow-md flex items-center justify-center py-2.5"
+                                className="flex-1 bg-slate-800 hover:bg-slate-950 text-white font-extrabold gap-2 shadow-md flex items-center justify-center py-2.5"
                             >
                                 <Download size={15} /> Baixar PDF Certificado
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    playNotificationSound();
+                                    setPrintData({
+                                        igreja: db?.igreja || { nome: "Assembleia de Deus GIPP", cor_tema: "#4f46e5", cidade: "São Paulo" },
+                                        membro: { nome: user?.nome || "Obreiro em Formação Acadêmica" },
+                                        extra: { curso: certifiedCourse?.title || "Teologia Geral" }
+                                    });
+                                    setPrintMode('cert_curso');
+                                    setPreviewOpen(true);
+                                    setShowCertificateModal(false);
+                                }}
+                                className="flex-1 bg-amber-600 hover:bg-amber-750 text-white font-black gap-2 shadow-md flex items-center justify-center py-2.5"
+                            >
+                                <Printer size={15} /> Imprimir Alta Resolução
                             </Button>
                         </div>
                     </div>
