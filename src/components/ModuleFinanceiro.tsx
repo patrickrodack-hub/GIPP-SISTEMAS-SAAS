@@ -953,6 +953,62 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         };
     }, [financeiroFiltrado, db.financeiro, congregacaoFilter]);
 
+    const exportarExcelFinanceiro = (tipo: 'entrada' | 'saida') => {
+        const registros = tabelaFinanceiroFiltrada.filter(f => f.tipo === tipo);
+        if (registros.length === 0) {
+            addToast(`Nenhum lançamento de ${tipo === 'entrada' ? 'entrada' : 'saída'} encontrado para exportar.`, 'info');
+            return;
+        }
+        
+        const headers = tipo === 'entrada' 
+            ? ["ID", "Data Competencia", "Descricao", "Membro ID", "Membro Nome", "Categoria", "Valor (R$)", "Congregacao ID", "Congregacao Nome", "Status"]
+            : ["ID", "Data Vencimento", "Data Competencia", "Descricao", "Fornecedor", "Valor (R$)", "Congregacao", "Status"];
+            
+        const rows = registros.map(f => {
+            if (tipo === 'entrada') {
+                return [
+                    f.id || "",
+                    f.data_competencia || "",
+                    f.descricao || "",
+                    f.membro_id || "",
+                    f.membro_nome || (f.membro_id ? db.membros?.find(m=>m.id===f.membro_id)?.nome || "" : ""),
+                    f.categoria || "",
+                    parseFloat(f.valor || "0").toFixed(2),
+                    f.congregacao_id || "sede",
+                    !f.congregacao_id || f.congregacao_id === 'sede' ? 'Sede Principal' : db.congregacoes?.find(c=>c.id===f.congregacao_id)?.nome || "",
+                    f.status || ""
+                ];
+            } else {
+                return [
+                    f.id || "",
+                    f.data_vencimento || "",
+                    f.data_competencia || "",
+                    f.descricao || "",
+                    f.fornecedor_id ? db.fornecedores?.find(forn=>forn.id===f.fornecedor_id)?.nome || f.fornecedor_id : "",
+                    parseFloat(f.valor || "0").toFixed(2),
+                    !f.congregacao_id || f.congregacao_id === 'sede' ? 'Sede Principal' : db.congregacoes?.find(c=>c.id===f.congregacao_id)?.nome || "",
+                    f.status || ""
+                ];
+            }
+        });
+        
+        let csvContent = "\uFEFF"; // UTF-8 BOM
+        csvContent += headers.join(";") + "\n";
+        rows.forEach(row => {
+            csvContent += row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";") + "\n";
+        });
+        
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${tipo === 'entrada' ? 'entradas' : 'despesas'}_gipp_${getTodayDate()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addToast(`Listagem de ${tipo === 'entrada' ? 'Entradas' : 'Despesas'} exportada com sucesso em CSV!`, 'success');
+    };
+
     const contribuintes = new Set(financeiroFiltrado.filter(f => f.tipo === 'entrada' && f.membro_id).map(f => f.membro_id)).size;
     const totalMembros = db.membros?.length || 0;
 
@@ -1512,7 +1568,13 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                         <div className="bg-white/80 backdrop-blur-md border-t-4 border-emerald-500 p-5 rounded-2xl shadow-sm shrink-0 mb-4 flex flex-col gap-4">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-xl sm:text-2xl font-black text-emerald-600">Registro de Entradas</h3>
-                                <Button onClick={() => openModal('fin_entrada_novo')} variant="success" className="shadow-lg shadow-emerald-500/30 bg-gradient-to-r from-emerald-500 to-teal-600"><Plus size={18}/> Nova Entrada</Button>
+                                <div className="flex gap-2">
+                                    <Button onClick={() => exportarExcelFinanceiro('entrada')} variant="secondary" className="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 transition-all">
+                                        <FileSpreadsheet size={16} className="text-emerald-500" />
+                                        Exportar CSV
+                                    </Button>
+                                    <Button onClick={() => openModal('fin_entrada_novo')} variant="success" className="shadow-lg shadow-emerald-500/30 bg-gradient-to-r from-emerald-500 to-teal-600"><Plus size={18}/> Nova Entrada</Button>
+                                </div>
                             </div>
                             
                             <div className="flex flex-wrap gap-3 items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
@@ -1547,7 +1609,13 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                          <div className="bg-white/80 backdrop-blur-md border-t-4 border-rose-500 p-5 rounded-2xl shadow-sm shrink-0 mb-4 flex flex-col gap-4">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-xl sm:text-2xl font-black text-rose-600">Registro de Saídas</h3>
-                                <Button onClick={() => openModal('fin_saida_novo')} variant="danger" className="shadow-lg shadow-rose-500/30"><Plus size={18}/> Nova Despesa</Button>
+                                <div className="flex gap-2">
+                                    <Button onClick={() => exportarExcelFinanceiro('saida')} variant="secondary" className="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 transition-all">
+                                        <FileSpreadsheet size={16} className="text-emerald-500" />
+                                        Exportar CSV
+                                    </Button>
+                                    <Button onClick={() => openModal('fin_saida_novo')} variant="danger" className="shadow-lg shadow-rose-500/30"><Plus size={18}/> Nova Despesa</Button>
+                                </div>
                             </div>
                             
                             <div className="flex flex-wrap gap-3 items-center bg-slate-50 p-3 rounded-xl border border-slate-100">

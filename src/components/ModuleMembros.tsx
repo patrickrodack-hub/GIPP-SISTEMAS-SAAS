@@ -53,6 +53,44 @@ const ModuleMembros = memo(() => {
         (!m.congregacao_id && congregacaoFilter === 'sede')
     );
 
+    const handleExportMembrosCSV = () => {
+        if (membrosFiltrados.length === 0) {
+            addToast("Nenhum membro filtrado encontrado para exportar.", "info");
+            return;
+        }
+        
+        const headers = ["ID", "Nome", "CPF", "Telefone", "E-mail", "Cargo", "Função Administrativa", "Congregação", "Status", "Data Nascimento", "Endereço"];
+        const rows = membrosFiltrados.map(m => [
+            m.id || "",
+            m.nome || "",
+            m.cpf || "",
+            m.telefone || "",
+            m.email || "",
+            m.cargo || "Membro",
+            m.funcao_administrativa || "NENHUMA",
+            !m.congregacao_id || m.congregacao_id === 'sede' ? 'Sede Principal' : db.congregacoes?.find(c => c.id === m.congregacao_id)?.nome || "Outra",
+            m.status || "Ativo",
+            m.data_nascimento || "",
+            m.endereco || ""
+        ]);
+        
+        let csvContent = "\uFEFF"; // UTF-8 BOM
+        csvContent += headers.join(";") + "\n";
+        rows.forEach(row => {
+            csvContent += row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";") + "\n";
+        });
+        
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `membros_gipp_${getTodayDate()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addToast("Listagem de Membros exportada com sucesso em CSV!", "success");
+    };
+
     const handleExportVouchers = async (membro) => {
         // Query database transactions for attachments belonging to member
         const transacoes = (db.financeiro || []).filter(f => f.membro_id === membro.id && f.comprovante);
@@ -151,6 +189,10 @@ const ModuleMembros = memo(() => {
                         <option value="sede">Sede Principal</option>
                         {(db.congregacoes||[]).map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
                     </select>
+                    <Button onClick={handleExportMembrosCSV} variant="secondary" className="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 transition-all">
+                        <FileSpreadsheet size={16} className="text-emerald-500" />
+                        Exportar CSV
+                    </Button>
                 </div>
             </div>
             <div className="flex-1 overflow-hidden">

@@ -8046,6 +8046,117 @@ export const PrintSystem = ({
         );
     }
 
+    // 9 - APOSTILAS DE TEOLOGIA (REQUISITO PROFESSOR DE TEOLOGIA)
+    if (mode === 'rel_apostila') {
+        const { title, level, introduction, doctrinalFoundation, biblicalReferences, practicalApplication, quiz } = data;
+        return (
+            <PageContainer>
+                <div className="space-y-8 p-4 font-serif text-slate-800 leading-relaxed text-justify">
+                    {/* Header */}
+                    <div className="border-b-4 border-indigo-900 pb-4 text-center space-y-1 avoid-break">
+                        <span className="text-xs font-black uppercase tracking-widest text-indigo-700 font-sans">Faculdade de Formação Teológica GIPP</span>
+                        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight">{title || "Apostila de Estudo Teológico"}</h1>
+                        <span className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider">Grau Curricular: {level || "Avançado"}</span>
+                    </div>
+
+                    {/* Introdução */}
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold text-indigo-950 font-sans border-b border-indigo-200 pb-1 flex items-center gap-2">
+                            <span className="bg-indigo-900 text-white font-sans text-xs px-2.5 py-1 rounded-md">1</span> Introdução Histórica
+                        </h2>
+                        <div className="text-slate-700 space-y-4 text-sm leading-loose">
+                            {typeof introduction === 'string' ? (
+                                introduction.split('\n').map((para: string, i: number) => para.trim() && <p key={i} className="indent-8">{para.trim()}</p>)
+                            ) : (
+                                introduction
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Fundamentação Doutrinária */}
+                    <div className="space-y-4 avoid-break-inside">
+                        <h2 className="text-xl font-bold text-indigo-950 font-sans border-b border-indigo-200 pb-1 flex items-center gap-2 mt-8">
+                            <span className="bg-indigo-900 text-white font-sans text-xs px-2.5 py-1 rounded-md">2</span> Fundamentação Doutrinária (CGADB)
+                        </h2>
+                        <div className="text-slate-700 space-y-4 text-sm leading-loose">
+                            {typeof doctrinalFoundation === 'string' ? (
+                                doctrinalFoundation.split('\n').map((para: string, i: number) => para.trim() && <p key={i} className="indent-8">{para.trim()}</p>)
+                            ) : (
+                                doctrinalFoundation
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Referências Bíblicas */}
+                    {biblicalReferences && biblicalReferences.length > 0 && (
+                        <div className="space-y-4 avoid-break-inside">
+                            <h2 className="text-xl font-bold text-indigo-950 font-sans border-b border-indigo-200 pb-1 flex items-center gap-2 mt-8">
+                                <span className="bg-indigo-900 text-white font-sans text-xs px-2.5 py-1 rounded-md">3</span> Fundamentos Exegéticos e Bíblicos
+                            </h2>
+                            <ul className="space-y-4">
+                                {biblicalReferences.map((ref: string, i: number) => (
+                                    <li key={i} className="bg-slate-50 border-l-4 border-indigo-800 p-4 rounded-r-xl text-sm italic text-slate-700 shadow-xs">
+                                        {ref}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {/* Aplicação Prática */}
+                    <div className="space-y-4 avoid-break-inside">
+                        <h2 className="text-xl font-bold text-indigo-950 font-sans border-b border-indigo-200 pb-1 flex items-center gap-2 mt-8">
+                            <span className="bg-indigo-900 text-white font-sans text-xs px-2.5 py-1 rounded-md">4</span> Aplicação Pastoral Prática
+                        </h2>
+                        <div className="text-slate-700 space-y-4 text-sm leading-loose">
+                            {typeof practicalApplication === 'string' ? (
+                                practicalApplication.split('\n').map((para: string, i: number) => para.trim() && <p key={i} className="indent-8">{para.trim()}</p>)
+                            ) : (
+                                practicalApplication
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Questionário de Fixação */}
+                    {quiz && quiz.length > 0 && (
+                        <div className="space-y-4 avoid-break-inside page-break-before">
+                            <h2 className="text-xl font-bold text-indigo-950 font-sans border-b border-indigo-200 pb-1 flex items-center gap-2 mt-8">
+                                <span className="bg-indigo-900 text-white font-sans text-xs px-2.5 py-1 rounded-md">5</span> Questionário de Fixação Teológica
+                            </h2>
+                            <div className="space-y-6 mt-4">
+                                {quiz.map((q: any, i: number) => (
+                                    <div key={i} className="border border-slate-200 p-5 rounded-2xl bg-white space-y-3">
+                                        <p className="font-bold text-sm text-slate-900 font-sans">QUESTÃO {i + 1}: {q.question}</p>
+                                        <div className="grid grid-cols-1 gap-2 pl-4">
+                                            {q.options?.map((opt: string, optIdx: number) => (
+                                                <div key={optIdx} className="text-xs font-sans text-slate-700 flex items-center gap-2">
+                                                    <span className="w-5 h-5 flex items-center justify-center border border-slate-300 rounded-full text-[10px] font-black shrink-0">
+                                                        {String.fromCharCode(65 + optIdx)}
+                                                    </span>
+                                                    <span>{opt}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {q.explanation && (
+                                            <div className="mt-2 text-xs bg-indigo-50/50 p-3 rounded-lg border border-indigo-100/50 font-sans text-indigo-950">
+                                                <span className="font-bold">Gabarito Comentado:</span> {q.explanation}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="pt-12 text-center text-xs font-sans font-bold text-slate-400 uppercase tracking-widest avoid-break">
+                        <p>Faculdade Teológica Integrada GIPP — Doutrina Reformada Pentecostal</p>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
     return null;
 };
 
@@ -13320,6 +13431,8 @@ export default function App() {
   const [user, setUser] = useState(null); 
   const [authUser, setAuthUser] = useState(null); 
   const [view, setView] = useState('login');
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [loginMode, setLoginMode] = useState(() => {
       if (typeof navigator !== 'undefined') {
           return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'membro' : 'admin';
@@ -13354,6 +13467,75 @@ export default function App() {
           console.warn("Could not sync DB state to localStorage cache:", err);
       }
   }, [db]);
+
+  const globalSearchResults = useMemo(() => {
+      if (!globalSearchQuery.trim()) return [];
+      const queryClean = globalSearchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const results = [];
+      
+      const modules = [
+          { label: "Visão Geral (Dashboard)", view: "dashboard", category: "Navegação", icon: LayoutDashboard },
+          { label: "Bíblia de Estudos Offline", view: "biblia", category: "Navegação", icon: BookOpen },
+          { label: "Membros (Rol Eclesiástico)", view: "cad_membro", category: "Navegação", icon: Users },
+          { label: "Financeiro: Entradas e Dízimos", view: "fin_entrada", category: "Navegação", icon: ArrowUpCircle },
+          { label: "Financeiro: Saídas e Contas", view: "fin_saida", category: "Navegação", icon: ArrowDownCircle },
+          { label: "Conciliação Bancária DDA", view: "fin_conciliacao", category: "Navegação", icon: CreditCard },
+          { label: "Curso de Teologia / Faculdade", view: "curso_teologia", category: "Navegação", icon: GraduationCap },
+          { label: "Escola Bíblica Dominical (EBD)", view: "secretaria_ebd", category: "Navegação", icon: BookOpenText },
+          { label: "Células e Pequenos Grupos", view: "cad_celula", category: "Navegação", icon: Home },
+          { label: "Secretaria Integrada & Agenda", view: "secretaria_integrada", category: "Navegação", icon: FileText },
+          { label: "Assistente Pastoral IA", view: "assistente_ai", category: "Navegação", icon: Sparkles },
+          { label: "D.P. & Contabilidade eSocial", view: "dp_contabilidade", category: "Navegação", icon: Briefcase },
+          { label: "Configurações do Sistema", view: "config_sistema", category: "Navegação", icon: Settings },
+          { label: "Auditoria de Logs", view: "auditoria", category: "Navegação", icon: Shield },
+          { label: "Suporte Técnico Dev", view: "suporte_dev", category: "Navegação", icon: Headset }
+      ];
+      
+      modules.forEach(m => {
+          if (m.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(queryClean)) {
+              results.push({ ...m, type: 'module' });
+          }
+      });
+      
+      if (db.membros) {
+          db.membros.forEach((m: any) => {
+              const nomeClean = (m.nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              const cpfClean = (m.cpf || "").replace(/\D/g, "");
+              const cargoClean = (m.cargo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              if (nomeClean.includes(queryClean) || cpfClean.includes(queryClean) || cargoClean.includes(queryClean)) {
+                  results.push({
+                      label: m.nome,
+                      sublabel: `${m.cargo || 'Membro'} • ${m.telefone || 'Sem Telefone'}`,
+                      view: "cad_membro",
+                      type: "member",
+                      category: "Membros",
+                      icon: User,
+                      data: m
+                  });
+              }
+          });
+      }
+      
+      if (db.celulas) {
+          db.celulas.forEach((c: any) => {
+              const nomeClean = (c.nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              const liderClean = (c.lider_nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              if (nomeClean.includes(queryClean) || liderClean.includes(queryClean)) {
+                  results.push({
+                      label: c.nome,
+                      sublabel: `Líder: ${c.lider_nome || 'Não definido'} • Dia: ${c.dia_semana || 'Sem dia'}`,
+                      view: "cad_celula",
+                      type: "cell",
+                      category: "Células",
+                      icon: Home,
+                      data: c
+                  });
+              }
+          });
+      }
+
+      return results.slice(0, 8);
+  }, [globalSearchQuery, db]);
 
   // FCM Messaging States
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
@@ -14048,13 +14230,24 @@ export default function App() {
   // --- ATALHOS GLOBAIS DE TECLADO ---
   useEffect(() => {
       const handleKeyDown = (e) => {
+          const k = e.key.toLowerCase();
+          
+          if ((e.ctrlKey || e.metaKey) && k === 'k') {
+              e.preventDefault();
+              setGlobalSearchOpen(prev => !prev);
+              return;
+          }
+
+          if (e.key === 'Escape') {
+              setGlobalSearchOpen(false);
+          }
+
           // Ignorar se estiver digitando em inputs, textareas ou selects
           const activeNodeName = document.activeElement?.nodeName;
           if (activeNodeName === 'INPUT' || activeNodeName === 'TEXTAREA' || activeNodeName === 'SELECT' || document.activeElement?.getAttribute('contenteditable') === 'true') {
               return;
           }
 
-          const k = e.key.toLowerCase();
           if (e.altKey) {
               if (k === 'd') {
                   e.preventDefault();
@@ -14094,7 +14287,7 @@ export default function App() {
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setView]);
+  }, [setView, setGlobalSearchOpen]);
 
   const logAction = async (action, details, itemType = '', itemId = '') => {
       if (!authUser) return;
@@ -16256,6 +16449,80 @@ export default function App() {
         <div className="screen-content">
             {user.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />}
         </div>
+
+        {globalSearchOpen && (
+            <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh] p-4 bg-slate-950/40 backdrop-blur-sm animate-fadeIn" onClick={() => setGlobalSearchOpen(false)}>
+                <div className="bg-white/95 backdrop-blur-md w-full max-w-2xl rounded-3xl border border-slate-200/80 shadow-2xl overflow-hidden flex flex-col max-h-[70vh] animate-scaleUp" onClick={e => e.stopPropagation()}>
+                    <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+                        <Search size={22} className="text-indigo-600 animate-pulse" />
+                        <input 
+                            type="text" 
+                            placeholder="Busca Global GIPP (Pesquise Membros, Células ou Telas...)" 
+                            value={globalSearchQuery}
+                            onChange={e => setGlobalSearchQuery(e.target.value)}
+                            className="flex-1 bg-transparent border-none text-slate-800 text-base font-bold outline-none placeholder:text-slate-400 uppercase"
+                            autoFocus
+                        />
+                        <button onClick={() => { setGlobalSearchOpen(false); setGlobalSearchQuery(''); }} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-xl transition-colors cursor-pointer">
+                            <X size={16} />
+                        </button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-[250px]">
+                        {!globalSearchQuery.trim() ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
+                                <div className="p-3 bg-indigo-50 text-indigo-500 rounded-2xl"><Search size={28} /></div>
+                                <div className="text-sm font-black text-slate-700">Central de Busca por Teclado</div>
+                                <p className="text-xs text-slate-400 max-w-xs leading-relaxed font-semibold">Digite o nome de um membro, líder de célula, nome de departamento, congregação ou tela do sistema para navegar instantaneamente.</p>
+                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                                    <span className="bg-white px-1 py-0.5 rounded border border-slate-200 font-mono shadow-xs">ESC</span> para fechar
+                                </div>
+                            </div>
+                        ) : globalSearchResults.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                                <p className="text-sm font-bold text-slate-500">Nenhum resultado encontrado para "{globalSearchQuery}"</p>
+                                <p className="text-xs text-slate-400 font-semibold">Verifique a ortografia ou tente outro termo.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Resultados Compilados ({globalSearchResults.length})</div>
+                                <div className="space-y-1.5">
+                                    {globalSearchResults.map((res, idx) => {
+                                        const IconComponent = res.icon || Search;
+                                        return (
+                                            <button 
+                                                key={idx} 
+                                                onClick={() => {
+                                                    setView(res.view);
+                                                    setGlobalSearchOpen(false);
+                                                    setGlobalSearchQuery('');
+                                                    addToast(`Navegando para: ${res.label}`, 'success');
+                                                }}
+                                                className="w-full text-left p-3 hover:bg-indigo-50/60 active:bg-indigo-50 rounded-2xl transition-all border border-transparent hover:border-indigo-100 flex items-center justify-between group cursor-pointer"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2.5 bg-slate-50 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 rounded-xl transition-all shadow-xs border border-slate-100"><IconComponent size={18} /></div>
+                                                    <div>
+                                                        <div className="text-sm font-black text-slate-750 group-hover:text-indigo-950 transition-colors">{res.label}</div>
+                                                        <div className="text-xs text-slate-450 group-hover:text-indigo-650 transition-colors font-semibold">{res.sublabel || res.category}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-[10px] font-black uppercase text-indigo-500 group-hover:translate-x-1 transition-transform tracking-wider bg-indigo-50/40 px-2 py-1 rounded-lg border border-indigo-50/20">Acessar</div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="p-3 border-t border-slate-100 bg-slate-50 text-[10px] font-bold text-slate-400 flex justify-between items-center px-5 shrink-0 uppercase tracking-wider">
+                        <span>Filtro inteligente ativo</span>
+                        <span>Ctrl+K</span>
+                    </div>
+                </div>
+            </div>
+        )}
     </ChurchContext.Provider>
   );
 }

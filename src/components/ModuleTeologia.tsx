@@ -10,7 +10,7 @@ import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
 
 export default function ModuleTeologia() {
-    const { user, addToast, setPrintMode, setPrintData } = useContext(ChurchContext);
+    const { user, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
     const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
     const [activeLesson, setActiveLesson] = useState<number | null>(null);
     const [quizActive, setQuizActive] = useState<boolean>(false);
@@ -1641,8 +1641,12 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 
                                 {/* Print Booklet Button */}
                                 <Button
-                                    onClick={() => window.print()}
-                                    className="w-full bg-slate-800 text-white font-bold text-xs py-2 rounded-xl flex items-center justify-center gap-2 border border-slate-700 mt-2 hover:bg-slate-900"
+                                    onClick={() => {
+                                        setPrintData(booklet);
+                                        setPrintMode('rel_apostila');
+                                        setPreviewOpen(true);
+                                    }}
+                                    className="w-full bg-indigo-600 text-white font-bold text-xs py-2 rounded-xl flex items-center justify-center gap-2 border border-indigo-700 mt-2 hover:bg-indigo-700 shadow-sm"
                                 >
                                     <Printer size={13} /> Imprimir Estudo PDF
                                 </Button>
