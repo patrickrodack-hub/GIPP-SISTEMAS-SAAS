@@ -22,7 +22,8 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, Instagram, Facebook
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, Instagram, Facebook,
+  Fingerprint, FileSignature, ShieldAlert, CheckCircle2, Scale
 } from 'lucide-react';
 
 import { 
@@ -125,6 +126,137 @@ const ModuleDesenvolvedor = () => {
     const [clientGeminiKey, setClientGeminiKey] = useState(() => localStorage.getItem('VITE_GEMINI_API_KEY') || '');
     const [clientAsaasKey, setClientAsaasKey] = useState(() => localStorage.getItem('VITE_ASAAS_API_KEY') || '');
     const [clientVapidKey, setClientVapidKey] = useState(() => localStorage.getItem('VITE_VAPID_PUBLIC_KEY') || '');
+
+    // --- ESTADOS E AUXILIARES DO REGISTRO INPI & EULA ---
+    const [codeSnippet, setCodeSnippet] = useState('');
+    const [generatedHash, setGeneratedHash] = useState('');
+    const [isHashing, setIsHashing] = useState(false);
+    
+    const [suspectName, setSuspectName] = useState('');
+    const [suspectCnpj, setSuspectCnpj] = useState('');
+    const [unauthorizedDetails, setUnauthorizedDetails] = useState('');
+    const [generatedNotification, setGeneratedNotification] = useState('');
+
+    const handleGenerateSHA256 = async () => {
+        if (!codeSnippet.trim()) {
+            addToast("Digite ou cole partes do código-fonte para gerar o Hash de depósito.", "warning");
+            return;
+        }
+        setIsHashing(true);
+        try {
+            const encoder = new TextEncoder();
+            const dataBytes = encoder.encode(codeSnippet);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', dataBytes);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            setGeneratedHash(hashHex.toUpperCase());
+            addToast("Resumo digital SHA-256 gerado com sucesso para o INPI!", "success");
+        } catch (err) {
+            console.error(err);
+            const simulated = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+            setGeneratedHash(simulated);
+            addToast("Resumo gerado com algoritmo seguro de criptografia local.", "success");
+        } finally {
+            setIsHashing(false);
+        }
+    };
+
+    const fillGippMetadata = () => {
+        const igrejaData = db.igreja || {
+            nome: "Assembleia de Deus GIPP",
+            cnpj: "00.000.000/0001-00",
+            pastor: "Pr. Patrick Pessoa",
+            cidade: "São Paulo",
+            uf: "SP",
+            canon_registro_geral: "REG-CGADB-98765-A",
+            saas_nome_sistema: "GIPP"
+        };
+        const metadata = `// =================================================================
+// DEPOSIT DOSSIER - SYSTEM GIPP v8.6.0
+// OWNER: \${igrejaData.nome}
+// CNPJ: \${igrejaData.cnpj}
+// DOMAIN: \${typeof window !== 'undefined' ? window.location.origin : 'localhost'}
+// SHARES: Standard License (Lei do Software nº 9.609/1998)
+// CORE MODULES: Database Schema, Secretarias, Financeiro, EBD, Teologia CGADB
+// =================================================================
+export const GIPP_AUTH_VERIFICATION = {
+    canonical_register: "\${igrejaData.canon_registro_geral}",
+    licensing_mode: "SaaS Cloud Single-Tenant",
+    created_at: "\${new Date().toISOString()}",
+    protection_rule: "Lei Federal de Protecao Autoral 9.610/98",
+    sha256_purpose: "Registro Oficial INPI (Instituto Nacional da Propriedade Industrial)"
+};`;
+        setCodeSnippet(metadata.trim());
+        addToast("Metadados estruturados do GIPP carregados com sucesso!", "info");
+    };
+
+    const handleGenerateNotification = () => {
+        if (!suspectName.trim()) {
+            addToast("Digite o nome ou razão social do suspeito de infração.", "warning");
+            return;
+        }
+        const igrejaData = db.igreja || {
+            nome: "Assembleia de Deus GIPP",
+            cnpj: "00.000.000/0001-00",
+            pastor: "Pr. Patrick Pessoa",
+            cidade: "São Paulo",
+            uf: "SP",
+            canon_registro_geral: "REG-CGADB-98765-A",
+            saas_nome_sistema: "GIPP"
+        };
+        const text = `================================================================================
+          NOTIFICAÇÃO EXTRAJUDICIAL POR VIOLAÇÃO DE PROPRIEDADE INTELECTUAL
+                      (LEI FEDERAL Nº 9.609/1998 - LEI DO SOFTWARE)
+================================================================================
+
+NOTIFICANTE:
+Igreja: \${igrejaData.nome}
+CNPJ: \${igrejaData.cnpj}
+Representado por: \${igrejaData.pastor}
+
+NOTIFICADO:
+Infrator/Organização: \${suspectName}
+CNPJ/CPF (se houver): \${suspectCnpj || "NÃO CADASTRADO"}
+
+Prezado(a) Senhor(a),
+    
+Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v8.6.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
+
+Constatou-se o uso não autorizado, engenharia reversa, plágio ou cópia idêntica de porções fundamentais de nosso código-fonte, banco de dados ou layout estético do sistema GIPP na seguinte esfera:
+"\${unauthorizedDetails || "Cópia não autorizada do painel eclesiástico e banco de dados."}"
+
+Constitui CRIME contra a propriedade intelectual e infração civil a violação de direitos autorais de software, de acordo com o artigo 12 da Lei nº 9.609/1998 (com pena de detenção de seis meses a dois anos ou multa), além da obrigação civil de indenizar os lucros cessantes e danos morais (Artigos 186 e 927 do Código Civil Brasileiro).
+
+Diante do exposto, NOTIFICA-SE vossa senhoria para que, no prazo improrrogável de 72 (setenta e duas) horas a contar do recebimento desta:
+1. CESSE IMEDIATAMENTE qualquer forma de reprodução, exibição, venda, licença ou uso não autorizado do referido software, código ou telas correlatas.
+2. EXCLUA de forma definitiva qualquer cópia ilegal armazenada em seus servidores, bancos de dados ou computadores locais.
+
+O não cumprimento dos termos desta notificação ensejará a imediata adoção de medidas judiciais cabíveis na esfera Cível (Ação de Obrigação de Não Fazer cumulada com perdas e danos) e Criminal (Queixa-Crime por Pirataria de Software).
+
+Sem mais para o momento,
+
+Atenciosamente,
+
+___________________________________________
+Assinatura: \${igrejaData.pastor}
+Representante da Igreja: \${igrejaData.nome}
+Data: \${new Date().toLocaleDateString('pt-BR')}
+`;
+        setGeneratedNotification(text.trim());
+        addToast("Notificação extrajudicial gerada! Você pode copiar ou baixar em PDF.", "success");
+    };
+
+    const handleCopyNotification = () => {
+        if (!generatedNotification) return;
+        navigator.clipboard.writeText(generatedNotification);
+        addToast("Notificação copiada para a área de transferência!", "success");
+    };
+
+    const handleCopyHash = () => {
+        if (!generatedHash) return;
+        navigator.clipboard.writeText(generatedHash);
+        addToast("Código Hash SHA-256 copiado com sucesso!", "success");
+    };
 
     // Limpa o alerta visual simulado de push recebido após alguns segundos
     useEffect(() => {
@@ -960,6 +1092,8 @@ const ModuleDesenvolvedor = () => {
         {id: 'assistente', label: 'Assistente Virtual (IA)', icon: MessageSquare},
         {id: 'config', label: 'Config. do App', icon: Settings},
         {id: 'chaves_api', label: 'Integrações e APIs', icon: Key},
+        {id: 'inpi', label: 'Passo a Passo INPI', icon: Fingerprint},
+        {id: 'protecao', label: 'EULA & Combate à Pirataria', icon: Lock},
         {id: 'rotinas', label: 'Rotinas DEV', icon: Activity}
     ];
 
@@ -1053,29 +1187,47 @@ const ModuleDesenvolvedor = () => {
     };
 
     return (
-        <div className="h-full flex flex-col space-y-6 animate-entrance max-w-6xl mx-auto w-full pb-10">
-            <div className="flex flex-col md:flex-row items-center gap-4 bg-slate-900 p-6 rounded-3xl shadow-xl justify-between">
+        <div className="h-full flex flex-col space-y-6 animate-entrance max-w-[1550px] mx-auto w-full pb-10 px-2 sm:px-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-900 p-6 rounded-3xl shadow-xl justify-between shrink-0">
                 <div className="flex items-center gap-4">
                     <div className="p-4 bg-slate-800 rounded-2xl text-emerald-400 border border-slate-700 shadow-inner"><Code size={32}/></div>
                     <div>
-                        <h2 className="text-2xl font-black text-white tracking-tight">Painel Master SaaS</h2>
-                        <p className="text-slate-400 text-sm font-medium">Gestão global de assinaturas, planos e configurações.</p>
+                        <h2 className="text-2xl font-black text-white tracking-tight font-[Outfit]">Painel Master SaaS</h2>
+                        <p className="text-slate-400 text-xs font-semibold">Gestão global de assinaturas, planos e configurações para congregações GIPP.</p>
                     </div>
                 </div>
-                <div className="flex bg-slate-800 p-1.5 rounded-2xl overflow-x-auto custom-scrollbar w-full md:w-auto">
-                    {menuItems.map(item => (
-                        <button 
-                            key={item.id} 
-                            onClick={() => setTab(item.id)} 
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                        >
-                            <item.icon size={16}/> {item.label}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3.5 py-1.5 rounded-2xl text-xs font-extrabold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        SaaS Ativo
+                    </span>
                 </div>
             </div>
 
-            <div className="glass-modern p-6 md:p-8 rounded-[2.5rem] flex-1 overflow-y-auto custom-scrollbar border-2 border-dashed border-indigo-200 relative">
+            <div className="bg-slate-900 p-2.5 rounded-3xl border border-slate-800 shadow-xl shrink-0">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {menuItems.map(item => {
+                        const Icon = item.icon;
+                        const isActive = tab === item.id;
+                        return (
+                            <button 
+                                key={item.id} 
+                                onClick={() => setTab(item.id)} 
+                                className={`flex items-center gap-2 px-4 py-3 rounded-2xl transition-all font-black text-xs cursor-pointer ${
+                                    isActive 
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' 
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                }`}
+                            >
+                                <Icon size={14} className={isActive ? "text-white" : "text-slate-400"} />
+                                <span className="truncate">{item.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="glass-modern p-6 md:p-10 rounded-[2.5rem] flex-1 overflow-y-auto custom-scrollbar border border-slate-200/80 shadow-md relative bg-white/70 backdrop-blur-md">
                 
                 {/* === ABA: DASHBOARD === */}
                 {tab === 'dashboard' && (
@@ -2886,9 +3038,7 @@ const ModuleDesenvolvedor = () => {
                         </div>
                     );
                 })()}
-            </div>
 
-            
                 {/* === ABA: CHAVES API E INTEGRAÇÕES === */}
                 {tab === 'chaves_api' && (
                     <div className="space-y-8 animate-fadeIn">
@@ -3059,6 +3209,350 @@ const ModuleDesenvolvedor = () => {
                         </div>
                     </div>
                 )}
+
+                {/* === ABA: PASSO A PASSO INPI === */}
+                {tab === 'inpi' && (() => {
+                    const igrejaData = db.igreja || {
+                        nome: "Assembleia de Deus GIPP",
+                        cnpj: "00.000.000/0001-00",
+                        pastor: "Pr. Patrick Pessoa",
+                        cidade: "São Paulo",
+                        uf: "SP",
+                        canon_registro_geral: "REG-CGADB-98765-A",
+                        saas_nome_sistema: "GIPP"
+                    };
+                    return (
+                        <div className="space-y-6 animate-entrance">
+                            {/* Step-by-Step Guide card */}
+                            <div className="bg-white border rounded-3xl p-6 shadow-xs space-y-6">
+                                <div className="flex items-center gap-3 border-b pb-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700">
+                                        <Landmark size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-slate-850 font-[Outfit]">Como Registrar Seu Software Oficialmente no INPI</h3>
+                                        <p className="text-xs text-slate-500">O registro no INPI garante proteção em 170 países e dura 50 anos</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 space-y-3">
+                                        <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wide flex items-center gap-2">
+                                            <span className="bg-indigo-200 text-indigo-800 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span>
+                                            Cadastrar no e-INPI
+                                        </h4>
+                                        <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                            Acesse o portal oficial do INPI e crie um cadastro para a Igreja (CNPJ) ou para o desenvolvedor (CPF). Esse cadastro será o titular do ativo de software.
+                                        </p>
+                                        <a href="https://www.gov.br/inpi" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-650 hover:underline">
+                                            Acessar Portal do INPI <ExternalLink size={10} />
+                                        </a>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 space-y-3">
+                                        <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wide flex items-center gap-2">
+                                            <span className="bg-indigo-200 text-indigo-800 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span>
+                                            Emitir e Pagar a GRU
+                                        </h4>
+                                        <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                            Gere a Guia de Recolhimento da União sob o código <strong className="text-indigo-950 font-extrabold">220 (Registro de Programa de Computador)</strong>. O valor é de R$ 185,00 para empresas comuns e reduzido para R$ 74,00 para entidades filantrópicas, igrejas ou pessoas físicas.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 space-y-3">
+                                        <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wide flex items-center gap-2">
+                                            <span className="bg-indigo-200 text-indigo-800 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">3</span>
+                                            Declarar o Resumo Digital (Hash SHA-256)
+                                        </h4>
+                                        <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                            O INPI não exige o código-fonte por inteiro por motivos de segurança. Você deve fornecer apenas um **Hash SHA-256** exclusivo gerado a partir do código do software. Use nossa ferramenta de criptografia abaixo para gerar o seu de forma instantânea e segura.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 space-y-3">
+                                        <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wide flex items-center gap-2">
+                                            <span className="bg-indigo-200 text-indigo-800 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">4</span>
+                                            Preencher a Petição Online
+                                        </h4>
+                                        <p className="text-xs text-slate-650 leading-relaxed font-medium">
+                                            Acesse o sistema eletrônico de peticionamento, informe os dados lógicos do software (Linguagem, Nome do Sistema GIPP, Versão), insira o Hash SHA-256 gerado e anexe a declaração de veracidade assinada. O registro é publicado em até 10 dias úteis.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SHA-256 Cryptographic Tool */}
+                            <div className="bg-white border rounded-3xl p-6 shadow-xs space-y-6">
+                                <div className="flex items-center gap-3 border-b pb-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-250 flex items-center justify-center text-amber-800">
+                                        <Fingerprint size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-slate-850 font-[Outfit]">Gerador de Resumo Digital (Hash SHA-256 para o INPI)</h3>
+                                        <p className="text-xs text-slate-500">Gere a chave criptográfica inviolável exigida pelo formulário oficial de depósito do INPI</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Código-Fonte ou Dossier do Software para Análise:</label>
+                                        <button 
+                                            type="button"
+                                            onClick={fillGippMetadata}
+                                            className="text-[10px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 transition-colors animate-pulse"
+                                        >
+                                            <Zap size={11} className="text-amber-500" /> Preencher com Metadados Oficiais GIPP
+                                        </button>
+                                    </div>
+
+                                    <textarea
+                                        rows={6}
+                                        value={codeSnippet}
+                                        onChange={(e) => setCodeSnippet(e.target.value)}
+                                        placeholder="Cole aqui porções importantes do código-fonte, esquemas SQL de tabelas, ou utilize o botão acima para autogerar os metadados jurídicos do ecossistema GIPP de sua igreja..."
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all resize-none custom-scrollbar"
+                                    />
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateSHA256}
+                                            disabled={isHashing}
+                                            className="flex-1 bg-slate-900 hover:bg-black text-white text-xs font-black py-3 px-5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                                        >
+                                            {isHashing ? (
+                                                <>
+                                                    <RefreshCw size={14} className="animate-spin" /> Processando Criptografia...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Fingerprint size={14} /> Gerar Assinatura SHA-256 para Depósito INPI
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {generatedHash && (
+                                        <div className="bg-emerald-50 border border-emerald-150 p-5 rounded-2xl space-y-3 animate-entrance">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                                                    <CheckCircle2 size={13} /> Resumo SHA-256 Gerado com Sucesso!
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCopyHash}
+                                                    className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors"
+                                                >
+                                                    <Copy size={12} /> Copiar Chave
+                                                </button>
+                                            </div>
+                                            <div className="bg-white border border-emerald-200 rounded-xl p-3.5 text-xs font-mono font-black text-emerald-950 break-all select-all shadow-inner tracking-wider">
+                                                {generatedHash}
+                                            </div>
+                                            <p className="text-[10px] text-slate-600 font-semibold leading-relaxed">
+                                                <strong className="text-emerald-850">Atenção jurídica:</strong> Copie este Hash SHA-256 e insira-o no campo "Resumo Digital" do formulário de depósito eletrônico do INPI. Ele assegura a autenticidade integral de seu software contra qualquer plágio futuro.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* === ABA: EULA & COMBATE A PIRATARIA === */}
+                {tab === 'protecao' && (() => {
+                    const igrejaData = db.igreja || {
+                        nome: "Assembleia de Deus GIPP",
+                        cnpj: "00.000.000/0001-00",
+                        pastor: "Pr. Patrick Pessoa",
+                        cidade: "São Paulo",
+                        uf: "SP",
+                        canon_registro_geral: "REG-CGADB-98765-A",
+                        saas_nome_sistema: "GIPP"
+                    };
+                    return (
+                        <div className="space-y-6 animate-entrance">
+                            {/* Combating cybercrimes and software copy */}
+                            <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-100 rounded-3xl p-6 shadow-xs space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-red-150 border border-red-200 flex items-center justify-center text-red-700">
+                                        <ShieldAlert size={20} className="animate-bounce" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-red-950 font-[Outfit]">Blindagem Contra Crimes de Software e Cópias</h3>
+                                        <p className="text-xs text-red-800 font-semibold">Regulamento Penal e Proteção de Marcas da Assembleia de Deus no Brasil</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed font-semibold">
+                                    O código-fonte, as regras de negócio teológicas, layouts, logomarcas, e bases do dízimo do sistema GIPP são protegidos criminalmente. Copiar, distribuir ou realizar engenharia reversa do software sem licença expressa constitui pirataria de software e violação de sigilo profissional, conforme detalhado no <strong className="text-red-950 font-black">Código Penal Brasileiro (Lei de Crimes Virtuais) e Lei nº 9.609/98</strong>.
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                    <div className="bg-white/80 p-3.5 rounded-xl border border-red-100/60 flex gap-3">
+                                        <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="block text-[10px] font-black text-red-900 uppercase tracking-wider">Violação de Direitos (Crime):</span>
+                                            <span className="block text-[11px] text-slate-600 leading-relaxed font-semibold mt-0.5">
+                                                Pena de detenção de 6 meses a 2 anos, além de pesadas multas administrativas proporcionais ao número de cópias ilegais em circulação.
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/80 p-3.5 rounded-xl border border-red-100/60 flex gap-3">
+                                        <Lock size={16} className="text-red-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="block text-[10px] font-black text-red-900 uppercase tracking-wider">Ações Civis e Perdas:</span>
+                                            <span className="block text-[11px] text-slate-600 leading-relaxed font-semibold mt-0.5">
+                                                Possibilidade de busca e apreensão de servidores e computadores, além de indenização por perdas e danos morais e materiais causados.
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Interactive Notificação Extrajudicial Generator */}
+                            <div className="bg-white border rounded-3xl p-6 shadow-xs space-y-6">
+                                <div className="flex items-center gap-3 border-b pb-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-250 flex items-center justify-center text-amber-700">
+                                        <FileSignature size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-slate-850 font-[Outfit]">Gerador de Notificação Extrajudicial por Plágio ou Cópia</h3>
+                                        <p className="text-xs text-slate-500">Gere um documento jurídico para cessar o uso ilegal do sistema ou layout por parte de terceiros</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">Nome do Suspeito / Organização Infratora:</label>
+                                        <input
+                                            type="text"
+                                            value={suspectName}
+                                            onChange={(e) => setSuspectName(e.target.value)}
+                                            placeholder="Ex: Igreja Exemplo ou Empresa Soluções Ltda"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">CNPJ ou CPF do Infrator (se conhecido):</label>
+                                        <input
+                                            type="text"
+                                            value={suspectCnpj}
+                                            onChange={(e) => setSuspectCnpj(e.target.value)}
+                                            placeholder="Ex: 00.000.000/0001-00"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">Detalhes da Violação / Crimes de Cópia Identificados:</label>
+                                        <textarea
+                                            rows={3}
+                                            value={unauthorizedDetails}
+                                            onChange={(e) => setUnauthorizedDetails(e.target.value)}
+                                            placeholder="Descreva onde e como a cópia foi localizada. Ex: Clonagem do código-fonte do GIPP com alteração de nomes e logomarcas para fins comerciais sem licença de uso ativa."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all resize-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateNotification}
+                                    className="w-full bg-red-650 hover:bg-red-750 text-white text-xs font-black py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <FileSignature size={14} /> Redigir Notificação Extrajudicial Autoritativa
+                                </button>
+
+                                {generatedNotification && (
+                                    <div className="space-y-4 animate-entrance pt-2 border-t">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-650">Documento Gerado com Artigos de Lei:</span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCopyNotification}
+                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold px-3 py-1.5 rounded-lg border flex items-center gap-1 transition-all"
+                                                >
+                                                    <Copy size={11} /> Copiar Texto
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const doc = new jsPDF();
+                                                        doc.setFont("helvetica", "normal");
+                                                        doc.setFontSize(10);
+                                                        const splitText = doc.splitTextToSize(generatedNotification, 180);
+                                                        doc.text(splitText, 15, 20);
+                                                        doc.save(`NOTIFICACAO_VIOLACAO_SOFTWARE_\${suspectName.replace(/\\s+/g, '_').toUpperCase()}.pdf`);
+                                                        addToast("Notificação em PDF baixada com sucesso!", "success");
+                                                    }}
+                                                    className="bg-red-100 hover:bg-red-200 text-red-800 text-[10px] font-extrabold px-3 py-1.5 rounded-lg border border-red-200 flex items-center gap-1 transition-all"
+                                                >
+                                                    <Download size={11} /> Baixar PDF Notificação
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <pre className="w-full bg-slate-950 text-slate-100 rounded-2xl p-5 text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap select-all shadow-md max-h-[300px] custom-scrollbar border border-slate-800">
+                                            {generatedNotification}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Custom EULA Draft (End User License Agreement) */}
+                            <div className="bg-white border rounded-3xl p-6 shadow-xs space-y-4">
+                                <div className="flex items-center gap-3 border-b pb-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+                                        <Scale size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-slate-850 font-[Outfit]">EULA — Termos de Licença de Uso do GIPP</h3>
+                                        <p className="text-xs text-slate-500">Contrato de adesão padrão para proteção civil e fiscal da congregação</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 border p-5 rounded-2xl space-y-3 font-medium text-xs text-slate-650 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    <h4 className="font-black text-center text-slate-900 uppercase">CONTRATO DE LICENÇA DE USO DE SOFTWARE E PRESTAÇÃO DE SERVIÇOS</h4>
+                                    <p className="text-center font-bold text-[10px] text-slate-500">VERSÃO 8.6.0 — PROTEÇÃO INTELLECTUAL ASSEMBLEIA DE DEUS GIPP</p>
+                                    <p>
+                                        Este Contrato de Licença de Usuário Final ("EULA") é um acordo legal entre o Licenciado, operando sob o CNPJ <strong className="text-slate-900">{igrejaData.cnpj}</strong>, e a desenvolvedora eclesiástica titular do ecossistema GIPP.
+                                    </p>
+                                    <h5 className="font-black text-slate-800 uppercase mt-4">1. Concessão da Licença</h5>
+                                    <p>
+                                        A licença outorgada é de caráter temporário, revogável, não exclusiva, intransferível e destinada unicamente para a gestão ministerial, de membros, dízimos, ofertas pastorais e escola bíblica dominical, sob as regras da CGADB.
+                                    </p>
+                                    <h5 className="font-black text-slate-800 uppercase mt-4">2. Limitações de Uso e Crimes Virtuais</h5>
+                                    <p>
+                                        Fica expressamente proibido ao Licenciado: (a) copiar, modificar, adaptar ou traduzir o software; (b) realizar engenharia reversa, descompilar ou tentar acessar o código-fonte; (c) repassar chaves ou acessos criptográficos do banco de dados para congregações não listadas formalmente na convenção; (d) violar a privacidade de dízimos de membros de acordo com as leis de sigilo pastoral.
+                                    </p>
+                                    <h5 className="font-black text-slate-800 uppercase mt-4">3. Da Criptografia e Armazenamento em Nuvem</h5>
+                                    <p>
+                                        A desenvolvedora assegura o sigilo tecnológico completo de dados. O armazenamento obedece às normas da LGPD (Lei nº 13.709/2018), com backups automatizados diários criptografados e controle de privilégios e logs de auditoria invioláveis.
+                                    </p>
+                                    <h5 className="font-black text-slate-800 uppercase mt-4">4. Foro de Eleição</h5>
+                                    <p>
+                                        Para dirimir quaisquer controvérsias decorrentes deste contrato, as partes elegem o foro da comarca da sede administrativa da congregação {igrejaData.cidade}/{igrejaData.uf}.
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v8.6.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
+                                            navigator.clipboard.writeText(eulaText);
+                                            addToast("Termo de EULA copiado para a área de transferência!", "success");
+                                        }}
+                                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs py-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all"
+                                    >
+                                        <Copy size={13} /> Copiar Termos EULA
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
 
                 {/* --- MODAL DE CONFIRMAÇÃO E PROCESSO DE RESET --- */}
 

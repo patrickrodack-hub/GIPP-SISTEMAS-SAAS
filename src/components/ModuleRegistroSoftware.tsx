@@ -2,7 +2,8 @@ import React, { useState, useContext, useRef } from 'react';
 import { ChurchContext } from '../App';
 import { 
   Scale, ShieldCheck, Printer, Download, Search, BookOpen, Quote, 
-  FileText, Award, Landmark, HelpCircle, ExternalLink, ShieldAlert
+  FileText, Award, Landmark, HelpCircle, ExternalLink, ShieldAlert,
+  Fingerprint, Copy, Lock, FileSignature, AlertTriangle, RefreshCw, Zap, CheckCircle2
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -14,7 +15,10 @@ export default function ModuleRegistroSoftware() {
         printMarginType,
         printOrientation,
         printContentScale,
-        printPalette
+        printPalette,
+        setPrintMode,
+        setPrintData,
+        setPreviewOpen
     } = useContext(ChurchContext);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeSection, setActiveSection] = useState<'certidao' | 'artigos' | 'regras'>('certidao');
@@ -218,22 +222,22 @@ export default function ModuleRegistroSoftware() {
 
             {/* Tabs & Search */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
-                <div className="flex gap-2 bg-slate-100 p-1.5 rounded-full border">
+                <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-[1.5rem] border">
                     <button 
                         onClick={() => setActiveSection('certidao')}
-                        className={`flex items-center gap-2 font-bold text-xs px-5 py-2.5 rounded-full transition-all ${activeSection === 'certidao' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                        className={`flex items-center gap-2 font-bold text-xs px-4 py-2 rounded-full transition-all ${activeSection === 'certidao' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
                     >
                         <Award size={14} /> Certidão de Titularidade
                     </button>
                     <button 
                         onClick={() => setActiveSection('artigos')}
-                        className={`flex items-center gap-2 font-bold text-xs px-5 py-2.5 rounded-full transition-all ${activeSection === 'artigos' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                        className={`flex items-center gap-2 font-bold text-xs px-4 py-2 rounded-full transition-all ${activeSection === 'artigos' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
                     >
                         <BookOpen size={14} /> Legislação de Software (9.609/98)
                     </button>
                     <button 
                         onClick={() => setActiveSection('regras')}
-                        className={`flex items-center gap-2 font-bold text-xs px-5 py-2.5 rounded-full transition-all ${activeSection === 'regras' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                        className={`flex items-center gap-2 font-bold text-xs px-4 py-2 rounded-full transition-all ${activeSection === 'regras' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
                     >
                         <Landmark size={14} /> Auditoria, Segurança & LGPD
                     </button>
@@ -481,3 +485,4 @@ export default function ModuleRegistroSoftware() {
         </div>
     );
 }
+
