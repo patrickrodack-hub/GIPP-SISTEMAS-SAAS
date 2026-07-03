@@ -45,6 +45,7 @@ import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISP
 import DashboardModule from './components/DashboardModule';
 import ModuleEmailAdmin from './components/ModuleEmailAdmin';
 import ModuleEmailMember from './components/ModuleEmailMember';
+import ModuleMarketingSocial from './components/ModuleMarketingSocial';
 import ModuleChangelog from './components/ModuleChangelog';
 import ModuleIgreja from './components/ModuleIgreja';
 import ModuleDesenvolvedor from './components/ModuleDesenvolvedor';
@@ -8832,7 +8833,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const hoverColor = iconColors[id] || 'group-hover:text-indigo-600';
 
         const isMary = user?.usuario?.toLowerCase() === 'mary';
-        const isAllowedForMary = id === 'suporte_dev' || id === 'changelog' || id === 'sobre';
+        const isAllowedForMary = id === 'suporte_dev' || id === 'marketing_social' || id === 'changelog' || id === 'sobre';
         const isMaryDisabled = isMary && !isAllowedForMary;
 
         return (
@@ -8949,12 +8950,15 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
                 </div>
 
-                {(hasPermission('access_sec_certificados') || hasPermission('access_midia')) && (
+                {(hasPermission('access_sec_certificados') || hasPermission('access_midia') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
                     <div>
                         <MenuGroup label="Estúdio Canva" />
                         {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
+                        {(hasPermission('access_midia') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
+                            <MenuItem id="marketing_social" icon={Share2} label="Marketing & Redes" />
+                        )}
                     </div>
                 )}
 
@@ -13043,6 +13047,7 @@ const AppLayout = () => {
         'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
         'config_visual': { component: ModuleConfigVisual, access: 'access_config_visual' },
         'config_sistema': { component: ModuleConfiguracoesGerais, access: 'access_config_sistema' },
+        'marketing_social': { component: ModuleMarketingSocial, access: 'master' },
         'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
@@ -13124,7 +13129,7 @@ const AppLayout = () => {
                     </div>
                 </div>
                 
-                {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'changelog' && view !== 'sobre') ? (
+                {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'marketing_social' && view !== 'changelog' && view !== 'sobre') ? (
                     <div className="h-full flex flex-col items-center justify-center text-center">
                         <Lock size={64} className="text-rose-500 mb-8 animate-bounce"/>
                         <h2 className="text-4xl font-black text-slate-800 tracking-tight leading-tight mb-2">Acesso Inativo</h2>
