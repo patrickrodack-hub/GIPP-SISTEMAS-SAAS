@@ -8956,9 +8956,6 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
-                        {(hasPermission('access_midia') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
-                            <MenuItem id="marketing_social" icon={Share2} label="Marketing & Redes" />
-                        )}
                     </div>
                 )}
 
@@ -8984,10 +8981,11 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                 )}
 
                 {/* Exclusivo para o Desenvolvedor (Master Owner) e Assistente Virtual Mary */}
-                {(user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary') && (
+                {(user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || user?.nivel === 'suporte') && (
                     <div>
                         <MenuGroup label="Desenvolvedor & Suporte" />
                         {user?.id === 'dev' && <MenuItem id="desenvolvedor" icon={Code} label="Painel Master SaaS" />}
+                        <MenuItem id="marketing_social" icon={Share2} label="Marketing & Redes" />
                         <MenuItem id="suporte_dev" icon={Headset} label="Op. de Suporte" />
                     </div>
                 )}
