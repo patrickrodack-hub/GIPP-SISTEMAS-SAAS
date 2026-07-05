@@ -43,14 +43,117 @@ import {
 } from '../App';
 
 // Exporting component
+const DATABASE_SECTIONS = [
+  { key: 'igreja', label: 'Configurações da Igreja' },
+  { key: 'membros', label: 'Rol de Membros' },
+  { key: 'celulas', label: 'Células e Pequenos Grupos' },
+  { key: 'celulas_relatorios', label: 'Relatórios de Células' },
+  { key: 'congregacoes', label: 'Congregações' },
+  { key: 'fornecedores', label: 'Fornecedores e Contatos' },
+  { key: 'departamentos', label: 'Departamentos e Ministérios' },
+  { key: 'usuarios', label: 'Usuários e Permissões' },
+  { key: 'financeiro', label: 'Fluxo de Caixa (Lançamentos)' },
+  { key: 'carnes', label: 'Carnês de Dizimistas' },
+  { key: 'centro_custo', label: 'Centros de Custo' },
+  { key: 'ebd', label: 'EBD: Turmas, Alunos e Professores' },
+  { key: 'missoes', label: 'Missões e Projetos Sociais' },
+  { key: 'agenda', label: 'Agenda de Eventos' },
+  { key: 'tarefas', label: 'Quadro de Tarefas' },
+  { key: 'projetos_midia', label: 'Projetos de Comunicação' },
+  { key: 'solicitacoes', label: 'Solicitações e Requerimentos' },
+  { key: 'visitantes', label: 'Registro de Visitantes' },
+  { key: 'patrimonio', label: 'Patrimônio e Ativos' },
+  { key: 'emails', label: 'Histórico de E-mails' },
+  { key: 'mural', label: 'Mural de Avisos da Igreja' },
+  { key: 'orcamentos', label: 'Orçamentos de Compras' },
+  { key: 'pastor_agenda', label: 'Gabinete: Agenda Pastoral' },
+  { key: 'pastor_mensagens', label: 'Gabinete: Mensagens de Apoio' },
+  { key: 'pastor_esbocos', label: 'Gabinete: Esboços de Sermão' },
+  { key: 'pastor_atas', label: 'Gabinete: Atas Pastorais' },
+  { key: 'pastor_liturgias', label: 'Gabinete: Roteiros de Culto' },
+  { key: 'kids_criancas', label: 'Kids: Cadastro de Crianças' },
+  { key: 'kids_presencas', label: 'Kids: Lista de Presença' },
+  { key: 'kids_ocorrencias', label: 'Kids: Ocorrências / Avisos' },
+  { key: 'dp_colaboradores', label: 'D.P.: Cadastro de Funcionários' },
+  { key: 'dp_folhas', label: 'D.P.: Folhas de Pagamento' },
+  { key: 'frotas_veiculos', label: 'Frotas: Veículos Cadastrados' },
+  { key: 'frotas_motoristas', label: 'Frotas: Motoristas Habilitados' },
+  { key: 'frotas_despesas', label: 'Frotas: Despesas de Manutenção' },
+  { key: 'frotas_multas', label: 'Frotas: Registro de Multas' },
+  { key: 'secretaria_contatos', label: 'Secretaria: Agenda Telefônica' },
+  { key: 'auditoria', label: 'Auditoria: Logs de Segurança' }
+];
+
+const getRecordCount = (dataObj: any, key: string) => {
+  if (!dataObj) return 0;
+  if (key === 'igreja') {
+    return dataObj.igreja ? 1 : 0;
+  }
+  if (key === 'ebd') {
+    const turmas = dataObj.ebd?.turmas?.length || 0;
+    const professores = dataObj.ebd?.professores?.length || 0;
+    const alunos = dataObj.ebd?.alunos?.length || 0;
+    const licoes = dataObj.ebd?.licoes?.length || 0;
+    return turmas + professores + alunos + licoes;
+  }
+  if (key === 'missoes') {
+    const missionarios = dataObj.missoes?.missionarios?.length || 0;
+    const agencias = dataObj.missoes?.agencias?.length || 0;
+    const colaboradores = dataObj.missoes?.colaboradores?.length || 0;
+    const agenda = dataObj.missoes?.agenda?.length || 0;
+    return missionarios + agencias + colaboradores + agenda;
+  }
+  return Array.isArray(dataObj[key]) ? dataObj[key].length : 0;
+};
+
+const getDocsForSection = (secKey: string, targetData: any) => {
+    const docs: any[] = [];
+    if (secKey === 'igreja') {
+        if (targetData.igreja) {
+            docs.push({ collection: 'settings', id: 'config', data: targetData.igreja });
+        }
+    } else if (secKey === 'ebd') {
+        if (targetData.ebd) {
+            if (targetData.ebd.turmas) targetData.ebd.turmas.forEach((item: any) => docs.push({ collection: 'ebd_turmas', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+            if (targetData.ebd.professores) targetData.ebd.professores.forEach((item: any) => docs.push({ collection: 'ebd_professores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+            if (targetData.ebd.alunos) targetData.ebd.alunos.forEach((item: any) => docs.push({ collection: 'ebd_alunos', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+            if (targetData.ebd.licoes) targetData.ebd.licoes.forEach((item: any) => docs.push({ collection: 'ebd_licoes', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+        }
+    } else if (secKey === 'missoes') {
+        if (targetData.missoes) {
+            if (targetData.missoes.missionarios) targetData.missoes.missionarios.forEach((item: any) => docs.push({ collection: 'missoes_missionarios', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+            if (targetData.missoes.agencias) targetData.missoes.agencias.forEach((item: any) => docs.push({ collection: 'missoes_agencias', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+            if (targetData.missoes.colaboradores) targetData.missoes.colaboradores.forEach((item: any) => docs.push({ collection: 'missoes_colaboradores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+            if (targetData.missoes.agenda) targetData.missoes.agenda.forEach((item: any) => docs.push({ collection: 'missoes_agenda', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+        }
+    } else {
+        const items = targetData[secKey];
+        if (Array.isArray(items)) {
+            items.forEach((item: any) => {
+                docs.push({ 
+                    collection: secKey, 
+                    id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), 
+                    data: item 
+                });
+            });
+        }
+    }
+    return docs;
+};
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const ModuleBackup = () => {
-    const { startExport, handleImportRequest, db, dbFirestore, appId, addToast, setDoc, updateDoc, doc, collection, logAction, setConfirmDialog, user } = useContext(ChurchContext);
+    const { startExport, handleImportRequest, db, dbFirestore, appId, addToast, setDoc, updateDoc, doc, collection, logAction, setConfirmDialog, user, setDbState } = useContext(ChurchContext);
     
     const [cloudBackups, setCloudBackups] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [creating, setCreating] = useState(false);
     const [restoring, setRestoring] = useState(false);
     const [restoreProgress, setRestoreProgress] = useState(0);
+    const [processedLogs, setProcessedLogs] = useState<any[]>([]);
+    const [currentStepText, setCurrentStepText] = useState('');
+    const [restoreStage, setRestoreStage] = useState<'initial' | 'processing' | 'finished'>('initial');
 
     const autoHabilitado = db.igreja?.backup_auto_habilitado !== false;
     const autoFrequencia = db.igreja?.backup_auto_frequencia || 'diario';
@@ -130,63 +233,78 @@ const ModuleBackup = () => {
             message: `ATENÇÃO: Você está prestes a restaurar a base de dados para o ponto de ${new Date(backup.data_criacao).toLocaleString('pt-BR')} (criado por ${backup.responsavel}). Esta ação substituirá seus membros, registros financeiros, escalas e configurações atuais pelos dados contidos neste backup. Deseja prosseguir?`,
             onConfirm: async () => {
                 setRestoring(true);
+                setRestoreStage('processing');
                 setRestoreProgress(0);
                 try {
                     const targetData = JSON.parse(backup.dados_json);
-                    const docsToWrite: any[] = [];
                     
-                    if (targetData.igreja) {
-                        docsToWrite.push({ collection: 'settings', id: 'config', data: targetData.igreja });
-                    }
+                    const initialLogs = DATABASE_SECTIONS.map(sec => ({
+                        key: sec.key,
+                        label: sec.label,
+                        count: getRecordCount(targetData, sec.key),
+                        status: 'pending' as any
+                    }));
+                    setProcessedLogs(initialLogs);
+                    setCurrentStepText('Iniciando conexão e gravação remota...');
                     
-                    const simpleCollections = ['membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 'emails', 'mural', 'orcamentos'];
-                    simpleCollections.forEach(col => {
-                        if (targetData[col]) {
-                            targetData[col].forEach((item: any) => {
-                                docsToWrite.push({ 
-                                    collection: col, 
-                                    id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), 
-                                    data: item 
-                                });
-                            });
+                    await delay(400);
+
+                    for (let i = 0; i < DATABASE_SECTIONS.length; i++) {
+                        const section = DATABASE_SECTIONS[i];
+                        const docsToSave = getDocsForSection(section.key, targetData);
+
+                        setProcessedLogs(prev => {
+                            const updatedLogs = [...prev];
+                            const targetIdx = updatedLogs.findIndex(l => l.key === section.key);
+                            if (targetIdx !== -1) {
+                                updatedLogs[targetIdx].status = 'processing';
+                            }
+                            return updatedLogs;
+                        });
+                        setCurrentStepText(`Gravando ${section.label} (${docsToSave.length} documentos)...`);
+                        setRestoreProgress(Math.round((i / DATABASE_SECTIONS.length) * 100));
+
+                        if (docsToSave.length > 0) {
+                            const batchSize = 100;
+                            for (let j = 0; j < docsToSave.length; j += batchSize) {
+                                const batch = writeBatch(dbFirestore);
+                                const chunk = docsToSave.slice(j, j + batchSize);
+                                
+                                for (const docObj of chunk) {
+                                    const { collection: colName, id, data: itemData } = docObj;
+                                    const dataToSave = { ...itemData };
+                                    delete dataToSave.id;
+                                    const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, String(id));
+                                    batch.set(ref, dataToSave, { merge: true });
+                                }
+                                
+                                await batch.commit();
+                            }
+                        } else {
+                            await delay(30);
                         }
-                    });
-                    
-                    if (targetData.ebd) {
-                        if (targetData.ebd.turmas) targetData.ebd.turmas.forEach((item: any) => docsToWrite.push({ collection: 'ebd_turmas', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-                        if (targetData.ebd.alunos) targetData.ebd.alunos.forEach((item: any) => docsToWrite.push({ collection: 'ebd_alunos', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-                        if (targetData.ebd.licoes) targetData.ebd.licoes.forEach((item: any) => docsToWrite.push({ collection: 'ebd_licoes', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-                    }
-                    if (targetData.missoes) {
-                        if (targetData.missoes.missionarios) targetData.missoes.missionarios.forEach((item: any) => docsToWrite.push({ collection: 'missoes_missionarios', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-                        if (targetData.missoes.agencias) targetData.missoes.agencias.forEach((item: any) => docsToWrite.push({ collection: 'missoes_agencias', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-                        if (targetData.missoes.colaboradores) targetData.missoes.colaboradores.forEach((item: any) => docsToWrite.push({ collection: 'missoes_colaboradores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-                        if (targetData.missoes.agenda) targetData.missoes.agenda.forEach((item: any) => docsToWrite.push({ collection: 'missoes_agenda', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+
+                        setProcessedLogs(prev => {
+                            const updatedLogs = [...prev];
+                            const targetIdx = updatedLogs.findIndex(l => l.key === section.key);
+                            if (targetIdx !== -1) {
+                                updatedLogs[targetIdx].status = 'success';
+                            }
+                            return updatedLogs;
+                        });
                     }
 
-                    const batchSize = 100;
-                    for (let i = 0; i < docsToWrite.length; i += batchSize) {
-                        const batch = writeBatch(dbFirestore);
-                        const chunk = docsToWrite.slice(i, i + batchSize);
-                        
-                        for (const docObj of chunk) {
-                            const { collection: colName, id, data: itemData } = docObj;
-                            const dataToSave = { ...itemData };
-                            delete dataToSave.id;
-                            const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, String(id));
-                            batch.set(ref, dataToSave, { merge: true });
-                        }
-                        
-                        await batch.commit();
-                        setRestoreProgress(Math.round(((i + chunk.length) / docsToWrite.length) * 100));
-                    }
-                    
+                    setRestoreProgress(100);
+                    setCurrentStepText('Finalizando atualização dos índices de cache...');
+                    await delay(300);
+
+                    setDbState(targetData);
                     addToast("Ponto de restauração em Nuvem aplicado com sucesso!", "success");
                     logAction('SISTEMA', `Restaurou banco de dados da nuvem para o ponto: ${backup.data_criacao}`, 'cloud_backups', backup.id);
+                    setRestoreStage('finished');
                 } catch (err) {
                     console.error("Erro ao aplicar backup da nuvem:", err);
                     addToast("Falha ao restaurar dados da nuvem.", "error");
-                } finally {
                     setRestoring(false);
                 }
             }
@@ -419,18 +537,70 @@ const ModuleBackup = () => {
 
             {restoring && createPortal(
                 <div className="fixed inset-0 bg-slate-900/90 z-[11000] flex flex-col items-center justify-center p-6 backdrop-blur-md">
-                    <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-entrance">
-                        <div className="relative mx-auto w-20 h-20 bg-emerald-100 text-emerald-650 rounded-full flex items-center justify-center animate-pulse">
-                            <Database className="text-emerald-500" size={40}/>
+                    <div className="w-full max-w-lg bg-white rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[90vh] animate-entrance">
+                        <div className="text-center overflow-y-auto flex-1 pb-4">
+                            <div className="relative mx-auto w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-lg mb-6">
+                                <Database className="text-emerald-500" size={40}/>
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-wide">
+                                    {restoreStage === 'finished' ? 'Restauração Concluída' : 'Gravando em Lotes'}
+                                </h3>
+                                <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                                    {restoreStage === 'finished' ? 'A base de dados foi restaurada com êxito!' : 'Não feche nem atualize esta aba. Sobrescrevendo tabelas estruturais de forma segura...'}
+                                </p>
+                            </div>
+
+                            {/* Checklist display */}
+                            {processedLogs && processedLogs.length > 0 && (
+                                <div className="border border-slate-200/60 rounded-2xl overflow-hidden bg-slate-50/50 my-6 text-left">
+                                    <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200/60 flex justify-between items-center">
+                                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Módulo / Tabela do Sistema</span>
+                                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Status / Registros</span>
+                                    </div>
+                                    <div className="max-h-52 overflow-y-auto divide-y divide-slate-100 font-sans text-xs">
+                                        {processedLogs.map((log, idx) => (
+                                            <div key={idx} className={`px-4 py-2 flex items-center justify-between transition-colors ${log.status === 'processing' ? 'bg-emerald-50/50' : ''}`}>
+                                                <div className="flex items-center gap-2">
+                                                    {log.status === 'success' && <Check className="text-emerald-500 font-black" size={14}/>}
+                                                    {log.status === 'processing' && <Loader2 className="text-emerald-500 animate-spin" size={14}/>}
+                                                    {log.status === 'pending' && <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                                                    <span className={`font-bold ${log.status === 'success' ? 'text-slate-700' : log.status === 'processing' ? 'text-emerald-600 font-extrabold' : 'text-slate-400'}`}>
+                                                        {log.label}
+                                                    </span>
+                                                </div>
+                                                <span className={`font-mono font-bold ${log.status === 'success' ? 'text-emerald-600' : log.status === 'processing' ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
+                                                    {log.status === 'success' ? `${log.count} reg.` : log.status === 'processing' ? 'gravando...' : 'aguardando'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {restoreStage === 'processing' && currentStepText && (
+                                <p className="text-xs font-mono font-black text-emerald-600 bg-emerald-50 py-1.5 px-4 rounded-xl inline-block mt-2">
+                                    <Loader2 size={12} className="animate-spin inline mr-1" /> {currentStepText}
+                                </p>
+                            )}
                         </div>
-                        <div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-wide">Gravando em Lotes</h3>
-                            <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">Não feche nem atualize esta aba. Sobrescrevendo tabelas estruturais de forma segura...</p>
+
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            {restoreStage === 'processing' && (
+                                <div className="space-y-2">
+                                    <div className="w-full bg-slate-100 rounded-full h-4 relative overflow-hidden border border-slate-200 shadow-inner">
+                                        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 h-full rounded-full transition-all duration-300" style={{ width: `${restoreProgress}%` }}></div>
+                                    </div>
+                                    <p className="text-center text-xs font-black text-emerald-600">{restoreProgress}% Processado</p>
+                                </div>
+                            )}
+
+                            {restoreStage === 'finished' && (
+                                <Button variant="success" onClick={() => { setRestoring(false); }} className="w-full py-3 rounded-2xl text-sm font-black uppercase">
+                                    Concluir e Fechar Janela
+                                </Button>
+                            )}
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-3 relative overflow-hidden shadow-inner">
-                            <div className="bg-emerald-500 h-full rounded-full transition-all duration-300" style={{ width: `${restoreProgress}%` }}></div>
-                        </div>
-                        <p className="text-xs font-mono font-black text-emerald-650 bg-emerald-50 py-1.5 px-4 rounded-xl inline-block">{restoreProgress}% Processado</p>
                     </div>
                 </div>,
                 document.body

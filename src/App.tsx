@@ -1988,7 +1988,7 @@ export const FormSelect = ({ label, value, onChange, options, className="", ...p
 
 export const BackupModal = ({ backupState, onConfirm, onCancel }) => {
     if (!backupState.isOpen) return null;
-    const { mode, stage, progress, stats } = backupState;
+    const { mode, stage, progress, stats, processedLogs, currentStepText } = backupState;
 
     const StatsDisplay = ({ data }) => {
         if (!data) return null;
@@ -2016,10 +2016,39 @@ export const BackupModal = ({ backupState, onConfirm, onCancel }) => {
         );
     };
 
+    const ChecklistDisplay = ({ logs }) => {
+        if (!logs || logs.length === 0) return null;
+        return (
+            <div className="border border-slate-200/60 rounded-2xl overflow-hidden bg-slate-50/50 my-3">
+                <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200/60 flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Módulo / Tabela do Sistema</span>
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Status / Registros</span>
+                </div>
+                <div className="max-h-52 overflow-y-auto divide-y divide-slate-100 font-sans text-xs">
+                    {logs.map((log, idx) => (
+                        <div key={idx} className={`px-4 py-2 flex items-center justify-between transition-colors ${log.status === 'processing' ? 'bg-indigo-50/50' : ''}`}>
+                            <div className="flex items-center gap-2">
+                                {log.status === 'success' && <Check className="text-emerald-500 font-black" size={14}/>}
+                                {log.status === 'processing' && <Loader2 className="text-indigo-500 animate-spin" size={14}/>}
+                                {log.status === 'pending' && <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                                <span className={`font-bold ${log.status === 'success' ? 'text-slate-700' : log.status === 'processing' ? 'text-indigo-600 font-extrabold' : 'text-slate-400'}`}>
+                                    {log.label}
+                                </span>
+                            </div>
+                            <span className={`font-mono font-bold ${log.status === 'success' ? 'text-emerald-600' : log.status === 'processing' ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}>
+                                {log.status === 'success' ? `${log.count} reg.` : log.status === 'processing' ? 'processando...' : 'aguardando'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/80 z-[11000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative">
-                <div className="p-8 pb-4 text-center">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative flex flex-col max-h-[90vh]">
+                <div className="p-8 pb-4 text-center overflow-y-auto flex-1">
                     <div className={`w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg ${mode==='import'?'bg-amber-100 text-amber-600':'bg-indigo-100 text-indigo-600'}`}>
                         {mode === 'import' ? <UploadCloud size={40}/> : <Database size={40}/>}
                     </div>
@@ -2031,18 +2060,33 @@ export const BackupModal = ({ backupState, onConfirm, onCancel }) => {
                     {stage === 'initial' && mode === 'export' && <p className="text-slate-500 font-medium px-4 mb-4">O seguinte conteúdo será salvo no arquivo:</p>}
                     {stage === 'initial' && mode === 'logout' && <p className="text-slate-500 font-medium px-4 mb-4">Deseja realizar uma cópia de segurança antes de sair?</p>}
                     
-                    {stage === 'processing' && <p className="text-slate-500 font-medium px-4">Processando dados...</p>}
-                    {stage === 'finished' && mode === 'import' && <p className="text-emerald-600 font-bold px-4 mb-4">Importação concluída! Resumo do sistema:</p>}
-                    {stage === 'finished' && mode === 'export' && <p className="text-emerald-600 font-bold px-4 mb-4">Arquivo gerado com sucesso!</p>}
-                </div>
+                    {stage === 'processing' && (
+                        <div className="space-y-1">
+                            <p className="text-slate-700 font-black px-4 flex items-center justify-center gap-2">
+                                <Loader2 size={16} className="animate-spin text-indigo-600"/> {currentStepText || 'Processando tabelas do sistema...'}
+                            </p>
+                            <p className="text-xs text-slate-400 font-bold">Por favor, mantenha esta aba aberta.</p>
+                        </div>
+                    )}
+                    {stage === 'finished' && mode === 'import' && <p className="text-emerald-600 font-extrabold px-4 mb-4">Importação concluída com sucesso! Relatório do checklist:</p>}
+                    {stage === 'finished' && mode === 'export' && <p className="text-emerald-600 font-extrabold px-4 mb-4">Backup concluído! Relatório do checklist:</p>}
 
-                <div className="px-8 pb-2">
-                    {(stage === 'initial' || (stage === 'finished' && mode === 'import')) && stats && (
-                        <StatsDisplay data={stats} />
+                    {/* Initial Summary */}
+                    {stage === 'initial' && stats && (
+                        <div className="px-2 pb-2">
+                            <StatsDisplay data={stats} />
+                        </div>
+                    )}
+
+                    {/* Checklists for Processing and Finished stage */}
+                    {(stage === 'processing' || stage === 'finished') && processedLogs && (
+                        <div className="px-2">
+                            <ChecklistDisplay logs={processedLogs} />
+                        </div>
                     )}
                 </div>
 
-                <div className="p-8 pt-2 bg-slate-50/50 flex flex-col gap-3">
+                <div className="p-8 pt-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
                     {stage === 'initial' && (
                         <div className="flex gap-4">
                             <Button variant="ghost" onClick={onCancel} className="flex-1 bg-white border border-slate-200">
@@ -2055,10 +2099,10 @@ export const BackupModal = ({ backupState, onConfirm, onCancel }) => {
                     )}
                     {stage === 'processing' && (
                         <div className="space-y-2">
-                            <div className="w-full h-4 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
-                                <div className="h-full bg-indigo-500 animate-pulse transition-all duration-300" style={{width: `${progress}%`}}></div>
+                            <div className="w-full h-4 bg-slate-200 rounded-full overflow-hidden border border-slate-300 shadow-inner">
+                                <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 transition-all duration-300" style={{width: `${progress}%`}}></div>
                             </div>
-                            <p className="text-center text-xs font-bold text-slate-400">{progress}% Concluído</p>
+                            <p className="text-center text-xs font-black text-indigo-600">{progress}% Concluído</p>
                         </div>
                     )}
                     {stage === 'finished' && (
@@ -14993,41 +15037,188 @@ export default function App() {
       };
   };
 
-  const handleExportRequest = () => { setBackupState({ isOpen: true, mode: 'export', stage: 'initial', progress: 0, stats: calculateStats(db), fileData: null }); };
-  const handleLogoutRequest = () => { setBackupState({ isOpen: true, mode: 'logout', stage: 'initial', progress: 0, stats: calculateStats(db), fileData: null }); };
-  
-  const processExport = () => { 
-      setBackupState(prev => ({ ...prev, stage: 'processing', progress: 0 })); 
-      let p = 0;
-      const interval = setInterval(() => {
-          p += 10;
-          setBackupState(prev => ({ ...prev, progress: p }));
-          if (p >= 100) {
-              clearInterval(interval);
-              try {
-                  // CORREÇÃO: Utilizar Blob para permitir exportação de arquivos gigantes sem corromper
-                  const jsonStr = JSON.stringify(db);
-                  const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `backup_gipp_${getTodayDate()}.json`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  URL.revokeObjectURL(url);
+  const DATABASE_SECTIONS = [
+    { key: 'igreja', label: 'Configurações da Igreja' },
+    { key: 'membros', label: 'Rol de Membros' },
+    { key: 'celulas', label: 'Células e Pequenos Grupos' },
+    { key: 'celulas_relatorios', label: 'Relatórios de Células' },
+    { key: 'congregacoes', label: 'Congregações' },
+    { key: 'fornecedores', label: 'Fornecedores e Contatos' },
+    { key: 'departamentos', label: 'Departamentos e Ministérios' },
+    { key: 'usuarios', label: 'Usuários e Permissões' },
+    { key: 'financeiro', label: 'Fluxo de Caixa (Lançamentos)' },
+    { key: 'carnes', label: 'Carnês de Dizimistas' },
+    { key: 'centro_custo', label: 'Centros de Custo' },
+    { key: 'ebd', label: 'EBD: Turmas, Alunos e Professores' },
+    { key: 'missoes', label: 'Missões e Projetos Sociais' },
+    { key: 'agenda', label: 'Agenda de Eventos' },
+    { key: 'tarefas', label: 'Quadro de Tarefas' },
+    { key: 'projetos_midia', label: 'Projetos de Comunicação' },
+    { key: 'solicitacoes', label: 'Solicitações e Requerimentos' },
+    { key: 'visitantes', label: 'Registro de Visitantes' },
+    { key: 'patrimonio', label: 'Patrimônio e Ativos' },
+    { key: 'emails', label: 'Histórico de E-mails' },
+    { key: 'mural', label: 'Mural de Avisos da Igreja' },
+    { key: 'orcamentos', label: 'Orçamentos de Compras' },
+    { key: 'pastor_agenda', label: 'Gabinete: Agenda Pastoral' },
+    { key: 'pastor_mensagens', label: 'Gabinete: Mensagens de Apoio' },
+    { key: 'pastor_esbocos', label: 'Gabinete: Esboços de Sermão' },
+    { key: 'pastor_atas', label: 'Gabinete: Atas Pastorais' },
+    { key: 'pastor_liturgias', label: 'Gabinete: Roteiros de Culto' },
+    { key: 'kids_criancas', label: 'Kids: Cadastro de Crianças' },
+    { key: 'kids_presencas', label: 'Kids: Lista de Presença' },
+    { key: 'kids_ocorrencias', label: 'Kids: Ocorrências / Avisos' },
+    { key: 'dp_colaboradores', label: 'D.P.: Cadastro de Funcionários' },
+    { key: 'dp_folhas', label: 'D.P.: Folhas de Pagamento' },
+    { key: 'frotas_veiculos', label: 'Frotas: Veículos Cadastrados' },
+    { key: 'frotas_motoristas', label: 'Frotas: Motoristas Habilitados' },
+    { key: 'frotas_despesas', label: 'Frotas: Despesas de Manutenção' },
+    { key: 'frotas_multas', label: 'Frotas: Registro de Multas' },
+    { key: 'secretaria_contatos', label: 'Secretaria: Agenda Telefônica' },
+    { key: 'auditoria', label: 'Auditoria: Logs de Segurança' }
+  ];
 
-                  setBackupState(prev => ({ ...prev, stage: 'finished' }));
-                  if (backupState.mode === 'logout') {
-                      setTimeout(() => { setBackupState(prev => ({ ...prev, isOpen: false })); handleLogout(); }, 1500);
-                  }
-              } catch (err) {
-                  console.error("Erro na exportação:", err);
-                  addToast("Erro ao gerar ficheiro de backup.", "error");
-                  setBackupState(prev => ({ ...prev, isOpen: false }));
-              }
+  const getRecordCount = (dataObj: any, key: string) => {
+    if (!dataObj) return 0;
+    if (key === 'igreja') {
+      return dataObj.igreja ? 1 : 0;
+    }
+    if (key === 'ebd') {
+      const turmas = dataObj.ebd?.turmas?.length || 0;
+      const professores = dataObj.ebd?.professores?.length || 0;
+      const alunos = dataObj.ebd?.alunos?.length || 0;
+      const licoes = dataObj.ebd?.licoes?.length || 0;
+      return turmas + professores + alunos + licoes;
+    }
+    if (key === 'missoes') {
+      const missionarios = dataObj.missoes?.missionarios?.length || 0;
+      const agencias = dataObj.missoes?.agencias?.length || 0;
+      const colaboradores = dataObj.missoes?.colaboradores?.length || 0;
+      const agenda = dataObj.missoes?.agenda?.length || 0;
+      return missionarios + agencias + colaboradores + agenda;
+    }
+    return Array.isArray(dataObj[key]) ? dataObj[key].length : 0;
+  };
+
+  const getDocsForSection = (secKey: string, targetData: any) => {
+      const docs: any[] = [];
+      if (secKey === 'igreja') {
+          if (targetData.igreja) {
+              docs.push({ collection: 'settings', id: 'config', data: targetData.igreja });
           }
-      }, 100);
+      } else if (secKey === 'ebd') {
+          if (targetData.ebd) {
+              if (targetData.ebd.turmas) targetData.ebd.turmas.forEach((item: any) => docs.push({ collection: 'ebd_turmas', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+              if (targetData.ebd.professores) targetData.ebd.professores.forEach((item: any) => docs.push({ collection: 'ebd_professores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+              if (targetData.ebd.alunos) targetData.ebd.alunos.forEach((item: any) => docs.push({ collection: 'ebd_alunos', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+              if (targetData.ebd.licoes) targetData.ebd.licoes.forEach((item: any) => docs.push({ collection: 'ebd_licoes', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+          }
+      } else if (secKey === 'missoes') {
+          if (targetData.missoes) {
+              if (targetData.missoes.missionarios) targetData.missoes.missionarios.forEach((item: any) => docs.push({ collection: 'missoes_missionarios', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+              if (targetData.missoes.agencias) targetData.missoes.agencias.forEach((item: any) => docs.push({ collection: 'missoes_agencias', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+              if (targetData.missoes.colaboradores) targetData.missoes.colaboradores.forEach((item: any) => docs.push({ collection: 'missoes_colaboradores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+              if (targetData.missoes.agenda) targetData.missoes.agenda.forEach((item: any) => docs.push({ collection: 'missoes_agenda', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+          }
+      } else {
+          const items = targetData[secKey];
+          if (Array.isArray(items)) {
+              items.forEach((item: any) => {
+                  docs.push({ 
+                      collection: secKey, 
+                      id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), 
+                      data: item 
+                  });
+              });
+          }
+      }
+      return docs;
+  };
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const handleExportRequest = () => { setBackupState({ isOpen: true, mode: 'export', stage: 'initial', progress: 0, stats: calculateStats(db), fileData: null, processedLogs: [], currentStepText: '' }); };
+  const handleLogoutRequest = () => { setBackupState({ isOpen: true, mode: 'logout', stage: 'initial', progress: 0, stats: calculateStats(db), fileData: null, processedLogs: [], currentStepText: '' }); };
+  
+  const processExport = async () => { 
+      const initialLogs = DATABASE_SECTIONS.map(sec => ({
+          key: sec.key,
+          label: sec.label,
+          count: getRecordCount(db, sec.key),
+          status: 'pending' as any
+      }));
+
+      setBackupState(prev => ({ 
+          ...prev, 
+          stage: 'processing', 
+          progress: 0, 
+          processedLogs: initialLogs,
+          currentStepText: 'Iniciando empacotamento do banco de dados...'
+      }));
+
+      await delay(400);
+
+      for (let i = 0; i < DATABASE_SECTIONS.length; i++) {
+          const section = DATABASE_SECTIONS[i];
+          const count = getRecordCount(db, section.key);
+
+          setBackupState(prev => {
+              const updatedLogs = [...(prev.processedLogs || [])];
+              const targetIdx = updatedLogs.findIndex(l => l.key === section.key);
+              if (targetIdx !== -1) {
+                  updatedLogs[targetIdx].status = 'processing';
+              }
+              return {
+                  ...prev,
+                  currentStepText: `Processando ${section.label} (${count} registros)...`,
+                  processedLogs: updatedLogs,
+                  progress: Math.round((i / DATABASE_SECTIONS.length) * 100)
+              };
+          });
+
+          await delay(60);
+
+          setBackupState(prev => {
+              const updatedLogs = [...(prev.processedLogs || [])];
+              const targetIdx = updatedLogs.findIndex(l => l.key === section.key);
+              if (targetIdx !== -1) {
+                  updatedLogs[targetIdx].status = 'success';
+              }
+              return {
+                  ...prev,
+                  processedLogs: updatedLogs
+              };
+          });
+      }
+
+      setBackupState(prev => ({ 
+          ...prev, 
+          progress: 100, 
+          currentStepText: 'Finalizando compactação do arquivo JSON...' 
+      }));
+      await delay(300);
+
+      try {
+          const jsonStr = JSON.stringify(db);
+          const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `backup_gipp_${getTodayDate()}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          setBackupState(prev => ({ ...prev, stage: 'finished' }));
+          if (backupState.mode === 'logout') {
+              setTimeout(() => { setBackupState(prev => ({ ...prev, isOpen: false })); handleLogout(); }, 1500);
+          }
+      } catch (err) {
+          console.error("Erro na exportação:", err);
+          addToast("Erro ao gerar ficheiro de backup.", "error");
+          setBackupState(prev => ({ ...prev, isOpen: false }));
+      }
   };
 
   const handleImportRequest = () => { fileInputRef.current?.click(); };
@@ -15039,9 +15230,8 @@ export default function App() {
       reader.onload = (event) => {
           try {
               const json = JSON.parse(event.target.result as string);
-              // Validação extra para garantir que não se importou um ficheiro corrompido
               if (!json.igreja && !json.membros) throw new Error("Formato inválido");
-              setBackupState({ isOpen: true, mode: 'import', stage: 'initial', progress: 0, stats: calculateStats(json), fileData: json });
+              setBackupState({ isOpen: true, mode: 'import', stage: 'initial', progress: 0, stats: calculateStats(json), fileData: json, processedLogs: [], currentStepText: '' });
           } catch (err) { 
               console.error(err);
               addToast("Ficheiro corrompido ou inválido. Exporte um novo backup.", "error"); 
@@ -15052,60 +15242,93 @@ export default function App() {
   };
 
   const processImport = async () => {
-      setBackupState(prev => ({ ...prev, stage: 'processing', progress: 0 }));
       const targetData = backupState.fileData;
+      if (!targetData) return;
+
+      const initialLogs = DATABASE_SECTIONS.map(sec => ({
+          key: sec.key,
+          label: sec.label,
+          count: getRecordCount(targetData, sec.key),
+          status: 'pending' as any
+      }));
+
+      setBackupState(prev => ({ 
+          ...prev, 
+          stage: 'processing', 
+          progress: 0, 
+          processedLogs: initialLogs,
+          currentStepText: 'Iniciando gravação de dados estruturados...'
+      }));
+
+      await delay(400);
 
       try {
-          const docsToWrite = [];
-          if (targetData.igreja) docsToWrite.push({ collection: 'settings', id: 'config', data: targetData.igreja });
-          
-          const simpleCollections = ['membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 'emails', 'mural', 'orcamentos'];
-          simpleCollections.forEach(col => {
-              if (targetData[col]) targetData[col].forEach(item => docsToWrite.push({ collection: col, id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-          });
-          
-          if (targetData.ebd) {
-              if (targetData.ebd.turmas) targetData.ebd.turmas.forEach(item => docsToWrite.push({ collection: 'ebd_turmas', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-              if (targetData.ebd.alunos) targetData.ebd.alunos.forEach(item => docsToWrite.push({ collection: 'ebd_alunos', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-              if (targetData.ebd.licoes) targetData.ebd.licoes.forEach(item => docsToWrite.push({ collection: 'ebd_licoes', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-          }
-          if (targetData.missoes) {
-              if (targetData.missoes.missionarios) targetData.missoes.missionarios.forEach(item => docsToWrite.push({ collection: 'missoes_missionarios', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-              if (targetData.missoes.agencias) targetData.missoes.agencias.forEach(item => docsToWrite.push({ collection: 'missoes_agencias', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-              if (targetData.missoes.colaboradores) targetData.missoes.colaboradores.forEach(item => docsToWrite.push({ collection: 'missoes_colaboradores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-              if (targetData.missoes.agenda) targetData.missoes.agenda.forEach(item => docsToWrite.push({ collection: 'missoes_agenda', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
-          }
+          for (let i = 0; i < DATABASE_SECTIONS.length; i++) {
+              const section = DATABASE_SECTIONS[i];
+              const docsToSave = getDocsForSection(section.key, targetData);
 
-          // CORREÇÃO: Diminuição do tamanho do lote para 100 para respeitar limites do Firebase
-          const batchSize = 100; 
-          for (let i = 0; i < docsToWrite.length; i += batchSize) {
-              const batch = writeBatch(dbFirestore);
-              const chunk = docsToWrite.slice(i, i + batchSize);
-              
-              for (const docObj of chunk) {
-                  const { collection: colName, id, data } = docObj;
-                  const dataToSave = { ...data };
-                  delete dataToSave.id;
-                  const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, String(id));
-                  batch.set(ref, dataToSave, { merge: true });
+              setBackupState(prev => {
+                  const updatedLogs = [...(prev.processedLogs || [])];
+                  const targetIdx = updatedLogs.findIndex(l => l.key === section.key);
+                  if (targetIdx !== -1) {
+                      updatedLogs[targetIdx].status = 'processing';
+                  }
+                  return {
+                      ...prev,
+                      currentStepText: `Restaurando ${section.label} (${docsToSave.length} documentos)...`,
+                      processedLogs: updatedLogs,
+                      progress: Math.round((i / DATABASE_SECTIONS.length) * 100)
+                  };
+              });
+
+              if (docsToSave.length > 0) {
+                  const batchSize = 100;
+                  for (let j = 0; j < docsToSave.length; j += batchSize) {
+                      const batch = writeBatch(dbFirestore);
+                      const chunk = docsToSave.slice(j, j + batchSize);
+                      
+                      for (const docObj of chunk) {
+                          const { collection: colName, id, data } = docObj;
+                          const dataToSave = { ...data };
+                          delete dataToSave.id;
+                          const ref = doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, String(id));
+                          batch.set(ref, dataToSave, { merge: true });
+                      }
+                      
+                      await batch.commit();
+                  }
+              } else {
+                  await delay(30);
               }
-              
-              await batch.commit();
-              setBackupState(prev => ({ ...prev, progress: Math.min(95, Math.round(((i + chunk.length) / docsToWrite.length) * 100)) }));
+
+              setBackupState(prev => {
+                  const updatedLogs = [...(prev.processedLogs || [])];
+                  const targetIdx = updatedLogs.findIndex(l => l.key === section.key);
+                  if (targetIdx !== -1) {
+                      updatedLogs[targetIdx].status = 'success';
+                  }
+                  return {
+                      ...prev,
+                      processedLogs: updatedLogs
+                  };
+              });
           }
 
-          setBackupState(prev => ({ ...prev, progress: 100 }));
-          
-          setTimeout(() => {
-              setDbState(targetData);
-              addToast("Dados restaurados com sucesso no banco de dados!", "success");
-              setBackupState(prev => ({ ...prev, stage: 'finished' }));
-          }, 500);
+          setBackupState(prev => ({ 
+              ...prev, 
+              progress: 100, 
+              currentStepText: 'Finalizando atualização da interface...' 
+          }));
+          await delay(300);
+
+          setDbState(targetData);
+          addToast("Dados restaurados com sucesso no banco de dados!", "success");
+          setBackupState(prev => ({ ...prev, stage: 'finished' }));
 
       } catch (error) {
           console.error("Erro na importação:", error);
           addToast("Erro ao importar dados. Verifique a sua conexão.", "error");
-          setBackupState(prev => ({ ...prev, stage: 'initial', isOpen: false }));
+          setBackupState(prev => ({ ...prev, stage: 'initial', isOpen: false, processedLogs: [], currentStepText: '' }));
       }
   };
 
