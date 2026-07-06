@@ -1788,13 +1788,13 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 8.5.0 Platinum Enterprise v10 estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica) e na ministração estruturada e litúrgica de ordem pastoral.
+            O GIPP Versão 8.7.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral de ministérios específicos.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
               <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-1">
-                <Baby size={16} className="text-rose-500" /> Salinha Kids & Notificações
+                <Baby size={16} className="text-rose-500" /> Salinha Kids & Segurança
               </span>
               <p className="text-[10px] text-slate-500 leading-snug font-bold">
                 Controle de entrada e saída por PIN secreto de responsáveis legais. Emissão de alertas de incidentes urgentes via Portal do Membro para garantir total transparência junto aos familiares.
@@ -1803,10 +1803,10 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
 
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
               <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-1">
-                <GraduationCap size={16} className="text-indigo-500" /> EBD Interativa & EAD
+                <GraduationCap size={16} className="text-indigo-500" /> Universidade Teológica CGADB
               </span>
               <p className="text-[10px] text-slate-500 leading-snug font-bold">
-                Mapeamento de chamadas de classes, estudos dirigidos com inteligência artificial via Gemini e cursos interativos em EAD com lições de Defesa da Fé e certificados de alta resolução.
+                Ensino sistemático canônico de acordo com a Declaração de Fé da CGADB. Dividido em níveis Básico, Médio e Avançado com quizzes, gabarito inteligente e caderno de anotações persistentes.
               </p>
             </div>
           </div>
@@ -1824,9 +1824,19 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
           <div className="bg-indigo-50 border border-indigo-150 rounded-2xl p-4 flex gap-3 text-indigo-950">
             <GraduationCap className="text-indigo-600 shrink-0 mt-0.5" size={20} />
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wide">Acompanhamento e Mentoria EAD de Capacitação</h4>
+              <h4 className="text-xs font-black uppercase tracking-wide">Universidade Teológica GIPP & Declaração de Fé CGADB</h4>
               <p className="text-xs text-indigo-800 mt-1 leading-relaxed">
-                Idealizado para a formação sólida de obreiros locais. Siga os módulos pedagógicos estruturados e realize os quizes de fixação teológica compostos por perguntas desafiadoras sobre a doutrina e apologética. Ao atingir a média de aproveitamento ideal, o certificado HD é confeccionado em tempo de execução.
+                Desenvolvido em total consonância com as diretrizes e os 24 capítulos da Declaração de Fé das Assembleias de Deus (CGADB). Os alunos contam com módulos teológicos estruturados que cobrem Bibliologia, Teontologia, Cristologia, Pneumatologia, Hamartiologia, Soteriologia, Eclesiologia, Distintivos Pentecostais, Cura Divina, Escatologia Pré-Tribulacionista e Família. O sistema inclui questionários de fixação doutrinária de 2 questões ao final de cada lição, correção de gabarito em tempo real, além de um Caderno de Anotações integrado com salvamento em disco e exportador TXT imediato para consulta segura no púlpito.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex gap-3 text-slate-900">
+            <Plus className="text-emerald-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wide">Departamentos & Ministérios Estruturados</h4>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Facilita a divisão e gestão por diretorias com canais específicos para o Ministério de Louvor (escalas de músicos e ensaios), Ministério de Mídia (equipamentos e escalas de transmissão) e Ministério da Família (aconselhamento conjugal e cursos de formação tradicional do lar baseados no Cap. 24 da CGADB).
               </p>
             </div>
           </div>

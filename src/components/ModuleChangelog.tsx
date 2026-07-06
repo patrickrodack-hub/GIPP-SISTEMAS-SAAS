@@ -47,6 +47,19 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.7.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-700 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v8.7.0 - Governança Eclesiástica Estendida, Controle de Restrições Unificadas & Matriz de Recursos Avançados</h3>
+                <p className="text-xs text-indigo-700 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Matriz de Permissões de Planos Refinada:</strong> Alinhamento estrito dos 42 módulos da GIPP nos pacotes Básico, Standard e Avançado, incluindo os novos módulos de Universidade Teológica e EAD de Capacitação de forma nativa no painel de liberação de planos e faturamento.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Governança de Usuários Modulados (32 Módulos):</strong> Novo barramento de restrição de segurança no nível modulado, permitindo que a liderança restrinja ou libere individualmente o acesso à Universidade Teológica GIPP, EAD Cursos, Ministério da Família e todos os outros módulos de apoio.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Manual do Usuário Expandido:</strong> Atualização completa da Central de Ajuda com o detalhamento operacional, guias de acesso rápido e boas práticas para todos os novos recursos integrados da Universidade Teológica e EAD.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Estabilização da Inicialização (Boot Long Polling):</strong> Atualização do driver de rede do Firebase Firestore para habilitar o modo experimental de Long Polling e persistência em segundo plano, garantindo acesso estável ao sistema e eliminando falhas de conexão de rede em ambientes sob iFrame.</li>
+                </ul>
+            </div>
+            
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.6.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>

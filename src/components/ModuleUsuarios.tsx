@@ -37,7 +37,7 @@ const CATEGORIAS_PERMISSOES = [
   },
   {
     titulo: "Secretaria, Relatórios & Cursos",
-    desc: "Secretaria Geral, EBD, Capacitações EAD e Missões",
+    desc: "Secretaria Geral, EBD, Capacitações EAD, Teologia e Missões",
     icon: BookOpen,
     opcoes: [
       { id: 'access_sec_agenda', label: 'Agenda & Atividades' },
@@ -46,6 +46,7 @@ const CATEGORIAS_PERMISSOES = [
       { id: 'access_ebd', label: 'Escola Bíblica (EBD)' },
       { id: 'access_salinha_kids', label: 'Salinha Kids (Check-In)' },
       { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos)' },
+      { id: 'access_teologia', label: 'Universidade Teológica GIPP' },
       { id: 'access_missoes', label: 'Departamento de Missões' }
     ]
   },

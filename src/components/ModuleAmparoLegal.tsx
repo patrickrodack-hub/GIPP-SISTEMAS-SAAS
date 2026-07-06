@@ -432,7 +432,7 @@ export default function ModuleAmparoLegal() {
                                     {/* Footer Authenticity */}
                                     <div className="pt-8 flex flex-col items-center gap-1.5">
                                         <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[7px] font-black tracking-widest uppercase">
-                                            <ShieldCheck size={9} className="text-indigo-600" /> autenticado via sistema gipp v8.6.0
+                                            <ShieldCheck size={9} className="text-indigo-600" /> autenticado via sistema gipp v8.7.0
                                         </div>
                                         <span className="text-[6.5px] text-slate-400 font-semibold">Este documento oficial comprova as prerrogativas de fé e impede embargos infundados.</span>
                                     </div>

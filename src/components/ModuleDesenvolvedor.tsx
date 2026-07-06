@@ -172,7 +172,7 @@ const ModuleDesenvolvedor = () => {
             saas_nome_sistema: "GIPP"
         };
         const metadata = `// =================================================================
-// DEPOSIT DOSSIER - SYSTEM GIPP v8.6.0
+// DEPOSIT DOSSIER - SYSTEM GIPP v8.7.0
 // OWNER: \${igrejaData.nome}
 // CNPJ: \${igrejaData.cnpj}
 // DOMAIN: \${typeof window !== 'undefined' ? window.location.origin : 'localhost'}
@@ -220,7 +220,7 @@ CNPJ/CPF (se houver): \${suspectCnpj || "NÃO CADASTRADO"}
 
 Prezado(a) Senhor(a),
     
-Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v8.6.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
+Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v8.7.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
 
 Constatou-se o uso não autorizado, engenharia reversa, plágio ou cópia idêntica de porções fundamentais de nosso código-fonte, banco de dados ou layout estético do sistema GIPP na seguinte esfera:
 "\${unauthorizedDetails || "Cópia não autorizada do painel eclesiástico e banco de dados."}"
@@ -443,9 +443,9 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
     };
 
     const defaultPlanos = {
-        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software'],
-        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia'],
-        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade']
+        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia'],
+        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia'],
+        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia']
     };
 
     const defaultValores = { basico: 97, standard: 147, avancado: 197 };
@@ -467,6 +467,9 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         {id: 'cad_usuario', label: 'Usuários e Níveis'},
         {id: 'acessos_portal', label: 'Acessos do Portal'},
         {id: 'cad_departamento', label: 'Ministérios (Deptos)'},
+        {id: 'ministerio_louvor', label: 'Ministério de Louvor'},
+        {id: 'ministerio_midia', label: 'Ministério de Mídia'},
+        {id: 'ministerio_familia', label: 'Ministério da Família'},
         {id: 'fin_entrada', label: 'Receitas (Entradas)'},
         {id: 'fin_saida', label: 'Despesas (Saídas)'},
         {id: 'fin_dre', label: 'DRE & Balanço'},
@@ -478,6 +481,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         {id: 'assistente_ai', label: 'Pastoral IA'},
         {id: 'email_interno', label: 'Webmail Direto'},
         {id: 'secretaria_integrada', label: 'Secretaria & Tarefas'},
+        {id: 'secretaria_livro_atas', label: 'Livro Digital de Atas'},
         {id: 'secretaria_certificados', label: 'Certificados'},
         {id: 'carteirinha_studio', label: 'Estúdio Carteirinhas'},
         {id: 'credencial_lote', label: 'Credencial em Lote'},
@@ -3513,7 +3517,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
 
                                 <div className="bg-slate-50 border p-5 rounded-2xl space-y-3 font-medium text-xs text-slate-650 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
                                     <h4 className="font-black text-center text-slate-900 uppercase">CONTRATO DE LICENÇA DE USO DE SOFTWARE E PRESTAÇÃO DE SERVIÇOS</h4>
-                                    <p className="text-center font-bold text-[10px] text-slate-500">VERSÃO 8.6.0 — PROTEÇÃO INTELLECTUAL ASSEMBLEIA DE DEUS GIPP</p>
+                                    <p className="text-center font-bold text-[10px] text-slate-500">VERSÃO 8.7.0 — PROTEÇÃO INTELLECTUAL ASSEMBLEIA DE DEUS GIPP</p>
                                     <p>
                                         Este Contrato de Licença de Usuário Final ("EULA") é um acordo legal entre o Licenciado, operando sob o CNPJ <strong className="text-slate-900">{igrejaData.cnpj}</strong>, e a desenvolvedora eclesiástica titular do ecossistema GIPP.
                                     </p>
@@ -3539,7 +3543,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v8.6.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
+                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v8.7.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
                                             navigator.clipboard.writeText(eulaText);
                                             addToast("Termo de EULA copiado para a área de transferência!", "success");
                                         }}
