@@ -84,6 +84,12 @@ const ModuleUsuarios = memo(() => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterNivel, setFilterNivel] = useState('all');
   const [filterCongregacao, setFilterCongregacao] = useState('all');
+  const [userColFilters, setUserColFilters] = useState({
+    nome: '',
+    nivel: '',
+    congregacao: '',
+    permissoes: ''
+  });
 
   // Estados locais para o Modal de Edição/Criação
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,9 +125,29 @@ const ModuleUsuarios = memo(() => {
         ? true 
         : (filterCongregacao === 'sede' ? (!u.congregacao_id || u.congregacao_id === 'sede') : u.congregacao_id === filterCongregacao);
 
-      return matchSearch && matchNivel && matchCong;
+      // Column filters
+      const congName = u.congregacao_id === 'sede' || !u.congregacao_id
+        ? 'Sede Principal'
+        : db.congregacoes?.find((c: any) => c.id === u.congregacao_id)?.nome || 'Outra';
+
+      const matchColNome = !userColFilters.nome || 
+        (u.nome || '').toLowerCase().includes(userColFilters.nome.toLowerCase()) ||
+        (u.usuario || '').toLowerCase().includes(userColFilters.nome.toLowerCase());
+      
+      const matchColNivel = !userColFilters.nivel || 
+        (u.nivel || '').toLowerCase().includes(userColFilters.nivel.toLowerCase());
+      
+      const matchColCong = !userColFilters.congregacao || 
+        congName.toLowerCase().includes(userColFilters.congregacao.toLowerCase());
+
+      const permissoesStr = Array.isArray(u.permissoes) ? u.permissoes.join(', ') : '';
+      const matchColPerm = !userColFilters.permissoes || 
+        permissoesStr.toLowerCase().includes(userColFilters.permissoes.toLowerCase()) ||
+        (u.nivel === 'master' && 'todos tudo irrestrito'.includes(userColFilters.permissoes.toLowerCase()));
+
+      return matchSearch && matchNivel && matchCong && matchColNome && matchColNivel && matchColCong && matchColPerm;
     });
-  }, [usersList, searchTerm, filterNivel, filterCongregacao]);
+  }, [usersList, searchTerm, filterNivel, filterCongregacao, userColFilters, db.congregacoes]);
 
   // Abre form para adicionar usuário
   const handleOpenAdd = () => {
@@ -336,11 +362,55 @@ const ModuleUsuarios = memo(() => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="p-4 text-xs font-extrabold uppercase tracking-wider text-slate-500">Nome do Operador / Login</th>
-                  <th className="p-4 text-xs font-extrabold uppercase tracking-wider text-slate-500">Nível</th>
-                  <th className="p-4 text-xs font-extrabold uppercase tracking-wider text-slate-500">Filial / Congregação</th>
-                  <th className="p-4 text-xs font-extrabold uppercase tracking-wider text-slate-500">Permissões Habilitadas</th>
-                  <th className="p-4 text-xs font-extrabold uppercase tracking-wider text-slate-500 text-right">Ações</th>
+                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                    <div className="flex flex-col gap-1.5">
+                      <span>Nome do Operador / Login</span>
+                      <input 
+                        type="text" 
+                        placeholder="Filtrar..." 
+                        value={userColFilters.nome} 
+                        onChange={e => setUserColFilters({...userColFilters, nome: e.target.value})}
+                        className="px-2 py-1 text-[10px] font-bold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                    <div className="flex flex-col gap-1.5">
+                      <span>Nível</span>
+                      <input 
+                        type="text" 
+                        placeholder="Filtrar..." 
+                        value={userColFilters.nivel} 
+                        onChange={e => setUserColFilters({...userColFilters, nivel: e.target.value})}
+                        className="px-2 py-1 text-[10px] font-bold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                    <div className="flex flex-col gap-1.5">
+                      <span>Filial / Congregação</span>
+                      <input 
+                        type="text" 
+                        placeholder="Filtrar..." 
+                        value={userColFilters.congregacao} 
+                        onChange={e => setUserColFilters({...userColFilters, congregacao: e.target.value})}
+                        className="px-2 py-1 text-[10px] font-bold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                    <div className="flex flex-col gap-1.5">
+                      <span>Permissões Habilitadas</span>
+                      <input 
+                        type="text" 
+                        placeholder="Filtrar..." 
+                        value={userColFilters.permissoes} 
+                        onChange={e => setUserColFilters({...userColFilters, permissoes: e.target.value})}
+                        className="px-2 py-1 text-[10px] font-bold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500 text-right align-top pt-4">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

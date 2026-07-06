@@ -45,7 +45,7 @@ import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
 
 // Exporting component
 const ModuleConfigVisual = () => {
-    const { db, setDoc, doc, dbFirestore, appId, addToast, theme, setTheme } = useContext(ChurchContext);
+    const { db, setDoc, doc, dbFirestore, appId, addToast, theme, setTheme, osTheme, setOsTheme } = useContext(ChurchContext);
     const configData = db.igreja || {};
     
     const [selectedWall, setSelectedWall] = useState(configData.papel_parede || null);
@@ -54,6 +54,7 @@ const ModuleConfigVisual = () => {
     const [selectedIconPack, setSelectedIconPack] = useState(configData.pacote_icones || 'gipp');
     const [customUrl, setCustomUrl] = useState('');
     const [saving, setSaving] = useState(false);
+    const [previewTheme, setPreviewTheme] = useState(osTheme || 'default');
 
     // Sincroniza estados caso d_igreja mude externamente
     useEffect(() => {
@@ -128,6 +129,210 @@ const ModuleConfigVisual = () => {
                     <div>
                         <h2 className="text-3xl font-black text-slate-800 tracking-tight">Experiência Visual & Temas</h2>
                         <p className="text-sm text-slate-500 font-medium">Personalize a atmosfera visual do sistema com papéis de parede e estilos de animação.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* SEÇÃO: SELETOR DE TEMAS COM PRÉ-VISUALIZAÇÃO */}
+            <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                    <MonitorPlay className="text-indigo-600" size={24}/>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800">Seletor de Temas do Sistema (OS Themes)</h3>
+                        <p className="text-xs text-slate-500 font-semibold">Escolha um dos sistemas operacionais retrô ou modernos abaixo e veja como a interface GIPP ficará antes de salvar.</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Lista de Temas */}
+                    <div className="lg:col-span-5 flex flex-col space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
+                        {[
+                            { id: 'default', name: 'GIPP Padrão (Moderno)', label: 'Default', desc: 'Interface moderna com cantos arredondados, gradientes e estética minimalista.' },
+                            { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
+                            { id: 'winxp', name: 'Windows XP (Luna)', label: 'WinXP', desc: 'Retrô vibrante dos anos 2005, com cabeçalhos azuis e botões verdes.' },
+                            { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
+                            { id: 'msdos', name: 'MS-DOS 6.22 (Terminal)', label: 'MS-DOS', desc: 'Visual retrô hacking de terminal de comandos em fósforo verde sobre preto.' },
+                            { id: 'premium_black', name: 'Premium Black & Gold', label: 'Luxo', desc: 'Tema escuro requintado com contrastes profundos e acabamentos em dourado.' },
+                            { id: 'futuristic', name: 'GIPP Sci-Fi Futurista', label: 'Futurista', desc: 'Estética cibernética de alta performance com realces neon ciano/rosa e acabamento holográfico.' }
+                        ].map((t) => {
+                            const isSelected = previewTheme === t.id;
+                            const isActive = osTheme === t.id || (t.id === 'default' && !osTheme);
+                            return (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() => setPreviewTheme(t.id)}
+                                    className={`w-full text-left p-3.5 rounded-2xl border-2 transition-all flex justify-between items-center group cursor-pointer ${
+                                        isSelected 
+                                            ? 'border-indigo-600 bg-indigo-50/25 shadow-sm' 
+                                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'
+                                    }`}
+                                >
+                                    <div className="flex-1 min-w-0 pr-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-black text-slate-800 text-sm leading-none">{t.name}</span>
+                                            {isActive && (
+                                                <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider leading-none">
+                                                    Em Uso
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[10.5px] text-slate-500 font-semibold leading-relaxed mt-1">{t.desc}</p>
+                                    </div>
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                        isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                                    }`}>
+                                        {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Janela de Pré-visualização Viva */}
+                    <div className="lg:col-span-7 flex flex-col space-y-4">
+                        <div className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">Prévia Interativa de Interface</div>
+                        
+                        {/* Desktop Simulador */}
+                        <div 
+                          className={`w-full h-[330px] rounded-[1.5rem] overflow-hidden relative flex flex-col p-4 shadow-inner border border-slate-200/60 transition-all duration-300 ${
+                            previewTheme === 'default' ? 'bg-[#0f172a]' :
+                            previewTheme === 'win11' ? 'bg-gradient-to-tr from-[#9ec2e6] to-[#d6e5f5]' :
+                            previewTheme === 'winxp' ? 'bg-[#0050e6]' : /* Bliss classic blue */
+                            previewTheme === 'win95' ? 'bg-[#008080]' : /* classic teal */
+                            previewTheme === 'msdos' ? 'bg-black' :
+                            previewTheme === 'premium_black' ? 'bg-[#1a1a1a]' :
+                            previewTheme === 'futuristic' ? 'bg-[#03001e]' : 'bg-slate-100'
+                          }`}
+                        >
+                            {/* Papel de Parede simulado */}
+                            {previewTheme === 'winxp' && (
+                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=400&q=80')`, filter: 'brightness(0.95)' }}></div>
+                            )}
+
+                            {/* Janela simulada */}
+                            <div 
+                              className={`w-full max-w-md mx-auto mt-6 relative flex flex-col transition-all duration-300 z-10 ${
+                                previewTheme === 'win95' ? 'bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#808080] border-b-[#808080] outline-1 outline-black p-0.5' :
+                                previewTheme === 'winxp' ? 'bg-[#d4d0c8] rounded-t-lg border-2 border-[#0054e3] p-0.5' :
+                                previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
+                                previewTheme === 'msdos' ? 'bg-black border-2 border-green-500 p-2 text-green-500 font-mono text-[11px]' :
+                                previewTheme === 'premium_black' ? 'bg-[#0a0a0a] border border-[#D4AF37] p-2 text-slate-100' :
+                                previewTheme === 'futuristic' ? 'bg-black/90 border border-[#00f0ff] p-2 text-slate-100 shadow-[0_0_15px_rgba(0,240,255,0.25)]' :
+                                'bg-white/95 rounded-3xl border border-slate-100 p-3 shadow-xl text-slate-800'
+                              }`}
+                              style={{ 
+                                fontFamily: previewTheme === 'win95' || previewTheme === 'winxp' ? "'Tahoma', sans-serif" : 
+                                             previewTheme === 'msdos' ? "'Courier New', monospace" : "inherit"
+                              }}
+                            >
+                                {/* Barra de título simulada */}
+                                <div 
+                                  className={`flex items-center justify-between px-2 py-1 select-none ${
+                                    previewTheme === 'win95' ? 'bg-[#000080] text-white font-bold' :
+                                    previewTheme === 'winxp' ? 'bg-gradient-to-r from-[#0054e3] to-[#278df1] text-white font-bold rounded-t-md' :
+                                    previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
+                                    previewTheme === 'msdos' ? 'bg-green-950 border-b border-green-500 pb-1 mb-2 font-mono text-green-400 font-bold' :
+                                    previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border-b border-[#D4AF37]/40 pb-1 mb-2 text-[#D4AF37] font-bold' :
+                                    previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#03001e] to-[#120012] border-b border-[#00f0ff]/40 pb-1 mb-2 text-[#00f0ff] font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' :
+                                    'bg-slate-50/80 p-2 rounded-2xl text-slate-800 font-bold'
+                                  }`}
+                                >
+                                    <span className="text-[11px] truncate uppercase tracking-wide">
+                                        {previewTheme === 'msdos' ? 'C:\\GIPP\\DASHBOARD.EXE' : 'GIPP - Visual Preview'}
+                                    </span>
+                                    {/* Botões de controle simulados */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {previewTheme === 'win95' ? (
+                                            <div className="flex gap-0.5">
+                                                <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">_</span>
+                                                <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">▢</span>
+                                                <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">✕</span>
+                                            </div>
+                                        ) : previewTheme === 'winxp' ? (
+                                            <div className="flex gap-0.5">
+                                                <span className="w-4 h-4 bg-blue-600 rounded-full border border-blue-900 text-white text-[8px] flex items-center justify-center font-bold select-none">_</span>
+                                                <span className="w-4 h-4 bg-green-600 rounded-full border border-green-900 text-white text-[8px] flex items-center justify-center font-bold select-none">▢</span>
+                                                <span className="w-4 h-4 bg-red-600 rounded-full border border-red-900 text-white text-[8px] flex items-center justify-center font-bold select-none">✕</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Conteúdo simulado */}
+                                <div className={`p-4 mt-1 flex flex-col space-y-3.5 ${
+                                    previewTheme === 'msdos' ? 'bg-black text-green-500 font-mono' :
+                                    previewTheme === 'premium_black' ? 'bg-[#050505] text-slate-100' :
+                                    previewTheme === 'futuristic' ? 'bg-[#03001e] text-slate-100' :
+                                    previewTheme === 'win95' || previewTheme === 'winxp' ? 'bg-[#d4d0c8] text-black' :
+                                    'bg-white text-slate-800'
+                                }`}>
+                                    <div className="text-[11px] font-bold">Secretaria GIPP (Demonstração)</div>
+                                    
+                                    {/* Campo de input simulado */}
+                                    <div className="flex flex-col space-y-1">
+                                        <span className="text-[10px] font-bold opacity-85">Nome do Membro:</span>
+                                        <div className={`p-1.5 text-[10px] truncate ${
+                                            previewTheme === 'win95' ? 'bg-white border-t-1.5 border-l-1.5 border-t-[#404040] border-l-[#404040] border-r-1.5 border-b-1.5 border-r-white border-b-white text-black' :
+                                            previewTheme === 'winxp' ? 'bg-white border border-blue-600 text-black rounded' :
+                                            previewTheme === 'msdos' ? 'border border-green-500 bg-black text-green-400 font-mono' :
+                                            previewTheme === 'premium_black' ? 'border border-[#D4AF37]/40 bg-black text-[#D4AF37]' :
+                                            previewTheme === 'futuristic' ? 'border border-[#00f0ff]/50 bg-slate-950 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]' :
+                                            'bg-slate-50 border border-slate-200 rounded-xl'
+                                        }`}>
+                                            JOÃO SOUZA SANTOS (MEMBRO ATIVO)
+                                        </div>
+                                    </div>
+
+                                    {/* Botões simulados */}
+                                    <div className="flex gap-2">
+                                        <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
+                                            previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
+                                            previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded shadow-xs' :
+                                            previewTheme === 'msdos' ? 'border border-green-500 bg-green-950 text-green-400 font-mono text-center font-bold' :
+                                            previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border border-[#D4AF37] text-[#D4AF37] text-center font-bold' :
+                                            previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#00f0ff] to-[#ff007f] border border-white/10 text-white text-center font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)] rounded-lg' :
+                                            'bg-indigo-600 text-white rounded-xl font-bold shadow-md shadow-indigo-100 text-center'
+                                        }`}>
+                                            Gravar Registro
+                                        </div>
+                                        <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
+                                            previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
+                                            previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded' :
+                                            previewTheme === 'msdos' ? 'border border-green-500 bg-black text-green-400 font-mono text-center' :
+                                            previewTheme === 'premium_black' ? 'bg-black border border-slate-700 text-slate-400 text-center' :
+                                            previewTheme === 'futuristic' ? 'bg-slate-900/80 border border-[#ff007f]/40 text-[#ff007f] text-center rounded-lg shadow-[0_0_8px_rgba(255,0,127,0.15)]' :
+                                            'bg-slate-100 text-slate-500 rounded-xl font-bold text-center'
+                                        }`}>
+                                            Cancelar
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Botão para aplicar o tema */}
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <span className="text-[11px] text-slate-500 font-bold">
+                                {previewTheme === osTheme ? 'Este tema já está ativo no seu navegador.' : 'Modificações não salvas ainda.'}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setOsTheme(previewTheme);
+                                    addToast(`Tema do sistema alterado para: ${previewTheme.toUpperCase()}`, "success");
+                                }}
+                                className="px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-2xl font-black text-xs hover:-translate-y-0.5 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                            >
+                                <Save size={14} /> Aplicar Tema do Sistema
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -296,6 +501,18 @@ const ModuleConfigVisual = () => {
 
                         <div className="flex flex-col space-y-4">
                             {[
+                                {
+                                    id: '3d',
+                                    name: 'GIPP 3D Esférico (Claymorphism)',
+                                    desc: 'Ícones volumétricos com profundidade de camadas, brilho de vidro e sombra de base tátil simulada que saltam aos olhos.',
+                                    previewStyle: (
+                                        <div className="flex gap-2 items-center">
+                                            <div className="w-8 h-8 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-[0_3px_0_#1d4ed8,0_6px_12px_rgba(29,78,216,0.3)] border-t border-white/30"><Calendar size={14} strokeWidth={2.5} className="drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.3)]"/></div>
+                                            <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-[0_3px_0_#4338ca,0_6px_12px_rgba(67,56,202,0.3)] border-t border-white/30"><Users size={14} strokeWidth={2.5} className="drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.3)]"/></div>
+                                            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-[0_3px_0_#047857,0_6px_12px_rgba(4,120,87,0.3)] border-t border-white/30"><CreditCard size={14} strokeWidth={2.5} className="drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.3)]"/></div>
+                                        </div>
+                                    )
+                                },
                                 {
                                     id: 'gipp',
                                     name: 'GIPP Tecnológico (Padrão)',

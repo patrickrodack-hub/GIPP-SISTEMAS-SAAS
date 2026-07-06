@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { 
   BookOpen, ChevronDown, ChevronRight, ChevronLeft, Award, HelpCircle, 
-  Loader2, DownloadCloud, Copy, Book, TrendingUp, User, Star, CheckCheck, AlertTriangle
+  Loader2, DownloadCloud, Copy, Book, TrendingUp, User, Star, CheckCheck, AlertTriangle, X
 } from 'lucide-react';
 
 import { 
@@ -27,6 +27,9 @@ const ModuleBiblia = () => {
     const [readingPages, setReadingPages] = useState<string[]>([]); // NOVO: Paginação
     const [currentReadingPage, setCurrentReadingPage] = useState<number>(0); // NOVO: Paginação
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isReadingMode, setIsReadingMode] = useState<boolean>(false);
+    const [readingFontSize, setReadingFontSize] = useState<number>(20);
+    const [readingContrast, setReadingContrast] = useState<'normal' | 'high' | 'sepia'>('normal');
 
     // Recursos de Caching & Modo Offline
     const [cachedChapters, setCachedChapters] = useState<Set<string>>(new Set());
@@ -853,9 +856,122 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                             </Button>
                         </div>
                         
-                        <div className="absolute top-6 right-6 md:top-12 md:right-12 z-20">
+                        <div className="absolute top-6 right-6 md:top-12 md:right-12 z-20 flex gap-2">
+                             <button onClick={() => setIsReadingMode(true)} className="p-3 bg-white border border-slate-300 rounded-full text-slate-600 hover:text-amber-600 hover:bg-amber-50 shadow-lg transition-colors" title="Modo Leitura de Tela Cheia"><BookOpen size={20}/></button>
                              <button onClick={() => { copyToClipboard(readingData); addToast("Estudo completo copiado!", "success"); }} className="p-3 bg-white border border-slate-300 rounded-full text-slate-600 hover:text-amber-600 hover:bg-amber-50 shadow-lg transition-colors" title="Copiar Estudo Completo"><Copy size={20}/></button>
                         </div>
+
+                        {/* FULL SCREEN READING OVERLAY */}
+                        {isReadingMode && (
+                            <div className={`fixed inset-0 z-[20000] flex flex-col overflow-hidden animate-fadeIn ${
+                                readingContrast === 'high' ? 'bg-black text-white' : 
+                                readingContrast === 'sepia' ? 'bg-[#f4eccf] text-[#433422]' : 
+                                'bg-[#f4f1ea] text-slate-900'
+                            }`}>
+                                {/* Control Panel Bar */}
+                                <div className="border-b border-white/10 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md bg-slate-900 text-white select-none shrink-0">
+                                    <div className="flex items-center gap-3 text-left">
+                                        <BookOpen className="text-amber-500" size={24}/>
+                                        <div>
+                                            <h3 className="font-serif text-lg font-black tracking-wide uppercase leading-none">{selectedBook?.name} {selectedChapter}</h3>
+                                            <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase tracking-wider font-bold">Página {currentReadingPage + 1} de {readingPages.length} • Modo Leitura Expandido</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Controls */}
+                                    <div className="flex flex-wrap items-center gap-6 text-xs font-black uppercase tracking-wider">
+                                        {/* Font Size Adjusters */}
+                                        <div className="flex items-center gap-2 bg-white/10 rounded-xl p-1 border border-white/10">
+                                            <button 
+                                                onClick={() => setReadingFontSize(f => Math.max(14, f - 2))} 
+                                                className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono"
+                                                title="Diminuir Fonte"
+                                            >
+                                                A-
+                                            </button>
+                                            <button 
+                                                onClick={() => setReadingFontSize(20)} 
+                                                className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                                title="Tamanho Padrão"
+                                            >
+                                                A
+                                            </button>
+                                            <button 
+                                                onClick={() => setReadingFontSize(f => Math.min(36, f + 2))} 
+                                                className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono"
+                                                title="Aumentar Fonte"
+                                            >
+                                                A+
+                                            </button>
+                                        </div>
+
+                                        {/* Contrast Choices */}
+                                        <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+                                            <button 
+                                                onClick={() => setReadingContrast('normal')} 
+                                                className={`px-3 py-1.5 rounded-lg transition-colors ${readingContrast === 'normal' ? 'bg-amber-500 text-slate-950' : 'hover:bg-white/10'}`}
+                                            >
+                                                Padrão
+                                            </button>
+                                            <button 
+                                                onClick={() => setReadingContrast('sepia')} 
+                                                className={`px-3 py-1.5 rounded-lg transition-colors ${readingContrast === 'sepia' ? 'bg-[#433422] text-[#f4eccf]' : 'hover:bg-white/10'}`}
+                                            >
+                                                Sépia
+                                            </button>
+                                            <button 
+                                                onClick={() => setReadingContrast('high')} 
+                                                className={`px-3 py-1.5 rounded-lg transition-colors ${readingContrast === 'high' ? 'bg-white text-slate-950 border border-white' : 'hover:bg-white/10'}`}
+                                            >
+                                                Contraste
+                                            </button>
+                                        </div>
+
+                                        {/* Exit button */}
+                                        <button 
+                                            onClick={() => setIsReadingMode(false)} 
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md active:scale-95"
+                                        >
+                                            <X size={16}/> Sair
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Content Body */}
+                                <div className="flex-1 overflow-y-auto p-8 md:p-16 flex justify-center custom-scrollbar">
+                                    <div className="max-w-3xl w-full select-text leading-relaxed font-serif whitespace-pre-wrap transition-all pb-24 text-left" style={{ fontSize: `${readingFontSize}px` }}>
+                                        {readingPages[currentReadingPage]}
+                                    </div>
+                                </div>
+
+                                {/* Footer Navigation Bar */}
+                                <div className="border-t border-white/10 px-8 py-4 flex justify-between items-center shrink-0 z-10 select-none bg-slate-900 text-white">
+                                    <Button 
+                                        onClick={() => setCurrentReadingPage(p => Math.max(0, p - 1))} 
+                                        disabled={currentReadingPage === 0}
+                                        variant="ghost"
+                                        className="border border-white/10 bg-white/5 hover:bg-white/10 text-white"
+                                    >
+                                        <ChevronLeft size={18}/> <span className="font-sans font-bold text-xs uppercase tracking-wider">Anterior</span>
+                                    </Button>
+                                    
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-sm font-black font-serif">
+                                            {currentReadingPage + 1} <span className="text-slate-400 font-medium font-sans">de</span> {readingPages.length}
+                                        </span>
+                                    </div>
+                                    
+                                    <Button 
+                                        onClick={() => setCurrentReadingPage(p => Math.min(readingPages.length - 1, p + 1))} 
+                                        disabled={currentReadingPage === readingPages.length - 1}
+                                        variant="primary"
+                                        className="bg-amber-500 hover:bg-amber-600 text-slate-955 border-0 font-sans font-black text-xs uppercase tracking-widest"
+                                    >
+                                        Próxima <ChevronRight size={18}/>
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center p-10 opacity-70">

@@ -837,6 +837,108 @@ const OsThemeStyles = () => (
         body[data-os-theme="premium_black"] .login-left-hero { background: linear-gradient(to bottom right, #111111, #000000) !important; border-right: 1px solid rgba(212, 175, 55, 0.3) !important; }
         body[data-os-theme="premium_black"] .login-gradient-text { background-image: linear-gradient(to right, #FFD700, #D4AF37) !important; -webkit-background-clip: text !important; color: transparent !important; text-shadow: 0 0 20px rgba(212, 175, 55, 0.3) !important; }
         body[data-os-theme="premium_black"] .login-accent-text { color: #D4AF37 !important; opacity: 0.9 !important; }
+
+        body[data-os-theme="futuristic"] { 
+            background-color: #03001e; 
+            background-image: radial-gradient(circle at top right, #730075 0%, #03001e 70%), radial-gradient(circle at bottom left, #0575e6 0%, #03001e 70%) !important; 
+            font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important; 
+            color: #e2e8f0 !important; 
+        }
+        body[data-os-theme="futuristic"] .glass-modern, 
+        body[data-os-theme="futuristic"] .glass-card, 
+        body[data-os-theme="futuristic"] .glass-panel, 
+        body[data-os-theme="futuristic"] aside, 
+        body[data-os-theme="futuristic"] .bg-white, 
+        body[data-os-theme="futuristic"] .bg-slate-50 { 
+            background: linear-gradient(135deg, rgba(10, 10, 25, 0.8) 0%, rgba(3, 3, 10, 0.95) 100%) !important; 
+            backdrop-filter: blur(25px) saturate(220%) !important; 
+            border: 1px solid rgba(0, 240, 255, 0.4) !important; 
+            box-shadow: 0 15px 40px -10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(0, 240, 255, 0.2), 0 0 15px rgba(0, 240, 255, 0.1) !important; 
+            color: #e2e8f0 !important; 
+        }
+        body[data-os-theme="futuristic"] .glass-card:hover, 
+        body[data-os-theme="futuristic"] tr:hover td { 
+            background: linear-gradient(135deg, rgba(20, 20, 45, 0.9) 0%, rgba(8, 8, 25, 0.98) 100%) !important; 
+            border-color: rgba(255, 0, 127, 0.75) !important; 
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.45), inset 0 1px 0 rgba(255,255,255,0.1) !important; 
+            transform: translateY(-3px); 
+        }
+        body[data-os-theme="futuristic"] h1, 
+        body[data-os-theme="futuristic"] h2, 
+        body[data-os-theme="futuristic"] h3, 
+        body[data-os-theme="futuristic"] .text-slate-800 { 
+            color: #ffffff !important; 
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6) !important; 
+        }
+        body[data-os-theme="futuristic"] .text-slate-600, 
+        body[data-os-theme="futuristic"] .text-slate-500 { 
+            color: #94a3b8 !important; 
+        }
+        body[data-os-theme="futuristic"] .text-gradient, 
+        body[data-os-theme="futuristic"] .text-indigo-600, 
+        body[data-os-theme="futuristic"] .text-emerald-600 { 
+            background: linear-gradient(135deg, #00f0ff 0%, #ff007f 100%) !important; 
+            -webkit-background-clip: text !important; 
+            -webkit-text-fill-color: transparent !important; 
+            color: transparent !important; 
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.35) !important; 
+        }
+        body[data-os-theme="futuristic"] svg { 
+            color: #00f0ff !important; 
+            filter: drop-shadow(0px 0px 8px rgba(0, 240, 255, 0.7)); 
+        }
+        body[data-os-theme="futuristic"] button.bg-gradient-to-r, 
+        body[data-os-theme="futuristic"] .bg-indigo-600, 
+        body[data-os-theme="futuristic"] .bg-emerald-500 { 
+            background: linear-gradient(to right, #00f0ff 0%, #ff007f 100%) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.2) !important; 
+            color: #ffffff !important; 
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.2) !important; 
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5); 
+        }
+        body[data-os-theme="futuristic"] button.bg-gradient-to-r:hover { 
+            filter: brightness(1.2) !important; 
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.6) !important; 
+        }
+        body[data-os-theme="futuristic"] input, 
+        body[data-os-theme="futuristic"] select, 
+        body[data-os-theme="futuristic"] textarea { 
+            background-color: rgba(5, 5, 15, 0.85) !important; 
+            border: 1px solid rgba(0, 240, 255, 0.35) !important; 
+            color: #00f0ff !important; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8), 0 0 5px rgba(0,240,255,0.1) !important; 
+        }
+        body[data-os-theme="futuristic"] input:focus, 
+        body[data-os-theme="futuristic"] select:focus { 
+            border-color: #ff007f !important; 
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.5), inset 0 2px 4px rgba(0,0,0,0.5) !important; 
+            background-color: rgba(10, 10, 25, 0.9) !important; 
+        }
+        body[data-os-theme="futuristic"] table th { 
+            background-color: rgba(10, 10, 30, 0.95) !important; 
+            border-bottom: 2px solid rgba(0, 240, 255, 0.5) !important; 
+            color: #00f0ff !important; 
+        }
+        body[data-os-theme="futuristic"] table td { 
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1) !important; 
+            color: #e2e8f0 !important; 
+        }
+        body[data-os-theme="futuristic"] .login-left-hero { 
+            background: linear-gradient(to bottom right, #03001e, #120012) !important; 
+            border-right: 1px solid rgba(0, 240, 255, 0.3) !important; 
+        }
+        body[data-os-theme="futuristic"] .login-gradient-text { 
+            background-image: linear-gradient(to right, #00f0ff, #ff007f) !important; 
+            -webkit-background-clip: text !important; 
+            color: transparent !important; 
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.4) !important; 
+        }
+        body[data-os-theme="futuristic"] .login-accent-text { 
+            color: #ff007f !important; 
+            text-shadow: 0 0 8px rgba(255, 0, 127, 0.4) !important; 
+            opacity: 0.9 !important; 
+        }
+
     `}</style>
 );
 
@@ -1257,6 +1359,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         if (theme === 'win95') return "bg-[#008080]";
         if (theme === 'premium_black') return "bg-[#050505]";
         if (theme === 'msdos') return "bg-[#000022]";
+        if (theme === 'futuristic') return "bg-[#03001e]";
         if (isLightTheme) {
             if (isSplash) {
                 return "bg-[#eef6fc] bg-[radial-gradient(at_0%_0%,_rgba(186,230,253,0.5)_0,_transparent_50%),_radial-gradient(at_50%_0%,_rgba(219,234,254,0.7)_0,_transparent_50%)]";
@@ -1285,7 +1388,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         </div>
     );
 
-    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black';
+    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic';
 
     return (
         <div className={`absolute inset-0 overflow-hidden ${papelParede ? '' : getBaseThemeStyles()}`}>
@@ -1444,6 +1547,29 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                 </>
             )}
 
+            {activeAnim === 'futuristic' && (
+                <>
+                    <style>{`
+                        @keyframes cyber-scan {
+                            0% { transform: translateY(-100%); }
+                            100% { transform: translateY(100%); }
+                        }
+                    `}</style>
+                    <div className="absolute inset-0" style={{ 
+                        backgroundImage: 'linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px)', 
+                        backgroundSize: '40px 40px',
+                        backgroundPosition: 'center'
+                    }}></div>
+                    <div className="absolute inset-0" style={{ 
+                        background: 'linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.1) 50%, transparent)',
+                        height: '100%',
+                        animation: 'cyber-scan 12s linear infinite'
+                    }}></div>
+                    <div className="absolute top-[20%] right-[10%] w-[35vw] h-[35vw] rounded-full blur-[120px] bg-[#ff007f]/10 animate-pulse-glow" style={{ animationDuration: '6s' }}></div>
+                    <div className="absolute bottom-[20%] left-[10%] w-[35vw] h-[35vw] rounded-full blur-[120px] bg-[#00f0ff]/10 animate-pulse-glow" style={{ animationDuration: '9s' }}></div>
+                </>
+            )}
+
             {(activeAnim === 'stars' || activeAnim === 'splash' || (activeAnim === 'default' && !papelParede)) && (
                 <>
                     {isLightTheme ? (
@@ -1503,7 +1629,8 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const themesList = [
         { id: 'default', label: 'GIPP Padrão' }, { id: 'premium_black', label: 'Premium Black' },
         { id: 'win11', label: 'Windows 11' }, { id: 'winxp', label: 'Windows XP' },
-        { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'MS-DOS 6.22' }
+        { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'MS-DOS 6.22' },
+        { id: 'futuristic', label: 'GIPP Sci-Fi Futurista' }
     ];
     let btnClass = variant === 'dark' ? `p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white flex items-center gap-2 ${className}` : variant === 'mobile' ? `p-2 bg-slate-50 text-slate-500 rounded-lg flex items-center gap-2 ${className}` : `p-3 bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl text-slate-600 flex items-center gap-2 ${className}`;
 
@@ -1819,6 +1946,22 @@ const COLOR_CLASSES = {
     }
 };
 
+const THREED_COLORS = {
+    amber: { bg: 'bg-amber-500', shadow: 'shadow-[0_4px_0_#b45309,0_8px_16px_rgba(180,83,9,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#b45309,0_3px_6px_rgba(180,83,9,0.25)]', text: 'text-amber-50', textActive: 'text-white' },
+    blue: { bg: 'bg-blue-500', shadow: 'shadow-[0_4px_0_#1d4ed8,0_8px_16px_rgba(29,78,216,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#1d4ed8,0_3px_6px_rgba(29,78,216,0.25)]', text: 'text-blue-50', textActive: 'text-white' },
+    fuchsia: { bg: 'bg-fuchsia-500', shadow: 'shadow-[0_4px_0_#a21caf,0_8px_16px_rgba(162,28,175,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#a21caf,0_3px_6px_rgba(162,28,175,0.25)]', text: 'text-fuchsia-50', textActive: 'text-white' },
+    teal: { bg: 'bg-teal-500', shadow: 'shadow-[0_4px_0_#0f766e,0_8px_16px_rgba(15,118,110,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#0f766e,0_3px_6px_rgba(15,118,110,0.25)]', text: 'text-teal-50', textActive: 'text-white' },
+    indigo: { bg: 'bg-indigo-500', shadow: 'shadow-[0_4px_0_#4338ca,0_8px_16px_rgba(67,56,202,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#4338ca,0_3px_6px_rgba(67,56,202,0.25)]', text: 'text-indigo-50', textActive: 'text-white' },
+    rose: { bg: 'bg-rose-500', shadow: 'shadow-[0_4px_0_#be123c,0_8px_16px_rgba(190,18,60,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#be123c,0_3px_6px_rgba(190,18,60,0.25)]', text: 'text-rose-50', textActive: 'text-white' },
+    emerald: { bg: 'bg-emerald-500', shadow: 'shadow-[0_4px_0_#047857,0_8px_16px_rgba(4,120,87,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#047857,0_3px_6px_rgba(4,120,87,0.25)]', text: 'text-emerald-50', textActive: 'text-white' },
+    purple: { bg: 'bg-purple-500', shadow: 'shadow-[0_4px_0_#6d28d9,0_8px_16px_rgba(109,40,217,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#6d28d9,0_3px_6px_rgba(109,40,217,0.25)]', text: 'text-purple-50', textActive: 'text-white' },
+    slate: { bg: 'bg-slate-500', shadow: 'shadow-[0_4px_0_#334155,0_8px_16px_rgba(51,65,85,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#334155,0_3px_6px_rgba(51,65,85,0.25)]', text: 'text-slate-50', textActive: 'text-white' },
+    cyan: { bg: 'bg-cyan-500', shadow: 'shadow-[0_4px_0_#0e7490,0_8px_16px_rgba(14,116,144,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#0e7490,0_3px_6px_rgba(14,116,144,0.25)]', text: 'text-cyan-50', textActive: 'text-white' },
+    pink: { bg: 'bg-pink-500', shadow: 'shadow-[0_4px_0_#be185d,0_8px_16px_rgba(190,24,93,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#be185d,0_3px_6px_rgba(190,24,93,0.25)]', text: 'text-pink-50', textActive: 'text-white' },
+    violet: { bg: 'bg-violet-500', shadow: 'shadow-[0_4px_0_#6d28d9,0_8px_16px_rgba(109,40,217,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#6d28d9,0_3px_6px_rgba(109,40,217,0.25)]', text: 'text-violet-50', textActive: 'text-white' },
+    orange: { bg: 'bg-orange-500', shadow: 'shadow-[0_4px_0_#c2410c,0_8px_16px_rgba(194,65,12,0.35)]', activeShadow: 'shadow-[0_1.5px_0_#c2410c,0_3px_6px_rgba(194,65,12,0.25)]', text: 'text-orange-50', textActive: 'text-white' },
+};
+
 export const SystemIcon = ({ id, icon: Icon, active, size = 18 }) => {
     const context = useContext(ChurchContext);
     const pack = context?.db?.igreja?.pacote_icones || 'gipp';
@@ -1827,6 +1970,23 @@ export const SystemIcon = ({ id, icon: Icon, active, size = 18 }) => {
     
     const color = getModuleColor(id);
     const themeClass = COLOR_CLASSES[color] || COLOR_CLASSES.indigo;
+
+    // GIPP 3D Esférico (Claymorphism)
+    if (pack === '3d') {
+        const threed = THREED_COLORS[color] || THREED_COLORS.indigo;
+        if (active) {
+            return (
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border-t border-white/40 shadow-inner ${threed.bg} ${threed.textActive} ${threed.activeShadow} translate-y-[2.5px] scale-105 duration-200 transition-all`}>
+                    <Icon size={size - 2} strokeWidth={2.6} className="shrink-0 drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.35)] animate-pulse" />
+                </div>
+            );
+        }
+        return (
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border-t border-white/20 transition-all duration-300 hover:scale-110 active:scale-95 hover:translate-y-[1px] ${threed.bg} ${threed.text} ${threed.shadow}`}>
+                <Icon size={size - 2} strokeWidth={2.2} className="shrink-0 drop-shadow-[0_1.5px_2.5px_rgba(0,0,0,0.3)]" />
+            </div>
+        );
+    }
 
     // GIPP (Padrão Tecnológico/Neon)
     if (pack === 'gipp') {
@@ -1918,24 +2078,29 @@ export const PortalHeader = ({ title, subtitle, icon: Icon, gradientTo, children
     );
 };
 
-const ToastContainer = ({ toasts, removeToast }) => ( 
-  <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none print:hidden"> 
-    {toasts.map(toast => ( 
-      <div key={toast.id} className={`flex items-center gap-4 px-6 py-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] text-white min-w-[340px] max-w-md pointer-events-auto transform transition-all duration-500 animate-slide-in backdrop-blur-2xl border border-white/20 ${toast.type === 'success' ? 'bg-gradient-to-r from-emerald-600/90 to-teal-600/90' : toast.type === 'error' ? 'bg-gradient-to-r from-rose-600/90 to-red-600/90' : 'bg-gradient-to-r from-blue-600/90 to-indigo-600/90'}`}> 
-        <div className="p-2 bg-white/20 rounded-full shrink-0 shadow-inner"> 
-          {toast.type === 'success' && <CheckCircle size={24} className="animate-pulse"/>} 
-          {toast.type === 'error' && <AlertCircle size={24} className="animate-pulse"/>} 
-          {toast.type === 'info' && <Info size={24} className="animate-pulse"/>} 
-        </div> 
-        <div className="flex-1">
-          <h4 className="font-bold text-sm tracking-wide mb-0.5 uppercase">{toast.type === 'success' ? 'Sucesso' : toast.type === 'error' ? 'Erro' : 'Informação'}</h4>
-          <p className="text-xs text-white/90 font-medium leading-relaxed">{toast.message}</p>
-        </div> 
-        <button onClick={() => removeToast(toast.id)} className="text-white/60 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-full"><X size={18}/></button> 
-      </div> 
-    ))} 
-  </div> 
-);
+const ToastContainer = ({ toasts, removeToast }) => {
+  return (
+    <div className="fixed z-[9999] flex flex-col gap-3 pointer-events-none print:hidden top-6 right-6">
+      {toasts.map(toast => {
+        // Standard modern gradient style for other themes
+        return (
+          <div key={toast.id} className={`flex items-center gap-4 px-6 py-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] text-white min-w-[340px] max-w-md pointer-events-auto transform transition-all duration-500 animate-slide-in backdrop-blur-2xl border border-white/20 ${toast.type === 'success' ? 'bg-gradient-to-r from-emerald-600/90 to-teal-600/90' : toast.type === 'error' ? 'bg-gradient-to-r from-rose-600/90 to-red-600/90' : 'bg-gradient-to-r from-blue-600/90 to-indigo-600/90'}`}> 
+            <div className="p-2 bg-white/20 rounded-full shrink-0 shadow-inner"> 
+              {toast.type === 'success' && <CheckCircle size={24} className="animate-pulse"/>} 
+              {toast.type === 'error' && <AlertCircle size={24} className="animate-pulse"/>} 
+              {toast.type === 'info' && <Info size={24} className="animate-pulse"/>} 
+            </div> 
+            <div className="flex-1">
+              <h4 className="font-bold text-sm tracking-wide mb-0.5 uppercase">{toast.type === 'success' ? 'Sucesso' : toast.type === 'error' ? 'Erro' : 'Informação'}</h4>
+              <p className="text-xs text-white/90 font-medium leading-relaxed">{toast.message}</p>
+            </div> 
+            <button onClick={() => removeToast(toast.id)} className="text-white/60 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-full"><X size={18}/></button> 
+          </div>
+        );
+      })} 
+    </div>
+  );
+};
 
 export const Button = ({ children, onClick, variant = 'primary', className = '', ...props }: { children: React.ReactNode, onClick?: (e: any) => void, variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'ghost', className?: string, [x: string]: any }) => { 
   const variants = { 
@@ -2137,6 +2302,19 @@ export const ConfirmModal = ({ isOpen, onClose, onConfirm, onCancel, title, mess
   ); 
 };
 
+export const parseFlexibleDate = (str: any): Date | null => {
+    if (!str) return null;
+    const s = String(str).trim();
+    const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmyMatch) {
+        const [_, day, month, year] = dmyMatch;
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+    const parsed = new Date(s);
+    if (!isNaN(parsed.getTime())) return parsed;
+    return null;
+};
+
 // --- GENERIC TABLE ---
 export const GenericTable = ({ 
   data, 
@@ -2159,9 +2337,275 @@ export const GenericTable = ({
 }) => { 
   const { openModal, deleteItem, user } = useContext(ChurchContext); 
   const [searchTerm, setSearchTerm] = useState(''); 
+  const [colFilters, setColFilters] = useState<Record<string, any>>({});
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const [activeFilterCol, setActiveFilterCol] = useState<string | null>(null);
+  const [catSearchTerms, setCatSearchTerms] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (activeFilterCol && !(e.target as HTMLElement).closest('.filter-popup-container')) {
+        setActiveFilterCol(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [activeFilterCol]);
+
+  const getUniqueColumnValues = (colKey: string, colSpec: any) => {
+      const vals = new Set<string>();
+      processedData.forEach(item => {
+          let valStr = '';
+          let rawVal = item[colSpec.key];
+          if (colSpec.render) {
+              try {
+                  const rendered = colSpec.render(item);
+                  if (typeof rendered === 'string' || typeof rendered === 'number') {
+                      valStr = String(rendered);
+                  } else {
+                      valStr = safeText(rawVal);
+                  }
+              } catch (e) {
+                  valStr = safeText(rawVal);
+              }
+          } else {
+              valStr = safeText(rawVal);
+          }
+          if (valStr.trim() !== '') {
+              vals.add(valStr.trim());
+          }
+      });
+      return Array.from(vals).sort();
+  };
+
+  const detectColumnDataType = (colKey: string, uniqueVals: string[]) => {
+      const lowerKey = colKey.toLowerCase();
+      if (lowerKey.includes('status') || lowerKey.includes('tipo') || lowerKey.includes('categoria')) {
+          return 'categorical';
+      }
+      
+      if (uniqueVals.length <= 15) {
+          return 'categorical';
+      }
+      
+      let numericCount = 0;
+      let dateCount = 0;
+      let totalCount = uniqueVals.length;
+      
+      if (totalCount === 0) return 'text';
+      
+      uniqueVals.forEach(v => {
+          const stripped = v.replace(/[^\d.,-]/g, '').replace(',', '.');
+          if (stripped !== '' && !isNaN(parseFloat(stripped))) {
+              numericCount++;
+          }
+          const isDate = !isNaN(Date.parse(v)) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v);
+          if (isDate) {
+              dateCount++;
+          }
+      });
+      
+      if (numericCount / totalCount > 0.8) return 'numeric';
+      if (dateCount / totalCount > 0.8) return 'date';
+      return 'text';
+  };
+
+  const renderColumnFilterOptions = (colKey: string, colSpec: any) => {
+      const uniqueVals = getUniqueColumnValues(colKey, colSpec);
+      const dataType = detectColumnDataType(colKey, uniqueVals);
+      const currentFilter = colFilters[colKey] as any;
+      const filterValue = typeof currentFilter === 'object' ? (currentFilter?.value || '') : (currentFilter || '');
+      const operator = typeof currentFilter === 'object' ? (currentFilter?.operator || '') : '';
+
+      switch (dataType) {
+          case 'categorical': {
+              const term = catSearchTerms[colKey] || '';
+              const filteredVals = uniqueVals.filter(v => v.toLowerCase().includes(term.toLowerCase()));
+              const selected = currentFilter?.selectedValues || [];
+              
+              return (
+                  <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Valores Únicos</span>
+                      {uniqueVals.length > 5 && (
+                          <input 
+                              type="text"
+                              placeholder="Pesquisar opções..."
+                              value={term}
+                              onChange={e => setCatSearchTerms({ ...catSearchTerms, [colKey]: e.target.value })}
+                              className="px-2 py-1 text-[10px] border border-slate-200 rounded bg-slate-50 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                      )}
+                      <div className="max-h-36 overflow-y-auto flex flex-col gap-1.5 custom-scrollbar pr-1">
+                          {filteredVals.map((v, idx) => {
+                              const isChecked = selected.some((sel: string) => sel.toLowerCase() === v.toLowerCase());
+                              return (
+                                  <label key={idx} className="flex items-center gap-2 text-xs font-medium text-slate-700 hover:text-indigo-600 cursor-pointer">
+                                      <input 
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={e => {
+                                              let updatedSelected = [...selected];
+                                              if (e.target.checked) {
+                                                  updatedSelected.push(v);
+                                              } else {
+                                                  updatedSelected = updatedSelected.filter((sel: string) => sel.toLowerCase() !== v.toLowerCase());
+                                              }
+                                              setColFilters({
+                                                  ...colFilters,
+                                                  [colKey]: {
+                                                      operator: 'in',
+                                                      value: '',
+                                                      selectedValues: updatedSelected
+                                                  }
+                                              });
+                                          }}
+                                          className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                      />
+                                      <span className="truncate">{v}</span>
+                                  </label>
+                              );
+                          })}
+                          {filteredVals.length === 0 && (
+                              <span className="text-[10px] text-slate-400 italic">Sem resultados</span>
+                          )}
+                      </div>
+                  </div>
+              );
+          }
+          case 'numeric': {
+              const currentOp = operator || 'gt';
+              return (
+                  <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Condição Numérica</span>
+                      <select 
+                          value={currentOp}
+                          onChange={e => {
+                              setColFilters({
+                                  ...colFilters,
+                                  [colKey]: {
+                                      operator: e.target.value,
+                                      value: filterValue,
+                                      selectedValues: []
+                                  }
+                              });
+                          }}
+                          className="px-2 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:border-indigo-500 w-full"
+                      >
+                          <option value="gt">Maior que (&gt;)</option>
+                          <option value="lt">Menor que (&lt;)</option>
+                          <option value="eq">Igual a (=)</option>
+                      </select>
+                      <input 
+                          type="number"
+                          step="any"
+                          placeholder="Valor numérico..."
+                          value={filterValue}
+                          onChange={e => {
+                              setColFilters({
+                                  ...colFilters,
+                                  [colKey]: {
+                                      operator: currentOp,
+                                      value: e.target.value,
+                                      selectedValues: []
+                                  }
+                              });
+                          }}
+                          className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                  </div>
+              );
+          }
+          case 'date': {
+              const currentOp = operator || 'before';
+              return (
+                  <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Filtro Temporal</span>
+                      <select 
+                          value={currentOp}
+                          onChange={e => {
+                              setColFilters({
+                                  ...colFilters,
+                                  [colKey]: {
+                                      operator: e.target.value,
+                                      value: filterValue,
+                                      selectedValues: []
+                                  }
+                              });
+                          }}
+                          className="px-2 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:border-indigo-500 w-full"
+                      >
+                          <option value="before">Antes de</option>
+                          <option value="after">Depois de</option>
+                          <option value="equals">No dia</option>
+                      </select>
+                      <input 
+                          type="date"
+                          value={filterValue}
+                          onChange={e => {
+                              setColFilters({
+                                  ...colFilters,
+                                  [colKey]: {
+                                      operator: currentOp,
+                                      value: e.target.value,
+                                      selectedValues: []
+                                  }
+                              });
+                          }}
+                          className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                  </div>
+              );
+          }
+          default: {
+              const currentOp = operator || 'contains';
+              return (
+                  <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Regra de Texto</span>
+                      <select 
+                          value={currentOp}
+                          onChange={e => {
+                              setColFilters({
+                                  ...colFilters,
+                                  [colKey]: {
+                                      operator: e.target.value,
+                                      value: filterValue,
+                                      selectedValues: []
+                                  }
+                              });
+                          }}
+                          className="px-2 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none focus:border-indigo-500 w-full"
+                      >
+                          <option value="contains">Contém</option>
+                          <option value="not_contains">Não contém</option>
+                          <option value="equals">Igual a</option>
+                          <option value="starts">Começa com</option>
+                          <option value="ends">Termina com</option>
+                      </select>
+                      <input 
+                          type="text"
+                          placeholder="Texto para buscar..."
+                          value={filterValue}
+                          onChange={e => {
+                              setColFilters({
+                                  ...colFilters,
+                                  [colKey]: {
+                                      operator: currentOp,
+                                      value: e.target.value,
+                                      selectedValues: []
+                                  }
+                              });
+                          }}
+                          className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-indigo-500 w-full"
+                      />
+                  </div>
+              );
+          }
+      }
+  };
+
   
   const processedData = useMemo(() => {
       let result = data ? [...data] : []; 
@@ -2180,16 +2624,111 @@ export const GenericTable = ({
               if (itemCongId !== userCongId) return false; 
           }
 
-          if (!searchTerm) return true; 
-          const term = searchTerm.toLowerCase();
-          return Object.entries(item).some(([key, val]) => {
-              if (['foto', 'logo', 'comprovante', 'banco_logo_base64', 'capa', 'icone_sistema'].includes(key)) return false;
-              return safeText(val).toLowerCase().includes(term);
-          });
+          if (searchTerm) {
+              const term = searchTerm.toLowerCase();
+              const matchGlobal = Object.entries(item).some(([key, val]) => {
+                  if (['foto', 'logo', 'comprovante', 'banco_logo_base64', 'capa', 'icone_sistema'].includes(key)) return false;
+                  return safeText(val).toLowerCase().includes(term);
+              });
+              if (!matchGlobal) return false;
+          }
+
+          // Column filters
+          for (const [colKey, filterVal] of Object.entries(colFilters)) {
+              if (!filterVal) continue;
+              const col = columns.find(c => (c.key === colKey || c.header === colKey));
+              if (!col) continue;
+
+              let textToCompare = '';
+              let rawVal = item[col.key];
+              if (col.render) {
+                  try {
+                      const rendered = col.render(item);
+                      if (typeof rendered === 'string' || typeof rendered === 'number') {
+                          textToCompare = String(rendered);
+                      } else {
+                          textToCompare = safeText(rawVal);
+                      }
+                  } catch (e) {
+                      textToCompare = safeText(rawVal);
+                  }
+              } else {
+                  textToCompare = safeText(rawVal);
+              }
+
+              if (typeof filterVal === 'string') {
+                  const term = filterVal.toLowerCase();
+                  if (!textToCompare.toLowerCase().includes(term)) {
+                      return false;
+                  }
+              } else {
+                  const { operator, value, selectedValues } = filterVal as any;
+                  
+                  if (operator === 'in') {
+                      if (selectedValues && selectedValues.length > 0) {
+                          const match = selectedValues.some((v: string) => textToCompare.toLowerCase() === v.toLowerCase());
+                          if (!match) return false;
+                      }
+                  } else if (value !== undefined && value !== '') {
+                      const valStr = String(value).toLowerCase();
+                      const compStr = textToCompare.toLowerCase();
+                      
+                      switch (operator) {
+                          case 'contains':
+                              if (!compStr.includes(valStr)) return false;
+                              break;
+                          case 'not_contains':
+                              if (compStr.includes(valStr)) return false;
+                              break;
+                          case 'equals':
+                              if (compStr !== valStr) return false;
+                              break;
+                          case 'starts':
+                              if (!compStr.startsWith(valStr)) return false;
+                              break;
+                          case 'ends':
+                              if (!compStr.endsWith(valStr)) return false;
+                              break;
+                          case 'gt': {
+                              const numItem = parseFloat(textToCompare.replace(/[^\d.,-]/g, '').replace(',', '.'));
+                              const numFilter = parseFloat(value);
+                              if (isNaN(numItem) || isNaN(numFilter) || numItem <= numFilter) return false;
+                              break;
+                          }
+                          case 'lt': {
+                              const numItem = parseFloat(textToCompare.replace(/[^\d.,-]/g, '').replace(',', '.'));
+                              const numFilter = parseFloat(value);
+                              if (isNaN(numItem) || isNaN(numFilter) || numItem >= numFilter) return false;
+                              break;
+                          }
+                          case 'eq': {
+                              const numItem = parseFloat(textToCompare.replace(/[^\d.,-]/g, '').replace(',', '.'));
+                              const numFilter = parseFloat(value);
+                              if (isNaN(numItem) || isNaN(numFilter) || numItem !== numFilter) return false;
+                              break;
+                          }
+                          case 'before': {
+                              const dateItem = parseFlexibleDate(textToCompare);
+                              const dateFilter = parseFlexibleDate(value);
+                              if (!dateItem || !dateFilter || isNaN(dateItem.getTime()) || isNaN(dateFilter.getTime()) || dateItem >= dateFilter) return false;
+                              break;
+                          }
+                          case 'after': {
+                              const dateItem = parseFlexibleDate(textToCompare);
+                              const dateFilter = parseFlexibleDate(value);
+                              if (!dateItem || !dateFilter || isNaN(dateItem.getTime()) || isNaN(dateFilter.getTime()) || dateItem <= dateFilter) return false;
+                              break;
+                          }
+                      }
+                  }
+              }
+          }
+
+          return true;
       });
-  }, [processedData, searchTerm, user]);
+  }, [processedData, searchTerm, user, colFilters, columns]);
   
-  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, colFilters]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = useMemo(() => { return filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage); }, [filteredData, currentPage, itemsPerPage]);
@@ -2248,8 +2787,96 @@ export const GenericTable = ({
           <thead className="bg-white/60 backdrop-blur-md sticky top-0 z-20 shadow-sm">
             <tr>
                 {onSelectionChange && <th className="px-4 py-5 w-10"><input type="checkbox" onChange={toggleSelectAll} checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"/></th>}
-                {columns.map((c, i) => (<th key={i} className="px-8 py-5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">{c.header}</th>))}
-                <th className="px-8 py-5 text-right text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">Ações</th>
+                {columns.map((c, i) => {
+                  const colKey = c.key || c.header;
+                  const filterVal = colFilters[colKey];
+                  const textValue = typeof filterVal === 'object' ? (filterVal?.value || '') : (filterVal || '');
+                  const isFiltered = filterVal && (
+                      typeof filterVal === 'string' 
+                      ? filterVal !== '' 
+                      : (filterVal.value !== '' || (filterVal.selectedValues && filterVal.selectedValues.length > 0))
+                  );
+
+                  return (
+                    <th key={i} className="px-8 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] relative">
+                      <div className="flex flex-col gap-1.5 min-w-[140px] relative filter-popup-container">
+                        <div className="flex items-center justify-between gap-1 w-full">
+                          <span className="truncate">{c.header}</span>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveFilterCol(activeFilterCol === colKey ? null : colKey);
+                            }}
+                            className={`p-1 rounded-md hover:bg-slate-200/50 transition-colors flex items-center justify-center ${isFiltered ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' : 'text-slate-400'}`}
+                            title="Opções de filtragem avançada"
+                          >
+                            <Filter size={12} className={isFiltered ? "fill-indigo-600 text-indigo-600" : "text-slate-400"} />
+                          </button>
+                        </div>
+                        
+                        <input 
+                          type="text" 
+                          placeholder="Filtrar..." 
+                          value={textValue} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            setColFilters({
+                              ...colFilters,
+                              [colKey]: typeof filterVal === 'object' 
+                                ? { ...filterVal, value: val } 
+                                : val
+                            });
+                          }}
+                          className="px-2 py-1 text-[10px] font-semibold border border-slate-200 rounded-lg bg-white/70 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
+                          onClick={e => e.stopPropagation()}
+                        />
+
+                        {/* Dropdown Menu de Filtro Avançado */}
+                        {activeFilterCol === colKey && (
+                          <div 
+                            className="absolute left-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-4 z-50 text-slate-700 font-sans tracking-normal normal-case flex flex-col gap-3"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <Filter size={12} className="text-indigo-500" /> Filtro: {c.header}
+                              </span>
+                              <button 
+                                onClick={() => setActiveFilterCol(null)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            
+                            {renderColumnFilterOptions(colKey, c)}
+                            
+                            <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-100">
+                              <button 
+                                onClick={() => {
+                                  const newFilters = { ...colFilters };
+                                  delete newFilters[colKey];
+                                  setColFilters(newFilters);
+                                  setActiveFilterCol(null);
+                                }}
+                                className="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors uppercase"
+                              >
+                                Limpar
+                              </button>
+                              <button 
+                                onClick={() => setActiveFilterCol(null)}
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition-colors uppercase shadow-sm"
+                              >
+                                Aplicar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+                <th className="px-8 py-3 text-right text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] align-top pt-[18px]">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/40 bg-transparent">
@@ -8955,7 +9582,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     </div>
                 )}
 
-                {(hasPermission('access_ministerios') || (hasPermission('access_salinha_kids') && checkPlan('salinha_kids'))) && (
+                {(hasPermission('access_ministerios') || (hasPermission('access_salinha_kids') && checkPlan('salinha_kids')) || (hasPermission('access_ebd') && checkPlan('secretaria_ebd')) || (hasPermission('access_missoes') && checkPlan('missoes_painel'))) && (
                     <div>
                         <MenuGroup label="Ministérios e Depto." />
                         {hasPermission('access_ministerios') && checkPlan('cad_departamento') && <MenuItem id="cad_departamento" icon={Briefcase} label="Ministério (Deptos)" />}
@@ -8963,6 +9590,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_ministerios') && checkPlan('ministerio_midia') && <MenuItem id="ministerio_midia" icon={Video} label="Ministério de Mídia" />}
                         {hasPermission('access_ministerios') && checkPlan('ministerio_familia') && <MenuItem id="ministerio_familia" icon={Heart} label="Ministério da Família" />}
                         {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
+                        {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
+                        {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     </div>
                 )}
 
@@ -8987,10 +9616,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_livro_atas') && <MenuItem id="secretaria_livro_atas" icon={BookOpen} label="Livro Digital de Atas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
-                    {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
                     {hasPermission('access_teologia') && checkPlan('curso_teologia') && <MenuItem id="curso_teologia" icon={BookOpen} label="Universidade Teológica GIPP" />}
-                    {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
                 </div>
 
@@ -12531,7 +13158,7 @@ const MemberPortalLayout = () => {
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-    const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark';
+    const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic';
 
     const handleVerificarPagamento = async () => {
         setVerificandoPix(true);
@@ -12608,7 +13235,7 @@ const MemberPortalLayout = () => {
     }
 
     const getHeaderStyles = () => {
-        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic') {
             return "bg-black/70 border-b border-white/10 text-white backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
@@ -12621,7 +13248,7 @@ const MemberPortalLayout = () => {
     };
 
     const getFooterStyles = () => {
-        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic') {
             return "bg-black/70 border-t border-white/10 text-white/70 backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
@@ -12634,7 +13261,7 @@ const MemberPortalLayout = () => {
     };
 
     const getBottomSheetStyles = () => {
-        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark') {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic') {
             return "bg-slate-900/70 text-white border-t border-white/10 backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
@@ -14336,7 +14963,7 @@ export default function App() {
       return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setView, setGlobalSearchOpen]);
 
-  const logAction = async (action, details, itemType = '', itemId = '') => {
+  const logAction = async (action, details, itemType = '', itemId = '', dadosAntes = null, dadosDepois = null) => {
       if (!authUser) return;
       try {
           await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'auditoria_logs'), {
@@ -14346,6 +14973,8 @@ export default function App() {
               detalhes: details,
               tipo_item: itemType,
               item_id: itemId,
+              dados_antes: dadosAntes ? JSON.parse(JSON.stringify(dadosAntes)) : null,
+              dados_depois: dadosDepois ? JSON.parse(JSON.stringify(dadosDepois)) : null,
               data_hora: new Date().toISOString()
           });
       } catch (e) {
@@ -15662,11 +16291,11 @@ export default function App() {
         let savedId = editingItem && editingItem.id ? editingItem.id : null;
         if (editingItem && editingItem.id) {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', colName, editingItem.id), safeData, { merge: true });
-            logAction('EDIÇÃO', `Editou registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, editingItem.id);
+            logAction('EDIÇÃO', `Editou registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, editingItem.id, editingItem, safeData);
         } else {
             const novoDoc = await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', colName), { ...safeData, created_at: new Date().toISOString() });
             savedId = novoDoc.id;
-            logAction('CRIAÇÃO', `Criou novo registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, novoDoc.id);
+            logAction('CRIAÇÃO', `Criou novo registo: ${safeData.nome || safeData.titulo || safeData.descricao || 'Item'}`, colName, novoDoc.id, null, safeData);
         }
 
         if (savedId) {

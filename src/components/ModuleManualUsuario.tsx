@@ -6,7 +6,7 @@ import {
   AlertTriangle, Lightbulb, Phone, Mail, FileText, FileBarChart, Award, 
   Sparkles, Layers, Cpu, CheckSquare, RefreshCw, Printer, Trash2, Heart,
   Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database,
-  Plus, GraduationCap, Baby, ShieldAlert
+  Plus, GraduationCap, Baby, ShieldAlert, X
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -19,6 +19,9 @@ export default function ModuleManualUsuario() {
   const [directoryFilter, setDirectoryFilter] = useState('todos');
   const [directorySearch, setDirectorySearch] = useState('');
   const [isEbookMode, setIsEbookMode] = useState(false);
+  const [isReadingMode, setIsReadingMode] = useState(false);
+  const [readingFontSize, setReadingFontSize] = useState(18);
+  const [readingContrast, setReadingContrast] = useState<'normal' | 'high' | 'sepia'>('normal');
 
   // AI manual module states
   const [selectedSubModule, setSelectedSubModule] = useState<any | null>(null);
@@ -2477,13 +2480,22 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
               </h2>
             </div>
 
-            <button
-              onClick={handleDownloadActiveMaterialPdf}
-              className="flex items-center gap-1.5 px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold rounded-2xl tracking-wide transition-all shadow-md cursor-pointer shrink-0 no-print"
-            >
-              <Download size={13} />
-              {selectedSubModule ? 'Baixar este Manual (PDF)' : 'Baixar Capítulo (PDF)'}
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => setIsReadingMode(true)}
+                className="flex items-center gap-1.5 px-4.5 py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white text-xs font-bold rounded-2xl tracking-wide transition-all shadow-md cursor-pointer shrink-0 no-print"
+              >
+                <BookOpen size={13} />
+                Modo Leitura
+              </button>
+              <button
+                onClick={handleDownloadActiveMaterialPdf}
+                className="flex items-center gap-1.5 px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold rounded-2xl tracking-wide transition-all shadow-md cursor-pointer shrink-0 no-print"
+              >
+                <Download size={13} />
+                {selectedSubModule ? 'Baixar este Manual (PDF)' : 'Baixar Capítulo (PDF)'}
+              </button>
+            </div>
           </div>
 
           <div className="animate-entrance print:block">
@@ -2520,6 +2532,103 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
         </div>
 
       </div>
+      )}
+
+      {/* FULL SCREEN READING OVERLAY */}
+      {isReadingMode && (
+        <div className={`fixed inset-0 z-[20000] flex flex-col overflow-hidden animate-fadeIn ${
+          readingContrast === 'high' ? 'bg-black text-white' : 
+          readingContrast === 'sepia' ? 'bg-[#f4eccf] text-[#433422]' : 
+          'bg-[#f4f1ea] text-slate-900'
+        }`}>
+          {/* Control Panel Bar */}
+          <div className="border-b border-white/10 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md bg-slate-900 text-white select-none shrink-0">
+            <div className="flex items-center gap-3 text-left">
+              <BookOpen className="text-indigo-400" size={24}/>
+              <div>
+                <h3 className="font-sans text-lg font-black tracking-wide uppercase leading-none">
+                  {selectedSubModule ? `GIPP-${selectedSubModule.id.toUpperCase()} — ${selectedSubModule.name}` : activeContent.title}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase tracking-wider font-bold">Modo Leitura Expandido • Suíte GIPP</p>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-6 text-xs font-black uppercase tracking-wider">
+              {/* Font Size Adjusters */}
+              <div className="flex items-center gap-2 bg-white/10 rounded-xl p-1 border border-white/10">
+                <button 
+                  onClick={() => setReadingFontSize(f => Math.max(12, f - 2))} 
+                  className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono"
+                  title="Diminuir Fonte"
+                >
+                  A-
+                </button>
+                <button 
+                  onClick={() => setReadingFontSize(18)} 
+                  className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                  title="Tamanho Padrão"
+                >
+                  A
+                </button>
+                <button 
+                  onClick={() => setReadingFontSize(f => Math.min(32, f + 2))} 
+                  className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono"
+                  title="Aumentar Fonte"
+                >
+                  A+
+                </button>
+              </div>
+
+              {/* Contrast Choices */}
+              <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+                <button 
+                  onClick={() => setReadingContrast('normal')} 
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${readingContrast === 'normal' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10'}`}
+                >
+                  Padrão
+                </button>
+                <button 
+                  onClick={() => setReadingContrast('sepia')} 
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${readingContrast === 'sepia' ? 'bg-[#433422] text-[#f4eccf]' : 'hover:bg-white/10'}`}
+                >
+                  Sépia
+                </button>
+                <button 
+                  onClick={() => setReadingContrast('high')} 
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${readingContrast === 'high' ? 'bg-white text-slate-950 border border-white' : 'hover:bg-white/10'}`}
+                >
+                  Contraste
+                </button>
+              </div>
+
+              {/* Exit button */}
+              <button 
+                onClick={() => setIsReadingMode(false)} 
+                className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md active:scale-95"
+              >
+                <X size={16}/> Sair
+              </button>
+            </div>
+          </div>
+
+          {/* Content Body */}
+          <div className="flex-1 overflow-y-auto p-8 md:p-16 flex justify-center custom-scrollbar">
+            <div className="max-w-3xl w-full select-text leading-relaxed whitespace-pre-wrap transition-all pb-24 text-left" style={{ fontSize: `${readingFontSize}px` }}>
+              {selectedSubModule ? (
+                renderAiManualView()
+              ) : (
+                <div className="space-y-6 text-left">
+                  {activeContent.content}
+                  
+                  {['membros', 'financeiro', 'celulas', 'secretaria', 'ai', 'seguranca', 'credenciais'].includes(activeContent.id) && (
+                    renderCategorySubModules(activeContent.id)
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

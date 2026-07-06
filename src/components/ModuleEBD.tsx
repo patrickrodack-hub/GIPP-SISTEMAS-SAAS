@@ -158,6 +158,17 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const [generatorLicaoInicial, setGeneratorLicaoInicial] = useState('1');
     const [escalaSearch, setEscalaSearch] = useState('');
     const [escalaFiltroTurmaId, setEscalaFiltroTurmaId] = useState('');
+    const [escalaColFilters, setEscalaColFilters] = useState({
+        data: '',
+        turma: '',
+        revista: '',
+        licao: '',
+        tema: '',
+        texto_biblico: '',
+        professor: '',
+        auxiliar: '',
+        obs: ''
+    });
 
     const reloadEscalaFromDb = () => {
         const list = db.ebd?.escalas || [];
@@ -193,9 +204,31 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                     return false;
                 }
             }
-            return true;
+
+            // Column filters
+            const rowData = row.data || '';
+            const rowClass = db.ebd?.turmas?.find((t: any) => t.id === row.turma_id)?.nome || '';
+            const rowRevista = row.revista || '';
+            const rowLicao = row.licao || '';
+            const rowTema = row.tema || '';
+            const rowTexto = row.texto_biblico || '';
+            const rowProf = db.membros?.find((m: any) => m.id === row.prof_id)?.nome || '';
+            const rowAux = db.membros?.find((m: any) => m.id === row.aux_id)?.nome || '';
+            const rowObs = row.observacoes || '';
+
+            const matchColData = !escalaColFilters.data || rowData.toLowerCase().includes(escalaColFilters.data.toLowerCase());
+            const matchColTurma = !escalaColFilters.turma || rowClass.toLowerCase().includes(escalaColFilters.turma.toLowerCase());
+            const matchColRevista = !escalaColFilters.revista || rowRevista.toLowerCase().includes(escalaColFilters.revista.toLowerCase());
+            const matchColLicao = !escalaColFilters.licao || rowLicao.toLowerCase().includes(escalaColFilters.licao.toLowerCase());
+            const matchColTema = !escalaColFilters.tema || rowTema.toLowerCase().includes(escalaColFilters.tema.toLowerCase());
+            const matchColTexto = !escalaColFilters.texto_biblico || rowTexto.toLowerCase().includes(escalaColFilters.texto_biblico.toLowerCase());
+            const matchColProf = !escalaColFilters.professor || rowProf.toLowerCase().includes(escalaColFilters.professor.toLowerCase());
+            const matchColAux = !escalaColFilters.auxiliar || rowAux.toLowerCase().includes(escalaColFilters.auxiliar.toLowerCase());
+            const matchColObs = !escalaColFilters.obs || rowObs.toLowerCase().includes(escalaColFilters.obs.toLowerCase());
+
+            return matchColData && matchColTurma && matchColRevista && matchColLicao && matchColTema && matchColTexto && matchColProf && matchColAux && matchColObs;
         });
-    }, [localEscalaRows, escalaFiltroTurmaId, escalaSearch, db.ebd?.turmas, db.membros]);
+    }, [localEscalaRows, escalaFiltroTurmaId, escalaSearch, db.ebd?.turmas, db.membros, escalaColFilters]);
 
     // Auto-load initially when tab becomes 7
     useEffect(() => {
@@ -3082,16 +3115,115 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                             <table className="w-full border-collapse text-left min-w-[1200px]">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                        <th className="py-4 px-4 w-[130px] text-center">Data</th>
-                                        <th className="py-4 px-4 w-[160px]">Classe/Turma</th>
-                                        <th className="py-4 px-4 w-[130px]">Revista</th>
-                                        <th className="py-4 px-4 w-[110px]">Nº Lição</th>
-                                        <th className="py-4 px-4 w-[200px]">Tema / Título da Aula</th>
-                                        <th className="py-4 px-4 w-[130px]">Texto Bíblico</th>
-                                        <th className="py-4 px-4 w-[180px]">Professor(a) Titular</th>
-                                        <th className="py-4 px-4 w-[180px]">Auxiliar EBD</th>
-                                        <th className="py-4 px-3">Obs / Anotações</th>
-                                        <th className="py-4 px-4 w-[100px] text-center">Ações</th>
+                                        <th className="py-3 px-4 w-[130px]">
+                                            <div className="flex flex-col gap-1.5 text-center items-center">
+                                                <span>Data</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.data} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, data: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full text-center"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[160px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Classe/Turma</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.turma} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, turma: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[130px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Revista</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.revista} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, revista: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[110px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Nº Lição</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.licao} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, licao: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[200px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Tema / Título da Aula</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.tema} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, tema: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[130px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Texto Bíblico</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.texto_biblico} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, texto_biblico: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[180px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Professor(a) Titular</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.professor} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, professor: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[180px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Auxiliar EBD</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.auxiliar} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, auxiliar: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-3">
+                                            <div className="flex flex-col gap-1.5">
+                                                <span>Obs / Anotações</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Filtrar..." 
+                                                    value={escalaColFilters.obs} 
+                                                    onChange={e => setEscalaColFilters({...escalaColFilters, obs: e.target.value})}
+                                                    className="px-2 py-1 text-[9px] font-semibold border border-slate-200/80 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="py-3 px-4 w-[100px] text-center align-top pt-4">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">

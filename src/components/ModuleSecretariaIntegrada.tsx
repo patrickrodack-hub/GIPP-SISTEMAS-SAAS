@@ -84,6 +84,14 @@ const ModuleSecretariaIntegrada = () => {
     const [contactSearch, setContactSearch] = useState('');
     const [contactTypeFilter, setContactTypeFilter] = useState('all');
     const [contactCategoryFilter, setContactCategoryFilter] = useState('all');
+    const [contactColFilters, setContactColFilters] = useState({
+        tipo: '',
+        nome: '',
+        categoria: '',
+        cargo: '',
+        contato: '',
+        cidade: ''
+    });
 
     const myContatos = db.secretaria_contatos || [];
 
@@ -190,15 +198,37 @@ const ModuleSecretariaIntegrada = () => {
     const filteredContatosList = myContatos.filter(c => {
         const nameVal = c.nome || '';
         const telVal = c.telefone || '';
+        const emailVal = c.email || '';
         const presVal = c.presidente || '';
         const cargoVal = c.cargo_eclesiastico || '';
+        const tipoVal = c.tipo_contato || '';
+        const catVal = c.categoria || '';
+        const cidVal = c.cidade || '';
+        const ufVal = c.uf || '';
+
         const matchesSearch = nameVal.toLowerCase().includes(contactSearch.toLowerCase()) || 
                               telVal.includes(contactSearch) ||
                               presVal.toLowerCase().includes(contactSearch.toLowerCase()) ||
                               cargoVal.toLowerCase().includes(contactSearch.toLowerCase());
         const matchesType = contactTypeFilter === 'all' || c.tipo_contato === contactTypeFilter;
         const matchesCategory = contactCategoryFilter === 'all' || c.categoria === contactCategoryFilter;
-        return matchesSearch && matchesType && matchesCategory;
+
+        // Column Filters
+        const matchesColTipo = !contactColFilters.tipo || tipoVal.toLowerCase().includes(contactColFilters.tipo.toLowerCase());
+        const matchesColNome = !contactColFilters.nome || nameVal.toLowerCase().includes(contactColFilters.nome.toLowerCase());
+        const matchesColCategoria = !contactColFilters.categoria || catVal.toLowerCase().includes(contactColFilters.categoria.toLowerCase());
+        const matchesColCargo = !contactColFilters.cargo || 
+                                cargoVal.toLowerCase().includes(contactColFilters.cargo.toLowerCase()) || 
+                                presVal.toLowerCase().includes(contactColFilters.cargo.toLowerCase());
+        const matchesColContato = !contactColFilters.contato || 
+                                  telVal.toLowerCase().includes(contactColFilters.contato.toLowerCase()) || 
+                                  emailVal.toLowerCase().includes(contactColFilters.contato.toLowerCase());
+        const matchesColCidade = !contactColFilters.cidade || 
+                                 cidVal.toLowerCase().includes(contactColFilters.cidade.toLowerCase()) || 
+                                 ufVal.toLowerCase().includes(contactColFilters.cidade.toLowerCase());
+
+        return matchesSearch && matchesType && matchesCategory &&
+               matchesColTipo && matchesColNome && matchesColCategoria && matchesColCargo && matchesColContato && matchesColCidade;
     });
 
     const handlePrintCustomReport = () => {
@@ -698,13 +728,79 @@ const ModuleSecretariaIntegrada = () => {
                                 <table className="w-full text-left border-collapse min-w-[800px] text-slate-700">
                                     <thead>
                                         <tr className="bg-slate-50/75 border-b border-slate-100">
-                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[120px]">Tipo</th>
-                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Nome / Razão Social</th>
-                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px]">Categoria</th>
-                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Cargo / Presidente</th>
-                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Contato</th>
-                                            <th className="py-4 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">Cidade / UF</th>
-                                            <th className="py-4 px-6 text-right text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px]">Ações</th>
+                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[120px]">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span>Tipo</span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Filtrar..." 
+                                                        value={contactColFilters.tipo} 
+                                                        onChange={e => setContactColFilters({...contactColFilters, tipo: e.target.value})}
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span>Nome / Razão Social</span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Filtrar..." 
+                                                        value={contactColFilters.nome} 
+                                                        onChange={e => setContactColFilters({...contactColFilters, nome: e.target.value})}
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px]">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span>Categoria</span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Filtrar..." 
+                                                        value={contactColFilters.categoria} 
+                                                        onChange={e => setContactColFilters({...contactColFilters, categoria: e.target.value})}
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span>Cargo / Presidente</span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Filtrar..." 
+                                                        value={contactColFilters.cargo} 
+                                                        onChange={e => setContactColFilters({...contactColFilters, cargo: e.target.value})}
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span>Contato</span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Filtrar..." 
+                                                        value={contactColFilters.contato} 
+                                                        onChange={e => setContactColFilters({...contactColFilters, contato: e.target.value})}
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span>Cidade / UF</span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Filtrar..." 
+                                                        value={contactColFilters.cidade} 
+                                                        onChange={e => setContactColFilters({...contactColFilters, cidade: e.target.value})}
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="py-3 px-6 text-right text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px] align-top pt-4">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">

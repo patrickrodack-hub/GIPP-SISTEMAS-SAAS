@@ -174,6 +174,12 @@ export default function ModuleLivroAtas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('todos');
   const [livroFilter, setLivroFilter] = useState<string>('todos');
+  const [ataColFilters, setAtaColFilters] = useState({
+    pag_livro: '',
+    registro_titulo: '',
+    data: '',
+    status: ''
+  });
 
   // IA Draft Assist
   const [bulletPoints, setBulletPoints] = useState('');
@@ -495,7 +501,19 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
     const matchType = typeFilter === 'todos' || reg.tipo === typeFilter;
     const matchLivro = livroFilter === 'todos' || reg.livro_id === livroFilter;
 
-    return matchSearch && matchType && matchLivro;
+    // Column Filters
+    const bookData = livros.find(b => b.id === reg.livro_id);
+    const pagLivroStr = `pág. ${reg.pagina_numero || ''} ${bookData?.nome || ''}`;
+    const regTituloStr = `${reg.titulo || ''} ${reg.tipo || ''} ${reg.moderador || ''} ${reg.secretario || ''} ${reg.celebrante || ''}`;
+    const dataStr = reg.data_registro || reg.data_celebracao || reg.data_batismo || reg.data_consagracao || '';
+    const statusStr = reg.status || '';
+
+    const matchColPag = !ataColFilters.pag_livro || pagLivroStr.toLowerCase().includes(ataColFilters.pag_livro.toLowerCase());
+    const matchColTitulo = !ataColFilters.registro_titulo || regTituloStr.toLowerCase().includes(ataColFilters.registro_titulo.toLowerCase());
+    const matchColData = !ataColFilters.data || dataStr.toLowerCase().includes(ataColFilters.data.toLowerCase());
+    const matchColStatus = !ataColFilters.status || statusStr.toLowerCase().includes(ataColFilters.status.toLowerCase());
+
+    return matchSearch && matchType && matchLivro && matchColPag && matchColTitulo && matchColData && matchColStatus;
   });
 
   // Calculate pages for virtualization
@@ -1086,11 +1104,55 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-400 font-black uppercase tracking-wider">
-                      <th className="p-4 sm:p-5">Pág / Livro</th>
-                      <th className="p-4 sm:p-5">Registro / Título</th>
-                      <th className="p-4 sm:p-5">Data de Lavra</th>
-                      <th className="p-4 sm:p-5">Status</th>
-                      <th className="p-4 sm:p-5 text-center">Ações</th>
+                      <th className="p-3 sm:p-4">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Pág / Livro</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={ataColFilters.pag_livro} 
+                            onChange={e => setAtaColFilters({...ataColFilters, pag_livro: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 sm:p-4">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Registro / Título</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={ataColFilters.registro_titulo} 
+                            onChange={e => setAtaColFilters({...ataColFilters, registro_titulo: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 sm:p-4">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Data de Lavra</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={ataColFilters.data} 
+                            onChange={e => setAtaColFilters({...ataColFilters, data: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 sm:p-4">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Status</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={ataColFilters.status} 
+                            onChange={e => setAtaColFilters({...ataColFilters, status: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 sm:p-4 text-center align-top pt-4">Ações</th>
                     </tr>
                   </thead>
                   <tbody>

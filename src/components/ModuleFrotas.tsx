@@ -161,6 +161,35 @@ const ModuleFrotas = () => {
   const [filterTipoDespesa, setFilterTipoDespesa] = useState('todos');
   const [filterStatusMulta, setFilterStatusMulta] = useState('todos');
 
+  const [vehColFilters, setVehColFilters] = useState({
+    modelo_marca: '',
+    placa: '',
+    tipo: '',
+    licenciamento: '',
+    ipva: '',
+    status: ''
+  });
+
+  const [expColFilters, setExpColFilters] = useState({
+    data: '',
+    veiculo: '',
+    tipo: '',
+    motorista: '',
+    descricao: '',
+    odometro: '',
+    valor: ''
+  });
+
+  const [fineColFilters, setFineColFilters] = useState({
+    auto: '',
+    veiculo: '',
+    infracao: '',
+    motorista: '',
+    pontuacao: '',
+    status: '',
+    valor: ''
+  });
+
   // Modals visibility states
   const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
   const [driverModalOpen, setDriverModalOpen] = useState(false);
@@ -827,9 +856,18 @@ const ModuleFrotas = () => {
     return veiculos.filter(v => {
       const matchesSearch = `${v.marca} ${v.modelo} ${v.placa}`.toLowerCase().includes(searchVeiculos.toLowerCase());
       const matchesStatus = filterStatusVeiculo === 'todos' || v.status === filterStatusVeiculo;
-      return matchesSearch && matchesStatus;
+
+      // Column filters
+      const matchColModeloMarca = !vehColFilters.modelo_marca || `${v.marca || ''} ${v.modelo || ''}`.toLowerCase().includes(vehColFilters.modelo_marca.toLowerCase());
+      const matchColPlaca = !vehColFilters.placa || (v.placa || '').toLowerCase().includes(vehColFilters.placa.toLowerCase());
+      const matchColTipo = !vehColFilters.tipo || (v.tipo || '').toLowerCase().includes(vehColFilters.tipo.toLowerCase());
+      const matchColLic = !vehColFilters.licenciamento || (v.data_licenciamento || '').toLowerCase().includes(vehColFilters.licenciamento.toLowerCase());
+      const matchColIpva = !vehColFilters.ipva || (v.data_ipva || '').toLowerCase().includes(vehColFilters.ipva.toLowerCase());
+      const matchColStatus = !vehColFilters.status || (v.status || '').toLowerCase().includes(vehColFilters.status.toLowerCase());
+
+      return matchesSearch && matchesStatus && matchColModeloMarca && matchColPlaca && matchColTipo && matchColLic && matchColIpva && matchColStatus;
     });
-  }, [veiculos, searchVeiculos, filterStatusVeiculo]);
+  }, [veiculos, searchVeiculos, filterStatusVeiculo, vehColFilters]);
 
   const filteredMotoristas = useMemo(() => {
     return motoristas.filter(m => {
@@ -840,15 +878,58 @@ const ModuleFrotas = () => {
   const filteredDespesas = useMemo(() => {
     return despesas.filter(d => {
       const matchesType = filterTipoDespesa === 'todos' || d.tipo === filterTipoDespesa;
-      return matchesType;
+
+      // Column filters
+      const veh = veiculos.find(v => v.id === d.veiculo_id);
+      const motorista = motoristas.find(m => m.id === d.motorista_id);
+      
+      const rowData = d.data || '';
+      const rowVeiculo = veh ? `${veh.marca} ${veh.modelo} (${veh.placa})` : '';
+      const rowTipo = d.tipo || '';
+      const rowMotorista = motorista ? motorista.nome : '';
+      const rowDesc = d.descricao || '';
+      const rowOdo = d.odometro ? d.odometro.toString() : '';
+      const rowVal = d.valor ? d.valor.toString() : '';
+
+      const matchColData = !expColFilters.data || rowData.toLowerCase().includes(expColFilters.data.toLowerCase());
+      const matchColVeh = !expColFilters.veiculo || rowVeiculo.toLowerCase().includes(expColFilters.veiculo.toLowerCase());
+      const matchColTipo = !expColFilters.tipo || rowTipo.toLowerCase().includes(expColFilters.tipo.toLowerCase());
+      const matchColMot = !expColFilters.motorista || rowMotorista.toLowerCase().includes(expColFilters.motorista.toLowerCase());
+      const matchColDesc = !expColFilters.descricao || rowDesc.toLowerCase().includes(expColFilters.descricao.toLowerCase());
+      const matchColOdo = !expColFilters.odometro || rowOdo.toLowerCase().includes(expColFilters.odometro.toLowerCase());
+      const matchColVal = !expColFilters.valor || rowVal.toLowerCase().includes(expColFilters.valor.toLowerCase());
+
+      return matchesType && matchColData && matchColVeh && matchColTipo && matchColMot && matchColDesc && matchColOdo && matchColVal;
     });
-  }, [despesas, filterTipoDespesa]);
+  }, [despesas, filterTipoDespesa, veiculos, motoristas, expColFilters]);
 
   const filteredMultas = useMemo(() => {
     return multas.filter(f => {
-      return filterStatusMulta === 'todos' || f.status === filterStatusMulta;
+      const matchesStatus = filterStatusMulta === 'todos' || f.status === filterStatusMulta;
+
+      // Column filters
+      const veh = veiculos.find(v => v.id === f.veiculo_id);
+      const motorista = motoristas.find(m => m.id === f.motorista_id);
+
+      const rowAuto = f.auto_infracao || '';
+      const rowVeiculo = veh ? `${veh.marca} ${veh.modelo} (${veh.placa})` : '';
+      const rowInf = f.infracao || '';
+      const rowMot = motorista ? motorista.nome : '';
+      const rowPont = f.pontos ? f.pontos.toString() : '';
+      const rowStatus = f.status || '';
+      const rowVal = f.valor ? f.valor.toString() : '';
+
+      const matchColAuto = !fineColFilters.auto || rowAuto.toLowerCase().includes(fineColFilters.auto.toLowerCase());
+      const matchColVeh = !fineColFilters.veiculo || rowVeiculo.toLowerCase().includes(fineColFilters.veiculo.toLowerCase());
+      const matchColInf = !fineColFilters.infracao || rowInf.toLowerCase().includes(fineColFilters.infracao.toLowerCase());
+      const matchColMot = !fineColFilters.motorista || rowMot.toLowerCase().includes(fineColFilters.motorista.toLowerCase());
+      const matchColPont = !fineColFilters.pontuacao || rowPont.toLowerCase().includes(fineColFilters.pontuacao.toLowerCase());
+      const matchColStatus = !fineColFilters.status || rowStatus.toLowerCase().includes(fineColFilters.status.toLowerCase());
+      const matchColVal = !fineColFilters.valor || rowVal.toLowerCase().includes(fineColFilters.valor.toLowerCase());
+
+      return matchesStatus && matchColAuto && matchColVeh && matchColInf && matchColMot && matchColPont && matchColStatus && matchColVal;
     });
-  }, [multas, filterStatusMulta]);
+  }, [multas, filterStatusMulta, veiculos, motoristas, fineColFilters]);
 
   return (
     <div className="h-full flex flex-col space-y-6 animate-entrance text-slate-800 font-sans">
@@ -1303,13 +1384,79 @@ const ModuleFrotas = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/60 border-b border-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
-                      <th className="p-4 pl-6">Modelo/Marca</th>
-                      <th className="p-4">Placa</th>
-                      <th className="p-4">Tipo / Detalhes</th>
-                      <th className="p-4">Licenciamento</th>
-                      <th className="p-4">IPVA</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right pr-6">Ações</th>
+                      <th className="p-3 pl-6">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Modelo/Marca</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={vehColFilters.modelo_marca} 
+                            onChange={e => setVehColFilters({...vehColFilters, modelo_marca: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Placa</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={vehColFilters.placa} 
+                            onChange={e => setVehColFilters({...vehColFilters, placa: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Tipo / Detalhes</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={vehColFilters.tipo} 
+                            onChange={e => setVehColFilters({...vehColFilters, tipo: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Licenciamento</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={vehColFilters.licenciamento} 
+                            onChange={e => setVehColFilters({...vehColFilters, licenciamento: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>IPVA</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={vehColFilters.ipva} 
+                            onChange={e => setVehColFilters({...vehColFilters, ipva: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Status</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={vehColFilters.status} 
+                            onChange={e => setVehColFilters({...vehColFilters, status: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 text-right pr-6 align-top pt-4">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1564,14 +1711,91 @@ const ModuleFrotas = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/60 border-b border-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
-                      <th className="p-4 pl-6">Data</th>
-                      <th className="p-4">Veículo</th>
-                      <th className="p-4">Tipo de Gasto</th>
-                      <th className="p-4">Motorista Relacionado</th>
-                      <th className="p-4">Descrição/Obs</th>
-                      <th className="p-4">Odômetro (KM)</th>
-                      <th className="p-4">Valor</th>
-                      <th className="p-4 text-right pr-6">Ações</th>
+                      <th className="p-3 pl-6">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Data</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.data} 
+                            onChange={e => setExpColFilters({...expColFilters, data: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Veículo</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.veiculo} 
+                            onChange={e => setExpColFilters({...expColFilters, veiculo: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Tipo de Gasto</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.tipo} 
+                            onChange={e => setExpColFilters({...expColFilters, tipo: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Motorista Relacionado</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.motorista} 
+                            onChange={e => setExpColFilters({...expColFilters, motorista: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Descrição/Obs</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.descricao} 
+                            onChange={e => setExpColFilters({...expColFilters, descricao: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Odômetro (KM)</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.odometro} 
+                            onChange={e => setExpColFilters({...expColFilters, odometro: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Valor</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={expColFilters.valor} 
+                            onChange={e => setExpColFilters({...expColFilters, valor: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 text-right pr-6 align-top pt-4">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1680,14 +1904,91 @@ const ModuleFrotas = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/60 border-b border-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
-                      <th className="p-4 pl-6">Auto Infração / Data</th>
-                      <th className="p-4">Veículo</th>
-                      <th className="p-4">Infracção</th>
-                      <th className="p-4">Motorista Notificado</th>
-                      <th className="p-4">Pontuação CNH</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Valor</th>
-                      <th className="p-4 text-right pr-6">Ações</th>
+                      <th className="p-3 pl-6">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Auto Infração / Data</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.auto} 
+                            onChange={e => setFineColFilters({...fineColFilters, auto: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Veículo</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.veiculo} 
+                            onChange={e => setFineColFilters({...fineColFilters, veiculo: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Infracção</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.infracao} 
+                            onChange={e => setFineColFilters({...fineColFilters, infracao: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Motorista Notificado</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.motorista} 
+                            onChange={e => setFineColFilters({...fineColFilters, motorista: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Pontuação CNH</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.pontuacao} 
+                            onChange={e => setFineColFilters({...fineColFilters, pontuacao: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Status</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.status} 
+                            onChange={e => setFineColFilters({...fineColFilters, status: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Valor</span>
+                          <input 
+                            type="text" 
+                            placeholder="Filtrar..." 
+                            value={fineColFilters.valor} 
+                            onChange={e => setFineColFilters({...fineColFilters, valor: e.target.value})}
+                            className="px-2 py-1 text-[9px] font-semibold border border-slate-200 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                          />
+                        </div>
+                      </th>
+                      <th className="p-3 text-right pr-6 align-top pt-4">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">

@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { ChurchContext, Button, playMenuSound, playNotificationSound } from '../App';
 import { 
-    BookOpen, GraduationCap, ChevronRight, CheckCircle, Lock, Award, ArrowLeft, 
+    BookOpen, GraduationCap, ChevronRight, ChevronLeft, CheckCircle, Lock, Award, ArrowLeft, 
     Shield, Printer, Sparkles, Brain, Trash2, Download, Plus, Search, 
     BookOpenText, FileText, RotateCcw, Check, HelpCircle, Loader2, ClipboardList,
     Play, Pause, Volume2, X
@@ -228,6 +228,7 @@ export default function ModuleTeologia() {
     // E-Reader Specific States
     const [readerTheme, setReaderTheme] = useState<'white' | 'sepia' | 'dark'>('white');
     const [readerFontSize, setReaderFontSize] = useState<'base' | 'lg' | 'xl' | '2xl'>('lg');
+    const [isReadingMode, setIsReadingMode] = useState<boolean>(false);
     const [studentNotes, setStudentNotes] = useState<Record<string, string>>({});
     const [showGlossary, setShowGlossary] = useState<boolean>(false);
     const [savingNotes, setSavingNotes] = useState<boolean>(false);
@@ -477,15 +478,25 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Progresso da Leitura:</span>
-                            <div className="w-32 bg-slate-200 rounded-full h-2">
-                                <div 
-                                    className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
-                                    style={{ width: `${((currentPage + 1) / totalPages) * 100}%` }}
-                                ></div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Progresso da Leitura:</span>
+                                <div className="w-32 bg-slate-200 rounded-full h-2">
+                                    <div 
+                                        className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                                        style={{ width: `${((currentPage + 1) / totalPages) * 100}%` }}
+                                    ></div>
+                                </div>
+                                <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">{currentPage + 1} / {totalPages} Pág.</span>
                             </div>
-                            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">{currentPage + 1} / {totalPages} Pág.</span>
+                            <Button
+                                onClick={() => { playMenuSound(); setIsReadingMode(true); }}
+                                variant="ghost"
+                                className="text-slate-600 hover:text-indigo-600 font-bold gap-1.5 px-3 py-1.5 border border-slate-200 hover:border-indigo-200 rounded-xl text-xs flex items-center shrink-0"
+                                title="Modo Leitura de Tela Cheia"
+                            >
+                                <BookOpen size={16} /> <span className="hidden sm:inline">Tela Cheia</span>
+                            </Button>
                         </div>
                     </div>
 
@@ -827,6 +838,144 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                         </div>
 
                     </div>
+
+                    {/* FULL SCREEN READING OVERLAY */}
+                    {isReadingMode && (
+                        <div className={`fixed inset-0 z-[20000] flex flex-col overflow-hidden animate-fadeIn ${
+                            readerTheme === 'dark' ? 'bg-[#0b0f19] text-slate-100' : 
+                            readerTheme === 'sepia' ? 'bg-[#fcf8f2] text-[#5c4033]' : 
+                            'bg-[#f8f9fa] text-slate-900'
+                        }`}>
+                            {/* Control Panel Bar */}
+                            <div className="border-b border-white/10 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md bg-slate-900 text-white select-none shrink-0">
+                                <div className="flex items-center gap-3 text-left">
+                                    <BookOpen className="text-indigo-400" size={24}/>
+                                    <div>
+                                        <h3 className="font-serif text-lg font-black tracking-wide uppercase leading-none">Capítulo {activeLesson}: {lessonData.title}</h3>
+                                        <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase tracking-wider font-bold">{course.title} • Página {currentPage + 1} de {totalPages} • Modo Leitura Expandido</p>
+                                    </div>
+                                </div>
+
+                                {/* Controls */}
+                                <div className="flex flex-wrap items-center gap-6 text-xs font-black uppercase tracking-wider">
+                                    {/* Font Size Adjusters */}
+                                    <div className="flex items-center gap-2 bg-white/10 rounded-xl p-1 border border-white/10">
+                                        <button 
+                                            disabled={readerFontSize === 'base'}
+                                            onClick={() => setReaderFontSize(readerFontSize === '2xl' ? 'xl' : readerFontSize === 'xl' ? 'lg' : 'base')}
+                                            className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono disabled:opacity-30 border-0 bg-transparent text-white cursor-pointer"
+                                            title="Diminuir Fonte"
+                                        >
+                                            A-
+                                        </button>
+                                        <button 
+                                            onClick={() => setReaderFontSize('lg')} 
+                                            className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors border-0 bg-transparent text-white cursor-pointer"
+                                            title="Tamanho Padrão"
+                                        >
+                                            A
+                                        </button>
+                                        <button 
+                                            disabled={readerFontSize === '2xl'}
+                                            onClick={() => setReaderFontSize(readerFontSize === 'base' ? 'lg' : readerFontSize === 'lg' ? 'xl' : '2xl')}
+                                            className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono disabled:opacity-30 border-0 bg-transparent text-white cursor-pointer"
+                                            title="Aumentar Fonte"
+                                        >
+                                            A+
+                                        </button>
+                                    </div>
+
+                                    {/* Contrast Choices */}
+                                    <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+                                        <button 
+                                            onClick={() => setReaderTheme('white')} 
+                                            className={`px-3 py-1.5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer ${readerTheme === 'white' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-white'}`}
+                                        >
+                                            Dia
+                                        </button>
+                                        <button 
+                                            onClick={() => setReaderTheme('sepia')} 
+                                            className={`px-3 py-1.5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer ${readerTheme === 'sepia' ? 'bg-[#5c4033] text-[#fcf8f2]' : 'hover:bg-white/10 text-white'}`}
+                                        >
+                                            Sépia
+                                        </button>
+                                        <button 
+                                            onClick={() => setReaderTheme('dark')} 
+                                            className={`px-3 py-1.5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer ${readerTheme === 'dark' ? 'bg-slate-950 text-white border border-white/10' : 'hover:bg-white/10 text-white'}`}
+                                        >
+                                            Noite
+                                        </button>
+                                    </div>
+
+                                    {/* Exit button */}
+                                    <button 
+                                        onClick={() => { playMenuSound(); setIsReadingMode(false); }} 
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md active:scale-95 border-0 cursor-pointer"
+                                    >
+                                        <X size={16}/> Sair
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Content Body */}
+                            <div className="flex-1 overflow-y-auto p-8 md:p-16 flex justify-center custom-scrollbar">
+                                <div className={`max-w-3xl w-full select-text leading-relaxed font-serif whitespace-pre-wrap transition-all pb-24 text-left space-y-6 ${
+                                    readerFontSize === 'base' ? 'text-base' :
+                                    readerFontSize === 'lg' ? 'text-lg' :
+                                    readerFontSize === 'xl' ? 'text-xl' : 'text-2xl'
+                                }`}>
+                                    <div className="flex items-center justify-between border-b pb-4 mb-6 opacity-65 border-slate-500 text-xs text-slate-500">
+                                        <span className="font-black uppercase tracking-widest">{currentPageData.subtitle || `Página ${currentPage + 1}`}</span>
+                                        <span className="font-serif italic">Universidade Teológica Apostólica</span>
+                                    </div>
+                                    <h2 className="text-3xl md:text-4xl font-black font-sans leading-tight tracking-tight mb-8">
+                                        {currentPageData.pageTitle}
+                                    </h2>
+                                    <div className="space-y-5 text-justify leading-relaxed">
+                                        {currentPageData.text}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Navigation Bar */}
+                            <div className="border-t border-white/10 px-8 py-4 flex justify-between items-center shrink-0 z-10 select-none bg-slate-900 text-white">
+                                <Button 
+                                    onClick={() => { playMenuSound(); setCurrentPage(p => Math.max(0, p - 1)); }} 
+                                    disabled={currentPage === 0}
+                                    variant="ghost"
+                                    className="border border-white/10 bg-white/5 hover:bg-white/10 text-white gap-1.5"
+                                >
+                                    <ChevronLeft size={18}/> <span className="font-sans font-bold text-xs uppercase tracking-wider">Anterior</span>
+                                </Button>
+                                
+                                <div className="flex flex-col items-center">
+                                    <span className="text-sm font-black font-serif">
+                                        Página {currentPage + 1} <span className="text-slate-400 font-medium font-sans">de</span> {totalPages}
+                                    </span>
+                                </div>
+                                
+                                {currentPage < totalPages - 1 ? (
+                                    <Button 
+                                        onClick={() => { playMenuSound(); setCurrentPage(p => Math.min(totalPages - 1, p + 1)); }} 
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white border-0 font-sans font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl flex items-center gap-1 shadow-md"
+                                    >
+                                        Próxima <ChevronRight size={18}/>
+                                    </Button>
+                                ) : (
+                                    <Button 
+                                        onClick={() => {
+                                            playNotificationSound();
+                                            setIsReadingMode(false);
+                                            markLessonCompleted(course.id, activeLesson);
+                                        }} 
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 font-sans font-black text-xs uppercase tracking-widest px-6 py-2.5 rounded-xl flex items-center gap-1 shadow-md"
+                                    >
+                                        Concluir <CheckCircle size={18}/>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -1387,6 +1536,14 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                 ></div>
                             </div>
                             <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{currentPage + 1} / {totalPages} Pág.</span>
+                            <Button
+                                onClick={() => { playMenuSound(); setIsReadingMode(true); }}
+                                variant="ghost"
+                                className="text-slate-600 hover:text-indigo-600 font-bold gap-1.5 px-3 py-1.5 border border-slate-200 hover:border-indigo-200 rounded-xl text-xs flex items-center shrink-0"
+                                title="Modo Leitura de Tela Cheia"
+                            >
+                                <BookOpen size={16} /> <span className="hidden sm:inline">Tela Cheia</span>
+                            </Button>
                         </div>
                     </div>
 
@@ -1733,6 +1890,292 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                         </div>
 
                     </div>
+
+                    {/* FULL SCREEN READING OVERLAY */}
+                    {isReadingMode && (
+                        <div className={`fixed inset-0 z-[20000] flex flex-col overflow-hidden animate-fadeIn ${
+                            readerTheme === 'dark' ? 'bg-[#0b0f19] text-slate-100' : 
+                            readerTheme === 'sepia' ? 'bg-[#fcf8f2] text-[#5c4033]' : 
+                            'bg-[#f8f9fa] text-slate-900'
+                        }`}>
+                            {/* Control Panel Bar */}
+                            <div className="border-b border-white/10 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md bg-slate-900 text-white select-none shrink-0">
+                                <div className="flex items-center gap-3 text-left">
+                                    <Sparkles className="text-indigo-400 animate-pulse" size={24}/>
+                                    <div>
+                                        <h3 className="font-serif text-lg font-black tracking-wide uppercase leading-none">{booklet.title || booklet.theme}</h3>
+                                        <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase tracking-wider font-bold">Nível {booklet.level || 'Avançado'} • Página {currentPage + 1} de {totalPages} • Modo Leitura Expandido</p>
+                                    </div>
+                                </div>
+
+                                {/* Controls */}
+                                <div className="flex flex-wrap items-center gap-6 text-xs font-black uppercase tracking-wider">
+                                    {/* Font Size Adjusters */}
+                                    <div className="flex items-center gap-2 bg-white/10 rounded-xl p-1 border border-white/10">
+                                        <button 
+                                            disabled={readerFontSize === 'base'}
+                                            onClick={() => setReaderFontSize(readerFontSize === '2xl' ? 'xl' : readerFontSize === 'xl' ? 'lg' : 'base')}
+                                            className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono disabled:opacity-30 border-0 bg-transparent text-white cursor-pointer"
+                                            title="Diminuir Fonte"
+                                        >
+                                            A-
+                                        </button>
+                                        <button 
+                                            onClick={() => setReaderFontSize('lg')} 
+                                            className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors border-0 bg-transparent text-white cursor-pointer"
+                                            title="Tamanho Padrão"
+                                        >
+                                            A
+                                        </button>
+                                        <button 
+                                            disabled={readerFontSize === '2xl'}
+                                            onClick={() => setReaderFontSize(readerFontSize === 'base' ? 'lg' : readerFontSize === 'lg' ? 'xl' : '2xl')}
+                                            className="px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-mono disabled:opacity-30 border-0 bg-transparent text-white cursor-pointer"
+                                            title="Aumentar Fonte"
+                                        >
+                                            A+
+                                        </button>
+                                    </div>
+
+                                    {/* Contrast Choices */}
+                                    <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+                                        <button 
+                                            onClick={() => setReaderTheme('white')} 
+                                            className={`px-3 py-1.5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer ${readerTheme === 'white' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-white'}`}
+                                        >
+                                            Alba
+                                        </button>
+                                        <button 
+                                            onClick={() => setReaderTheme('sepia')} 
+                                            className={`px-3 py-1.5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer ${readerTheme === 'sepia' ? 'bg-[#5c4033] text-[#fcf8f2]' : 'hover:bg-white/10 text-white'}`}
+                                        >
+                                            Sépia
+                                        </button>
+                                        <button 
+                                            onClick={() => setReaderTheme('dark')} 
+                                            className={`px-3 py-1.5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer ${readerTheme === 'dark' ? 'bg-slate-950 text-white border border-white/10' : 'hover:bg-white/10 text-white'}`}
+                                        >
+                                            Noctis
+                                        </button>
+                                    </div>
+
+                                    {/* Exit button */}
+                                    <button 
+                                        onClick={() => { playMenuSound(); setIsReadingMode(false); }} 
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md active:scale-95 border-0 cursor-pointer"
+                                    >
+                                        <X size={16}/> Sair
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Content Body */}
+                            <div className="flex-1 overflow-y-auto p-8 md:p-16 flex justify-center custom-scrollbar">
+                                <div className={`max-w-3xl w-full select-text leading-relaxed font-serif whitespace-pre-wrap transition-all pb-24 text-left space-y-6 ${
+                                    readerFontSize === 'base' ? 'text-base' :
+                                    readerFontSize === 'lg' ? 'text-lg' :
+                                    readerFontSize === 'xl' ? 'text-xl' : 'text-2xl'
+                                }`}>
+                                    <div className="flex items-center justify-between border-b pb-4 mb-6 opacity-65 border-slate-500 text-xs text-slate-500">
+                                        <span className="font-black uppercase tracking-widest">{pageTitleData.subtitle}</span>
+                                        <span className="font-serif italic text-indigo-500 font-bold">Universidade Assembleiana</span>
+                                    </div>
+                                    <h2 className="text-3xl md:text-4xl font-black font-sans leading-tight tracking-tight mb-8">
+                                        {pageTitleData.title}
+                                    </h2>
+                                    
+                                    <div className="space-y-5 leading-relaxed text-justify">
+                                        {currentPage === 0 && (
+                                            <div className="space-y-4">
+                                                {booklet.introduction ? (
+                                                    booklet.introduction.split('\n\n').map((para: string, idx: number) => (
+                                                        <p key={idx}>{para}</p>
+                                                    ))
+                                                ) : <p>Processando introdução...</p>}
+                                            </div>
+                                        )}
+
+                                        {currentPage === 1 && (
+                                            <div className="space-y-4">
+                                                {booklet.doctrinalFoundation ? (
+                                                    booklet.doctrinalFoundation.split('\n\n').map((para: string, idx: number) => (
+                                                        <p key={idx}>{para}</p>
+                                                    ))
+                                                ) : <p>Processando fundamento doutrinário...</p>}
+                                            </div>
+                                        )}
+
+                                        {currentPage === 2 && (
+                                            <div className="space-y-4">
+                                                {Array.isArray(booklet.biblicalReferences) ? (
+                                                    <div className="space-y-4 font-sans text-sm">
+                                                        {booklet.biblicalReferences.map((ref: string, idx: number) => (
+                                                            <div key={idx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/10 text-slate-750 leading-relaxed font-serif text-base space-y-2">
+                                                                <span className="font-sans font-black text-xs text-indigo-600 block uppercase">Passagem Bíblica #{idx+1}</span>
+                                                                <p className="italic font-medium">{ref}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : typeof booklet.biblicalReferences === 'string' ? (
+                                                    booklet.biblicalReferences.split('\n\n').map((para: string, idx: number) => (
+                                                        <p key={idx}>{para}</p>
+                                                    ))
+                                                ) : <p>Processando referências bíblicas...</p>}
+                                            </div>
+                                        )}
+
+                                        {currentPage === 3 && (
+                                            <div className="space-y-4">
+                                                {booklet.practicalApplication ? (
+                                                    booklet.practicalApplication.split('\n\n').map((para: string, idx: number) => (
+                                                        <p key={idx}>{para}</p>
+                                                    ))
+                                                ) : <p>Processando aplicação prática...</p>}
+                                            </div>
+                                        )}
+
+                                        {currentPage === 4 && (
+                                            <div className="space-y-6 font-sans">
+                                                {booklet.quiz && booklet.quiz.length > 0 ? (
+                                                    <div className="space-y-6 text-left">
+                                                        {booklet.quiz.map((q: any, qIdx: number) => (
+                                                            <div key={qIdx} className={`p-5 rounded-2xl border space-y-3 transition-colors ${
+                                                                readerTheme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/5'
+                                                            }`}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <HelpCircle className="text-indigo-600" size={16} />
+                                                                    <span className="font-extrabold text-xs text-indigo-700 uppercase tracking-wider">Questão {qIdx + 1} de {booklet.quiz.length}</span>
+                                                                </div>
+                                                                <p className={`text-sm font-black tracking-tight leading-snug ${readerTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{q.question}</p>
+                                                                <div className="space-y-1.5 pt-2">
+                                                                    {q.options.map((opt: string, optIdx: number) => {
+                                                                        const isSelected = generatedAnswers[qIdx] === optIdx;
+                                                                        const isCorrect = q.correctIndex === optIdx;
+                                                                        
+                                                                        let optStyle = readerTheme === 'dark'
+                                                                            ? "border-white/10 hover:border-indigo-400 text-slate-300 bg-white/5"
+                                                                            : "border-slate-200 hover:border-indigo-200 text-slate-700 bg-white/50";
+                                                                        if (isSelected) {
+                                                                            optStyle = "border-indigo-600 ring-2 ring-indigo-500 bg-indigo-50/85 text-indigo-950";
+                                                                        }
+                                                                        if (generatedQuizTested) {
+                                                                            if (isCorrect) {
+                                                                                optStyle = "border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500";
+                                                                            } else if (isSelected) {
+                                                                                optStyle = "border-red-600 bg-red-50 text-red-950 ring-2 ring-red-500";
+                                                                            }
+                                                                        }
+
+                                                                        return (
+                                                                            <button
+                                                                                key={optIdx}
+                                                                                disabled={generatedQuizTested}
+                                                                                onClick={() => handleAnswerGeneratedQuiz(qIdx, optIdx)}
+                                                                                className={`w-full p-2.5 rounded-xl border text-xs font-semibold text-left transition-all ${optStyle}`}
+                                                                            >
+                                                                                <span className="font-extrabold mr-2 select-none">
+                                                                                    {String.fromCharCode(65 + optIdx)})
+                                                                                </span>
+                                                                                {opt}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+
+                                                                {generatedQuizTested && (
+                                                                    <div className={`p-3 border rounded-xl space-y-1 mt-3 ${
+                                                                        readerTheme === 'dark' ? 'bg-indigo-950/40 border-indigo-900 text-slate-300' : 'bg-indigo-50/30 border-indigo-100 text-slate-650'
+                                                                    }`}>
+                                                                        <span className="text-[10px] font-black block uppercase tracking-wider">Explicação do Professor:</span>
+                                                                        <p className="text-[11.5px] font-medium leading-relaxed font-sans">{q.explanation || "A alternativa responde corretamente respaldada na verdade canônica."}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+
+                                                        {!generatedQuizTested ? (
+                                                            <Button
+                                                                disabled={answeredCount < totalQuizCount}
+                                                                onClick={() => {
+                                                                    playNotificationSound();
+                                                                    setGeneratedQuizTested(true);
+                                                                    if (quizScorePercent >= 70) {
+                                                                        addToast(`Parabéns! Aproveitamento de ${quizScorePercent}% na apostila gerada por IA!`, "success");
+                                                                    } else {
+                                                                        addToast(`Aproveitamento: ${quizScorePercent}%. Analise o feedback das respostas.`, "warning");
+                                                                    }
+                                                                }}
+                                                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-3 rounded-xl shadow-md disabled:opacity-50 transition-all mt-4"
+                                                            >
+                                                                Validar Respostas ({answeredCount}/{totalQuizCount})
+                                                            </Button>
+                                                        ) : (
+                                                            <div className={`text-center p-5 rounded-2xl space-y-1 mt-4 border ${
+                                                                readerTheme === 'dark' ? 'bg-indigo-950/45 border-indigo-900 text-white' : 'bg-indigo-50 border-indigo-100 text-indigo-900'
+                                                            }`}>
+                                                                <h5 className="font-black text-sm">Aproveitamento Final: {quizScorePercent}%</h5>
+                                                                <p className="text-xs font-medium font-sans">Nota mínima de aproveitamento: 70%</p>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        playMenuSound();
+                                                                        setGeneratedAnswers({});
+                                                                        setGeneratedQuizTested(false);
+                                                                    }}
+                                                                    className="text-xs font-bold underline mt-2 font-sans block mx-auto text-indigo-500 hover:text-indigo-400"
+                                                                >
+                                                                    Refazer Teste de Fixação
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : <p>Nenhum exercício gerado para esta apostila.</p>}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Navigation Bar */}
+                            <div className="border-t border-white/10 px-8 py-4 flex justify-between items-center shrink-0 z-10 select-none bg-slate-900 text-white">
+                                <Button 
+                                    onClick={() => { playMenuSound(); setCurrentPage(p => Math.max(0, p - 1)); }} 
+                                    disabled={currentPage === 0}
+                                    variant="ghost"
+                                    className="border border-white/10 bg-white/5 hover:bg-white/10 text-white gap-1.5"
+                                >
+                                    <ChevronLeft size={18}/> <span className="font-sans font-bold text-xs uppercase tracking-wider">Anterior</span>
+                                </Button>
+                                
+                                <div className="flex flex-col items-center">
+                                    <span className="text-sm font-black font-serif">
+                                        Página {currentPage + 1} <span className="text-slate-400 font-medium font-sans">de</span> {totalPages}
+                                    </span>
+                                </div>
+                                
+                                {currentPage < totalPages - 1 ? (
+                                    <Button 
+                                        onClick={() => { playMenuSound(); setCurrentPage(p => Math.min(totalPages - 1, p + 1)); }} 
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white border-0 font-sans font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl flex items-center gap-1 shadow-md"
+                                    >
+                                        Próxima <ChevronRight size={18}/>
+                                    </Button>
+                                ) : (
+                                    <Button 
+                                        onClick={() => {
+                                            playNotificationSound();
+                                            setIsReadingMode(false);
+                                            setSelectedGeneratedIndex(null);
+                                            setCurrentPage(0);
+                                            addToast("Leitura de apostila concluída!", "success");
+                                        }} 
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 font-sans font-black text-xs uppercase tracking-widest px-6 py-2.5 rounded-xl flex items-center gap-1 shadow-md"
+                                    >
+                                        Finalizar <CheckCircle size={18}/>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }

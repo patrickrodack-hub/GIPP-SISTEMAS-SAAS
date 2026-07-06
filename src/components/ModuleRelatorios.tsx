@@ -49,6 +49,169 @@ const ModuleRelatorios = memo(() => {
     const [inputs, setInputs] = useState({});
     const [loadingAiAta, setLoadingAiAta] = useState(false);
 
+    // AI Query States
+    const [aiQuery, setAiQuery] = useState('');
+    const [aiResult, setAiResult] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState('');
+
+    // Predefined prompt helpers for rapid access
+    const suggestPrompt = (text: string) => {
+        setAiQuery(text);
+    };
+
+    // AI Analysis call
+    const executeAiReportAnalysis = async () => {
+        if (!aiQuery.trim()) {
+            addToast("Por favor, digite sua pergunta para o Assistente AI.", "warning");
+            return;
+        }
+        setAiLoading(true);
+        setAiError('');
+        setAiResult('');
+        
+        try {
+            // Filter and extract compact member details safely
+            const compactMembros = (db.membros || []).map(m => ({
+                nome: m.nome,
+                sexo: m.sexo,
+                cargo: m.cargo || 'Membro',
+                status: m.status || 'Ativo',
+                data_admissao: m.data_admissao || '',
+                data_nascimento: m.data_nascimento || '',
+                congregacao: m.congregacao || 'Sede'
+            }));
+
+            // Filter and extract compact financial transaction details safely
+            const compactFinanceiro = (db.financeiro || []).map(f => ({
+                tipo: f.tipo, // Receita / Despesa
+                categoria: f.categoria,
+                valor: f.valor || 0,
+                data: f.data || '',
+                congregacao: f.congregacao || 'Sede'
+            }));
+
+            const prompt = `Você é o Assistente Analítico Oficial do GIPP (Gestão Integrada de Portais Pentecostais).
+Sua missão é realizar cálculos exatos e responder com 100% de exatidão analítica às perguntas do usuário usando estritamente as listas abaixo da nossa igreja.
+
+[LISTA DE MEMBROS (${compactMembros.length} cadastrados)]
+${JSON.stringify(compactMembros)}
+
+[LISTA DE TRANSAÇÕES FINANCEIRAS (${compactFinanceiro.length} registradas)]
+${JSON.stringify(compactFinanceiro)}
+
+[PERGUNTA DO USUÁRIO]
+"${aiQuery}"
+
+[INSTRUÇÕES MANDATÓRIAS]
+1. Se o usuário pedir para listar membros ou obreiros com base em critérios complexos (ex: obreiros, idade, sexo, data de admissão), filtre a lista fornecida, faça as contas corretas e apresente os membros encontrados em uma tabela Markdown limpa e organizada com colunas apropriadas.
+2. Se o usuário pedir para resumir tendências financeiras, analise as receitas e despesas, calcule o saldo geral, some as categorias mais recorrentes, identifique picos e tendências de entrada/saída, e apresente os resultados com números reais.
+3. Use tabelas Markdown sempre que listar múltiplos itens, valores ou estatísticas.
+4. Conclua com uma análise administrativa e pastoral didática e encorajadora.
+5. Escreva estritamente em português, de forma muito clara, respeitosa e refinada.`;
+
+            const response = await callGeminiAI(prompt);
+            setAiResult(response || '');
+            addToast("Análise analítica concluída com sucesso!", "success");
+        } catch (err: any) {
+            console.error(err);
+            setAiError("Não foi possível processar a consulta de IA neste momento. Verifique as credenciais de rede ou tente novamente.");
+            addToast("Falha na consulta da IA", "error");
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    // Beautiful custom parser and visual renderer for markdown
+    const renderMarkdown = (text: string) => {
+        if (!text) return null;
+        
+        const lines = text.split('\n');
+        const renderedElements: React.ReactNode[] = [];
+        let keyCounter = 0;
+        
+        let inTable = false;
+        let tableHeader: string[] = [];
+        let tableRows: string[][] = [];
+        
+        const flushTable = () => {
+            if (tableHeader.length > 0 || tableRows.length > 0) {
+                renderedElements.push(
+                    <div key={`table-${keyCounter++}`} className="overflow-x-auto my-4 border border-slate-200 rounded-2xl shadow-sm bg-white">
+                        <table className="min-w-full divide-y divide-slate-200">
+                            <thead className="bg-slate-50">
+                                <tr>
+                                    {tableHeader.map((th, i) => (
+                                        <th key={i} className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">{th.trim()}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-slate-100">
+                                {tableRows.map((row, rIndex) => (
+                                    <tr key={rIndex} className={rIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                                        {row.map((cell, cIndex) => (
+                                            <td key={cIndex} className="px-4 py-3 text-xs font-semibold text-slate-700">{cell.trim()}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+                tableHeader = [];
+                tableRows = [];
+                inTable = false;
+            }
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            if (line.startsWith('|')) {
+                inTable = true;
+                const parts = line.split('|').map(x => x.trim()).filter((x, idx, arr) => idx > 0 && idx < arr.length - 1);
+                
+                if (parts.every(p => p.startsWith('-') || p.includes('---'))) {
+                    continue;
+                }
+                
+                if (tableHeader.length === 0) {
+                    tableHeader = parts;
+                } else {
+                    tableRows.push(parts);
+                }
+                continue;
+            } else {
+                if (inTable) {
+                    flushTable();
+                }
+            }
+
+            if (line.startsWith('###')) {
+                renderedElements.push(<h4 key={keyCounter++} className="text-xs font-black text-slate-800 uppercase tracking-wider mt-5 mb-2.5">{line.replace('###', '').trim()}</h4>);
+            } else if (line.startsWith('##')) {
+                renderedElements.push(<h3 key={keyCounter++} className="text-sm font-black text-indigo-950 uppercase mt-6 mb-3 border-b border-indigo-100 pb-1.5 flex items-center gap-1.5"><Sparkles size={14} className="text-indigo-500"/> {line.replace('##', '').trim()}</h3>);
+            } else if (line.startsWith('#')) {
+                renderedElements.push(<h2 key={keyCounter++} className="text-base font-black text-slate-900 border-b-2 border-slate-100 pb-2 mb-3">{line.replace('#', '').trim()}</h2>);
+            } else if (line.startsWith('-') || line.startsWith('*')) {
+                renderedElements.push(
+                    <div key={keyCounter++} className="flex items-start gap-2 my-1.5 pl-1">
+                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full mt-1.5 shrink-0"></span>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed">{line.substring(1).trim()}</p>
+                    </div>
+                );
+            } else if (line !== '') {
+                renderedElements.push(<p key={keyCounter++} className="text-xs text-slate-600 font-medium leading-relaxed my-2">{line}</p>);
+            }
+        }
+        
+        if (inTable) {
+            flushTable();
+        }
+        
+        return <div className="space-y-1">{renderedElements}</div>;
+    };
+
     // Helper para gerar o rascunho de carta padrão com dados reais do membro
     const updateLetterText = (mId, docType, destIgreja, motivo) => {
         const m = db.membros.find(x => x.id === mId);
@@ -189,7 +352,127 @@ RESSALTAMOS QUE, A PARTIR DA PRESENTE DATA, O(A) MESMO(A) FICA DESLIGADO(A) DE Q
 
     return (
         <div className="glass-modern p-8 rounded-[2.5rem] animate-entrance">
-            <div className="flex items-center gap-3 mb-8"><div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-600"><FileText size={28}/></div><h2 className="text-3xl font-black text-slate-800 tracking-tight text-gradient">Central de Relatórios Oficiais</h2></div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-600">
+                        <FileText size={28}/>
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tight text-gradient">Central de Relatórios Oficiais</h2>
+                        <p className="text-xs text-slate-500 font-medium">Gere relatórios impressos, cartas oficiais ou consulte análises inteligentes com IA.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* AI ANALYTICS CONSOLE */}
+            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-indigo-50/40 via-white to-white shadow-md mb-8 ring-1 ring-indigo-50/50">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/25">
+                        <Cpu size={20} className="animate-pulse"/>
+                    </div>
+                    <div>
+                        <h3 className="font-black text-base text-indigo-950 uppercase tracking-tight">Assistente Analítico GIPP (Gemini AI)</h3>
+                        <p className="text-xs text-indigo-700/70 font-semibold">Peça em linguagem natural para analisar tendências financeiras ou listar membros com filtros avançados</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {/* Prompt input row */}
+                    <div className="flex flex-col md:flex-row gap-3">
+                        <input
+                            type="text"
+                            value={aiQuery}
+                            onChange={e => setAiQuery(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') executeAiReportAnalysis(); }}
+                            placeholder="Ex: Resumir tendências financeiras ou Listar todos os obreiros ativos do sexo masculino..."
+                            className="flex-1 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-2xl px-4 py-3.5 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all shadow-inner"
+                        />
+                        <Button 
+                            onClick={executeAiReportAnalysis} 
+                            disabled={aiLoading} 
+                            variant="primary" 
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider py-3.5 px-6 rounded-2xl transition-all shadow-md active:scale-95 shrink-0 flex items-center justify-center gap-2"
+                        >
+                            {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 
+                            {aiLoading ? "Analisando..." : "Consultar IA"}
+                        </Button>
+                    </div>
+
+                    {/* Quick prompts suggestions */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs select-none">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider mr-1 text-[10px]">Sugestões:</span>
+                        <button 
+                            onClick={() => suggestPrompt("Resumir tendências financeiras da igreja de forma detalhada, mostrando totais de dízimos vs despesas e saldo líquido")}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all cursor-pointer font-semibold"
+                        >
+                            📈 Tendências Financeiras
+                        </button>
+                        <button 
+                            onClick={() => suggestPrompt("Listar os obreiros ordenados (Pastores, Presbíteros, Diáconos, Evangelistas) em comunhão, agrupados por congregação")}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all cursor-pointer font-semibold"
+                        >
+                            📋 Listar Corpo Ministerial
+                        </button>
+                        <button 
+                            onClick={() => suggestPrompt("Encontrar todos os membros do sexo feminino com mais de 30 anos e cargo ativo, ordenando por nome")}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all cursor-pointer font-semibold"
+                        >
+                            👩 Membros Femininos {">"} 30
+                        </button>
+                        <button 
+                            onClick={() => {
+                                setAiQuery('');
+                                setAiResult('');
+                                setAiError('');
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100 rounded-xl transition-all cursor-pointer font-bold ml-auto"
+                            title="Limpar Console"
+                        >
+                            Limpar
+                        </button>
+                    </div>
+
+                    {/* Loading State Animation */}
+                    {aiLoading && (
+                        <div className="bg-indigo-50/50 rounded-2xl p-8 border border-indigo-100 flex flex-col items-center justify-center text-center animate-pulse">
+                            <Loader2 size={32} className="text-indigo-600 animate-spin mb-3"/>
+                            <h4 className="font-black text-sm text-indigo-950 uppercase">Processando Base de Dados GIPP</h4>
+                            <p className="text-xs text-indigo-700/70 font-semibold mt-1 max-w-md leading-relaxed">
+                                O Google Gemini está lendo os registros cadastrais de membros e o histórico do fluxo de caixa financeiro para formular uma resposta exata...
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Error State */}
+                    {aiError && (
+                        <div className="bg-rose-50 rounded-2xl p-4 border border-rose-150 flex items-start gap-3 text-rose-800">
+                            <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                            <div className="text-xs">
+                                <h4 className="font-bold uppercase tracking-wider">Falha de Comunicação</h4>
+                                <p className="font-medium mt-1 leading-relaxed">{aiError}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Results Container */}
+                    {aiResult && (
+                        <div className="bg-slate-50/80 rounded-2xl p-6 md:p-8 border border-slate-200 shadow-inner animate-fadeIn text-left">
+                            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4 select-none">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles size={16} className="text-indigo-500 animate-bounce" />
+                                    <h4 className="font-black text-xs text-indigo-950 uppercase tracking-wider">Relatório Analítico de Inteligência Artificial</h4>
+                                </div>
+                                <span className="text-[9px] bg-indigo-100 text-indigo-700 font-bold px-2 py-1 rounded-md uppercase tracking-wider">Processado via Gemini API</span>
+                            </div>
+                            
+                            <div className="prose prose-sm max-w-none prose-slate">
+                                {renderMarkdown(aiResult)}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {reportTypes.map(item => (
                     <button key={item.id} onClick={() => openReportConfig(item.id)} className={`glass-card p-6 rounded-[2rem] text-left hover:bg-white transition-all group border border-slate-200 relative overflow-hidden ring-1 ring-slate-100 hover:ring-${item.color}-300 hover:shadow-${item.color}-500/20 hover:shadow-xl`}>

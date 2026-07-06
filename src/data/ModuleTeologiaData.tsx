@@ -777,6 +777,16 @@ export const MODULES_TEOLOGIA: ModuleData[] = [
                     'Filosofia do Obreiro Pleno.'
                 ],
                 correctIndex: 1
+            },
+            {
+                question: 'Segundo os Capítulos 4 e 5 da Declaração de Fé da CGADB, a morte de Jesus Cristo na cruz do Calvário é ensinada oficialmente como:',
+                options: [
+                    'Um mero acidente político da história judaica antiga sem efeitos eternos.',
+                    'Uma morte vicária (substitutiva) e expiatória para a eterna redenção dos crentes.',
+                    'Um ato simbólico destinado apenas a demonstrar pacifismo e fraternidade cívica.',
+                    'Uma ilusão corporal ou representação teatral sem sofrimento físico verdadeiro.'
+                ],
+                correctIndex: 1
             }
         ]
     },
@@ -899,6 +909,16 @@ export const MODULES_TEOLOGIA: ModuleData[] = [
                     'O silêncio absoluto no decorrer da liturgia.'
                 ],
                 correctIndex: 2
+            },
+            {
+                question: 'Qual a correta definição da personalidade do Espírito Santo segundo o Capítulo 6 da Declaração de Fé da CGADB?',
+                options: [
+                    'O Espírito Santo é uma força ativa impessoal ou energia cósmica de Deus.',
+                    'O Espírito Santo é a Terceira Pessoa da Santíssima Trindade, possuindo personalidade divina própria, intelecto, sentimento e vontade.',
+                    'O Espírito Santo é uma emanação passageira de poder que surgiu apenas no Novo Testamento.',
+                    'O Espírito Santo é um anjo de alta patente que atua como mensageiro nas igrejas.'
+                ],
+                correctIndex: 1
             }
         ]
     },
@@ -1019,6 +1039,16 @@ export const MODULES_TEOLOGIA: ModuleData[] = [
                     'Os Dízimos do templo e a Consagração de presbíteros voluntários.',
                     'O Batismo por imersão nas águas e a Santa Ceia do Senhor.',
                     'A lavagem exterior cerimonial dos pés dos diáconos.'
+                ],
+                correctIndex: 2
+            },
+            {
+                question: 'De acordo com o Capítulo 12 da Declaração de Fé da CGADB, a forma correta e oficial para a celebração do batismo em águas é:',
+                options: [
+                    'Exclusivamente por aspersão de pequenas gotas de água sobre a testa.',
+                    'Por infusão de copos de água vertidos sobre a cabeça do candidato.',
+                    'Exclusivamente por imersão (submersão completa) do corpo em águas límpidas.',
+                    'Através de um batismo místico espiritual puramente mental sem uso de água.'
                 ],
                 correctIndex: 2
             }
@@ -1144,6 +1174,16 @@ export const MODULES_TEOLOGIA: ModuleData[] = [
                     'A morte natural fúnebre de todos os pastores do concílio militar.'
                 ],
                 correctIndex: 2
+            },
+            {
+                question: 'O que o Capítulo 22 da Declaração de Fé da CGADB ensina sobre a Segunda Vinda de Cristo em relação ao Milênio literal?',
+                options: [
+                    'O Milênio é apenas uma metáfora poética e Cristo não reinará corporalmente na terra.',
+                    'Cristo voltará corporalmente antes do Milênio (Pré-milenarismo) para reinar literalmente mil anos sobre a terra.',
+                    'O Milênio já foi inaugurado pela Igreja medieval e Cristo voltará apenas no fim do mundo.',
+                    'O Milênio ocorrerá inteiramente no céu sem qualquer relação com o planeta Terra.'
+                ],
+                correctIndex: 1
             }
         ]
     }
