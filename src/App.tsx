@@ -10415,6 +10415,165 @@ const PortalHome = ({ user, db, setView }) => {
     const [devocional, setDevocional] = useState('');
     const [loadingDev, setLoadingDev] = useState(false);
 
+    // --- ESTADOS E AUXILIARES DO HISTÓRICO DE MEDALHAS ---
+    const [isMedalHistoryOpen, setIsMedalHistoryOpen] = useState(false);
+    const [selectedHistoryFilter, setSelectedHistoryFilter] = useState<'all' | 'with_medals'>('with_medals');
+    const [medalViewMode, setMedalViewMode] = useState<'timeline' | 'categories'>('timeline');
+
+    const getMonthAchievements = (monthStr: string) => {
+        const unlocked = [];
+
+        // 1. Semeador (Dízimos e Ofertas) - Mensal
+        const dizimos = (db.financeiro || []).filter(f => f.membro_id === currentUser.id && f.status === 'pago' && (f.data_competencia || f.data_pagamento || '').startsWith(monthStr));
+        if (dizimos.length > 0) unlocked.push('dizimista');
+
+        // 2. Servo Ativo (Tarefas Concluídas) - Mensal
+        const tarefasConcluidas = (db.tarefas || []).filter(t => t.status === 'Concluido' && (t.data || '').startsWith(monthStr) && (t.equipe || []).some(m => m.id === currentUser.id || m.nome === currentUser.nome));
+        if (tarefasConcluidas.length > 0) unlocked.push('servo');
+
+        // 3. Estudo da EBD - Mensal
+        const isEbd = (currentUser.estudos_ebd_concluidos || []).some(e => e.mes === monthStr);
+        if (isEbd) unlocked.push('ebd');
+
+        // 4. Coração Missionário - Mensal
+        const isMissao = (db.carnes || []).some(c => c.membro_id === currentUser.id && c.titulo.toLowerCase().includes('miss') && (c.parcelas || []).some(p => p.status === 'pago' && (p.data_pagamento || '').startsWith(monthStr))) || 
+                         (db.financeiro || []).some(f => f.membro_id === currentUser.id && f.categoria === 'Missões' && f.status === 'pago' && (f.data_competencia || f.data_pagamento || '').startsWith(monthStr));
+        if (isMissao) unlocked.push('missao');
+        
+        // 5. Comunhão Ativa - Mensal
+        const isMural = (db.mural || []).some(m => m.autor_id === currentUser.id && (m.data || '').startsWith(monthStr));
+        if (isMural) unlocked.push('comunhao');
+
+        // Cursos concluídos neste mês
+        const cursosNoMes = (currentUser.cursos_concluidos || []).filter(c => c.mes === monthStr);
+
+        return {
+            monthStr,
+            badges: unlocked,
+            cursos: cursosNoMes
+        };
+    };
+
+    const getPast12MonthsList = () => {
+        const list = [];
+        const d = new Date();
+        for (let i = 0; i < 12; i++) {
+            const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+            const mStr = m.toISOString().slice(0, 7); // "YYYY-MM"
+            list.push(mStr);
+        }
+        return list;
+    };
+
+    const formatMonthLabel = (monthStr: string) => {
+        const [year, month] = monthStr.split('-');
+        const meses = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+        const monthIndex = parseInt(month, 10) - 1;
+        return `${meses[monthIndex]} de ${year}`;
+    };
+
+    const totalHistoricalBadgesCount = useMemo(() => {
+        let total = 0;
+        const months = getPast12MonthsList();
+        months.forEach(m => {
+            total += getMonthAchievements(m).badges.length;
+        });
+        return total;
+    }, [db, currentUser]);
+
+    const totalHistoricalCoursesCount = (currentUser.cursos_concluidos || []).length;
+
+    const totalActiveMonthsCount = useMemo(() => {
+        let count = 0;
+        const months = getPast12MonthsList();
+        months.forEach(m => {
+            const ach = getMonthAchievements(m);
+            if (ach.badges.length > 0 || ach.cursos.length > 0) {
+                count++;
+            }
+        });
+        return count;
+    }, [db, currentUser]);
+
+    const getMedalsByCategory = () => {
+        const months = getPast12MonthsList();
+        
+        const results = {
+            'Financeiro': [
+                {
+                    id: 'dizimista',
+                    title: 'Semeador',
+                    desc: 'Fidelidade de Dízimos e Ofertas no mês',
+                    icon: Award,
+                    textColor: 'text-amber-700',
+                    grad: 'from-amber-300 via-yellow-500 to-orange-600',
+                    glow: 'bg-amber-400',
+                    monthsWon: [] as string[]
+                },
+                {
+                    id: 'missao',
+                    title: 'Missionário',
+                    desc: 'Contribuição e Apoio Missionário no mês',
+                    icon: Globe,
+                    textColor: 'text-rose-700',
+                    grad: 'from-rose-400 via-rose-500 to-rose-700',
+                    glow: 'bg-rose-400',
+                    monthsWon: [] as string[]
+                }
+            ],
+            'EBD': [
+                {
+                    id: 'ebd',
+                    title: 'Estudo EBD',
+                    desc: 'Conclusão de Lição da Escola Bíblica Dominical no mês',
+                    icon: BookOpenText,
+                    textColor: 'text-blue-700',
+                    grad: 'from-blue-400 via-blue-500 to-blue-700',
+                    glow: 'bg-blue-400',
+                    monthsWon: [] as string[]
+                }
+            ],
+            'Social': [
+                {
+                    id: 'servo',
+                    title: 'Servo Ativo',
+                    desc: 'Conclusão de escalas e tarefas ministeriais no mês',
+                    icon: ShieldCheck,
+                    textColor: 'text-emerald-700',
+                    grad: 'from-emerald-400 via-emerald-500 to-emerald-700',
+                    glow: 'bg-emerald-400',
+                    monthsWon: [] as string[]
+                },
+                {
+                    id: 'comunhao',
+                    title: 'Comunhão',
+                    desc: 'Interação e partilha no mural da igreja no mês',
+                    icon: HeartHandshake,
+                    textColor: 'text-fuchsia-700',
+                    grad: 'from-fuchsia-400 via-fuchsia-500 to-purple-700',
+                    glow: 'bg-fuchsia-400',
+                    monthsWon: [] as string[]
+                }
+            ]
+        };
+
+        months.forEach(m => {
+            const ach = getMonthAchievements(m);
+            ach.badges.forEach(bid => {
+                if (bid === 'dizimista') results['Financeiro'][0].monthsWon.push(m);
+                if (bid === 'missao') results['Financeiro'][1].monthsWon.push(m);
+                if (bid === 'ebd') results['EBD'][0].monthsWon.push(m);
+                if (bid === 'servo') results['Social'][0].monthsWon.push(m);
+                if (bid === 'comunhao') results['Social'][1].monthsWon.push(m);
+            });
+        });
+
+        return results;
+    };
+
     const horaAtual = hojeObj.getHours();
     let saudacaoTempo = "Boa noite";
     if (horaAtual >= 5 && horaAtual < 12) saudacaoTempo = "Bom dia";
@@ -10697,13 +10856,22 @@ const PortalHome = ({ user, db, setView }) => {
                         </h3>
                         <p className="text-xs font-medium text-slate-500 mt-1">O seu envolvimento ministerial e acadêmico é reconhecido mensalmente.</p>
                     </div>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
                         <span className="text-[10px] font-black bg-slate-900 text-emerald-400 px-4 py-2 rounded-full tracking-widest uppercase shadow-md w-fit">
                             {unlockedCount} / {BADGE_DEFS.length} Atividades
                         </span>
                         <span className="text-[10px] font-black bg-slate-900 text-amber-400 px-4 py-2 rounded-full tracking-widest uppercase shadow-md w-fit">
                             {unlockedCursosCount} / {CURSOS_DISPONIVEIS.length} Cursos
                         </span>
+                        <button
+                            onClick={() => {
+                                setIsMedalHistoryOpen(true);
+                                playMenuSound();
+                            }}
+                            className="text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-4 py-2 rounded-full tracking-widest uppercase shadow-md w-fit flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-indigo-500/20"
+                        >
+                            <History size={12} /> Histórico Completo
+                        </button>
                     </div>
                 </div>
                 
@@ -10886,6 +11054,586 @@ const PortalHome = ({ user, db, setView }) => {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL DETALHADO DO HISTÓRICO DE MEDALHAS */}
+            <AnimatePresence>
+            {isMedalHistoryOpen && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 md:p-6"
+                >
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.85, rotate: -1, y: 15 }}
+                        animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.85, rotate: 1, y: 15 }}
+                        transition={{ type: "spring", stiffness: 220, damping: 22 }}
+                        className="bg-white rounded-[2rem] max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-100 flex flex-col text-left"
+                    >
+                        
+                        {/* Header do Modal */}
+                        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-6 md:p-8 shrink-0 relative">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-amber-450 rounded-full blur-[80px] opacity-20 -mr-12 -mt-12 pointer-events-none"></div>
+                            <div className="flex justify-between items-center relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 text-amber-400">
+                                        <History size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg md:text-xl font-black tracking-tight">Histórico de Medalhas e Conquistas</h3>
+                                        <p className="text-[11px] text-slate-300 font-medium">Linha do tempo e conquistas consolidadas de todos os meses anteriores.</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setIsMedalHistoryOpen(false);
+                                        playMenuSound();
+                                    }}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white cursor-pointer"
+                                    title="Fechar"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Placar / Stats Consolidados */}
+                        <div className="bg-slate-50 border-b border-slate-150 p-5 md:px-8 grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+                            <div className="bg-white p-4 rounded-2xl border border-slate-150 flex items-center gap-3 shadow-xs">
+                                <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                                    <Award size={20} />
+                                </div>
+                                <div>
+                                    <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block leading-none mb-1">Total de Medalhas</span>
+                                    <span className="text-base font-black text-slate-800 font-mono">{totalHistoricalBadgesCount}</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl border border-slate-150 flex items-center gap-3 shadow-xs">
+                                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                                    <GraduationCap size={20} />
+                                </div>
+                                <div>
+                                    <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block leading-none mb-1">Cursos Concluídos</span>
+                                    <span className="text-base font-black text-slate-800 font-mono">{totalHistoricalCoursesCount}</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl border border-slate-150 flex items-center gap-3 shadow-xs">
+                                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                                    <Calendar size={20} />
+                                </div>
+                                <div>
+                                    <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block leading-none mb-1">Meses Ativos</span>
+                                    <span className="text-base font-black text-slate-800 font-mono">{totalActiveMonthsCount} / 12</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl border border-slate-150 flex items-center gap-3 shadow-xs">
+                                <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
+                                    <Star size={20} />
+                                </div>
+                                <div>
+                                    <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block leading-none mb-1">Perfil Eclesiástico</span>
+                                    <span className="text-xs font-black text-slate-800 truncate block max-w-[130px]">{currentUser.cargo || 'Membro'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Filtros e Controle */}
+                        <div className="px-6 md:px-8 py-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 bg-white">
+                            {/* Seletor de Modo de Visualização */}
+                            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto">
+                                <div className="flex gap-1 bg-slate-150 p-1 rounded-xl w-full sm:w-auto">
+                                    <button
+                                        onClick={() => {
+                                            setMedalViewMode('timeline');
+                                            playMenuSound();
+                                        }}
+                                        className={`flex-1 sm:flex-initial px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${medalViewMode === 'timeline' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                                    >
+                                        <Calendar size={12} /> Linha do Tempo
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setMedalViewMode('categories');
+                                            playMenuSound();
+                                        }}
+                                        className={`flex-1 sm:flex-initial px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${medalViewMode === 'categories' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                                    >
+                                        <Award size={12} /> Por Categoria
+                                    </button>
+                                </div>
+
+                                {/* Filtro por mês - Apenas exibido em Linha do Tempo */}
+                                {medalViewMode === 'timeline' && (
+                                    <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedHistoryFilter('with_medals');
+                                                playMenuSound();
+                                            }}
+                                            className={`flex-1 sm:flex-initial px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${selectedHistoryFilter === 'with_medals' ? 'bg-white text-indigo-950 shadow-xs' : 'text-slate-500 hover:text-slate-850'}`}
+                                        >
+                                            Conquistas
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedHistoryFilter('all');
+                                                playMenuSound();
+                                            }}
+                                            className={`flex-1 sm:flex-initial px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${selectedHistoryFilter === 'all' ? 'bg-white text-indigo-950 shadow-xs' : 'text-slate-500 hover:text-slate-850'}`}
+                                        >
+                                            Todos 12 Meses
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <button
+                                onClick={() => {
+                                    let relatorio = `RELATÓRIO CONSOLIDADO DE MEDALHAS - ${currentUser.nome.toUpperCase()}\n`;
+                                    relatorio += `Gerado em ${new Date().toLocaleDateString('pt-BR')}\n`;
+                                    relatorio += `===============================================\n\n`;
+                                    relatorio += `• Total de Medalhas de Atividades: ${totalHistoricalBadgesCount}\n`;
+                                    relatorio += `• Total de Cursos Concluídos: ${totalHistoricalCoursesCount}\n`;
+                                    relatorio += `• Meses de Engajamento Ativo: ${totalActiveMonthsCount} de 12 meses analisados\n\n`;
+                                    relatorio += `DETALHAMENTO MÊS A MÊS:\n`;
+                                    
+                                    getPast12MonthsList().forEach(m => {
+                                        const res = getMonthAchievements(m);
+                                        if (res.badges.length > 0 || res.cursos.length > 0) {
+                                            relatorio += `\n[${formatMonthLabel(m).toUpperCase()}]\n`;
+                                            if (res.badges.length > 0) {
+                                                relatorio += `  - Medalhas de Atividade: ${res.badges.map(bid => BADGE_DEFS.find(b => b.id === bid)?.title || bid).join(', ')}\n`;
+                                            }
+                                            if (res.cursos.length > 0) {
+                                                relatorio += `  - Cursos Concluídos (Troféus): ${res.cursos.map(c => c.title).join(', ')}\n`;
+                                            }
+                                        }
+                                    });
+                                    navigator.clipboard.writeText(relatorio);
+                                    if (typeof window !== 'undefined') alert('Relatório consolidado de conquistas copiado para a Área de Trabalho!');
+                                }}
+                                className="w-full sm:w-auto px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                            >
+                                <Copy size={12} /> Copiar Relatório Completo
+                            </button>
+                        </div>
+
+                        {/* Lista Principal de Conquistas */}
+                        <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50">
+                            
+                            {/* VISUALIZAÇÃO POR CATEGORIA */}
+                            {medalViewMode === 'categories' ? (
+                                <div className="space-y-6">
+                                    {/* Categoria Financeiro */}
+                                    <div className="bg-white border border-slate-200 rounded-[1.5rem] p-5 md:p-6 shadow-xs text-slate-800">
+                                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
+                                            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                                                <Award size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">🏦 Categoria Financeiro</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Reconhecimento pela fidelidade em dízimos, ofertas e suporte missionário voluntário.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {getMedalsByCategory()['Financeiro'].map((m, idx) => {
+                                                const totalTimesWon = m.monthsWon.length;
+                                                const isUnlocked = totalTimesWon > 0;
+                                                return (
+                                                    <div 
+                                                        key={m.id} 
+                                                        className={`flex gap-3.5 p-4 rounded-2xl border transition-all ${
+                                                            isUnlocked 
+                                                                ? 'bg-white border-slate-200 hover:border-slate-300 shadow-3xs' 
+                                                                : 'bg-slate-50/10 border-slate-100 opacity-40 grayscale'
+                                                        }`}
+                                                    >
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.3, rotate: -45 }}
+                                                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                            transition={{ type: 'spring', stiffness: 220, damping: 15, delay: idx * 0.08 }}
+                                                            whileHover={isUnlocked ? { scale: 1.15, rotate: 8 } : {}}
+                                                            className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-md ${
+                                                                isUnlocked ? `bg-gradient-to-br ${m.grad} text-white` : 'bg-slate-200 text-slate-500'
+                                                            }`}
+                                                        >
+                                                            <m.icon size={20} strokeWidth={2.5} />
+                                                        </motion.div>
+                                                        
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h5 className={`text-[11px] font-black uppercase tracking-wide ${isUnlocked ? m.textColor : 'text-slate-500'}`}>{m.title}</h5>
+                                                                {isUnlocked && (
+                                                                    <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                                                                        Conquistada {totalTimesWon}x
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 leading-tight">{m.desc}</p>
+                                                            
+                                                            <div className="mt-2.5">
+                                                                <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider mb-1">Meses de Conquista</p>
+                                                                {isUnlocked ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {m.monthsWon.map((mStr) => (
+                                                                            <span key={mStr} className="bg-slate-50 border border-slate-150 text-slate-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">
+                                                                                {formatMonthLabel(mStr).split(' de ')[0]}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[8px] font-bold text-slate-400 italic">Sem registros nos últimos 12 meses.</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Categoria EBD */}
+                                    <div className="bg-white border border-slate-200 rounded-[1.5rem] p-5 md:p-6 shadow-xs text-slate-800">
+                                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
+                                            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                                                <BookOpenText size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">📚 Categoria Escola Dominical (EBD)</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Reconhecimento pelo empenho de estudo bíblico e conclusão de lições da Escola Dominical.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {getMedalsByCategory()['EBD'].map((m, idx) => {
+                                                const totalTimesWon = m.monthsWon.length;
+                                                const isUnlocked = totalTimesWon > 0;
+                                                return (
+                                                    <div 
+                                                        key={m.id} 
+                                                        className={`flex gap-3.5 p-4 rounded-2xl border transition-all ${
+                                                            isUnlocked 
+                                                                ? 'bg-white border-slate-200 hover:border-slate-300 shadow-3xs' 
+                                                                : 'bg-slate-50/10 border-slate-100 opacity-40 grayscale'
+                                                        }`}
+                                                    >
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.3, rotate: -45 }}
+                                                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                            transition={{ type: 'spring', stiffness: 220, damping: 15, delay: idx * 0.08 }}
+                                                            whileHover={isUnlocked ? { scale: 1.15, rotate: 8 } : {}}
+                                                            className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-md ${
+                                                                isUnlocked ? `bg-gradient-to-br ${m.grad} text-white` : 'bg-slate-200 text-slate-500'
+                                                            }`}
+                                                        >
+                                                            <m.icon size={20} strokeWidth={2.5} />
+                                                        </motion.div>
+                                                        
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h5 className={`text-[11px] font-black uppercase tracking-wide ${isUnlocked ? m.textColor : 'text-slate-500'}`}>{m.title}</h5>
+                                                                {isUnlocked && (
+                                                                    <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                                                                        Conquistada {totalTimesWon}x
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 leading-tight">{m.desc}</p>
+                                                            
+                                                            <div className="mt-2.5">
+                                                                <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider mb-1">Meses de Conquista</p>
+                                                                {isUnlocked ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {m.monthsWon.map((mStr) => (
+                                                                            <span key={mStr} className="bg-slate-50 border border-slate-150 text-slate-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">
+                                                                                {formatMonthLabel(mStr).split(' de ')[0]}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[8px] font-bold text-slate-400 italic">Sem lições concluídas nos últimos 12 meses.</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Categoria Social & Comunhão */}
+                                    <div className="bg-white border border-slate-200 rounded-[1.5rem] p-5 md:p-6 shadow-xs text-slate-800">
+                                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
+                                            <div className="p-2.5 bg-fuchsia-50 text-fuchsia-700 rounded-xl">
+                                                <HeartHandshake size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">🤝 Categoria Social & Comunhão</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Reconhecimento pela dedicação no cumprimento de escalas, tarefas e na fraternidade ativa no mural.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {getMedalsByCategory()['Social'].map((m, idx) => {
+                                                const totalTimesWon = m.monthsWon.length;
+                                                const isUnlocked = totalTimesWon > 0;
+                                                return (
+                                                    <div 
+                                                        key={m.id} 
+                                                        className={`flex gap-3.5 p-4 rounded-2xl border transition-all ${
+                                                            isUnlocked 
+                                                                ? 'bg-white border-slate-200 hover:border-slate-300 shadow-3xs' 
+                                                                : 'bg-slate-50/10 border-slate-100 opacity-40 grayscale'
+                                                        }`}
+                                                    >
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.3, rotate: -45 }}
+                                                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                            transition={{ type: 'spring', stiffness: 220, damping: 15, delay: idx * 0.08 }}
+                                                            whileHover={isUnlocked ? { scale: 1.15, rotate: 8 } : {}}
+                                                            className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-md ${
+                                                                isUnlocked ? `bg-gradient-to-br ${m.grad} text-white` : 'bg-slate-200 text-slate-500'
+                                                            }`}
+                                                        >
+                                                            <m.icon size={20} strokeWidth={2.5} />
+                                                        </motion.div>
+                                                        
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h5 className={`text-[11px] font-black uppercase tracking-wide ${isUnlocked ? m.textColor : 'text-slate-500'}`}>{m.title}</h5>
+                                                                {isUnlocked && (
+                                                                    <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                                                                        Conquistada {totalTimesWon}x
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 leading-tight">{m.desc}</p>
+                                                            
+                                                            <div className="mt-2.5">
+                                                                <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider mb-1">Meses de Conquista</p>
+                                                                {isUnlocked ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {m.monthsWon.map((mStr) => (
+                                                                            <span key={mStr} className="bg-slate-50 border border-slate-150 text-slate-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">
+                                                                                {formatMonthLabel(mStr).split(' de ')[0]}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[8px] font-bold text-slate-400 italic">Sem registros eclesiais ativos nos últimos 12 meses.</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Categoria Cursos & Teologia */}
+                                    <div className="bg-white border border-slate-200 rounded-[1.5rem] p-5 md:p-6 shadow-xs text-slate-800">
+                                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
+                                            <div className="p-2.5 bg-violet-50 text-violet-700 rounded-xl">
+                                                <GraduationCap size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">🎓 Categoria Acadêmica & Teologia</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Troféus e títulos de excelência teológica outorgados por conclusão de questionários na Universidade.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        {totalHistoricalCoursesCount > 0 ? (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                                {(currentUser.cursos_concluidos || []).map((c: any, idx: number) => {
+                                                    const cursoOriginal = CURSOS_DISPONIVEIS.find(cur => cur.id === c.id);
+                                                    const CIcon = cursoOriginal?.icon || GraduationCap;
+                                                    return (
+                                                        <div key={c.id || idx} className="flex items-center gap-3.5 bg-slate-50 border border-slate-150 p-3 rounded-2xl shadow-3xs">
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.3, rotate: -45 }}
+                                                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                                transition={{ type: 'spring', stiffness: 220, damping: 15, delay: idx * 0.08 }}
+                                                                whileHover={{ scale: 1.15, rotate: 8 }}
+                                                                className="w-11 h-11 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center shrink-0 shadow-md border-2 border-white"
+                                                            >
+                                                                <Star size={18} className="fill-slate-950 text-slate-950" />
+                                                            </motion.div>
+                                                            <div className="min-w-0">
+                                                                <h5 className="text-[10px] font-black text-slate-850 uppercase tracking-wide truncate">{c.title || cursoOriginal?.title}</h5>
+                                                                <p className="text-[8px] font-bold text-indigo-600 uppercase tracking-wider mt-0.5">Outorgado em {formatMonthLabel(c.mes)}</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                                                <GraduationCap size={32} className="mx-auto text-slate-300 mb-2" />
+                                                <p className="text-xs font-bold text-slate-600">Nenhum Título Concedido</p>
+                                                <p className="text-[10px] text-slate-500 mt-1 max-w-sm mx-auto">Explore e conclua as lições oficiais na Universidade Teológica para obter seus troféus.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {getPast12MonthsList()
+                                        .map(m => {
+                                            const ach = getMonthAchievements(m);
+                                            return {
+                                                monthStr: m,
+                                                ...ach
+                                            };
+                                        })
+                                        .filter(item => {
+                                            if (selectedHistoryFilter === 'with_medals') {
+                                                return item.badges.length > 0 || item.cursos.length > 0;
+                                            }
+                                            return true;
+                                        })
+                                        .map((item) => {
+                                            const label = formatMonthLabel(item.monthStr);
+                                            const isCurrent = item.monthStr === currentMonthStr;
+                                            const totalBadgesThisMonth = item.badges.length;
+                                            const totalCursosThisMonth = item.cursos.length;
+
+                                            return (
+                                                <div key={item.monthStr} className={`border rounded-[1.5rem] p-5 md:p-6 transition-all ${isCurrent ? 'bg-indigo-50/10 border-indigo-200 ring-2 ring-indigo-500/20' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+                                                        <div>
+                                                            <span className="flex items-center gap-2">
+                                                                <h4 className="text-base font-black text-slate-850">{label}</h4>
+                                                                {isCurrent && (
+                                                                    <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md animate-pulse">
+                                                                        Mês Atual
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <p className="text-[10px] font-bold text-slate-400 mt-0.5 font-mono uppercase">Ref: {item.monthStr}</p>
+                                                        </div>
+                                                        
+                                                        <div className="flex gap-1.5">
+                                                            <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-full ${totalBadgesThisMonth > 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
+                                                                {totalBadgesThisMonth} / 5 Atividades
+                                                            </span>
+                                                            {totalCursosThisMonth > 0 && (
+                                                                <span className="text-[8px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-0.5">
+                                                                    <Star size={8} className="fill-amber-500 text-amber-500" />
+                                                                    {totalCursosThisMonth} {totalCursosThisMonth === 1 ? 'Curso' : 'Cursos'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <p className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider mb-2">Medalhas Atribuídas</p>
+                                                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                                                {BADGE_DEFS.map((b, bIdx) => {
+                                                                    const isUnlocked = item.badges.includes(b.id);
+                                                                    return (
+                                                                        <motion.div 
+                                                                            key={b.id} 
+                                                                            initial={{ opacity: 0, scale: 0.3, rotate: -45 }}
+                                                                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                                            transition={{ type: 'spring', stiffness: 240, damping: 16, delay: bIdx * 0.04 }}
+                                                                            whileHover={isUnlocked ? { scale: 1.15, rotate: 6 } : {}}
+                                                                            className={`flex items-center gap-2.5 p-2 rounded-xl border text-left transition-all ${
+                                                                                isUnlocked 
+                                                                                    ? 'bg-white border-slate-200 shadow-2xs hover:shadow-sm' 
+                                                                                    : 'bg-slate-50/50 border-slate-100 opacity-40 grayscale'
+                                                                            }`}
+                                                                        >
+                                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                                                                isUnlocked 
+                                                                                    ? `bg-gradient-to-br ${b.grad} text-white` 
+                                                                                    : 'bg-slate-200 text-slate-500'
+                                                                            }`}>
+                                                                                <b.icon size={14} strokeWidth={2.5} />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <h5 className={`text-[9px] font-black uppercase tracking-wide truncate ${isUnlocked ? b.textColor : 'text-slate-500'}`}>{b.title}</h5>
+                                                                                <p className="text-[8px] font-bold text-slate-400 truncate leading-none mt-0.5">{isUnlocked ? 'Conquistado' : 'Bloqueado'}</p>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+
+                                                        {totalCursosThisMonth > 0 && (
+                                                            <div className="pt-3 border-t border-slate-100">
+                                                                <p className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider mb-2">Cursos Concluídos (Títulos)</p>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {item.cursos.map((c: any, cIdx: number) => {
+                                                                        const cursoOriginal = CURSOS_DISPONIVEIS.find(cur => cur.id === c.id);
+                                                                        const CIcon = cursoOriginal?.icon || GraduationCap;
+                                                                        return (
+                                                                            <motion.div 
+                                                                                key={c.id || cIdx} 
+                                                                                initial={{ opacity: 0, scale: 0.3, rotate: -30 }}
+                                                                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                                                transition={{ type: 'spring', stiffness: 220, damping: 14, delay: cIdx * 0.05 }}
+                                                                                whileHover={{ scale: 1.12, rotate: 6 }}
+                                                                                className="inline-flex items-center gap-2 bg-amber-50/50 border border-amber-200/50 p-2 px-3 rounded-xl cursor-pointer"
+                                                                            >
+                                                                                <div className="w-6 h-6 bg-amber-400 text-slate-900 rounded-lg flex items-center justify-center shrink-0">
+                                                                                    <CIcon size={12} />
+                                                                                </div>
+                                                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-wide">{c.title || cursoOriginal?.title}</span>
+                                                                            </motion.div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                </div>
+                                            );
+                                        })}
+
+                                    {getPast12MonthsList()
+                                        .map(m => getMonthAchievements(m))
+                                        .filter(item => {
+                                            if (selectedHistoryFilter === 'with_medals') {
+                                                return item.badges.length > 0 || item.cursos.length > 0;
+                                            }
+                                            return true;
+                                        }).length === 0 && (
+                                            <div className="text-center py-12 text-slate-400">
+                                                <Award size={48} className="mx-auto text-slate-200 mb-3 animate-pulse" />
+                                                <p className="font-extrabold text-sm text-slate-700">Nenhum Registro de Medalhas nos Últimos 12 Meses</p>
+                                                <p className="text-xs text-slate-500 mt-1">Realize contribuições, participe da EBD, interaja no mural e cumpra escalas para desbloquear medalhas!</p>
+                                            </div>
+                                        )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer do Modal */}
+                        <div className="bg-slate-50 border-t border-slate-150 p-4 shrink-0 flex justify-end">
+                            <button
+                                onClick={() => {
+                                    setIsMedalHistoryOpen(false);
+                                    playMenuSound();
+                                }}
+                                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
+                            >
+                                Fechar Histórico
+                            </button>
+                        </div>
+
+                    </motion.div>
+                </motion.div>
+            )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -15638,6 +16386,10 @@ export default function App() {
       }
       const found = db.usuarios.find(usr => (usr.usuario || '').toLowerCase() === u.toLowerCase() && usr.senha === p);
       if (found) { 
+          if (found.bloqueado) {
+              addToast("Erro: Esta conta de operador está bloqueada pela administração do GIPP!", 'error');
+              return;
+          }
           setUser(found); 
           setView('dashboard'); 
           setIsSystemBooting(true);

@@ -104,7 +104,8 @@ const ModuleUsuarios = memo(() => {
     congregacao_id: 'sede',
     nivel: 'restrito',
     funcao_administrativa: '',
-    permissoes: []
+    permissoes: [],
+    bloqueado: false
   });
 
   // Filtra operadores válidos (excluindo os excluídos logicamente)
@@ -160,7 +161,8 @@ const ModuleUsuarios = memo(() => {
       congregacao_id: 'sede',
       nivel: 'restrito',
       funcao_administrativa: '',
-      permissoes: ['access_manual'] // padrão ativa o manual do usuário
+      permissoes: ['access_manual'], // padrão ativa o manual do usuário
+      bloqueado: false
     });
     setIsModalOpen(true);
   };
@@ -175,7 +177,8 @@ const ModuleUsuarios = memo(() => {
       congregacao_id: operator.congregacao_id || 'sede',
       nivel: operator.nivel || 'restrito',
       funcao_administrativa: operator.funcao_administrativa || '',
-      permissoes: Array.isArray(operator.permissoes) ? [...operator.permissoes] : []
+      permissoes: Array.isArray(operator.permissoes) ? [...operator.permissoes] : [],
+      bloqueado: !!operator.bloqueado
     });
     setIsModalOpen(true);
   };
@@ -268,6 +271,7 @@ const ModuleUsuarios = memo(() => {
         nivel: formData.nivel,
         funcao_administrativa: formData.funcao_administrativa,
         permissoes: formData.nivel === 'master' ? [] : formData.permissoes,
+        bloqueado: !!formData.bloqueado,
         updatedAt: new Date().toISOString()
       };
 
@@ -428,7 +432,14 @@ const ModuleUsuarios = memo(() => {
                             {operator.nome?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <span className="font-extrabold text-sm text-slate-800 block leading-tight">{operator.nome}</span>
+                            <span className="font-extrabold text-sm text-slate-800 flex items-center gap-2 leading-tight">
+                              {operator.nome}
+                              {operator.bloqueado && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 font-black text-[8px] uppercase tracking-wider animate-pulse">
+                                  BLOQUEADO
+                                </span>
+                              )}
+                            </span>
                             <span className="text-xs font-mono text-slate-400 block mt-0.5">@{operator.usuario}</span>
                           </div>
                         </div>
@@ -581,6 +592,31 @@ const ModuleUsuarios = memo(() => {
                     </div>
 
                   </div>
+
+                  {/* Campo de Status da Conta */}
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-extrabold text-slate-750">Status de Operabilidade da Conta</h5>
+                      <p className="text-[10px] text-slate-400 font-medium">Se bloqueado, o operador perderá o acesso instantaneamente às credenciais e painéis do GIPP.</p>
+                    </div>
+                    <label className="inline-flex items-center cursor-pointer select-none">
+                      <input 
+                        type="checkbox"
+                        checked={!!formData.bloqueado}
+                        onChange={(e) => setFormData({ ...formData, bloqueado: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                      <span className="ms-3 text-xs font-black uppercase tracking-wider text-slate-700">
+                        {formData.bloqueado ? (
+                          <span className="text-rose-600">BLOQUEADO</span>
+                        ) : (
+                          <span className="text-emerald-600">ATIVO (PERMITIDO)</span>
+                        )}
+                      </span>
+                    </label>
+                  </div>
+
                 </div>
 
                 {/* Níveis de Segurança */}

@@ -1911,6 +1911,83 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
           </div>
         </div>
       )
+    },
+    {
+      id: 'faq_geral',
+      title: '8. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
+      shortTitle: 'Perguntas Frequentes (FAQ)',
+      icon: HelpCircle,
+      category: 'Suporte',
+      content: (
+        <div className="space-y-6">
+          <div className="border-b border-indigo-50 pb-3">
+            <h3 className="text-base font-black text-slate-800">Perguntas Frequentes (FAQ Geral)</h3>
+            <p className="text-xs text-slate-500 font-medium">Respostas diretas e resoluções para as dúvidas operacionais e eclesiásticas mais comuns dos obreiros e secretários.</p>
+          </div>
+
+          <div className="space-y-3.5">
+            <details className="group border border-slate-200 rounded-2xl p-4 bg-white hover:bg-slate-50/50 transition-all cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider list-none outline-none">
+                <span>1. Como conciliar o extrato bancário usando o arquivo de fluxo OFX?</span>
+                <span className="text-indigo-600 transition-transform duration-300 group-open:rotate-180">▼</span>
+              </summary>
+              <p className="mt-3 text-xs text-slate-600 leading-relaxed font-medium pl-2 border-l-2 border-indigo-500">
+                Acesse o **Módulo de Tesouraria e Finanças**, clique na aba **Importação OFX**, selecione o arquivo gerado pelo internet banking da igreja e faça o upload. O GIPP irá analisar eletronicamente cada débito e crédito, permitindo associar entradas diretamente com os dízimos e as saídas com as despesas, gerando balancetes contábeis precisos e auditáveis.
+              </p>
+            </details>
+
+            <details className="group border border-slate-200 rounded-2xl p-4 bg-white hover:bg-slate-50/50 transition-all cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider list-none outline-none">
+                <span>2. Como funciona o controle descentralizado das sub-congregações filiais?</span>
+                <span className="text-indigo-600 transition-transform duration-300 group-open:rotate-180">▼</span>
+              </summary>
+              <p className="mt-3 text-xs text-slate-600 leading-relaxed font-medium pl-2 border-l-2 border-indigo-500">
+                No GIPP, cada congregação filha possui um perfil administrativo exclusivo. Os obreiros locais podem lançar dízimos, despesas de custeio locais e cadastrar membros daquela filial. Todavia, em consonância com as regras da CGADB, o CNPJ permanece centralizado na Sede Geral, que consolida todos os lançamentos para relatórios fiscais integrais.
+              </p>
+            </details>
+
+            <details className="group border border-slate-200 rounded-2xl p-4 bg-white hover:bg-slate-50/50 transition-all cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider list-none outline-none">
+                <span>3. Como emitir a Credencial de Membro e Obreiro com validação via QR Code?</span>
+                <span className="text-indigo-600 transition-transform duration-300 group-open:rotate-180">▼</span>
+              </summary>
+              <p className="mt-3 text-xs text-slate-600 leading-relaxed font-medium pl-2 border-l-2 border-indigo-500">
+                No **Módulo da Secretaria (Fichas)**, localize a pessoa desejada, clique em **Opções** e escolha **Gerar Credencial / ID Digital**. O sistema gera instantaneamente um arquivo PDF com o brasão oficial da igreja, as informações de cargo eclesiástico e um QR Code inviolável. Qualquer smartphone que ler este QR Code acessará um validador seguro do GIPP, certificando o status ativo do obreiro ou membro.
+              </p>
+            </details>
+
+            <details className="group border border-slate-200 rounded-2xl p-4 bg-white hover:bg-slate-50/50 transition-all cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider list-none outline-none">
+                <span>4. Como funciona o bloqueio ou reativação rápida de um operador do sistema?</span>
+                <span className="text-indigo-600 transition-transform duration-300 group-open:rotate-180">▼</span>
+              </summary>
+              <p className="mt-3 text-xs text-slate-600 leading-relaxed font-medium pl-2 border-l-2 border-indigo-500">
+                O administrador MASTER da igreja Sede tem controle total sobre os perfis operacionais no **Módulo de Usuários**. Se um obreiro mudar de congregação ou for temporariamente suspenso, o administrador MASTER pode abrir o cadastro do usuário, ativar a chave de **Bloqueado** e salvar. A conta de operador perderá o acesso instantaneamente. Para reativar o perfil, basta desativar a chave de bloqueio e o operador terá seus acessos originais devolvidos.
+              </p>
+            </details>
+
+            <details className="group border border-slate-200 rounded-2xl p-4 bg-white hover:bg-slate-50/50 transition-all cursor-pointer">
+              <summary className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider list-none outline-none">
+                <span>5. Onde encontro o suporte dogmático da Declaração de Fé da CGADB?</span>
+                <span className="text-indigo-600 transition-transform duration-300 group-open:rotate-180">▼</span>
+              </summary>
+              <p className="mt-3 text-xs text-slate-600 leading-relaxed font-medium pl-2 border-l-2 border-indigo-500">
+                No **Módulo da Universidade Teológica**, além das lições didáticas da grade, o estudante conta com o **Guia Dogmático da CGADB** integrado diretamente na aba **Anotações**. Lá estão resumidos os 24 capítulos fundamentais da doutrina assembleiana com suas respectivas referências bíblicas exegéticas. O estudante pode consultar e copiar o resumo de cada dogma de fé com um único clique para apoiar seus sermões ou trabalhos acadêmicos.
+              </p>
+            </details>
+          </div>
+
+          <div className="bg-slate-900 text-slate-100 rounded-3xl p-6 shadow-lg border border-slate-800 flex items-center gap-4">
+            <HelpCircle size={32} className="text-indigo-400 shrink-0" />
+            <div>
+              <h4 className="text-xs font-black text-indigo-400 uppercase tracking-wider">Ainda precisa de Apoio Administrativo?</h4>
+              <p className="text-[10px] text-slate-300 leading-relaxed font-medium mt-1">
+                Se você encontrou um cenário excepcional ou necessita de configurações de servidor contábil, abra o canal oficial de **Suporte ao Desenvolvedor** no topo direito ou entre em contato com a equipe de engenharia do GIPP pelo ramal corporativo cadastrado.
+              </p>
+            </div>
+          </div>
+        </div>
+      )
     }
   ];
 

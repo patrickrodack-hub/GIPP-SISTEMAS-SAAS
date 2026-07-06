@@ -263,6 +263,27 @@ export default function ModuleTeologia() {
 
     // Dynamic extraction of saved local notes for the user notebook list
     const [savedNotesList, setSavedNotesList] = useState<Array<{ key: string, label: string, text: string }>>([]);
+    const [notesSearch, setNotesSearch] = useState<string>('');
+    const [selectedCgadbCap, setSelectedCgadbCap] = useState<number | null>(null);
+
+    const CAPITULOS_CGADB = [
+        { cap: 1, tema: "Sagradas Escrituras", ref: "2 Tm 3.16; 2 Pe 1.21", resumo: "Inspiração divina, verbal e plenária da Bíblia Sagrada, única regra infalível de fé e conduta." },
+        { cap: 2, tema: "O Único Deus Verdadeiro", ref: "Dt 6.4; Is 43.10", resumo: "Um só Deus vivo, eterno, infinito em poder, criador e preservador de tudo." },
+        { cap: 3, tema: "A Santíssima Trindade", ref: "Mt 28.19; 2 Co 13.13", resumo: "Um só Deus subsistente em três Pessoas distintas: o Pai, o Filho e o Espírito Santo." },
+        { cap: 4, tema: "Divindade de Jesus Cristo", ref: "Jo 1.1,14; Cl 2.9", resumo: "Filho eterno de Deus, verdadeiro Deus e verdadeiro homem, nascimento virginal." },
+        { cap: 6, tema: "O Espírito Santo", ref: "Jo 14.16; At 1.8", resumo: "A terceira Pessoa da Trindade, Consolador, que convence o mundo do pecado." },
+        { cap: 7, tema: "Criação e a Queda", ref: "Gn 1.26; Rm 5.12", resumo: "Criação imediata do homem (rejeição do evolucionismo). Queda pelo pecado adâmico." },
+        { cap: 10, tema: "Salvação do Homem", ref: "Ef 2.8; Tt 2.11", resumo: "Salvação unicamente pela graça divina, mediante a fé em Cristo, justificação e santificação." },
+        { cap: 11, tema: "A Igreja", ref: "Mt 16.18; Ef 1.22", resumo: "Corpo de Cristo, assembleia dos santos chamados para adoração e proclamação." },
+        { cap: 12, tema: "O Batismo em Águas", ref: "Mt 28.19; Rm 6.4", resumo: "Ordenança de Cristo praticada por imersão do corpo inteiro em águas." },
+        { cap: 13, tema: "A Ceia do Senhor", ref: "1 Co 11.23-26", resumo: "Memorial da morte de Cristo, partilha do pão e do cálice até que Ele venha." },
+        { cap: 19, tema: "Batismo no Espírito Santo", ref: "At 2.4; At 10.44-46", resumo: "Dádiva divina com a evidência física inicial do falar em outras línguas." },
+        { cap: 20, tema: "Os Dons Espirituais", ref: "1 Co 12.1-11", resumo: "Dádivas do Espírito Santo distribuídas para a edificação espiritual da Igreja." },
+        { cap: 21, tema: "A Cura Divina", ref: "Is 53.4,5; Tg 5.14", resumo: "Eficácia plena da oração da fé pelos enfermos, atualidade do milagre." },
+        { cap: 22, tema: "Segunda Vinda de Cristo", ref: "1 Ts 4.16,17", resumo: "Acontecimento em duas fases distintas: Arrebatamento pré-tribulacionista e Revelação em glória." },
+        { cap: 23, tema: "Milênio e Juízo Final", ref: "Ap 20.1-15", resumo: "Reinado literal de Cristo na Terra por 1000 anos, seguido pelo julgamento perante o Grande Trono Branco." },
+        { cap: 24, tema: "A Família e o Casamento", ref: "Gn 2.24; Mt 19.4-6", resumo: "Instituição divina sagrada, união monogâmica e heterossexual tradicional." }
+    ];
 
     useEffect(() => {
         const notes: Array<{ key: string, label: string, text: string }> = [];
@@ -1213,6 +1234,75 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
         link.click();
         URL.revokeObjectURL(url);
         addToast("Caderno de anotações exportado como arquivo TXT!", "success");
+    };
+
+    const handleExportNotesPDF = () => {
+        playNotificationSound();
+        if (savedNotesList.length === 0) {
+            addToast("Nenhuma anotação gravada ainda para exportar.", "warning");
+            return;
+        }
+
+        try {
+            const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+            
+            // Cabeçalho Oficial
+            doc.setFillColor(30, 41, 59); // Slate-800
+            doc.rect(0, 0, 595, 80, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(15);
+            doc.text((db.igreja?.nome || "UNIVERSIDADE TEOLÓGICA GIPP").toUpperCase(), 40, 35);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(200, 200, 200);
+            doc.text("SISTEMA GIPP V8.7.0 • CADERNO OFICIAL DE ANOTAÇÕES E ESTUDOS TEOLÓGICOS (CGADB)", 40, 55);
+            
+            let y = 120;
+            
+            savedNotesList.forEach((n, idx) => {
+                if (y > 720) {
+                    doc.addPage();
+                    y = 50;
+                }
+                
+                // Card de Identificação da Aula
+                doc.setFillColor(241, 245, 249); // Slate-100
+                doc.rect(30, y - 15, 535, 25, 'F');
+                
+                doc.setTextColor(15, 23, 42); // Slate-900
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text(`ESTUDO #${idx + 1}: ${n.label}`, 40, y);
+                
+                y += 25;
+                
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.setTextColor(51, 65, 85); // Slate-700
+                
+                // Split do texto da anotação
+                const splitText = doc.splitTextToSize(n.text, 515);
+                splitText.forEach((line: string) => {
+                    if (y > 750) {
+                        doc.addPage();
+                        y = 50;
+                    }
+                    doc.text(line, 40, y);
+                    y += 14;
+                });
+                
+                y += 25; // Espaço até a próxima anotação
+            });
+            
+            doc.save("universidade_teologia_caderno_estudos.pdf");
+            addToast("Caderno de anotações exportado como arquivo PDF!", "success");
+        } catch (e) {
+            console.error(e);
+            addToast("Falha ao exportar caderno de notas em PDF.", "error");
+        }
     };
 
     // Render Immersive Reader for AI-generated Booklet
@@ -2473,91 +2563,177 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 
             {activeTab === 'notes' && (
                 <div className="space-y-5 pt-4 animate-slideUp font-sans">
-                    <div className="flex items-center justify-between border-b border-indigo-50 pb-3">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-indigo-50 pb-3 gap-3">
                         <div className="flex items-center gap-2">
                             <FileText className="text-indigo-600" size={18} />
                             <h3 className="text-base font-black text-slate-850">Seu Caderno Digital de Estudos ({savedNotesList.length})</h3>
                         </div>
                         {savedNotesList.length > 0 && (
-                            <Button
-                                onClick={handleExportNotes}
-                                className="bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-xs py-2 rounded-xl flex items-center gap-1.5 shadow"
-                            >
-                                <Download size={13} /> Exportar Caderno (.TXT)
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={handleExportNotes}
+                                    className="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow"
+                                >
+                                    <Download size={13} /> Exportar TXT
+                                </Button>
+                                <Button
+                                    onClick={handleExportNotesPDF}
+                                    className="bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow"
+                                >
+                                    <Printer size={13} /> Baixar PDF Oficial
+                                </Button>
+                            </div>
                         )}
                     </div>
 
-                    {savedNotesList.length === 0 ? (
-                        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4 text-slate-400 shadow-sm border-dashed min-h-[300px]">
-                            <FileText size={44} className="text-slate-300 animate-pulse" />
-                            <div className="space-y-1">
-                                <h4 className="font-extrabold text-slate-700 text-sm">Nenhuma Anotação Realizada</h4>
-                                <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-                                    Para criar anotações, use o leitor digital ao estudar lições da nossa grade curricular. Elas aparecerão centralizadas e prontas para exportar aqui!
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {savedNotesList.map((n) => (
-                                <div key={n.key} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-3 relative flex flex-col justify-between">
-                                    <div>
-                                        <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                                            Matéria de Referência
-                                        </span>
-                                        <h4 className="text-sm font-black text-slate-700 mt-1.5 leading-tight line-clamp-1">{n.label}</h4>
-                                        <div className="mt-2 text-slate-600 text-xs">
-                                            <textarea
-                                                value={n.text}
-                                                onChange={(e) => {
-                                                    const newText = e.target.value;
-                                                    const key = n.key;
-                                                    const updatedNotes = { ...studentNotes, [key]: newText };
-                                                    setStudentNotes(updatedNotes);
-                                                    localStorage.setItem(key, newText);
-                                                }}
-                                                placeholder="Sua anotação teológica..."
-                                                rows={5}
-                                                className="w-full p-3 rounded-xl border border-slate-250 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-xs font-serif text-slate-600 leading-relaxed bg-slate-50/10"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-                                        <span className="text-[9px] text-slate-400 font-bold font-mono">Status: Sincronizado</span>
-                                        <div className="flex items-center gap-1.5">
-                                            <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(n.text);
-                                                    addToast("Copiado com sucesso!", "success");
-                                                }}
-                                                className="p-1 px-2.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-600 flex items-center gap-1"
-                                                title="Copiar texto"
-                                            >
-                                                Copiar
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (window.confirm("Deseja apagar esta anotação permanente?")) {
-                                                        localStorage.removeItem(n.key);
-                                                        const updatedNotes = { ...studentNotes };
-                                                        delete updatedNotes[n.key];
-                                                        setStudentNotes(updatedNotes);
-                                                        addToast("Anotação apagada.", "success");
-                                                    }
-                                                }}
-                                                className="p-1 px-2.5 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 text-[11px] font-bold rounded flex items-center gap-1"
-                                                title="Excluir"
-                                            >
-                                                Excluir
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                    {/* Barra de Pesquisa de Notas */}
+                    {savedNotesList.length > 0 && (
+                        <div className="relative">
+                            <Search className="absolute left-3.5 top-3 text-slate-400" size={15} />
+                            <input 
+                                type="text"
+                                placeholder="Filtrar notas de estudo por palavras-chave ou matéria..."
+                                value={notesSearch}
+                                onChange={(e) => setNotesSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 text-xs font-semibold border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50/50"
+                            />
                         </div>
                     )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        {/* Seção das Notas: Coluna 1 a 8 se houver notas */}
+                        <div className="lg:col-span-8 space-y-4">
+                            {savedNotesList.length === 0 ? (
+                                <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4 text-slate-400 shadow-sm border-dashed min-h-[300px]">
+                                    <FileText size={44} className="text-slate-300 animate-pulse" />
+                                    <div className="space-y-1">
+                                        <h4 className="font-extrabold text-slate-700 text-sm">Nenhuma Anotação Realizada</h4>
+                                        <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+                                            Para criar anotações, use o leitor digital ao estudar lições da nossa grade curricular. Elas aparecerão centralizadas e prontas para exportar aqui!
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {savedNotesList
+                                        .filter(n => 
+                                            n.label.toLowerCase().includes(notesSearch.toLowerCase()) ||
+                                            n.text.toLowerCase().includes(notesSearch.toLowerCase())
+                                        )
+                                        .map((n) => (
+                                            <div key={n.key} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xs space-y-3 relative flex flex-col justify-between">
+                                                <div>
+                                                    <span className="text-[8px] uppercase font-bold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                                                        Matéria de Referência
+                                                    </span>
+                                                    <h4 className="text-xs font-black text-slate-750 mt-1 leading-tight line-clamp-1" title={n.label}>{n.label}</h4>
+                                                    <div className="mt-2 text-slate-600 text-xs">
+                                                        <textarea
+                                                            value={n.text}
+                                                            onChange={(e) => {
+                                                                const newText = e.target.value;
+                                                                const key = n.key;
+                                                                const updatedNotes = { ...studentNotes, [key]: newText };
+                                                                setStudentNotes(updatedNotes);
+                                                                localStorage.setItem(key, newText);
+                                                            }}
+                                                            placeholder="Sua anotação teológica..."
+                                                            rows={4}
+                                                            className="w-full p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-xs font-serif text-slate-600 leading-relaxed bg-slate-50/10"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                                                    <span className="text-[8px] text-slate-400 font-bold font-mono">Status: Sincronizado</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(n.text);
+                                                                addToast("Copiado com sucesso!", "success");
+                                                            }}
+                                                            className="p-1 px-2 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-bold text-slate-600 flex items-center gap-1"
+                                                            title="Copiar texto"
+                                                        >
+                                                            Copiar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (window.confirm("Deseja apagar esta anotação permanente?")) {
+                                                                    localStorage.removeItem(n.key);
+                                                                    const updatedNotes = { ...studentNotes };
+                                                                    delete updatedNotes[n.key];
+                                                                    setStudentNotes(updatedNotes);
+                                                                    addToast("Anotação apagada.", "success");
+                                                                }
+                                                            }}
+                                                            className="p-1 px-2 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 text-[10px] font-bold rounded flex items-center gap-1"
+                                                            title="Excluir"
+                                                        >
+                                                            Excluir
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Coluna 4: Widget de Guia Dogmático CGADB */}
+                        <div className="lg:col-span-4 bg-slate-900 border border-slate-800 text-slate-100 p-5 rounded-3xl space-y-4 shadow-md">
+                            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                                <Shield className="text-amber-400 shrink-0" size={18} />
+                                <div>
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 leading-none">Guia Dogmático CGADB</h4>
+                                    <p className="text-[8.5px] text-slate-400 font-bold mt-1 uppercase">Apoio Teológico Rápido para Lições</p>
+                                </div>
+                            </div>
+
+                            <p className="text-[10px] text-slate-300 leading-relaxed font-medium">
+                                Selecione um capítulo da **Declaração de Fé da CGADB** para consultar os fundamentos doutrinários oficiais e embasamento bíblico:
+                            </p>
+
+                            <div className="space-y-1.5 max-h-[350px] overflow-y-auto pr-1">
+                                {CAPITULOS_CGADB.map((item) => (
+                                    <div 
+                                        key={item.cap}
+                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer text-left ${
+                                            selectedCgadbCap === item.cap
+                                                ? 'bg-amber-400/10 border-amber-400 text-amber-200'
+                                                : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-200'
+                                        }`}
+                                        onClick={() => {
+                                            playMenuSound();
+                                            setSelectedCgadbCap(selectedCgadbCap === item.cap ? null : item.cap);
+                                        }}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-amber-400">Cap. {item.cap}</span>
+                                            <span className="text-[9px] font-bold text-slate-400 font-mono">{item.ref}</span>
+                                        </div>
+                                        <h5 className="text-[11px] font-black mt-0.5">{item.tema}</h5>
+                                        
+                                        {selectedCgadbCap === item.cap && (
+                                            <div className="mt-2 pt-2 border-t border-white/10 space-y-2 animate-fadeIn text-[10px] font-medium text-slate-300">
+                                                <p className="leading-relaxed">{item.resumo}</p>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigator.clipboard.writeText(`[Declaração de Fé CGADB - Cap. ${item.cap}: ${item.tema} (${item.ref})] - ${item.resumo}`);
+                                                        addToast("Referência copiada para a Área de Transferência!", "success");
+                                                    }}
+                                                    className="w-full py-1 bg-amber-400 text-slate-900 font-black rounded-lg text-center text-[9px] uppercase tracking-wider hover:bg-amber-350 transition-colors"
+                                                >
+                                                    Copiar Referência Completa
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
