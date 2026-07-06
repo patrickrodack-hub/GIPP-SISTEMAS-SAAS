@@ -80,6 +80,7 @@ const ModuleMissoes = lazy(() => import('./components/ModuleMissoes'));
 const ModuleCarnes = lazy(() => import('./components/ModuleCarnes'));
 const ModuleLixeira = lazy(() => import('./components/ModuleLixeira'));
 import ModuleAcessosPortal from './components/ModuleAcessosPortal';
+import { PortalMonitoramento } from './components/PortalMonitoramento';
 import ModuleCredencial from './components/ModuleCredencial';
 import ModuleCarteirinha from './components/ModuleCarteirinha';
 const ModuleDPContabilidade = lazy(() => import('./components/ModuleDPContabilidade'));
@@ -13158,6 +13159,110 @@ const MemberPortalLayout = () => {
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
+    // Track member portal active connection duration & device type
+    const [currentSessionId] = useState(() => 'sess_' + Date.now());
+    const [secondsActive, setSecondsActive] = useState(0);
+
+    useEffect(() => {
+        if (!user || user.tipo !== 'membro') return;
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+        const createSessionLog = async () => {
+            const dateStr = new Date().toISOString();
+            const initialLog = {
+                id: currentSessionId,
+                membroId: user.id,
+                membroNome: user.nome,
+                cargo: user.cargo || user.funcao_administrativa || 'Membro',
+                timestamp: dateStr,
+                dispositivo: isMobile ? 'Celular / Mobile' : 'Computador / Desktop',
+                isMobile: isMobile,
+                tempoUtilizacaoSegundos: 0,
+                status: 'Ativo',
+                ultimoSinal: Date.now()
+            };
+
+            try {
+                // Save session log in Firestore
+                const logRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_access_logs', currentSessionId);
+                await setDoc(logRef, initialLog);
+
+                // Dispatch real-time connection notification
+                const notifTitle = `📱 Conexão ao Portal`;
+                const notifBody = `${user.nome} conectou-se de forma ativa pelo ${initialLog.dispositivo}!`;
+                
+                const notifRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_system_notifications', `notif_${currentSessionId}`);
+                await setDoc(notifRef, {
+                    id: `notif_${currentSessionId}`,
+                    title: notifTitle,
+                    desc: notifBody,
+                    timestamp: dateStr,
+                    type: 'portal_connection',
+                    membroNome: user.nome,
+                    membroId: user.id,
+                    dispositivo: initialLog.dispositivo,
+                    isMobile: isMobile
+                });
+
+                addToast(`Sessão conectada via ${initialLog.dispositivo}. Monitoramento ativo de segurança.`, "info");
+            } catch (err) {
+                console.warn("Error creating Firestore session log", err);
+                const localLogs = JSON.parse(localStorage.getItem('portal_access_logs_fallback') || '[]');
+                localLogs.unshift(initialLog);
+                localStorage.setItem('portal_access_logs_fallback', JSON.stringify(localLogs));
+            }
+        };
+
+        createSessionLog();
+
+        // Increment session duration and periodically sync
+        const timer = setInterval(() => {
+            setSecondsActive(prev => {
+                const next = prev + 1;
+                if (next % 5 === 0) {
+                    const updateSessionLog = async () => {
+                        try {
+                            const logRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_access_logs', currentSessionId);
+                            await setDoc(logRef, {
+                                tempoUtilizacaoSegundos: next,
+                                ultimoSinal: Date.now()
+                            }, { merge: true });
+                        } catch (err) {
+                            console.warn("Error updating session log", err);
+                        }
+
+                        const localLogs = JSON.parse(localStorage.getItem('portal_access_logs_fallback') || '[]');
+                        const index = localLogs.findIndex((l: any) => l.id === currentSessionId);
+                        if (index !== -1) {
+                            localLogs[index].tempoUtilizacaoSegundos = next;
+                            localLogs[index].ultimoSinal = Date.now();
+                            localStorage.setItem('portal_access_logs_fallback', JSON.stringify(localLogs));
+                        }
+                    };
+                    updateSessionLog();
+                }
+                return next;
+            });
+        }, 1000);
+
+        return () => {
+            clearInterval(timer);
+            const closeSessionLog = async () => {
+                try {
+                    const logRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_access_logs', currentSessionId);
+                    await setDoc(logRef, {
+                        status: 'Desconectado',
+                        ultimoSinal: Date.now()
+                    }, { merge: true });
+                } catch (err) {
+                    console.warn("Error closing session log", err);
+                }
+            };
+            closeSessionLog();
+        };
+    }, [user, currentSessionId]);
+
     const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic';
 
     const handleVerificarPagamento = async () => {
@@ -13367,10 +13472,11 @@ const MemberPortalLayout = () => {
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
+        { id: 'portal_monitoramento', icon: Activity, label: 'Monitoramento', hoverColor: 'group-hover:text-red-500' },
     ];
 
     const filteredBaseNavItems = baseNavItems.filter(item => {
-        if (item.id === 'portal_home') return true;
+        if (item.id === 'portal_home' || item.id === 'portal_monitoramento') return true;
         if (item.id === 'portal_professor_ebd') {
             return isProfessor;
         }
@@ -13426,6 +13532,7 @@ const MemberPortalLayout = () => {
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_cursos': return <PortalCursos user={user} />;
             case 'portal_informativo': return <ModuleBoletim />;
+            case 'portal_monitoramento': return <PortalMonitoramento user={user} />;
             default: return <PortalHome user={user} db={db} setView={setView} />;
         }
     };

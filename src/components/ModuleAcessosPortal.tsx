@@ -13,7 +13,7 @@ import {
   CheckCircle, AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter, MapPin, Briefcase, Heart, GraduationCap, Shield, Download,
   ClipboardList, Gift, PieChart as PieChartIcon, Upload, Image as ImageIcon, Database, Save, RefreshCw, Trash,
   Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
-  CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
+  CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, Monitor, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
@@ -55,6 +55,83 @@ const ModuleAcessosPortal = () => {
     const [selectedMemberForPerms, setSelectedMemberForPerms] = useState(null);
     const [isPermModalOpen, setIsPermModalOpen] = useState(false);
     const [memberPerms, setMemberPerms] = useState<string[]>([]);
+
+    // Telemetria & Monitoramento de Acesso
+    const [activeTab, setActiveTab] = useState<'membros' | 'monitoramento'>('membros');
+    const [accessLogs, setAccessLogs] = useState<any[]>([]);
+    const [loadingLogs, setLoadingLogs] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterDevice, setFilterDevice] = useState<'all' | 'mobile' | 'desktop'>('all');
+
+    useEffect(() => {
+        if (activeTab !== 'monitoramento') return;
+
+        setLoadingLogs(true);
+        try {
+            const q = query(
+                collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_access_logs')
+            );
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const fetchedLogs: any[] = [];
+                snapshot.forEach((document) => {
+                    fetchedLogs.push({ id: document.id, ...document.data() });
+                });
+
+                // Sort desc by timestamp
+                fetchedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+                // Detect new mobile logins within the last 5 seconds to notify the admin real-time
+                const now = Date.now();
+                fetchedLogs.forEach(log => {
+                    const logTime = new Date(log.timestamp).getTime();
+                    if (now - logTime < 5000 && !sessionStorage.getItem(`notified_admin_${log.id}`)) {
+                        sessionStorage.setItem(`notified_admin_${log.id}`, 'true');
+                        addToast(`🔔 Conexão Registrada: ${log.membroNome} acaba de conectar-se ao Portal de Membro (${log.dispositivo})!`, 'info');
+                    }
+                });
+
+                setAccessLogs(fetchedLogs);
+                setLoadingLogs(false);
+            }, (err) => {
+                console.warn("Firestore error in logs subscription", err);
+                // Fallback to local storage
+                const localLogs = JSON.parse(localStorage.getItem('portal_access_logs_fallback') || '[]');
+                setAccessLogs(localLogs);
+                setLoadingLogs(false);
+            });
+
+            return () => unsubscribe();
+        } catch (err) {
+            console.warn("Error establishing onSnapshot for portal logs", err);
+            setLoadingLogs(false);
+        }
+    }, [activeTab]);
+
+    const handleForceDisconnect = async (sessionId: string) => {
+        if (!confirm("Deseja realmente desconectar esta sessão remotamente?")) return;
+        try {
+            const logRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_access_logs', sessionId);
+            await setDoc(logRef, {
+                status: 'Desconectado',
+                ultimoSinal: Date.now()
+            }, { merge: true });
+            addToast("Sessão encerrada remotamente.", "success");
+        } catch (err) {
+            addToast("Erro ao encerrar sessão.", "error");
+        }
+    };
+
+    const handleDeleteLog = async (sessionId: string) => {
+        if (!confirm("Deseja excluir permanentemente este registro de acesso?")) return;
+        try {
+            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_access_logs', sessionId));
+            setAccessLogs(prev => prev.filter(l => l.id !== sessionId));
+            addToast("Registro excluído.", "info");
+        } catch (err) {
+            addToast("Erro ao remover registro.", "error");
+        }
+    };
 
     const handleOpenChangePass = (member) => {
         setSelectedMember(member);
