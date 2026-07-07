@@ -43,7 +43,7 @@ import {
 
 // Exporting component
 const ModulePortalTesoureiro = () => {
-    const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction } = useContext(ChurchContext);
+    const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction, setConfirmDialog } = useContext(ChurchContext);
     const [activeTab, setActiveTab] = useState('lancamento'); // lancamento, ultimos, conciliacao
     
     // Form State
@@ -202,16 +202,24 @@ const ModulePortalTesoureiro = () => {
     };
 
     const handleDeleteRecent = async (id, tipo, valor) => {
-        if (window.confirm(`Tens a certeza que desejas excluir este lançamento recente de R$ ${parseFloat(valor).toFixed(2)}?`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', id));
-                logAction('EXCLUSÃO', `Tesoureiro excluiu lançamento de ${tipo === 'entrada' ? 'Receita' : 'Despesa'} de R$ ${parseFloat(valor).toFixed(2)}`, 'financeiro', id);
-                addToast("Lançamento excluído com sucesso.", "info");
-            } catch (error) {
-                console.error(error);
-                addToast("Erro ao eliminar o lançamento.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Exclusão de Lançamento",
+            message: `Tens a certeza que desejas excluir este lançamento recente de R$ ${parseFloat(valor).toFixed(2)}?`,
+            confirmText: "Excluir",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', id));
+                    logAction('EXCLUSÃO', `Tesoureiro excluiu lançamento de ${tipo === 'entrada' ? 'Receita' : 'Despesa'} de R$ ${parseFloat(valor).toFixed(2)}`, 'financeiro', id);
+                    addToast("Lançamento excluído com sucesso.", "info");
+                } catch (error) {
+                    console.error(error);
+                    addToast("Erro ao eliminar o lançamento.", "error");
+                }
             }
-        }
+        });
     };
 
     const handleAutoValidatePix = () => {

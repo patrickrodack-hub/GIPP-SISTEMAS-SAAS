@@ -10,7 +10,7 @@ import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
 
 export default function ModuleTeologia() {
-    const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
     const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
     const [activeLesson, setActiveLesson] = useState<number | null>(null);
     const [quizActive, setQuizActive] = useState<boolean>(false);
@@ -245,7 +245,7 @@ export default function ModuleTeologia() {
     };
 
     // State variables for Custom AI Theological Booklet Generator
-    const [activeTab, setActiveTab] = useState<'grade' | 'ai_generator' | 'notes'>('grade');
+    const [activeTab, setActiveTab] = useState<'grade' | 'ai_generator' | 'notes' | 'diretoria'>('grade');
     const [aiTheme, setAiTheme] = useState<string>('');
     const [aiLevel, setAiLevel] = useState<'Básico' | 'Médio' | 'Avançado'>('Avançado');
     const [generatingBooklet, setGeneratingBooklet] = useState<boolean>(false);
@@ -260,6 +260,49 @@ export default function ModuleTeologia() {
     const [selectedGeneratedIndex, setSelectedGeneratedIndex] = useState<number | null>(null);
     const [generatedAnswers, setGeneratedAnswers] = useState<Record<number, number>>({});
     const [generatedQuizTested, setGeneratedQuizTested] = useState<boolean>(false);
+
+    // Directorate & Faculty Panel States
+    const [studentsList, setStudentsList] = useState<Array<{
+        id: string;
+        nome: string;
+        cargo: string;
+        progresso: number; // percentage 0-100
+        mediaGeral: number; // 0-10
+        batizado: boolean;
+        ebdPresenca: number; // percentage
+        notasPorModulo: Record<string, number>; // moduloId -> nota 0-10
+    }>>(() => {
+        try {
+            const saved = localStorage.getItem('university_students_ledger');
+            if (saved) return JSON.parse(saved);
+        } catch {}
+        // High quality default theological university students
+        return [
+            { id: '1', nome: 'Davi Alencar de Souza', cargo: 'Auxiliar de Trabalho', progresso: 85, mediaGeral: 9.2, batizado: true, ebdPresenca: 90, notasPorModulo: { teontologia: 9.5, bibliologia: 9.0, cristologia: 9.2 } },
+            { id: '2', nome: 'Sara de Oliveira Martins', cargo: 'Diaconisa', progresso: 100, mediaGeral: 9.8, batizado: true, ebdPresenca: 95, notasPorModulo: { teontologia: 10.0, bibliologia: 9.6, cristologia: 9.8 } },
+            { id: '3', nome: 'Caleb Mendonça Ramos', cargo: 'Presbítero', progresso: 60, mediaGeral: 8.0, batizado: true, ebdPresenca: 80, notasPorModulo: { teontologia: 8.0, bibliologia: 8.0 } },
+            { id: '4', nome: 'Estevão Barbosa Neto', cargo: 'Membro Vocacionado', progresso: 40, mediaGeral: 7.5, batizado: true, ebdPresenca: 85, notasPorModulo: { teontologia: 7.5 } },
+            { id: '5', nome: 'Deborah Lins Cavalcanti', cargo: 'Missionária', progresso: 90, mediaGeral: 9.5, batizado: true, ebdPresenca: 92, notasPorModulo: { teontologia: 9.2, bibliologia: 9.8, cristologia: 9.5 } }
+        ];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('university_students_ledger', JSON.stringify(studentsList));
+    }, [studentsList]);
+
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [isAddingStudent, setIsAddingStudent] = useState<boolean>(false);
+    const [newStudentForm, setNewStudentForm] = useState({ nome: '', cargo: 'Membro Vocacionado', batizado: true });
+    const [diretoriaSubTab, setDiretoriaSubTab] = useState<'secretaria' | 'pedagogico'>('secretaria');
+
+    // Lesson Plan States
+    const [lpCgadbCap, setLpCgadbCap] = useState<number>(1);
+    const [lpProfName, setLpProfName] = useState<string>(`Pr. Prof. ${user?.nome || 'Membro GIPP'}`);
+    const [lpDuration, setLpDuration] = useState<string>('90 minutos');
+    const [lpAudience, setLpAudience] = useState<string>('Obreiros e Vocacionados');
+    const [lpMethodology, setLpMethodology] = useState<string>('Aula expositiva dialógica com leitura compartilhada de passagens bíblicas chave e debate em grupos pequenos.');
+    const [lpObjective, setLpObjective] = useState<string>('Compreender sistematicamente os fundamentos exegéticos e dogmáticos do tema sob a ótica da Declaração de Fé da CGADB.');
+    const [generatedLessonPlan, setGeneratedLessonPlan] = useState<any | null>(null);
 
     // Dynamic extraction of saved local notes for the user notebook list
     const [savedNotesList, setSavedNotesList] = useState<Array<{ key: string, label: string, text: string }>>([]);
@@ -1124,7 +1167,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                                     ? 'bg-emerald-50/50 border-emerald-100 hover:border-emerald-200 cursor-pointer' 
                                                     : isLocked
                                                         ? 'bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed'
-                                                        : 'bg-white border-indigo-100 hover:border-indigo-300 shadow-sm cursor-pointer'
+                                                        : 'bg-indigo-50/40 border-indigo-150/80 hover:bg-indigo-50/80 hover:border-indigo-300 shadow-sm cursor-pointer text-slate-800'
                                             }`}
                                         >
                                             <div className="flex items-center gap-4">
@@ -1332,14 +1375,22 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
             };
 
             const handleDeleteBooklet = () => {
-                if (window.confirm("Deseja realmente remover esta apostila de sua biblioteca?")) {
-                    const filtered = generatedBooklets.filter((_, idx) => idx !== activeIndex);
-                    setGeneratedBooklets(filtered);
-                    localStorage.setItem('university_generated_booklets', JSON.stringify(filtered));
-                    setSelectedGeneratedIndex(null);
-                    setCurrentPage(0);
-                    addToast("Apostila teológica removida.", "success");
-                }
+                setConfirmDialog({
+                    isOpen: true,
+                    title: "Excluir Apostila",
+                    message: "Deseja realmente remover esta apostila de sua biblioteca pessoal?",
+                    confirmText: "Excluir",
+                    cancelText: "Cancelar",
+                    variant: "danger",
+                    onConfirm: () => {
+                        const filtered = generatedBooklets.filter((_, idx) => idx !== activeIndex);
+                        setGeneratedBooklets(filtered);
+                        localStorage.setItem('university_generated_booklets', JSON.stringify(filtered));
+                        setSelectedGeneratedIndex(null);
+                        setCurrentPage(0);
+                        addToast("Apostila teológica removida.", "success");
+                    }
+                });
             };
 
             const handleDownloadBookletPdf = (bk: any) => {
@@ -2100,7 +2151,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                                 {Array.isArray(booklet.biblicalReferences) ? (
                                                     <div className="space-y-4 font-sans text-sm">
                                                         {booklet.biblicalReferences.map((ref: string, idx: number) => (
-                                                            <div key={idx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/10 text-slate-750 leading-relaxed font-serif text-base space-y-2">
+                                                            <div key={idx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/10 text-slate-700 leading-relaxed font-serif text-base space-y-2">
                                                                 <span className="font-sans font-black text-xs text-indigo-600 block uppercase">Passagem Bíblica #{idx+1}</span>
                                                                 <p className="italic font-medium">{ref}</p>
                                                             </div>
@@ -2174,7 +2225,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 
                                                                 {generatedQuizTested && (
                                                                     <div className={`p-3 border rounded-xl space-y-1 mt-3 ${
-                                                                        readerTheme === 'dark' ? 'bg-indigo-950/40 border-indigo-900 text-slate-300' : 'bg-indigo-50/30 border-indigo-100 text-slate-650'
+                                                                        readerTheme === 'dark' ? 'bg-indigo-950/40 border-indigo-900 text-slate-300' : 'bg-indigo-50/30 border-indigo-100 text-slate-600'
                                                                     }`}>
                                                                         <span className="text-[10px] font-black block uppercase tracking-wider">Explicação do Professor:</span>
                                                                         <p className="text-[11.5px] font-medium leading-relaxed font-sans">{q.explanation || "A alternativa responde corretamente respaldada na verdade canônica."}</p>
@@ -2293,7 +2344,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 <button
                     onClick={() => { playMenuSound(); setActiveTab('grade'); }}
                     className={`pb-3 px-3 relative text-xs sm:text-sm font-black transition-all ${
-                        activeTab === 'grade' ? 'text-indigo-650 font-extrabold' : 'text-slate-500 hover:text-slate-850'
+                        activeTab === 'grade' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800'
                     }`}
                 >
                     <span className="flex items-center gap-1.5 font-sans uppercase tracking-wider text-[11px] sm:text-xs">
@@ -2307,12 +2358,12 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 <button
                     onClick={() => { playMenuSound(); setActiveTab('ai_generator'); }}
                     className={`pb-3 px-3 relative text-xs sm:text-sm font-black transition-all ${
-                        activeTab === 'ai_generator' ? 'text-indigo-650 font-extrabold' : 'text-slate-500 hover:text-slate-850'
+                        activeTab === 'ai_generator' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800'
                     }`}
                 >
                     <span className="flex items-center gap-1.5 font-sans uppercase tracking-wider text-[11px] sm:text-xs">
                         <Sparkles className="text-indigo-500 animate-ping absolute shrink-0 opacity-20" size={14} />
-                        <Sparkles className="text-indigo-550 shrink-0" size={14} /> Gerador de Apostila (IA)
+                        <Sparkles className="text-indigo-600 shrink-0" size={14} /> Gerador de Apostila (IA)
                     </span>
                     {activeTab === 'ai_generator' && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-fadeIn" />
@@ -2322,13 +2373,27 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 <button
                     onClick={() => { playMenuSound(); setActiveTab('notes'); }}
                     className={`pb-3 px-3 relative text-xs sm:text-sm font-black transition-all ${
-                        activeTab === 'notes' ? 'text-indigo-650 font-extrabold' : 'text-slate-500 hover:text-slate-850'
+                        activeTab === 'notes' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800'
                     }`}
                 >
                     <span className="flex items-center gap-1.5 font-sans uppercase tracking-wider text-[11px] sm:text-xs">
                         <FileText size={14} /> Anotações ({savedNotesList.length})
                     </span>
                     {activeTab === 'notes' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-fadeIn" />
+                    )}
+                </button>
+
+                <button
+                    onClick={() => { playMenuSound(); setActiveTab('diretoria'); }}
+                    className={`pb-3 px-3 relative text-xs sm:text-sm font-black transition-all ${
+                        activeTab === 'diretoria' ? 'text-indigo-600 font-extrabold' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                >
+                    <span className="flex items-center gap-1.5 font-sans uppercase tracking-wider text-[11px] sm:text-xs">
+                        <ClipboardList size={14} /> Painel Docente & Diretoria
+                    </span>
+                    {activeTab === 'diretoria' && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-fadeIn" />
                     )}
                 </button>
@@ -2421,7 +2486,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                             playMenuSound();
                                             setAiTheme(topic);
                                         }}
-                                        className={`w-full text-left p-2 rounded-lg hover:bg-white text-[10.5px] font-bold text-slate-600 hover:text-indigo-650 transition-colors border border-transparent hover:border-slate-150 flex items-start gap-1.5 ${
+                                        className={`w-full text-left p-2 rounded-lg hover:bg-white text-[10.5px] font-bold text-slate-600 hover:text-indigo-600 transition-colors border border-transparent hover:border-slate-150 flex items-start gap-1.5 ${
                                             aiTheme === topic ? 'bg-indigo-50/60 border-indigo-150 text-indigo-700' : ''
                                         }`}
                                     >
@@ -2446,8 +2511,8 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                         }}
                                         className={`py-2 rounded-xl border text-[11px] font-bold transition-all ${
                                             aiLevel === lvl 
-                                                ? 'bg-indigo-650 border-indigo-600 text-white shadow-sm' 
-                                                : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'
+                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm font-extrabold' 
+                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-indigo-200'
                                         }`}
                                     >
                                         {lvl}
@@ -2460,7 +2525,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                         <Button
                             onClick={() => handleGenerateBooklet(aiTheme)}
                             disabled={generatingBooklet || !aiTheme.trim()}
-                            className="w-full bg-indigo-600 hover:bg-indigo-750 text-white font-black text-xs py-3.5 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-3.5 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
                         >
                             {generatingBooklet ? (
                                 <>
@@ -2484,13 +2549,22 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                             {generatedBooklets.length > 0 && (
                                 <button
                                     onClick={() => {
-                                        if (window.confirm("Deseja realmente limpar toda a biblioteca gerada por IA?")) {
-                                            setGeneratedBooklets([]);
-                                            localStorage.removeItem('university_generated_booklets');
-                                            addToast("Biblioteca purgada comercialmente.", "success");
-                                        }
+                                        playMenuSound();
+                                        setConfirmDialog({
+                                            isOpen: true,
+                                            title: "Limpar Biblioteca",
+                                            message: "Deseja realmente limpar toda a sua biblioteca de apostilas geradas por IA? Esta ação apagará de forma permanente todas as apostilas salvas.",
+                                            confirmText: "Limpar Tudo",
+                                            cancelText: "Cancelar",
+                                            variant: "danger",
+                                            onConfirm: () => {
+                                                setGeneratedBooklets([]);
+                                                localStorage.removeItem('university_generated_booklets');
+                                                addToast("Biblioteca purgada comercialmente.", "success");
+                                            }
+                                        });
                                     }}
-                                    className="text-xs font-bold text-red-500 hover:text-red-750 underline"
+                                    className="text-xs font-bold text-red-500 hover:text-red-700 underline"
                                 >
                                     Limpar Total
                                 </button>
@@ -2541,14 +2615,22 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                             <button
                                                 onClick={() => {
                                                     playMenuSound();
-                                                    if (window.confirm(`Excluir "${bk.title || bk.theme}" definitivamente?`)) {
-                                                        const filt = generatedBooklets.filter((_, i) => i !== idx);
-                                                        setGeneratedBooklets(filt);
-                                                        localStorage.setItem('university_generated_booklets', JSON.stringify(filt));
-                                                        addToast("Apostila excluída.", "success");
-                                                    }
+                                                    setConfirmDialog({
+                                                        isOpen: true,
+                                                        title: "Excluir Apostila",
+                                                        message: `Deseja realmente excluir a apostila "${bk.title || bk.theme}" definitivamente? Esta ação não pode ser desfeita.`,
+                                                        confirmText: "Excluir",
+                                                        cancelText: "Cancelar",
+                                                        variant: "danger",
+                                                        onConfirm: () => {
+                                                            const filt = generatedBooklets.filter((_, i) => i !== idx);
+                                                            setGeneratedBooklets(filt);
+                                                            localStorage.setItem('university_generated_booklets', JSON.stringify(filt));
+                                                            addToast("Apostila excluída.", "success");
+                                                        }
+                                                    });
                                                 }}
-                                                className="p-2 bg-red-50 text-red-650 hover:bg-red-100 rounded-xl hover:text-red-750 transition-all border border-red-100 shrink-0 text-red-500"
+                                                className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl hover:text-red-700 transition-all border border-red-100 shrink-0 text-red-500"
                                             >
                                                 <Trash2 size={13} />
                                             </button>
@@ -2578,7 +2660,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                 </Button>
                                 <Button
                                     onClick={handleExportNotesPDF}
-                                    className="bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow"
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow"
                                 >
                                     <Printer size={13} /> Baixar PDF Oficial
                                 </Button>
@@ -2626,7 +2708,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                                     <span className="text-[8px] uppercase font-bold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                                                         Matéria de Referência
                                                     </span>
-                                                    <h4 className="text-xs font-black text-slate-750 mt-1 leading-tight line-clamp-1" title={n.label}>{n.label}</h4>
+                                                    <h4 className="text-xs font-black text-slate-700 mt-1 leading-tight line-clamp-1" title={n.label}>{n.label}</h4>
                                                     <div className="mt-2 text-slate-600 text-xs">
                                                         <textarea
                                                             value={n.text}
@@ -2659,15 +2741,24 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                                         </button>
                                                         <button
                                                             onClick={() => {
-                                                                if (window.confirm("Deseja apagar esta anotação permanente?")) {
-                                                                    localStorage.removeItem(n.key);
-                                                                    const updatedNotes = { ...studentNotes };
-                                                                    delete updatedNotes[n.key];
-                                                                    setStudentNotes(updatedNotes);
-                                                                    addToast("Anotação apagada.", "success");
-                                                                }
+                                                                playMenuSound();
+                                                                setConfirmDialog({
+                                                                    isOpen: true,
+                                                                    title: "Apagar Anotação",
+                                                                    message: "Deseja realmente apagar esta anotação permanente? Esta ação não pode ser desfeita.",
+                                                                    confirmText: "Apagar",
+                                                                    cancelText: "Cancelar",
+                                                                    variant: "danger",
+                                                                    onConfirm: () => {
+                                                                        localStorage.removeItem(n.key);
+                                                                        const updatedNotes = { ...studentNotes };
+                                                                        delete updatedNotes[n.key];
+                                                                        setStudentNotes(updatedNotes);
+                                                                        addToast("Anotação apagada.", "success");
+                                                                    }
+                                                                });
                                                             }}
-                                                            className="p-1 px-2 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-700 text-[10px] font-bold rounded flex items-center gap-1"
+                                                            className="p-1 px-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 text-[10px] font-bold rounded flex items-center gap-1"
                                                             title="Excluir"
                                                         >
                                                             Excluir
@@ -2734,6 +2825,687 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'diretoria' && (
+                <div className="space-y-6 pt-4 animate-slideUp font-sans text-left">
+                    {/* Header and Subtabs */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-indigo-100 pb-4 gap-4">
+                        <div>
+                            <span className="text-[10px] bg-indigo-100 text-indigo-700 font-black uppercase tracking-wider px-3 py-1 rounded-full text-left inline-block">
+                                Área do Diretor Acadêmico & Professor
+                            </span>
+                            <h3 className="text-xl font-black text-slate-850 mt-1">Painel Geral de Gestão Universitária</h3>
+                        </div>
+                        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                            <button
+                                type="button"
+                                onClick={() => { playMenuSound(); setDiretoriaSubTab('secretaria'); }}
+                                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                    diretoriaSubTab === 'secretaria' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-850'
+                                }`}
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <ClipboardList size={13} /> Secretaria & Livro de Notas
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { playMenuSound(); setDiretoriaSubTab('pedagogico'); }}
+                                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                    diretoriaSubTab === 'pedagogico' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-850'
+                                }`}
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <BookOpenText size={13} /> Pedagógico (Planos de Aula)
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Academic KPIs Dashboard */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200/30 p-4 rounded-3xl space-y-1 shadow-2xs text-left">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500">Total Matriculados</span>
+                            <div className="text-2xl font-black text-slate-800">{studentsList.length} alunos</div>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase">Formação ativa</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200/30 p-4 rounded-3xl space-y-1 shadow-2xs text-left">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500">Média Geral Universitária</span>
+                            <div className="text-2xl font-black text-slate-800">
+                                {studentsList.length > 0 ? (studentsList.reduce((acc, s) => acc + s.mediaGeral, 0) / studentsList.length).toFixed(1) : '0.0'} / 10
+                            </div>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase">Coeficiente de Rendimento</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/30 p-4 rounded-3xl space-y-1 shadow-2xs text-left">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-500">Aproveitamento Médio</span>
+                            <div className="text-2xl font-black text-slate-800">
+                                {studentsList.length > 0 ? Math.round(studentsList.reduce((acc, s) => acc + s.progresso, 0) / studentsList.length) : '0'}%
+                            </div>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase">Aulas concluídas</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-3xl space-y-1 shadow-2xs border border-slate-200/30 text-left">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Alinhamento Dogmático</span>
+                            <div className="text-2xl font-black text-slate-800">100% CGADB</div>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase">24 Capítulos da Declaração</p>
+                        </div>
+                    </div>
+
+                    {/* SUBTAB 1: SECRETARIA & LIVRO DE NOTAS */}
+                    {diretoriaSubTab === 'secretaria' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                            {/* Student Ledger: 7 cols */}
+                            <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-sm text-left">
+                                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                        <ClipboardList className="text-indigo-600" size={18} />
+                                        <h4 className="text-sm font-black text-slate-800">Livro de Registro de Notas Acadêmicas</h4>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { playMenuSound(); setIsAddingStudent(!isAddingStudent); }}
+                                        className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <Plus size={13} /> Matricular Aluno
+                                    </button>
+                                </div>
+
+                                {/* Form to Add Student */}
+                                {isAddingStudent && (
+                                    <div className="bg-slate-50/80 p-4 border border-slate-200 rounded-2xl space-y-3 animate-fadeIn text-left">
+                                        <h5 className="text-xs font-black text-slate-700 uppercase">Matricular Novo Aluno Teológico</h5>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase">Nome Completo</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Nome do aluno(a)"
+                                                    value={newStudentForm.nome}
+                                                    onChange={e => setNewStudentForm({ ...newStudentForm, nome: e.target.value })}
+                                                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 bg-white"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase">Cargo Ministerial</label>
+                                                <select
+                                                    value={newStudentForm.cargo}
+                                                    onChange={e => setNewStudentForm({ ...newStudentForm, cargo: e.target.value })}
+                                                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 bg-white cursor-pointer"
+                                                >
+                                                    <option value="Membro Vocacionado">Membro Vocacionado</option>
+                                                    <option value="Auxiliar de Trabalho">Auxiliar de Trabalho</option>
+                                                    <option value="Diácono / Diaconisa">Diácono / Diaconisa</option>
+                                                    <option value="Presbítero">Presbítero</option>
+                                                    <option value="Evangelista">Evangelista</option>
+                                                    <option value="Missionário(a)">Missionário(a)</option>
+                                                    <option value="Pastor">Pastor</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                                            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={newStudentForm.batizado}
+                                                    onChange={e => setNewStudentForm({ ...newStudentForm, batizado: e.target.checked })}
+                                                    className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500"
+                                                />
+                                                Batizado em Águas (Por Imersão - Requisito CGADB)
+                                            </label>
+                                            <div className="flex gap-2 justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsAddingStudent(false)}
+                                                    className="py-1 px-2 text-slate-500 hover:text-slate-700 text-xs font-bold cursor-pointer"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!newStudentForm.nome) {
+                                                            addToast("Por favor, digite o nome do aluno.", "error");
+                                                            return;
+                                                        }
+                                                        const newStudent = {
+                                                            id: Date.now().toString(),
+                                                            nome: newStudentForm.nome,
+                                                            cargo: newStudentForm.cargo,
+                                                            progresso: 0,
+                                                            mediaGeral: 0,
+                                                            batizado: newStudentForm.batizado,
+                                                            ebdPresenca: 100,
+                                                            notasPorModulo: {}
+                                                        };
+                                                        setStudentsList([...studentsList, newStudent]);
+                                                        setNewStudentForm({ nome: '', cargo: 'Membro Vocacionado', batizado: true });
+                                                        setIsAddingStudent(false);
+                                                        addToast("Aluno matriculado com sucesso!", "success");
+                                                    }}
+                                                    className="py-1 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase cursor-pointer"
+                                                >
+                                                    Confirmar Matrícula
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Students List Table */}
+                                <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-black uppercase text-[10px]">
+                                                <th className="p-3 text-left">Aluno / Cargo</th>
+                                                <th className="p-3 text-center">Progresso</th>
+                                                <th className="p-3 text-center">Média Geral</th>
+                                                <th className="p-3 text-center">Batismo</th>
+                                                <th className="p-3 text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {studentsList.map(st => (
+                                                <tr 
+                                                    key={st.id} 
+                                                    className={`hover:bg-slate-50/50 transition-colors ${
+                                                        selectedStudentId === st.id ? 'bg-indigo-50/25' : ''
+                                                    }`}
+                                                >
+                                                    <td className="p-3 text-left">
+                                                        <div className="font-extrabold text-slate-800">{st.nome}</div>
+                                                        <div className="text-[10px] text-indigo-600 font-bold font-mono">{st.cargo}</div>
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            <div className="w-12 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                                <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${st.progresso}%` }}></div>
+                                                            </div>
+                                                            <span className="font-bold text-slate-600">{st.progresso}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-3 text-center font-black text-slate-700">
+                                                        {st.mediaGeral > 0 ? `${st.mediaGeral.toFixed(1)}` : 'N/D'}
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        {st.batizado ? (
+                                                            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold text-[9px] uppercase border border-emerald-200/50">Sim</span>
+                                                        ) : (
+                                                            <span className="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-md font-bold text-[9px] uppercase border border-rose-200/50">Não</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3 text-right">
+                                                        <div className="flex justify-end gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { playMenuSound(); setSelectedStudentId(st.id); }}
+                                                                className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-600 font-bold rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                                                            >
+                                                                Gerenciar
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    playMenuSound();
+                                                                    setConfirmDialog({
+                                                                        isOpen: true,
+                                                                        title: "Desvincular Aluno",
+                                                                        message: `Deseja realmente desvincular o aluno ${st.nome} do sistema universitário? Esta ação é irreversível e removerá todas as notas atribuídas.`,
+                                                                        confirmText: "Desvincular",
+                                                                        cancelText: "Cancelar",
+                                                                        variant: "danger",
+                                                                        onConfirm: () => {
+                                                                            setStudentsList(prev => prev.filter(s => s.id !== st.id));
+                                                                            if (selectedStudentId === st.id) setSelectedStudentId(null);
+                                                                            addToast("Aluno removido do Rol Universitário.", "success");
+                                                                        }
+                                                                    });
+                                                                }}
+                                                                className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-100 cursor-pointer"
+                                                                title="Desvincular"
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Student Card / Grading sheet: 5 cols */}
+                            <div className="lg:col-span-5 space-y-4 text-left">
+                                {selectedStudentId ? (() => {
+                                    const activeStudent = studentsList.find(s => s.id === selectedStudentId);
+                                    if (!activeStudent) return null;
+                                    return (
+                                        <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-5 shadow-sm text-left">
+                                            {/* Student Card Header */}
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <span className="text-[8px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded uppercase font-mono">ID Aluno: #{activeStudent.id}</span>
+                                                    <h4 className="text-base font-black text-slate-850 leading-tight">{activeStudent.nome}</h4>
+                                                    <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{activeStudent.cargo}</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedStudentId(null)}
+                                                    className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+
+                                            {/* Fast stats inside card */}
+                                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center">
+                                                <div className="p-2 bg-white rounded-xl shadow-3xs">
+                                                    <span className="text-[8px] text-slate-400 font-bold uppercase block">Coeficiente</span>
+                                                    <div className="text-base font-black text-slate-800">{activeStudent.mediaGeral > 0 ? activeStudent.mediaGeral.toFixed(1) : "N/D"}</div>
+                                                </div>
+                                                <div className="p-2 bg-white rounded-xl shadow-3xs">
+                                                    <span className="text-[8px] text-slate-400 font-bold uppercase block">Status</span>
+                                                    <div className={`text-xs font-black uppercase mt-1 ${activeStudent.progresso >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                        {activeStudent.progresso >= 100 ? 'Formado' : 'Estudando'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Manual Grades Form */}
+                                            <div className="space-y-3">
+                                                <h5 className="text-[10px] font-black text-slate-700 uppercase tracking-wider border-b pb-1.5 flex items-center gap-1.5">
+                                                    <Award size={13} className="text-indigo-600" /> Notas por Matéria de Estudo
+                                                </h5>
+                                                <div className="space-y-2">
+                                                    {MODULES_TEOLOGIA.map(mod => {
+                                                        const nota = activeStudent.notasPorModulo[mod.id] ?? '';
+                                                        return (
+                                                            <div key={mod.id} className="flex justify-between items-center p-2 bg-slate-50/40 rounded-xl border border-slate-200/50">
+                                                                <div className="max-w-[70%] text-left">
+                                                                    <div className="font-extrabold text-[11px] text-slate-800 truncate" title={mod.title}>{mod.title}</div>
+                                                                    <span className="text-[8px] text-slate-400 font-bold uppercase">Curso Curricular</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        max="10"
+                                                                        step="0.1"
+                                                                        placeholder="-"
+                                                                        value={nota}
+                                                                        onChange={e => {
+                                                                            const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                                                            const updatedNotes = { ...activeStudent.notasPorModulo };
+                                                                            if (val === undefined || isNaN(val)) {
+                                                                                delete updatedNotes[mod.id];
+                                                                            } else {
+                                                                                updatedNotes[mod.id] = Math.max(0, Math.min(10, val));
+                                                                            }
+                                                                            
+                                                                            // Recalculate average grade and progress based on modules having grades
+                                                                            const gradeValues = Object.values(updatedNotes) as number[];
+                                                                            const average = gradeValues.length > 0 ? (gradeValues.reduce((a, b) => a + b, 0) / gradeValues.length) : 0;
+                                                                            const prog = Math.round((gradeValues.length / MODULES_TEOLOGIA.length) * 100);
+
+                                                                            setStudentsList(studentsList.map(s => s.id === activeStudent.id ? {
+                                                                                ...s,
+                                                                                notasPorModulo: updatedNotes,
+                                                                                mediaGeral: parseFloat(average.toFixed(2)),
+                                                                                progresso: prog
+                                                                            } : s));
+                                                                        }}
+                                                                        className="w-12 px-2 py-1 text-center font-black text-xs border border-slate-300 rounded-lg outline-none focus:border-indigo-500 bg-white"
+                                                                    />
+                                                                    <span className="text-[10px] text-slate-400 font-bold">/10</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Action: Generate Transcript or Diploma */}
+                                            <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        playNotificationSound();
+                                                        // Setup printed template data
+                                                        setPrintData({
+                                                            igreja: db?.igreja || { nome: "Assembleia de Deus GIPP", cor_tema: "#4f46e5", cidade: "São Paulo" },
+                                                            membro: { nome: activeStudent.nome, cargo: activeStudent.cargo },
+                                                            extra: { 
+                                                                mediaGeral: activeStudent.mediaGeral,
+                                                                progresso: activeStudent.progresso,
+                                                                batizado: activeStudent.batizado ? 'Sim' : 'Não',
+                                                                notas: activeStudent.notasPorModulo,
+                                                                titulo: "Histórico Escolar Oficial"
+                                                            }
+                                                        });
+                                                        setPrintMode('cert_curso'); // Uses our general preview engine
+                                                        setPreviewOpen(true);
+                                                        addToast("Carregando layout de Histórico Acadêmico para impressão...", "success");
+                                                    }}
+                                                    className="w-full py-2 bg-slate-800 hover:bg-slate-950 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                                >
+                                                    <Printer size={13} /> Imprimir Histórico Escolar
+                                                </button>
+                                                {activeStudent.progresso >= 100 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            playNotificationSound();
+                                                            setCertifiedCourse({ title: "Formação Completa em Teologia Sistemática e Eclesiologia" });
+                                                            setShowCertificateModal(true);
+                                                        }}
+                                                        className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                                    >
+                                                        <Award size={13} /> Expedir Diploma de Conclusão
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })() : (
+                                    <div className="bg-white border border-slate-200 border-dashed rounded-3xl p-10 text-center flex flex-col items-center justify-center space-y-3 text-slate-400 min-h-[300px]">
+                                        <GraduationCap size={40} className="text-slate-300 animate-pulse" />
+                                        <div className="space-y-1">
+                                            <h5 className="font-extrabold text-slate-700 text-xs">Nenhum Aluno Selecionado</h5>
+                                            <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed mx-auto">
+                                                Clique em **"Gerenciar"** ao lado do nome de qualquer estudante da grade na tabela ao lado para gerenciar suas notas, emitir comprovantes e expedir históricos.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SUBTAB 2: PEDAGÓGICO (PLANOS DE AULA CONECTADOS À DECLARAÇÃO CGADB) */}
+                    {diretoriaSubTab === 'pedagogico' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                            {/* Generator Form panel: 5 cols */}
+                            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-sm text-left">
+                                <div className="border-b pb-2 flex items-center gap-2">
+                                    <BookOpenText className="text-indigo-600" size={18} />
+                                    <div>
+                                        <h4 className="text-sm font-black text-slate-800">Criar Plano de Aula Teológico</h4>
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase">Planejamento didático alinhado à Convenção</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3.5 text-xs text-left">
+                                    {/* 1. Select CGADB Chapter */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Capítulo da Declaração de Fé (CGADB)</label>
+                                        <select
+                                            value={lpCgadbCap}
+                                            onChange={e => {
+                                                const capNum = parseInt(e.target.value);
+                                                setLpCgadbCap(capNum);
+                                                const capData = CAPITULOS_CGADB.find(c => c.cap === capNum);
+                                                if (capData) {
+                                                    setLpObjective(`Compreender sistematicamente a fundamentação doutrinária sobre "${capData.tema}" com base nas referências bíblicas exegéticas (${capData.ref}) e no Capítulo ${capData.cap} oficial da Declaração.`);
+                                                }
+                                            }}
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-semibold bg-white cursor-pointer"
+                                        >
+                                            {CAPITULOS_CGADB.map(cap => (
+                                                <option key={cap.cap} value={cap.cap}>
+                                                    Capítulo {cap.cap} - {cap.tema}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* 2. Metadata: Instructor, Duration, Audience */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Professor / Instrutor</label>
+                                        <input
+                                            type="text"
+                                            value={lpProfName}
+                                            onChange={e => setLpProfName(e.target.value)}
+                                            className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-semibold bg-white"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 text-left">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Duração Estimada</label>
+                                            <input
+                                                type="text"
+                                                value={lpDuration}
+                                                onChange={e => setLpDuration(e.target.value)}
+                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-semibold bg-white"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Público-Alvo</label>
+                                            <input
+                                                type="text"
+                                                value={lpAudience}
+                                                onChange={e => setLpAudience(e.target.value)}
+                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-semibold bg-white"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Objective */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Objetivo Geral do Ensino</label>
+                                        <textarea
+                                            rows={2}
+                                            value={lpObjective}
+                                            onChange={e => setLpObjective(e.target.value)}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-medium bg-white"
+                                        />
+                                    </div>
+
+                                    {/* 4. Methodology */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Metodologia Didática</label>
+                                        <textarea
+                                            rows={2}
+                                            value={lpMethodology}
+                                            onChange={e => setLpMethodology(e.target.value)}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-medium bg-white"
+                                        />
+                                    </div>
+
+                                    {/* Button to Generate */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            playNotificationSound();
+                                            const capData = CAPITULOS_CGADB.find(c => c.cap === lpCgadbCap);
+                                            if (!capData) return;
+                                            
+                                            // Dynamic creation of lesson plan payload
+                                            const plan = {
+                                                capitulo: capData.cap,
+                                                tema: capData.tema,
+                                                referencias: capData.ref,
+                                                doutrinaResumo: capData.resumo,
+                                                professor: lpProfName,
+                                                duracao: lpDuration,
+                                                publico: lpAudience,
+                                                objetivo: lpObjective,
+                                                metodologia: lpMethodology,
+                                                dataGeracao: new Date().toLocaleDateString('pt-BR'),
+                                                // Pre-made robust sequential outline for classroom use
+                                                esboco: [
+                                                    { tempo: "15 min", titulo: "Abertura Devocional e Oração", desc: "Leitura pública do texto bíblico básico e contextualização histórica inicial." },
+                                                    { tempo: "35 min", titulo: "Exposição Doutrinária Dogmática", desc: `Análise sistemática do Capítulo ${capData.cap} da Declaração da CGADB. Destaque para a defesa contra falsas interpretações.` },
+                                                    { tempo: "20 min", titulo: "Hermenêutica e Exegese Prática", desc: `Leitura dirigida e exegese dos versículos de apoio: ${capData.ref}.` },
+                                                    { tempo: "15 min", titulo: "Debate e Aplicação Ministerial", desc: "Discussão orientada sobre como os obreiros devem pregar e ensinar este dogma na igreja local." },
+                                                    { tempo: "5 min", titulo: "Oração de Encerramento e Avisos", desc: "Retorno de impressões e oração de envio pedagógico ministerial." }
+                                                ],
+                                                perguntasDebate: [
+                                                    `Qual a importância de defendermos de forma incondicional o ensino de "${capData.tema}" em tempos de relativismo pós-moderno?`,
+                                                    `Como o obreiro ou líder local pode usar as referências bíblicas (${capData.ref}) para aconselhar um membro com dúvidas sobre esta matéria?`
+                                                ]
+                                            };
+                                            setGeneratedLessonPlan(plan);
+                                            addToast("Plano de Aula Teológico gerado com sucesso!", "success");
+                                        }}
+                                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-wider rounded-xl shadow-md transition-colors text-center cursor-pointer"
+                                    >
+                                        Gerar Plano de Aula Docente
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Plan Display Panel: 7 cols */}
+                            <div className="lg:col-span-7 text-left">
+                                {generatedLessonPlan ? (
+                                    <div className="bg-white border-2 border-indigo-600 rounded-3xl p-6 space-y-5 shadow-md relative text-left">
+                                        {/* Watermark/Header Banner */}
+                                        <div className="flex justify-between items-start border-b border-indigo-100 pb-3">
+                                            <div className="space-y-0.5 text-left">
+                                                <span className="text-[8px] bg-indigo-50 border border-indigo-150 text-indigo-700 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider font-mono">
+                                                    Documento Curricular Acadêmico
+                                                </span>
+                                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Plano de Aula Oficial - Teologia</h4>
+                                                <p className="text-[9px] text-slate-400 font-bold uppercase font-mono">Alinhado com a Declaração de Fé da CGADB</p>
+                                            </div>
+                                            <div className="p-2.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl shrink-0">
+                                                <BookOpenText size={20} />
+                                            </div>
+                                        </div>
+
+                                        {/* Metadata block */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-2xl text-[10px] font-bold text-slate-600 border border-slate-100 text-left">
+                                            <div>
+                                                <span className="text-[8px] text-slate-400 uppercase leading-none block">Professor:</span>
+                                                <span className="text-slate-800 block truncate" title={generatedLessonPlan.professor}>{generatedLessonPlan.professor}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[8px] text-slate-400 uppercase leading-none block">Duração:</span>
+                                                <span className="text-slate-800 block">{generatedLessonPlan.duracao}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[8px] text-slate-400 uppercase leading-none block">Data:</span>
+                                                <span className="text-slate-800 block">{generatedLessonPlan.dataGeracao}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[8px] text-slate-400 uppercase leading-none block">Público:</span>
+                                                <span className="text-slate-800 block truncate" title={generatedLessonPlan.publico}>{generatedLessonPlan.publico}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Reference Section */}
+                                        <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-1.5 text-left">
+                                            <div className="flex justify-between items-center text-[10px] font-black text-amber-800">
+                                                <span>Doutrina: Cap. {generatedLessonPlan.capitulo} - {generatedLessonPlan.tema}</span>
+                                                <span className="font-mono">{generatedLessonPlan.referencias}</span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-700 leading-relaxed font-semibold">
+                                                {generatedLessonPlan.doutrinaResumo}
+                                            </p>
+                                        </div>
+
+                                        {/* Goals & Methodology */}
+                                        <div className="space-y-3 text-xs text-left">
+                                            <div className="space-y-1">
+                                                <h5 className="font-black text-slate-800 text-[10px] uppercase tracking-wider text-indigo-600">I. Objetivo Pedagógico Geral</h5>
+                                                <p className="text-slate-600 font-medium leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">{generatedLessonPlan.objetivo}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h5 className="font-black text-slate-800 text-[10px] uppercase tracking-wider text-indigo-600">II. Metodologia de Ensino</h5>
+                                                <p className="text-slate-600 font-medium leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">{generatedLessonPlan.metodologia}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Lesson Content Outline */}
+                                        <div className="space-y-2 text-left">
+                                            <h5 className="font-black text-slate-800 text-[10px] uppercase tracking-wider text-indigo-600">III. Esboço Sequencial de Aula</h5>
+                                            <div className="space-y-1.5 text-left">
+                                                {generatedLessonPlan.esboco.map((item: any, idx: number) => (
+                                                    <div key={idx} className="flex gap-3 text-xs p-2 rounded-xl border border-slate-100 hover:bg-slate-50/40 transition-colors text-left">
+                                                        <span className="font-mono font-black text-indigo-700 w-16 shrink-0 bg-indigo-50 rounded-lg py-1 px-1.5 text-center leading-none flex items-center justify-center">{item.tempo}</span>
+                                                        <div className="text-left">
+                                                            <div className="font-extrabold text-slate-800">{item.titulo}</div>
+                                                            <p className="text-[10px] text-slate-500 font-medium mt-0.5">{item.desc}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Debate questions */}
+                                        <div className="space-y-2 text-left">
+                                            <h5 className="font-black text-slate-800 text-[10px] uppercase tracking-wider text-indigo-600">IV. Perguntas de Fixação e Debate</h5>
+                                            <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-600 font-semibold leading-relaxed text-left">
+                                                {generatedLessonPlan.perguntasDebate.map((q: string, idx: number) => <li key={idx}>{q}</li>)}
+                                            </ul>
+                                        </div>
+
+                                        {/* Print / Copy actions */}
+                                        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    playMenuSound();
+                                                    const formattedText = `
+========================================
+PLANO DE AULA OFICIAL - UNIVERSIDADE TEOLÓGICA GIPP
+========================================
+Professor: ${generatedLessonPlan.professor}
+Duração: ${generatedLessonPlan.duracao} | Data: ${generatedLessonPlan.dataGeracao}
+Público-Alvo: ${generatedLessonPlan.publico}
+----------------------------------------
+Referência Doutrinária (CGADB):
+Capítulo ${generatedLessonPlan.capitulo}: ${generatedLessonPlan.tema}
+Referências Bíblicas: ${generatedLessonPlan.referencias}
+Resumo Doutrinário: ${generatedLessonPlan.doutrinaResumo}
+----------------------------------------
+I. Objetivo Pedagógico Geral:
+${generatedLessonPlan.objetivo}
+
+II. Metodologia de Ensino:
+${generatedLessonPlan.metodologia}
+
+III. Esboço Sequencial de Aula:
+${generatedLessonPlan.esboco.map((item: any) => `[${item.tempo}] - ${item.titulo}: ${item.desc}`).join('\n')}
+
+IV. Perguntas de Fixação e Debate:
+${generatedLessonPlan.perguntasDebate.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}
+========================================
+                                                    `;
+                                                    navigator.clipboard.writeText(formattedText);
+                                                    addToast("Plano de aula copiado para área de transferência!", "success");
+                                                }}
+                                                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-[11px] uppercase tracking-wider rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                                            >
+                                                Copiar Texto Completo
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    playNotificationSound();
+                                                    window.print();
+                                                }}
+                                                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                            >
+                                                <Printer size={13} /> Imprimir Plano de Aula
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white border border-slate-200 border-dashed rounded-3xl p-10 text-center flex flex-col items-center justify-center space-y-3 text-slate-400 min-h-[350px]">
+                                        <BookOpenText size={40} className="text-slate-300 animate-pulse" />
+                                        <div className="space-y-1 text-center">
+                                            <h5 className="font-extrabold text-slate-700 text-xs">Aguardando Parâmetros do Plano</h5>
+                                            <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed mx-auto">
+                                                Preencha as informações do instrutor, metodologia e selecione um capítulo da Declaração no painel ao lado, depois clique em **"Gerar Plano de Aula"**.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -2828,7 +3600,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                     setPreviewOpen(true);
                                     setShowCertificateModal(false);
                                 }}
-                                className="flex-1 bg-amber-600 hover:bg-amber-750 text-white font-black gap-2 shadow-md flex items-center justify-center py-2.5"
+                                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-black gap-2 shadow-md flex items-center justify-center py-2.5"
                             >
                                 <Printer size={15} /> Imprimir Alta Resolução
                             </Button>

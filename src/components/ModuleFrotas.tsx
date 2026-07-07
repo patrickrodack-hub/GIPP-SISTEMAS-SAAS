@@ -72,7 +72,7 @@ export interface Fine {
 }
 
 const ModuleFrotas = () => {
-  const { db, addToast, dbFirestore, appId, user, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+  const { db, addToast, dbFirestore, appId, user, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
   
   const handlePrintReport = (subType: 'resumo' | 'veiculos' | 'despesas' | 'multas') => {
     setPrintData({
@@ -398,14 +398,23 @@ const ModuleFrotas = () => {
   };
 
   const handleDeleteVehicle = async (id: string) => {
-    if (!window.confirm('Deseja realmente remover este veículo?')) return;
-    try {
-      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_veiculos', id);
-      await setDoc(docRef, { deleted: true }, { merge: true });
-      addToast('Veículo movido para a lixeira.', 'success');
-    } catch (err: any) {
-      addToast(`Erro ao excluir: ${err.message}`, 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Confirmar Remoção de Veículo",
+      message: "Deseja realmente remover este veículo?",
+      confirmText: "Remover",
+      cancelText: "Cancelar",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_veiculos', id);
+          await setDoc(docRef, { deleted: true }, { merge: true });
+          addToast('Veículo movido para a lixeira.', 'success');
+        } catch (err: any) {
+          addToast(`Erro ao excluir: ${err.message}`, 'error');
+        }
+      }
+    });
   };
 
   // Motoristas Functions
@@ -477,14 +486,23 @@ const ModuleFrotas = () => {
   };
 
   const handleDeleteDriver = async (id: string) => {
-    if (!window.confirm('Deseja realmente remover este motorista?')) return;
-    try {
-      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_motoristas', id);
-      await setDoc(docRef, { deleted: true }, { merge: true });
-      addToast('Motorista removido.', 'success');
-    } catch (err: any) {
-      addToast(`Erro ao excluir: ${err.message}`, 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Confirmar Remoção de Motorista",
+      message: "Deseja realmente remover este motorista?",
+      confirmText: "Remover",
+      cancelText: "Cancelar",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_motoristas', id);
+          await setDoc(docRef, { deleted: true }, { merge: true });
+          addToast('Motorista removido.', 'success');
+        } catch (err: any) {
+          addToast(`Erro ao excluir: ${err.message}`, 'error');
+        }
+      }
+    });
   };
 
   // Expenses functions
@@ -614,20 +632,29 @@ const ModuleFrotas = () => {
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!window.confirm('Deseja excluir este registro de despesa? (Removerá também do Financeiro)')) return;
-    try {
-      const rawExp = despesas.find((e: any) => e.id === id);
-      if (rawExp && (rawExp as any).financeiro_id) {
-        // Soft-delete linked financeiro entry
-        const finDocRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', (rawExp as any).financeiro_id);
-        await setDoc(finDocRef, { deleted: true }, { merge: true });
+    setConfirmDialog({
+      isOpen: true,
+      title: "Confirmar Exclusão de Despesa",
+      message: "Deseja excluir este registro de despesa? (Removerá também do Financeiro)",
+      confirmText: "Excluir",
+      cancelText: "Cancelar",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          const rawExp = despesas.find((e: any) => e.id === id);
+          if (rawExp && (rawExp as any).financeiro_id) {
+            // Soft-delete linked financeiro entry
+            const finDocRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', (rawExp as any).financeiro_id);
+            await setDoc(finDocRef, { deleted: true }, { merge: true });
+          }
+          const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_despesas', id);
+          await setDoc(docRef, { deleted: true }, { merge: true });
+          addToast('Lançamento e despesa do financeiro excluídos com sucesso.', 'success');
+        } catch (err: any) {
+          addToast(`Erro ao excluir: ${err.message}`, 'error');
+        }
       }
-      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_despesas', id);
-      await setDoc(docRef, { deleted: true }, { merge: true });
-      addToast('Lançamento e despesa do financeiro excluídos com sucesso.', 'success');
-    } catch (err: any) {
-      addToast(`Erro ao excluir: ${err.message}`, 'error');
-    }
+    });
   };
 
   const handleSaveMaintenance = async (e: React.FormEvent) => {
@@ -726,14 +753,23 @@ const ModuleFrotas = () => {
   };
 
   const handleDeleteFine = async (id: string) => {
-    if (!window.confirm('Excluir este lançamento de multa?')) return;
-    try {
-      const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_multas', id);
-      await setDoc(docRef, { deleted: true }, { merge: true });
-      addToast('Multa excluída de forma lógica.', 'success');
-    } catch (err: any) {
-      addToast(`Erro ao remover multa: ${err.message}`, 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Confirmar Exclusão de Multa",
+      message: "Excluir este lançamento de multa?",
+      confirmText: "Excluir",
+      cancelText: "Cancelar",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'frotas_multas', id);
+          await setDoc(docRef, { deleted: true }, { merge: true });
+          addToast('Multa excluída de forma lógica.', 'success');
+        } catch (err: any) {
+          addToast(`Erro ao remover multa: ${err.message}`, 'error');
+        }
+      }
+    });
   };
 
   // ----------------------------------------------------

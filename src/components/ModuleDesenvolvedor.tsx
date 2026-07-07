@@ -47,7 +47,7 @@ import { SAAS_MODULES_LIST, generateSaaSMarketingMessages } from './ModuleDivulg
 
 // Exporting component
 const ModuleDesenvolvedor = () => {
-    const { db, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const { db, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
     const [data, setData] = useState(db.igreja || {});
     const [tab, setTab] = useState('dashboard');
     
@@ -824,67 +824,91 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
             ? `Tem certeza que deseja BLOQUEAR o acesso da igreja "${t.nome}"? O sistema deles será travado imediatamente.` 
             : `Deseja DESBLOQUEAR e liberar o acesso da igreja "${t.nome}" manualmente?`;
         
-        if (!window.confirm(msg)) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: novoStatus === 'bloqueado' ? "Bloquear Cliente" : "Desbloquear Cliente",
+            message: msg,
+            confirmText: novoStatus === 'bloqueado' ? "Confirmar Bloqueio" : "Confirmar Desbloqueio",
+            cancelText: "Cancelar",
+            variant: novoStatus === 'bloqueado' ? "danger" : "success",
+            onConfirm: async () => {
+                try {
+                    // Evita erro de 'undefined' no Firebase caso o campo não exista anteriormente
+                    const liberadoStr = novoStatus === 'ativo' ? 'desenvolvedor' : (t.liberado_por || 'sistema');
+                    
+                    // 1. Atualiza na configuração da própria Igreja
+                    await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { 
+                        licenca_status: novoStatus,
+                        liberado_por: liberadoStr
+                    }, { merge: true });
 
-        try {
-            // Evita erro de 'undefined' no Firebase caso o campo não exista anteriormente
-            const liberadoStr = novoStatus === 'ativo' ? 'desenvolvedor' : (t.liberado_por || 'sistema');
-            
-            // 1. Atualiza na configuração da própria Igreja
-            await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { 
-                licenca_status: novoStatus,
-                liberado_por: liberadoStr
-            }, { merge: true });
+                    // 2. Atualiza no registo Mestre
+                    await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { 
+                        licenca_status: novoStatus,
+                        liberado_por: liberadoStr
+                    }, { merge: true });
 
-            // 2. Atualiza no registo Mestre
-            await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { 
-                licenca_status: novoStatus,
-                liberado_por: liberadoStr
-            }, { merge: true });
-
-            addToast(`Igreja ${novoStatus === 'bloqueado' ? 'bloqueada' : 'liberada'} com sucesso!`, "success");
-        } catch(e) {
-            console.error(e);
-            addToast("Erro ao alterar o status do cliente remotamente.", "error");
-        }
+                    addToast(`Igreja ${novoStatus === 'bloqueado' ? 'bloqueada' : 'liberada'} com sucesso!`, "success");
+                } catch(e) {
+                    console.error(e);
+                    addToast("Erro ao alterar o status do cliente remotamente.", "error");
+                }
+            }
+        });
     };
 
     const handleConfirmPayment = async (t) => {
-        if (!window.confirm(`Confirma o recebimento do pagamento da igreja "${t.nome}"? A licença será renovada por +30 dias.`)) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Pagamento",
+            message: `Confirma o recebimento do pagamento da igreja "${t.nome}"? A licença será renovada por +30 dias.`,
+            confirmText: "Confirmar",
+            cancelText: "Cancelar",
+            variant: "success",
+            onConfirm: async () => {
+                try {
+                    const novoVencimento = new Date();
+                    novoVencimento.setDate(novoVencimento.getDate() + 30);
+                    const vencimentoStr = novoVencimento.toISOString().split('T')[0];
 
-        try {
-            const novoVencimento = new Date();
-            novoVencimento.setDate(novoVencimento.getDate() + 30);
-            const vencimentoStr = novoVencimento.toISOString().split('T')[0];
+                    await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { 
+                        licenca_status: 'ativo',
+                        licenca_vencimento: vencimentoStr,
+                        liberado_por: 'desenvolvedor'
+                    }, { merge: true });
 
-            await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { 
-                licenca_status: 'ativo',
-                licenca_vencimento: vencimentoStr,
-                liberado_por: 'desenvolvedor'
-            }, { merge: true });
+                    await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { 
+                        licenca_status: 'ativo',
+                        licenca_vencimento: vencimentoStr,
+                        liberado_por: 'desenvolvedor'
+                    }, { merge: true });
 
-            await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { 
-                licenca_status: 'ativo',
-                licenca_vencimento: vencimentoStr,
-                liberado_por: 'desenvolvedor'
-            }, { merge: true });
-
-            addToast("Pagamento confirmado e licença renovada!", "success");
-        } catch(e) {
-            addToast("Erro ao confirmar pagamento.", "error");
-        }
+                    addToast("Pagamento confirmado e licença renovada!", "success");
+                } catch(e) {
+                    addToast("Erro ao confirmar pagamento.", "error");
+                }
+            }
+        });
     };
 
     const handleChangePlan = async (t, novoPlano) => {
-        if (!window.confirm(`Alterar o plano da igreja "${t.nome}" para ${novoPlano.toUpperCase()}? Os menus serão ajustados imediatamente.`)) return;
-
-        try {
-            await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { plano: novoPlano }, { merge: true });
-            await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { plano: novoPlano }, { merge: true });
-            addToast("Plano alterado com sucesso!", "success");
-        } catch(e) {
-            addToast("Erro ao alterar plano.", "error");
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: "Alterar Plano",
+            message: `Alterar o plano da igreja "${t.nome}" para ${novoPlano.toUpperCase()}? Os menus serão ajustados imediatamente.`,
+            confirmText: "Alterar",
+            cancelText: "Cancelar",
+            variant: "info",
+            onConfirm: async () => {
+                try {
+                    await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { plano: novoPlano }, { merge: true });
+                    await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { plano: novoPlano }, { merge: true });
+                    addToast("Plano alterado com sucesso!", "success");
+                } catch(e) {
+                    addToast("Erro ao alterar o plano.", "error");
+                }
+            }
+        });
     };
 
     const handleExecuteDeleteTenant = async () => {
@@ -1044,15 +1068,24 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
     };
 
     const handleRemovePapelParede = async () => {
-        if (!window.confirm("Deseja realmente remover o papel de parede personalizado?")) return;
-        try {
-            setData({...data, papel_parede: null});
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { papel_parede: null }, { merge: true });
-            addToast("Papel de parede removido com sucesso!", "success");
-        } catch (err) {
-            console.error(err);
-            addToast("Erro ao remover o papel de parede.", "error");
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: "Remover Papel de Parede",
+            message: "Deseja realmente remover o papel de parede personalizado?",
+            confirmText: "Remover",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    setData({...data, papel_parede: null});
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { papel_parede: null }, { merge: true });
+                    addToast("Papel de parede removido com sucesso!", "success");
+                } catch (err) {
+                    console.error(err);
+                    addToast("Erro ao remover o papel de parede.", "error");
+                }
+            }
+        });
     };
 
     // --- CÁLCULOS DO DASHBOARD SAAS ---

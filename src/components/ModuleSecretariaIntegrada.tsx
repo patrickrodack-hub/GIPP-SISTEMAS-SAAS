@@ -46,7 +46,7 @@ import { InteractiveWindow } from './InteractiveWindow';
 
 // Exporting component
 const ModuleSecretariaIntegrada = () => {
-    const { db, collection, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, setDoc, doc, logAction, deleteItem, openModal, addDoc, deleteDoc } = useContext(ChurchContext);
+    const { db, collection, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, setDoc, doc, logAction, deleteItem, openModal, addDoc, deleteDoc, setConfirmDialog } = useContext(ChurchContext);
     const [tab, setTab] = useState('contatos');
     const [selectedMembers, setSelectedMembers] = useState([]);
     const [msgTemplate, setMsgTemplate] = useState('');
@@ -177,16 +177,24 @@ const ModuleSecretariaIntegrada = () => {
     };
 
     const handleDeleteContact = async (id, name) => {
-        if (window.confirm(`Tem certeza que deseja remover o contato "${name}"?`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'secretaria_contatos', id));
-                logAction('EXCLUSÃO', `Secretaria removeu contato "${name}"`, 'secretaria_contatos', id);
-                addToast("Contato removido.", "info");
-            } catch (error) {
-                console.error(error);
-                addToast("Erro ao remover contato.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Remoção de Contato",
+            message: `Tem certeza que deseja remover o contato "${name}"?`,
+            confirmText: "Remover",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'secretaria_contatos', id));
+                    logAction('EXCLUSÃO', `Secretaria removeu contato "${name}"`, 'secretaria_contatos', id);
+                    addToast("Contato removido.", "info");
+                } catch (error) {
+                    console.error(error);
+                    addToast("Erro ao remover contato.", "error");
+                }
             }
-        }
+        });
     };
 
     const handlePrintFichaContact = (item) => {
@@ -316,16 +324,24 @@ const ModuleSecretariaIntegrada = () => {
     };
 
     const handleDeleteLiturgia = async (id, title) => {
-        if (window.confirm(`Tem a certeza que deseja remover o planeamento litúrgico do culto "${title}"?`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias', id));
-                logAction('EXCLUSÃO', `Secretaria removeu liturgia do culto "${title}"`, 'pastor_liturgias', id);
-                addToast("Planeamento litúrgico removido.", "info");
-            } catch (error) {
-                console.error(error);
-                addToast("Erro ao remover liturgia.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Exclusão de Liturgia",
+            message: `Tem a certeza que deseja remover o planeamento litúrgico do culto "${title}"?`,
+            confirmText: "Remover",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias', id));
+                    logAction('EXCLUSÃO', `Secretaria removeu liturgia do culto "${title}"`, 'pastor_liturgias', id);
+                    addToast("Planeamento litúrgico removido.", "info");
+                } catch (error) {
+                    console.error(error);
+                    addToast("Erro ao remover liturgia.", "error");
+                }
             }
-        }
+        });
     };
 
     // NOVO: Filtragem em tempo real de agendas e tarefas

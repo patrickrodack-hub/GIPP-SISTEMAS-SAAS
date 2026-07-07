@@ -5,7 +5,8 @@ import {
     CheckCircle2, Plus, Settings, AlertCircle, 
     Share2, MonitorPlay, Key, FilePlus, Sparkles, BookOpen, PlayCircle,
     Download, Copy, ExternalLink, ThumbsUp, MessageCircle, RefreshCw,
-    TrendingUp, Users, DollarSign, Award, Target, Eye, Trash2, Rocket, ToggleLeft, HelpCircle, ArrowUpRight
+    TrendingUp, Users, DollarSign, Award, Target, Eye, Trash2, Rocket, ToggleLeft, HelpCircle, ArrowUpRight,
+    Heart, Smile, Gift
 } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ChurchContext } from '../App';
@@ -51,18 +52,38 @@ const PLAN_VALUES = {
 };
 
 const ModuleMarketingSocial: React.FC = () => {
-    const { addToast, user, db, dbFirestore, appId } = useContext(ChurchContext);
+    const { addToast, user, db, dbFirestore, appId, callGeminiAI } = useContext(ChurchContext);
     
     const isDevOrSupport = useMemo(() => {
         return user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || user?.nivel === 'suporte';
     }, [user]);
 
     // States
-    const [activeTab, setActiveTab] = useState<'campanhas' | 'agendamento' | 'gestao' | 'leads' | 'dashboard' | 'api'>('gestao');
+    const [activeTab, setActiveTab] = useState<'campanhas' | 'agendamento' | 'gestao' | 'leads' | 'dashboard' | 'api' | 'endomarketing'>('gestao');
     const [selectedModuleId, setSelectedModuleId] = useState<string>('financeiro');
     const [selectedPlatform, setSelectedPlatform] = useState<'instagram' | 'facebook' | 'tiktok' | 'linkedin' | 'whatsapp'>('instagram');
     const [selectedPostType, setSelectedPostType] = useState<string>('imagem');
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'Pendente' | 'Disparado'>('Todos');
+    
+    // States for Endomarketing tab
+    const [muralNotes, setMuralNotes] = useState<any[]>([
+        { id: '1', dept: 'Mídia & Transmissão', text: 'Queremos honrar a equipe de transmissão pelo excelente trabalho no último culto de missões! Vocês conectaram milhares de corações.', author: 'Pr. Presidente', color: 'indigo', hearts: 12, amens: 18 },
+        { id: '2', dept: 'Ministério Infantil', text: 'Obrigado às tias e tios da Salinha Kids pelo carinho e ensino da Palavra de Deus aos nossos pequeninos. Vocês semeiam no melhor solo!', author: 'Irmã Rebeca', color: 'rose', hearts: 8, amens: 15 },
+        { id: '3', dept: 'Diaconato & Recepção', text: 'A recepção calorosa na entrada do templo tem sido um diferencial. Cada sorriso reflete a graça de nosso Senhor!', author: 'Pb. Mateus', color: 'emerald', hearts: 10, amens: 22 }
+    ]);
+    const [newNoteText, setNewNoteText] = useState('');
+    const [newNoteAuthor, setNewNoteAuthor] = useState('');
+    const [newNoteDept, setNewNoteDept] = useState('Geral');
+    const [newNoteColor, setNewNoteColor] = useState<'indigo' | 'rose' | 'amber' | 'emerald'>('indigo');
+    const [loadingEndoCampaign, setLoadingEndoCampaign] = useState(false);
+    const [endomarketingCampaignResult, setEndomarketingCampaignResult] = useState('');
+    const [selectedCampaignTheme, setSelectedCampaignTheme] = useState('Café Teológico dos Professores');
+    const [selectedCampaignGoal, setSelectedCampaignGoal] = useState('Fomentar a unidade e oração');
+    const [celebrantName, setCelebrantName] = useState('');
+    const [celebrantRole, setCelebrantRole] = useState('Voluntário');
+    const [celebrantTheme, setCelebrantTheme] = useState('Chama Avivada (2 Timóteo 1:6)');
+    const [compiledCardText, setCompiledCardText] = useState('');
+    const [loadingBirthdayCard, setLoadingBirthdayCard] = useState(false);
     
     // Customization for campaign copies
     const [gippName, setGippName] = useState(() => isDevOrSupport ? 'GIPP - Gestão Integrada de Portais' : (db?.igreja?.nome || 'Minha Igreja'));
@@ -1299,12 +1320,13 @@ const ModuleMarketingSocial: React.FC = () => {
 
             {/* --- MENU DE NAVEGAÇÃO INTERNA --- */}
             <div className="bg-slate-900 p-2.5 rounded-3xl border border-slate-800 shadow-xl shrink-0">
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-7 gap-2">
                     {[
                         { id: 'gestao', label: 'Central de Gestão', icon: Target },
                         { id: 'campanhas', label: 'Campanhas Prontas', icon: Share2 },
                         { id: 'agendamento', label: 'Agendar Posts', icon: Calendar },
                         { id: 'leads', label: 'Funil de Leads (CRM)', icon: Users },
+                        { id: 'endomarketing', label: 'Endomarketing & Equipe', icon: Heart },
                         { id: 'dashboard', label: 'Resultados & Métricas', icon: TrendingUp },
                         { id: 'api', label: 'Integrações de API', icon: Key }
                     ].map(item => {
@@ -2727,6 +2749,382 @@ const ModuleMarketingSocial: React.FC = () => {
                             </div>
                         </div>
 
+                    </div>
+                )}
+
+                {/* === ABA: ENDOMARKETING & EQUIPE === */}
+                {activeTab === 'endomarketing' && (
+                    <div className="space-y-8 animate-entrance text-slate-800">
+                        {/* Header da Seção */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-800 font-[Outfit] flex items-center gap-2">
+                                    <Heart className="text-pink-600 fill-pink-500 animate-pulse" size={26} />
+                                    Central de Endo-marketing & Engajamento de Voluntários
+                                </h3>
+                                <p className="text-xs text-slate-500 font-bold mt-1">
+                                    Ações estratégicas de comunicação interna, valorização dos obreiros e incentivo à comunhão da igreja.
+                                </p>
+                            </div>
+                            <div className="bg-gradient-to-r from-pink-50 to-indigo-50 border border-pink-200/50 px-4 py-2 rounded-2xl text-xs font-black text-slate-700 flex items-center gap-2">
+                                <Award className="text-pink-600" size={16} />
+                                Gestão Ativa de Equipes de Voluntariado
+                            </div>
+                        </div>
+
+                        {/* Grade Principal */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            
+                            {/* COLUNA ESQUERDA: MURAL DE GRATIDÃO (7 COLS) */}
+                            <div className="lg:col-span-7 space-y-6">
+                                <div className="bg-white border border-slate-200 p-6 sm:p-8 rounded-[2rem] shadow-sm space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h4 className="font-black text-slate-800 text-base">Mural de Honra & Reconhecimento</h4>
+                                            <p className="text-xs text-slate-500 font-bold">Publique notas de gratidão aos departamentos e veja a equipe reagir!</p>
+                                        </div>
+                                        <Smile className="text-amber-500" size={24} />
+                                    </div>
+
+                                    {/* Formulário de Afixação */}
+                                    <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-4 text-left">
+                                        <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Afixar Nova Gratidão no Mural</span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Ministério / Equipe:</label>
+                                                <select 
+                                                    value={newNoteDept} 
+                                                    onChange={(e) => setNewNoteDept(e.target.value)}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                >
+                                                    <option value="Mídia & Transmissão">Mídia & Transmissão</option>
+                                                    <option value="Ministério de Louvor">Ministério de Louvor</option>
+                                                    <option value="Escola Bíblica (EBD)">Escola Bíblica (EBD)</option>
+                                                    <option value="Departamento Infantil">Departamento Infantil</option>
+                                                    <option value="Diaconato & Recepção">Diaconato & Recepção</option>
+                                                    <option value="Apoio & Limpeza">Apoio & Limpeza</option>
+                                                    <option value="Geral">Geral (Toda a Igreja)</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Seu Nome / Cargo:</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Ex: Pr. Geraldo / Coordenação" 
+                                                    value={newNoteAuthor}
+                                                    onChange={(e) => setNewNoteAuthor(e.target.value)}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Mensagem de Gratidão (Exortação Pentecostal):</label>
+                                            <textarea 
+                                                rows={3}
+                                                placeholder="Agradeça de coração à dedicação e ao empenho do ministério..." 
+                                                value={newNoteText}
+                                                onChange={(e) => setNewNoteText(e.target.value)}
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                                            />
+                                        </div>
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-[10px] font-bold text-slate-400">Estilo:</span>
+                                                {(['indigo', 'rose', 'amber', 'emerald'] as any[]).map((col) => (
+                                                    <button
+                                                        key={col}
+                                                        type="button"
+                                                        onClick={() => setNewNoteColor(col)}
+                                                        className={`w-6 h-6 rounded-full transition-all border-2 ${
+                                                            newNoteColor === col ? 'border-slate-800 scale-110' : 'border-transparent'
+                                                        } ${
+                                                            col === 'indigo' ? 'bg-indigo-100' :
+                                                            col === 'rose' ? 'bg-rose-100' :
+                                                            col === 'amber' ? 'bg-amber-100' :
+                                                            'bg-emerald-100'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (!newNoteText.trim() || !newNoteAuthor.trim()) {
+                                                        addToast("Preencha a mensagem e o seu nome/cargo para afixar!", "warning");
+                                                        return;
+                                                    }
+                                                    const note = {
+                                                        id: String(Date.now()),
+                                                        dept: newNoteDept,
+                                                        text: newNoteText,
+                                                        author: newNoteAuthor,
+                                                        color: newNoteColor,
+                                                        hearts: 0,
+                                                        amens: 0
+                                                    };
+                                                    setMuralNotes([note, ...muralNotes]);
+                                                    setNewNoteText('');
+                                                    addToast("Nota afixada no mural com sucesso!", "success");
+                                                }}
+                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                                            >
+                                                <Plus size={14} /> Afixar no Mural
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Lista de Notas do Mural */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                        {muralNotes.map((note) => (
+                                            <div 
+                                                key={note.id}
+                                                className={`p-5 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-md text-left flex flex-col justify-between space-y-4 ${
+                                                    note.color === 'indigo' ? 'bg-indigo-50/70 border-indigo-100 text-indigo-950' :
+                                                    note.color === 'rose' ? 'bg-rose-50/70 border-rose-100 text-rose-950' :
+                                                    note.color === 'amber' ? 'bg-amber-50/70 border-amber-100 text-amber-950' :
+                                                    'bg-emerald-50/70 border-emerald-100 text-emerald-950'
+                                                }`}
+                                            >
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                                            note.color === 'indigo' ? 'bg-indigo-100 text-indigo-700' :
+                                                            note.color === 'rose' ? 'bg-rose-100 text-rose-700' :
+                                                            note.color === 'amber' ? 'bg-amber-100 text-amber-700' :
+                                                            'bg-emerald-100 text-emerald-700'
+                                                        }`}>
+                                                            {note.dept}
+                                                        </span>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setMuralNotes(muralNotes.filter(n => n.id !== note.id));
+                                                                addToast("Nota removida do mural.", "info");
+                                                            }}
+                                                            className="text-slate-400 hover:text-rose-600 text-[10px]"
+                                                            title="Remover nota"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-xs font-semibold leading-relaxed font-sans">
+                                                        "{note.text}"
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center justify-between border-t border-black/5 pt-3">
+                                                    <span className="text-[10px] font-bold opacity-60">Por: {note.author}</span>
+                                                    <div className="flex gap-2 text-[10px] font-bold">
+                                                        <button 
+                                                            onClick={() => {
+                                                                const updated = muralNotes.map(n => n.id === note.id ? { ...n, hearts: n.hearts + 1 } : n);
+                                                                setMuralNotes(updated);
+                                                            }}
+                                                            className="flex items-center gap-1 hover:scale-115 transition-all text-rose-600 bg-white/60 px-2 py-1 rounded-lg border border-black/5"
+                                                        >
+                                                            ❤️ <span className="font-black">{note.hearts}</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const updated = muralNotes.map(n => n.id === note.id ? { ...n, amens: n.amens + 1 } : n);
+                                                                setMuralNotes(updated);
+                                                            }}
+                                                            className="flex items-center gap-1 hover:scale-115 transition-all text-amber-600 bg-white/60 px-2 py-1 rounded-lg border border-black/5"
+                                                        >
+                                                            🙏 <span className="font-black">{note.amens}</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* COLUNA DIREITA: IA CAMPAIGN GENERATOR & BIRTHDAY CARD (5 COLS) */}
+                            <div className="lg:col-span-5 space-y-6 text-left">
+                                
+                                {/* CARD 1: IA CAMPAIGN GENERATOR */}
+                                <div className="bg-white border border-slate-200 p-6 sm:p-7 rounded-[2rem] shadow-sm space-y-5">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="text-indigo-600" size={20} />
+                                        <h4 className="font-black text-slate-800 text-sm">IA Planejadora de Campanhas Internas</h4>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                                        Selecione o tema e gere ideias criativas de endomarketing alinhadas aos valores eclesiásticos.
+                                    </p>
+
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Tema da Campanha:</label>
+                                            <select 
+                                                value={selectedCampaignTheme} 
+                                                onChange={(e) => setSelectedCampaignTheme(e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white"
+                                            >
+                                                <option value="Café Teológico dos Professores">Café Teológico dos Professores (EBD)</option>
+                                                <option value="Comunhão e Retiro dos Obreiros">Comunhão e Retiro dos Obreiros</option>
+                                                <option value="Excelência no Diaconato & Recepção">Excelência no Diaconato & Recepção</option>
+                                                <option value="Dia do Músico Evangélico & Dedicação">Dia do Músico Evangélico & Dedicação</option>
+                                                <option value="Consagração e Jejum de Voluntários">Consagração e Jejum de Voluntários</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Objetivo Principal:</label>
+                                            <select 
+                                                value={selectedCampaignGoal} 
+                                                onChange={(e) => setSelectedCampaignGoal(e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white"
+                                            >
+                                                <option value="Fomentar a unidade e oração">Fomentar a unidade e oração</option>
+                                                <option value="Atrair novos obreiros e voluntários">Atrair novos obreiros e voluntários</option>
+                                                <option value="Melhorar a pontualidade e dedicação">Melhorar a pontualidade e dedicação</option>
+                                                <option value="Expressar profunda gratidão pelo ano pastoral">Expressar profunda gratidão pelo ano pastoral</option>
+                                            </select>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            disabled={loadingEndoCampaign}
+                                            onClick={async () => {
+                                                setLoadingEndoCampaign(true);
+                                                try {
+                                                    const prompt = `Crie um plano simplificado de endomarketing eclesial (Assembleia de Deus CGADB). Tema: ${selectedCampaignTheme}. Objetivo: ${selectedCampaignGoal}. Forneça: 1) Um slogan impactante, 2) Três ideias de ações práticas, 3) Um versículo bíblico encorajador para abrir a campanha. Formato muito sucinto, didático e inspirador em português.`;
+                                                    const result = await callGeminiAI(prompt);
+                                                    setEndomarketingCampaignResult(result);
+                                                    addToast("Campanha gerada com sucesso!", "success");
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    addToast("Erro ao chamar o gerador de campanhas.", "error");
+                                                } finally {
+                                                    setLoadingEndoCampaign(false);
+                                                }
+                                            }}
+                                            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-xs py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 animate-pulse"
+                                        >
+                                            {loadingEndoCampaign ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                            {loadingEndoCampaign ? 'Planejando com a IA...' : '✨ Gerar Campanha Estratégica via IA'}
+                                        </button>
+                                    </div>
+
+                                    {endomarketingCampaignResult && (
+                                        <div className="mt-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-xs text-slate-700 whitespace-pre-wrap leading-relaxed font-medium max-h-[220px] overflow-y-auto custom-scrollbar">
+                                            {endomarketingCampaignResult}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* CARD 2: BIRTHDAY CARD GENERATOR */}
+                                <div className="bg-white border border-slate-200 p-6 sm:p-7 rounded-[2rem] shadow-sm space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <Gift className="text-pink-500" size={20} />
+                                        <h4 className="font-black text-slate-800 text-sm">Cartão de Aniversariante do Mês</h4>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                                        Monte um belo cartão com uma exortação devocional bíblica personalizada e compartilhe no grupo da equipe.
+                                    </p>
+
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Nome:</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Ex: Pb. Silas" 
+                                                    value={celebrantName}
+                                                    onChange={(e) => setCelebrantName(e.target.value)}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Ministério / Cargo:</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Ex: Baixista / Diácono" 
+                                                    value={celebrantRole}
+                                                    onChange={(e) => setCelebrantRole(e.target.value)}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Tema Escriturístico:</label>
+                                            <select 
+                                                value={celebrantTheme} 
+                                                onChange={(e) => setCelebrantTheme(e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white"
+                                            >
+                                                <option value="Chama Avivada (2 Timóteo 1:6)">Chama Avivada (2 Timóteo 1:6)</option>
+                                                <option value="Ovelha Guardada (Salmo 23)">Ovelha Guardada (Salmo 23)</option>
+                                                <option value="Sacerdócio Real (1 Pedro 2:9)">Sacerdócio Real (1 Pedro 2:9)</option>
+                                                <option value="Fidelidade e Coroa (Apocalipse 2:10)">Fidelidade e Coroa (Apocalipse 2:10)</option>
+                                            </select>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            disabled={loadingBirthdayCard}
+                                            onClick={async () => {
+                                                if (!celebrantName.trim()) {
+                                                    addToast("Digite o nome do aniversariante para gerar!", "warning");
+                                                    return;
+                                                }
+                                                setLoadingBirthdayCard(true);
+                                                try {
+                                                    const prompt = `Escreva uma mensagem de aniversário curta, amorosa e espiritualmente edificante (estilo pentecostal assembleiano clássico) para o obreiro/voluntário ${celebrantName} que atua no ministério: ${celebrantRole}. Use o tema teológico ${celebrantTheme}. Comece com uma saudação e termine com votos de bênçãos e saúde. Máximo de 1 parágrafo bem encorajador com um tom caloroso de comunhão.`;
+                                                    const result = await callGeminiAI(prompt);
+                                                    setCompiledCardText(result);
+                                                    addToast("Mensagem devocional criada!", "success");
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    addToast("Erro ao chamar o gerador de cartão.", "error");
+                                                } finally {
+                                                    setLoadingBirthdayCard(false);
+                                                }
+                                            }}
+                                            className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black text-xs py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {loadingBirthdayCard ? <RefreshCw size={14} className="animate-spin" /> : <Gift size={14} />}
+                                            {loadingBirthdayCard ? 'Redigindo Devocional...' : '✨ Gerar Devocional Customizado'}
+                                        </button>
+                                    </div>
+
+                                    {compiledCardText && (
+                                        <div className="space-y-3 pt-2">
+                                            {/* Representação Física do Cartão */}
+                                            <div className="bg-gradient-to-br from-pink-500 to-indigo-600 text-white p-5 rounded-2xl shadow-md text-left relative overflow-hidden">
+                                                <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4">
+                                                    <Gift size={120} />
+                                                </div>
+                                                <div className="relative z-10 space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[9px] font-black tracking-widest uppercase bg-white/20 px-2.5 py-0.5 rounded-full">PARABÉNS! 🎉</span>
+                                                        <span className="text-[10px] font-mono opacity-80">{celebrantTheme.split(' ')[0]}</span>
+                                                    </div>
+                                                    <h5 className="font-extrabold text-base leading-tight">{celebrantName}</h5>
+                                                    <p className="text-[10px] font-bold uppercase text-pink-200 tracking-wider mb-2">{celebrantRole}</p>
+                                                    <p className="text-xs leading-relaxed italic bg-black/15 p-3 rounded-xl border border-white/5 font-sans font-medium">
+                                                        {compiledCardText}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(`🎉 *FELIZ ANIVERSÁRIO!* 🎂\n\nQuerido(a) *${celebrantName}* (${celebrantRole}),\n\n${compiledCardText}\n\nDe toda a liderança e equipe da igreja! ❤️🙏`);
+                                                    addToast("Mensagem copiada para a área de transferência!", "success");
+                                                }}
+                                                className="w-full bg-slate-100 hover:bg-slate-205 text-slate-700 font-bold text-xs py-2 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5"
+                                            >
+                                                <Copy size={13} /> Copiar Texto Prontinho
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 )}
 

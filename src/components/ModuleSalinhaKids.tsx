@@ -59,7 +59,7 @@ interface ModuleSalinhaKidsProps {
 }
 
 const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' }) => {
-  const { db, addToast, dbFirestore, appId, user } = useContext(ChurchContext);
+  const { db, addToast, dbFirestore, appId, user, setConfirmDialog } = useContext(ChurchContext);
   const [tab, setTab] = useState(1); // 1: Dashboard, 2: Crianças, 3: Freguência, 4: Ocorrências, 5: Check-in/Out Station
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -787,9 +787,17 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
           const cleanPhone = parentPhone.replace(/\D/g, '');
           const waUrl = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(finalUrgentMsg)}`;
           
-          if (window.confirm(`Deseja despachar a notificação também no WhatsApp do Responsável (${parent.nome}) agora mesmo?`)) {
-            window.open(waUrl, '_blank');
-          }
+          setConfirmDialog({
+            isOpen: true,
+            title: "Despachar no WhatsApp?",
+            message: `Deseja despachar a notificação também no WhatsApp do Responsável (${parent.nome}) agora mesmo?`,
+            confirmText: "Enviar WhatsApp",
+            cancelText: "Não, apenas salvar",
+            variant: "info",
+            onConfirm: () => {
+              window.open(waUrl, '_blank');
+            }
+          });
         } else {
           addToast('Nota: Responsável não tem celular cadastrado para envio via WhatsApp.', 'info');
         }

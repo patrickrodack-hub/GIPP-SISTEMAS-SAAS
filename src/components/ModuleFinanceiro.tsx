@@ -143,7 +143,7 @@ const INITIAL_DDA_SEED = [
 
 // Exporting component
 const ModuleFinanceiro = ({ initialTab = 1 }) => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user, isOnline, setDbState } = useContext(ChurchContext);
+    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, logAction, user, isOnline, setDbState, setConfirmDialog } = useContext(ChurchContext);
     const [tab, setTab] = useState(initialTab);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
     const [statusFilter, setStatusFilter] = useState('todos');
@@ -1185,24 +1185,33 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     ];
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
     const StatCard = ({ title, value, sub = undefined, icon: Icon, color, active = undefined }: { title: any; value: any; sub?: any; icon: any; color: any; active?: any }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
-    const handleBaixarDespesa = async (item) => { 
-        if (!window.confirm(`Confirmar pagamento de R$ ${parseFloat(item.valor).toFixed(2)} para ${item.descricao}?`)) return; 
-        try { 
-            const histItem = {
-                usuario_nome: user?.nome || 'Operador',
-                usuario_id: user?.id || 'id',
-                data: new Date().toISOString(),
-                descricao: 'Status de pagamento alterado de "PENDENTE" para "PAGO"'
-            };
-            const prevHist = Array.isArray(item.historico) ? item.historico : (Array.isArray(item.alteracoes) ? item.alteracoes : []);
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', item.id), { 
-                status: 'pago', 
-                data_pagamento: new Date().toISOString().split('T')[0],
-                historico: [histItem, ...prevHist]
-            }, { merge: true }); 
-            logAction('BAIXA_FINANCEIRA', `Marcou despesa como paga: ${item.descricao}`, 'financeiro', item.id); 
-            addToast("Despesa baixada com sucesso!", "success"); 
-        } catch(e) { console.error(e); addToast("Erro ao baixar despesa.", "error"); } 
+    const handleBaixarDespesa = (item) => { 
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Pagamento de Despesa",
+            message: `Confirmar pagamento de R$ ${parseFloat(item.valor).toFixed(2)} para ${item.descricao}?`,
+            confirmText: "Confirmar",
+            cancelText: "Cancelar",
+            variant: "primary",
+            onConfirm: async () => {
+                try { 
+                    const histItem = {
+                        usuario_nome: user?.nome || 'Operador',
+                        usuario_id: user?.id || 'id',
+                        data: new Date().toISOString(),
+                        descricao: 'Status de pagamento alterado de "PENDENTE" para "PAGO"'
+                    };
+                    const prevHist = Array.isArray(item.historico) ? item.historico : (Array.isArray(item.alteracoes) ? item.alteracoes : []);
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', item.id), { 
+                        status: 'pago', 
+                        data_pagamento: new Date().toISOString().split('T')[0],
+                        historico: [histItem, ...prevHist]
+                    }, { merge: true }); 
+                    logAction('BAIXA_FINANCEIRA', `Marcou despesa como paga: ${item.descricao}`, 'financeiro', item.id); 
+                    addToast("Despesa baixada com sucesso!", "success"); 
+                } catch(e) { console.error(e); addToast("Erro ao baixar despesa.", "error"); } 
+            }
+        });
     };
 
     const handleDownloadAnexo = (base64Str, type) => {

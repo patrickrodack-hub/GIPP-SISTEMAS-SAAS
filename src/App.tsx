@@ -16,7 +16,7 @@ import {
   Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera, Apple,
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
-  MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
+  MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic, HelpCircle, Lightbulb,
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
@@ -9770,6 +9770,447 @@ const ThemeToggle = ({ variant = 'default', className = "" }) => {
     );
 };
 
+// --- HELP HUB TOGGLE & MODAL (USUÁRIO LEIGO) ---
+const HelpHubToggle = ({ className = "" }) => {
+    const { setShowHelpHub } = useContext(ChurchContext);
+    return (
+        <button 
+            type="button" 
+            onClick={() => { playMenuSound(); setShowHelpHub(true); }} 
+            className={`relative p-3 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center hover:scale-105 active:scale-95 duration-200 cursor-pointer ${className}`} 
+            title="Manual Interativo e Guia do Usuário"
+        >
+            <HelpCircle size={20} className="animate-pulse" />
+            <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full text-white border border-white shadow-xs tracking-wider">
+                GUIA
+            </span>
+        </button>
+    );
+};
+
+const HelpHubModal = ({ isOpen, onClose }) => {
+    const { setView, view, addToast, db } = useContext(ChurchContext);
+    const [activeTab, setActiveTab] = useState<'tour' | 'como_fazer' | 'glossario'>('tour');
+    const [tourStep, setTourStep] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    const tourSteps = [
+        {
+            title: "Bem-vindo ao Sistema ERP GIPP!",
+            subtitle: "Seu assistente completo para gestão de Igrejas e Ministérios.",
+            description: "Olá! O GIPP foi desenhado para ser simples e poderoso. Este assistente interativo vai ajudar você, líder, pastor ou tesoureiro, a dominar as principais ferramentas de forma rápida e didática, mesmo se você não tiver experiência com computadores.",
+            icon: Sparkles,
+            color: "from-amber-500 to-orange-500",
+            tips: [
+                "Utilize a Central de Busca Global pressionando Ctrl+K para encontrar qualquer coisa instantaneamente.",
+                "Sempre que tiver dúvidas, você pode acionar a Mary, nossa inteligência artificial oficial integrada."
+            ]
+        },
+        {
+            title: "Secretaria, Membresia e Rol",
+            subtitle: "Cadastro seguro e impressão de credenciais oficiais.",
+            description: "Aqui você controla o Rol de Membros da sua Igreja. Você pode cadastrar novos membros com foto, registrar casamentos, batismos em águas e emitir credenciais timbradas ou carteirinhas personalizadas.",
+            icon: Users,
+            color: "from-indigo-500 to-blue-500",
+            actionView: "cad_membro",
+            actionLabel: "Ir para Cadastro de Membros",
+            tips: [
+                "Você pode gerar relatórios estatísticos e emitir certificados de batismo ou apresentação.",
+                "As carteirinhas possuem QRCode gerado automaticamente para controle de chamadas."
+            ]
+        },
+        {
+            title: "Financeiro & Tesouraria Descomplicada",
+            subtitle: "Dízimos, Ofertas, DRE e Conciliação Bancária em cliques.",
+            description: "Gerencie todas as entradas (Dízimos e Ofertas) e despesas de forma transparente. Com o GIPP, você faz conciliação de arquivos OFX direto do seu banco e gera o balanço e DRE da igreja de forma automática.",
+            icon: CreditCard,
+            color: "from-emerald-500 to-teal-500",
+            actionView: "fin_entrada",
+            actionLabel: "Ir para Controle Financeiro",
+            tips: [
+                "Lançamentos recorrentes ajudam você a não esquecer contas mensais da igreja.",
+                "Os membros conseguem ver e emitir comprovantes de suas contribuições."
+            ]
+        },
+        {
+            title: "Cursos, EBD e Teologia CGADB",
+            subtitle: "Gestão escolar dominical e materiais profundos.",
+            description: "Organize as turmas de Escola Bíblica Dominical, gerencie chamadas, presenças e avaliações dos alunos. Seus alunos também têm acesso a uma Universidade Teológica completa com lições baseadas estritamente na Declaração de Fé da CGADB.",
+            icon: GraduationCap,
+            color: "from-purple-500 to-pink-500",
+            actionView: "secretaria_ebd",
+            actionLabel: "Ir para Gestão da EBD",
+            tips: [
+                "Gere lições teológicas profundas e envie os materiais em PDF para seus obreiros e membros.",
+                "Gerencie as turmas por níveis: Básico, Médio ou Avançado."
+            ]
+        },
+        {
+            title: "Segurança Absoluta & Backups",
+            subtitle: "Seus dados blindados na nuvem e no dispositivo.",
+            description: "A integridade dos dados da sua igreja é prioridade máxima. O sistema executa sincronização automática e backups na nuvem. Se apagar alguma coisa sem querer, você pode recuperar direto na Lixeira Integrada.",
+            icon: Shield,
+            color: "from-slate-700 to-slate-900",
+            actionView: "config_backup",
+            actionLabel: "Ir para Configurações de Backup",
+            tips: [
+                "Você pode baixar backups manuais em JSON a qualquer momento.",
+                "O log de auditoria registra quem fez cada ação para total transparência."
+            ]
+        }
+    ];
+
+    const guides = [
+        {
+            title: "Cadastrar novos membros da igreja",
+            steps: [
+                "Clique em 'Membros (Rol)' no menu lateral esquerdo.",
+                "Pressione o botão verde '+ Adicionar Membro' no canto superior direito.",
+                "Preencha as informações básicas (Nome, Telefone, Estado Civil) e dados eclesiásticos.",
+                "Opcionalmente, tire ou envie uma foto do membro para a carteirinha.",
+                "Pressione 'Guardar/Salvar' para arquivar no Rol Oficial."
+            ],
+            view: "cad_membro",
+            icon: Users,
+            category: "Secretaria"
+        },
+        {
+            title: "Registrar a entrada de dízimos e ofertas",
+            steps: [
+                "Clique em 'Receitas (Entradas)' no menu lateral.",
+                "Selecione se é um dízimo, oferta de culto ou doação especial.",
+                "Selecione o membro contribuinte (ou lance como 'Anônimo').",
+                "Insira o valor, a data e a forma de pagamento (Dinheiro, PIX, Cartão).",
+                "Clique em 'Guardar Lançamento' para registrar no fluxo financeiro."
+            ],
+            view: "fin_entrada",
+            icon: ArrowUpCircle,
+            category: "Financeiro"
+        },
+        {
+            title: "Lançar uma despesa/conta paga",
+            steps: [
+                "Selecione 'Despesas (Saídas)' no menu principal.",
+                "Clique no botão '+ Nova Despesa'.",
+                "Defina a categoria (Ex: Luz, Água, Aluguel, Compra de Bíblias, Ajuda Missionária).",
+                "Preencha o valor, data de vencimento e data do pagamento real.",
+                "Insira o arquivo do comprovante em PDF ou foto se tiver.",
+                "Pressione 'Guardar' para atualizar o caixa geral."
+            ],
+            view: "fin_saida",
+            icon: ArrowDownCircle,
+            category: "Financeiro"
+        },
+        {
+            title: "Fazer chamada/lançar presenças na EBD",
+            steps: [
+                "Vá em 'Gestão EBD' no menu de ministérios.",
+                "Selecione a classe desejada (Ex: Jovens, Adultos, Infantil).",
+                "Pressione a aba 'Chamadas / Presenças'.",
+                "Marque 'Presente' ou 'Ausente' ao lado do nome de cada aluno cadastrado.",
+                "Insira observações se houver (como visitas ou ofertas da classe).",
+                "Clique em 'Salvar Chamada' para consolidar o relatório do domingo."
+            ],
+            view: "secretaria_ebd",
+            icon: GraduationCap,
+            category: "Escola Bíblica"
+        },
+        {
+            title: "Gerar apostila de Teologia (CGADB)",
+            steps: [
+                "Vá até 'Curso Teologia' no menu Principal ou Acadêmico.",
+                "Escolha o nível da aula (Básico, Médio ou Avançado).",
+                "Escolha um tema ou digite o assunto teológico desejado no campo de geração.",
+                "A inteligência artificial irá formular a apostila baseada estritamente na Declaração de Fé da CGADB.",
+                "Use os botões de controle para salvar em PDF, imprimir ou liberar para estudo dos alunos."
+            ],
+            view: "curso_teologia",
+            icon: BookOpen,
+            category: "Teologia"
+        },
+        {
+            title: "Conectar e conversar com a Inteligência Artificial Mary",
+            steps: [
+                "Para suporte interativo, teológico ou administrativo, acesse o botão da Mary (ícone de brilho no canto inferior direito ou menu 'Assistente AI').",
+                "Digite sua dúvida em linguagem natural (Ex: 'como faço dízimo de obreiro' ou 'resuma o capítulo 12 da Declaração de Fé').",
+                "A Mary irá analisar seu banco de dados e as doutrinas oficiais da igreja para responder precisamente.",
+                "Você pode usar as respostas para preencher relatórios ou gerar avisos."
+            ],
+            view: "assistente_ai",
+            icon: Sparkles,
+            category: "Inteligência Artificial"
+        },
+        {
+            title: "Exportar Relatório Geral e Fazer Backup",
+            steps: [
+                "Abra o painel 'Utilitários (Bases)' ou acesse diretamente 'Backup & Segurança'.",
+                "Clique no botão azul 'Gerar Novo Backup' ou 'Exportar Dados em JSON'.",
+                "O arquivo será baixado de forma segura no seu computador ou celular.",
+                "Você também pode enviar esse arquivo para outra congregação ou manter como cópia física."
+            ],
+            view: "config_backup",
+            icon: Shield,
+            category: "Segurança"
+        }
+    ];
+
+    const glossary = [
+        { term: "DRE (Demonstração do Resultado)", desc: "Relatório financeiro estruturado que mostra se as contas da igreja terminaram o mês no azul (superávit) ou no vermelho (déficit), subtraindo todas as despesas das receitas." },
+        { term: "CGADB", desc: "Convenção Geral das Assembleias de Deus no Brasil. O GIPP está 100% alinhado com a Declaração de Fé e dogmas desta convenção para os materiais teológicos e litúrgicos." },
+        { term: "EBD", desc: "Escola Bíblica Dominical. O departamento responsável pelo ensino sistemático das Escrituras Sagradas aos domingos de manhã." },
+        { term: "Rol de Membros", desc: "Cadastro oficial, canônico e legal com os dados de todas as pessoas que foram batizadas ou recebidas por carta de recomendação na igreja local." },
+        { term: "Conciliação Bancária", desc: "O ato de comparar o extrato real da conta bancária da igreja com os lançamentos inseridos no sistema, garantindo que nenhum centavo fique sem justificativa." },
+        { term: "Arquivo OFX", desc: "Formato padrão de extrato eletrônico que você exporta do aplicativo do seu banco e envia ao GIPP para importar e lançar as movimentações em segundos, evitando digitação manual." },
+        { term: "PIN de Segurança (Kids)", desc: "Código numérico temporário ou fixo de 4 dígitos dado exclusivamente aos pais na hora de entregar a criança na Salinha Kids. A criança só pode ser retirada com a digitação desse PIN." }
+    ];
+
+    const filteredGuides = guides.filter(g => 
+        g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        g.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const activeStepData = tourSteps[tourStep];
+    const StepIcon = activeStepData.icon;
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fadeIn" onClick={onClose}>
+            <div className="bg-white/95 backdrop-blur-md w-full max-w-4xl h-[80vh] rounded-[2.5rem] border border-slate-200/80 shadow-2xl overflow-hidden flex flex-col animate-scaleUp" onClick={e => e.stopPropagation()}>
+                {/* Header do Hub */}
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl shadow-md shadow-orange-500/10">
+                            <HelpCircle size={24} />
+                        </div>
+                        <div className="text-left">
+                            <h2 className="text-xl font-black text-slate-800 tracking-tight">Manual Interativo & Guia de Ajuda</h2>
+                            <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Interface Simplificada para Usuários e Líderes</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-2xl transition-colors cursor-pointer">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Abas Superiores */}
+                <div className="flex border-b border-slate-100 bg-slate-50/30 p-2 shrink-0">
+                    <button 
+                        type="button"
+                        onClick={() => { playMenuSound(); setActiveTab('tour'); }} 
+                        className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'tour' ? 'bg-white shadow-sm text-indigo-600 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                    >
+                        <Sparkles size={16} /> Tour do ERP (Passo a Passo)
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => { playMenuSound(); setActiveTab('como_fazer'); }} 
+                        className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'como_fazer' ? 'bg-white shadow-sm text-indigo-600 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                    >
+                        <CheckSquare size={16} /> "Como eu faço para...?"
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => { playMenuSound(); setActiveTab('glossario'); }} 
+                        className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'glossario' ? 'bg-white shadow-sm text-indigo-600 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                    >
+                        <BookOpenText size={16} /> Glossário Eclesiástico
+                    </button>
+                </div>
+
+                {/* Conteúdo Principal com Rolagem */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white">
+                    {activeTab === 'tour' && (
+                        <div className="h-full flex flex-col justify-between space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center py-4">
+                                {/* Lado Esquerdo: Arte e Ícone */}
+                                <div className="md:col-span-4 flex flex-col items-center text-center space-y-4">
+                                    <div className={`p-8 bg-gradient-to-br ${activeStepData.color} text-white rounded-[2rem] shadow-xl shadow-indigo-500/10 transform rotate-2 hover:rotate-0 transition-transform duration-300`}>
+                                        <StepIcon size={64} className="animate-wiggle" />
+                                    </div>
+                                    <div className="flex gap-1.5 justify-center mt-4">
+                                        {tourSteps.map((_, idx) => (
+                                            <button 
+                                                type="button"
+                                                key={idx} 
+                                                onClick={() => { playMenuSound(); setTourStep(idx); }} 
+                                                className={`h-2 rounded-full transition-all duration-300 ${tourStep === idx ? 'w-6 bg-indigo-600' : 'w-2 bg-slate-200 hover:bg-slate-300'}`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Lado Direito: Texto */}
+                                <div className="md:col-span-8 space-y-4 text-left">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                                        Passo {tourStep + 1} de {tourSteps.length}
+                                    </span>
+                                    <h3 className="text-2xl font-black text-slate-800 leading-tight">{activeStepData.title}</h3>
+                                    <p className="text-sm font-extrabold text-slate-500">{activeStepData.subtitle}</p>
+                                    <p className="text-sm text-slate-600 font-semibold leading-relaxed">
+                                        {activeStepData.description}
+                                    </p>
+
+                                    {activeStepData.tips && (
+                                        <div className="bg-amber-50/60 rounded-2xl border border-amber-200/30 p-4 space-y-2 mt-2">
+                                            <div className="flex items-center gap-2 text-amber-900 font-extrabold text-xs">
+                                                <Lightbulb size={16} /> Dica de Ouro:
+                                            </div>
+                                            <ul className="list-disc pl-5 text-xs text-slate-600 font-semibold space-y-1">
+                                                {activeStepData.tips.map((tip, i) => <li key={i}>{tip}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {activeStepData.actionView && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                playMenuSound();
+                                                setView(activeStepData.actionView);
+                                                onClose();
+                                                addToast(`Navegando para: ${activeStepData.actionLabel}`, 'success');
+                                            }}
+                                            className="mt-4 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 cursor-pointer"
+                                        >
+                                            {activeStepData.actionLabel} <ArrowRight size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Controles de Navegação do Tour */}
+                            <div className="flex justify-between items-center border-t border-slate-100 pt-6 mt-auto">
+                                <button 
+                                    type="button"
+                                    onClick={() => { playMenuSound(); if (tourStep > 0) setTourStep(tourStep - 1); }} 
+                                    disabled={tourStep === 0}
+                                    className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:hover:bg-transparent font-bold text-xs uppercase transition-colors flex items-center gap-2 cursor-pointer"
+                                >
+                                    <ChevronLeft size={16} /> Anterior
+                                </button>
+                                {tourStep < tourSteps.length - 1 ? (
+                                    <button 
+                                        type="button"
+                                        onClick={() => { playMenuSound(); setTourStep(tourStep + 1); }} 
+                                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/15 font-black text-xs uppercase transition-all flex items-center gap-2 cursor-pointer"
+                                    >
+                                        Próximo <ChevronRight size={16} />
+                                    </button>
+                                ) : (
+                                    <button 
+                                        type="button"
+                                        onClick={() => { playMenuSound(); onClose(); addToast("Manual Concluído!", "success"); }} 
+                                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-500/15 font-black text-xs uppercase transition-all flex items-center gap-2 cursor-pointer"
+                                    >
+                                        Concluir Tour <CheckCheck size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'como_fazer' && (
+                        <div className="space-y-6">
+                            {/* Barra de Pesquisa de Guias */}
+                            <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-2xl flex items-center gap-3">
+                                <Search size={20} className="text-indigo-600" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Pesquisar tutorial ou tarefa (Ex: cadastrar membro, dízimo...)" 
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="flex-1 bg-transparent border-none text-slate-800 text-sm font-semibold outline-none placeholder:text-slate-400"
+                                />
+                                {searchQuery && (
+                                    <button type="button" onClick={() => setSearchQuery('')} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Lista de Guias */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {filteredGuides.map((guide, idx) => {
+                                    const GuideIcon = guide.icon || HelpCircle;
+                                    return (
+                                        <div key={idx} className="p-5 rounded-3xl border border-slate-200/80 hover:border-indigo-100 bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+                                            <div className="space-y-3 text-left">
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+                                                        {guide.category}
+                                                    </span>
+                                                    <div className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-100"><GuideIcon size={16} /></div>
+                                                </div>
+                                                <h4 className="font-black text-sm text-slate-800 leading-snug">{guide.title}</h4>
+                                                <div className="space-y-1.5 pl-1">
+                                                    {guide.steps.map((step, sIdx) => (
+                                                        <div key={sIdx} className="flex gap-2 text-xs font-semibold text-slate-500 leading-relaxed text-left">
+                                                            <span className="text-indigo-600 font-bold shrink-0">{sIdx + 1}.</span>
+                                                            <span>{step}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    playMenuSound();
+                                                    setView(guide.view);
+                                                    onClose();
+                                                    addToast(`Navegando para o módulo de ${guide.category}`, 'success');
+                                                }}
+                                                className="w-full py-2.5 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 border border-slate-200 hover:border-indigo-100 text-xs font-bold uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                                            >
+                                                Navegar para esta Tela <ExternalLink size={12} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+
+                                {filteredGuides.length === 0 && (
+                                    <div className="col-span-2 py-12 text-center space-y-2">
+                                        <p className="text-sm font-bold text-slate-500">Nenhum guia encontrado para "{searchQuery}"</p>
+                                        <p className="text-xs text-slate-400 font-semibold">Tente pesquisar termos alternativos como "rol", "oferta", "ebd", "mary" ou "teologia".</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'glossario' && (
+                        <div className="space-y-4">
+                            <p className="text-xs text-slate-500 font-semibold mb-2 text-left">Dicionário de termos e siglas administrativas e teológicas do sistema:</p>
+                            <div className="space-y-3.5">
+                                {glossary.map((g, idx) => (
+                                    <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex flex-col md:flex-row gap-2 md:gap-6 items-start text-left">
+                                        <div className="font-black text-sm text-indigo-700 md:w-1/4 shrink-0">{g.term}</div>
+                                        <div className="text-xs font-semibold text-slate-600 leading-relaxed md:w-3/4">{g.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Rodapé Informativo */}
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-slate-400 px-8 gap-2 shrink-0">
+                    <span className="uppercase tracking-wider">Mecanismo de Onboarding Integrado GIPP</span>
+                    <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg border border-indigo-100">Dica: Tecle ESC para fechar</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 // --- ALERTAS DE PAGAMENTOS E CARNÊS VENCENDO ---
 const MemberPaymentAlerts = () => {
     const { user, db, setView } = useContext(ChurchContext);
@@ -13722,13 +14163,22 @@ const PortalMural = ({ user, db }) => {
     };
 
     const handleDeletePost = async (id) => {
-        if (!window.confirm("Deseja apagar esta publicação?")) return;
-        try {
-            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'mural', id));
-            addToast("Publicação apagada.", "success");
-        } catch(e) {
-            addToast("Erro ao apagar.", "error");
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: "Apagar Publicação",
+            message: "Deseja apagar esta publicação?",
+            confirmText: "Apagar",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'mural', id));
+                    addToast("Publicação apagada.", "success");
+                } catch(e) {
+                    addToast("Erro ao apagar.", "error");
+                }
+            }
+        });
     };
 
     return (
@@ -14544,6 +14994,7 @@ const AppLayout = () => {
                         <AnimBgToggle />
                         <ThemeToggle />
                         <FullScreenToggle />
+                        <HelpHubToggle />
                         <NotificationCenter />
                     </div>
                 </div>
@@ -14855,6 +15306,7 @@ export default function App() {
   const [user, setUser] = useState(null); 
   const [authUser, setAuthUser] = useState(null); 
   const [view, setView] = useState('login');
+  const [showHelpHub, setShowHelpHub] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [loginMode, setLoginMode] = useState(() => {
@@ -17274,7 +17726,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
+  const ctxValues = { db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
 
   // --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
   const MobilePushCompatibilityCheck = () => {
@@ -18135,6 +18587,7 @@ export default function App() {
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
         <BackupModal backupState={backupState} onConfirm={handleBackupConfirm} onCancel={handleBackupCancel} />
+        {showHelpHub && <HelpHubModal isOpen={showHelpHub} onClose={() => setShowHelpHub(false)} />}
         {previewOpen && (
             <DocumentPreviewModal 
                 isOpen={previewOpen} 

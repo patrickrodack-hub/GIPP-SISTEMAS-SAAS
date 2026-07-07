@@ -44,7 +44,7 @@ import {
 
 // Exporting component
 const ModulePortalPastor = () => {
-    const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const { db, user, dbFirestore, appId, addToast, collection, addDoc, setDoc, doc, deleteDoc, logAction, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
     
     const allowedPastorPresRoles = db.igreja?.portal_pastor_pres_funcoes || ['PASTOR PRESIDENTE'];
     const isPastorPresidente = (user?.funcao_administrativa && allowedPastorPresRoles.includes(user.funcao_administrativa.toUpperCase())) || user?.nivel === 'master';
@@ -203,16 +203,24 @@ const ModulePortalPastor = () => {
     };
 
     const handleDeleteLiturgia = async (id, title) => {
-        if (window.confirm(`Tem a certeza que deseja remover o planeamento litúrgico do culto "${title}"?`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias', id));
-                logAction('EXCLUSÃO', `Pastor removeu liturgia do culto "${title}"`, 'pastor_liturgias', id);
-                addToast("Planeamento litúrgico removido.", "info");
-            } catch (error) {
-                console.error(error);
-                addToast("Erro ao remover liturgia.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Exclusão de Liturgia",
+            message: `Tem a certeza que deseja remover o planeamento litúrgico do culto "${title}"?`,
+            confirmText: "Remover",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_liturgias', id));
+                    logAction('EXCLUSÃO', `Pastor removeu liturgia do culto "${title}"`, 'pastor_liturgias', id);
+                    addToast("Planeamento litúrgico removido.", "info");
+                } catch (error) {
+                    console.error(error);
+                    addToast("Erro ao remover liturgia.", "error");
+                }
             }
-        }
+        });
     };
 
     const handleSaveAgenda = async (e) => {
@@ -260,16 +268,24 @@ const ModulePortalPastor = () => {
     };
 
     const handleDeleteAgenda = async (id, title) => {
-        if (window.confirm(`Tens a certeza que desejas retirar o compromisso "${title}"?`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_agenda', id));
-                logAction('EXCLUSÃO', `Pastor removeu compromisso "${title}"`, 'pastor_agenda', id);
-                addToast("Compromisso cancelado ou removido.", "info");
-            } catch (error) {
-                console.error(error);
-                addToast("Erro ao remover compromisso.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Cancelamento",
+            message: `Tens a certeza que desejas retirar o compromisso "${title}"?`,
+            confirmText: "Retirar",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_agenda', id));
+                    logAction('EXCLUSÃO', `Pastor removeu compromisso "${title}"`, 'pastor_agenda', id);
+                    addToast("Compromisso cancelado ou removido.", "info");
+                } catch (error) {
+                    console.error(error);
+                    addToast("Erro ao remover compromisso.", "error");
+                }
             }
-        }
+        });
     };
 
     const handleSendMsg = async (e) => {
@@ -346,15 +362,23 @@ const ModulePortalPastor = () => {
     };
 
     const handleDeleteEsboco = async (id, title) => {
-        if (window.confirm(`Remover definitivamente o esboço "${title}"?`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_esbocos', id));
-                logAction('EXCLUSÃO', `Pastor excluiu esboço "${title}"`, 'pastor_esbocos', id);
-                addToast("Esboço removido do cofre.", "info");
-            } catch (error) {
-                addToast("Erro ao remover esboço.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Exclusão de Esboço",
+            message: `Remover definitivamente o esboço "${title}"?`,
+            confirmText: "Remover",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_esbocos', id));
+                    logAction('EXCLUSÃO', `Pastor excluiu esboço "${title}"`, 'pastor_esbocos', id);
+                    addToast("Esboço removido do cofre.", "info");
+                } catch (error) {
+                    addToast("Erro ao remover esboço.", "error");
+                }
             }
-        }
+        });
     };
 
     // Form States for Atas (Área Restrita - Reuniões e Gabinete)
@@ -593,16 +617,24 @@ const ModulePortalPastor = () => {
     };
 
     const handleDeleteAta = async (id, title) => {
-        if (window.confirm(`Eliminar permanentemente a ata "${title}" do seu cofre? Esta ação é irreversível.`)) {
-            try {
-                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_atas', id));
-                logAction('EXCLUSÃO', `Pastor removeu ata "${title}"`, 'pastor_atas', id);
-                addToast("Ata eliminada com sucesso.", "info");
-            } catch (error) {
-                console.error(error);
-                addToast("Erro ao eliminar ata.", "error");
+        setConfirmDialog({
+            isOpen: true,
+            title: "Confirmar Exclusão de Ata/Atendimento",
+            message: `Eliminar permanentemente a ata "${title}" do seu cofre? Esta ação é irreversível.`,
+            confirmText: "Eliminar",
+            cancelText: "Cancelar",
+            variant: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'pastor_atas', id));
+                    logAction('EXCLUSÃO', `Pastor removeu ata "${title}"`, 'pastor_atas', id);
+                    addToast("Ata eliminada com sucesso.", "info");
+                } catch (error) {
+                    console.error(error);
+                    addToast("Erro ao eliminar ata.", "error");
+                }
             }
-        }
+        });
     };
 
     const handlePrintAta = (item) => {
