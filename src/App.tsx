@@ -10858,6 +10858,7 @@ const PortalHome = ({ user, db, setView }) => {
 
     // --- ESTADOS E AUXILIARES DO HISTÓRICO DE MEDALHAS ---
     const [isMedalHistoryOpen, setIsMedalHistoryOpen] = useState(false);
+    const [isMedalHistoryFullscreen, setIsMedalHistoryFullscreen] = useState(true);
     const [selectedHistoryFilter, setSelectedHistoryFilter] = useState<'all' | 'with_medals'>('with_medals');
     const [medalViewMode, setMedalViewMode] = useState<'timeline' | 'categories'>('timeline');
 
@@ -11504,14 +11505,14 @@ const PortalHome = ({ user, db, setView }) => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 md:p-6"
+                    className={`fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-md flex items-center justify-center ${isMedalHistoryFullscreen ? 'p-0' : 'p-4 md:p-6'}`}
                 >
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.85, rotate: -1, y: 15 }}
                         animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
                         exit={{ opacity: 0, scale: 0.85, rotate: 1, y: 15 }}
                         transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                        className="bg-white rounded-[2rem] max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-100 flex flex-col text-left"
+                        className={`bg-white overflow-hidden shadow-2xl border border-slate-100 flex flex-col text-left transition-all duration-300 ${isMedalHistoryFullscreen ? 'w-full h-full min-h-screen rounded-none' : 'max-w-6xl w-full max-h-[90vh] rounded-[2rem]'}`}
                     >
                         
                         {/* Header do Modal */}
@@ -11527,16 +11528,38 @@ const PortalHome = ({ user, db, setView }) => {
                                         <p className="text-[11px] text-slate-300 font-medium">Linha do tempo e conquistas consolidadas de todos os meses anteriores.</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => {
-                                        setIsMedalHistoryOpen(false);
-                                        playMenuSound();
-                                    }}
-                                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white cursor-pointer"
-                                    title="Fechar"
-                                >
-                                    <X size={20} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            setIsMedalHistoryOpen(false);
+                                            playMenuSound();
+                                        }}
+                                        className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white cursor-pointer"
+                                        title="Minimizar"
+                                    >
+                                        <Minus size={20} />
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            setIsMedalHistoryFullscreen(!isMedalHistoryFullscreen);
+                                            playMenuSound();
+                                        }}
+                                        className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white cursor-pointer"
+                                        title={isMedalHistoryFullscreen ? "Restaurar Tamanho" : "Tela Cheia"}
+                                    >
+                                        {isMedalHistoryFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            setIsMedalHistoryOpen(false);
+                                            playMenuSound();
+                                        }}
+                                        className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-slate-300 hover:text-white cursor-pointer"
+                                        title="Fechar"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
