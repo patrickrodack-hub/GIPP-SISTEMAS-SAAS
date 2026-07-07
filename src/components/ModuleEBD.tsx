@@ -998,18 +998,20 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
         
         try {
             const hasCapaExistente = !!initialCapa;
-            const prompt = `Atue como um teólogo especialista no material oficial da CPAD. 
-            Pesquise e use obrigatoriamente como base de conteúdo e imagens as seguintes fontes: o currículo e portal oficial da CPAD (Casa Publicadora das Assembleias de Deus), Google Books API e Sistema EBD.
+            const prompt = `Atue como um teólogo especialista no material oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
+            UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e sites relacionados à Lições Bíblicas CPAD) antes de gerar a resposta. 
+            É imprescindível que o material de estudo seja verdadeiramente baseado nas lições da CPAD.
+            
             O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", específicamente a Lição número ${licao.licao_numero || '1'}. 
             
             ${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
 
             Gere um conteúdo fiel, interativo e completo contendo:
-            1. Título da Lição
-            2. Texto Áureo e Verdade Prática
+            1. Título exato da Lição da CPAD
+            2. Texto Áureo e Verdade Prática exatos da revista
             3. Leitura Bíblica em Classe
             4. Introdução
-            5. Tópicos e Subtópicos explicados
+            5. Tópicos e Subtópicos explicados com base no comentarista da revista
             6. Conclusão.
             
             Utilize formatação Markdown bem estruturada e rica.`;
@@ -3445,9 +3447,10 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                     <button 
                                         onClick={async () => {
                                             setAiGeneratingQuiz(true);
-                                            const prom = `Atue como um pedagogo especializado em Ensino Bíblico e Escorla de Líderes. Com base na revista de EBD "${aiLesson.revista}", Lição "${aiLesson.licao}", elabore: 
+                                            const prom = `Atue como um pedagogo especializado em Ensino Bíblico e Escorla de Líderes. 
+UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD sobre a revista "${aiLesson.revista}", Lição "${aiLesson.licao}" e elabore: 
 1. 3 Perguntas quebra-gelo divertidas.
-2. 3 Perguntas de fixação bíblica profunda com respostas rápidas para o professor.
+2. 3 Perguntas de fixação bíblica profunda com respostas rápidas para o professor, embasadas no material do comentarista da CPAD.
 3. Uma dinâmica de grupo criativa de 10 minutos para fixar o tema central na mente dos alunos.
 Gere em formatação simples e amigável.`;
                                             try {

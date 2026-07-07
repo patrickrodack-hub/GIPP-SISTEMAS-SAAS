@@ -11272,11 +11272,18 @@ const PortalHome = ({ user, db, setView }) => {
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_ebd') && (
+                    <>
                     <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group">
                         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Estudo EBD</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
                     </button>
+                    <button onClick={() => setView('portal_revistas_interativas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all flex flex-col items-start group">
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpen size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Revistas IA</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Oficiais & Resumos</span>
+                    </button>
+                    </>
                 )}
                 {isProfessor && (
                     <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1">
@@ -14642,6 +14649,7 @@ const MemberPortalLayout = () => {
             case 'portal_tesoureiro': return <ModulePortalTesoureiro />;
             case 'portal_financas': return <PortalFinanceiro user={user} db={db} isTesoureiro={isTesoureiro} />;
             case 'portal_ebd': return <PortalEBD user={user} db={db} />;
+            case 'portal_revistas_interativas': return <ModuleRevistasInterativas db={db} isPortal={true} />;
             case 'portal_professor_ebd': return <ModuleEBD isProfessorOnly={true} />;
             case 'portal_frequencia': return <PortalFrequencia user={user} db={db} />;
             case 'portal_salinha_kids': return <ModuleSalinhaKids mode="portal" />;
@@ -14914,6 +14922,7 @@ const AppLayout = () => {
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },
         'credencial_lote': { component: ModuleCredencial, access: 'access_sec_certificados' },
         'secretaria_ebd': { component: ModuleEBD, access: 'access_ebd' },
+        'revistas_interativas': { component: ModuleRevistasInterativas, access: 'access_ebd' },
         'salinha_kids': { component: ModuleSalinhaKids, access: 'access_salinha_kids' },
         'gestao_cursos': { component: ModuleGestaoCursos, access: 'access_gestao_cursos' },
         'curso_teologia': { component: ModuleTeologia, access: 'access_teologia' },
@@ -15381,6 +15390,7 @@ export default function App() {
           { label: "Conciliação Bancária DDA", view: "fin_conciliacao", category: "Navegação", icon: CreditCard },
           { label: "Curso de Teologia / Faculdade", view: "curso_teologia", category: "Navegação", icon: GraduationCap },
           { label: "Escola Bíblica Dominical (EBD)", view: "secretaria_ebd", category: "Navegação", icon: BookOpenText },
+          { label: "Revistas Interativas (IA)", view: "revistas_interativas", category: "Navegação", icon: BookOpen },
           { label: "Células e Pequenos Grupos", view: "cad_celula", category: "Navegação", icon: Home },
           { label: "Secretaria Integrada & Agenda", view: "secretaria_integrada", category: "Navegação", icon: FileText },
           { label: "Assistente Pastoral IA", view: "assistente_ai", category: "Navegação", icon: Sparkles },
