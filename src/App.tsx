@@ -11512,7 +11512,7 @@ const PortalHome = ({ user, db, setView }) => {
                         animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
                         exit={{ opacity: 0, scale: 0.85, rotate: 1, y: 15 }}
                         transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                        className={`bg-white overflow-hidden shadow-2xl border border-slate-100 flex flex-col text-left transition-all duration-300 ${isMedalHistoryFullscreen ? 'w-full h-full min-h-screen rounded-none' : 'max-w-6xl w-full max-h-[90vh] rounded-[2rem]'}`}
+                        className={`bg-white overflow-hidden shadow-2xl border border-slate-100 flex flex-col text-left transition-all duration-300 ${isMedalHistoryFullscreen ? 'w-full h-full min-h-screen max-w-none rounded-none' : 'max-w-6xl w-full max-h-[90vh] rounded-[2rem]'}`}
                     >
                         
                         {/* Header do Modal */}
@@ -11688,7 +11688,7 @@ const PortalHome = ({ user, db, setView }) => {
                         </div>
 
                         {/* Lista Principal de Conquistas */}
-                        <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50">
+                        <div key={isMedalHistoryFullscreen ? 'full' : 'window'} className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50 portal-membro-historico-leitura">
                             
                             {/* VISUALIZAÇÃO POR CATEGORIA */}
                             {medalViewMode === 'categories' ? (
@@ -14143,7 +14143,7 @@ const PortalCursos = ({ user }) => {
 };
 
 const PortalMural = ({ user, db }) => {
-    const { addToast, dbFirestore, appId, collection, addDoc, setDoc, doc, deleteDoc } = useContext(ChurchContext);
+    const { addToast, dbFirestore, appId, collection, addDoc, setDoc, doc, deleteDoc, setConfirmDialog } = useContext(ChurchContext);
     const [novoPost, setNovoPost] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
