@@ -9,6 +9,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore";
+import { PDFDocument } from 'pdf-lib';
 
 const app = express();
 
@@ -162,6 +163,45 @@ app.post("/api/gemini/generate", async (req, res) => {
 });
 
 
+async function slicePdfIfTooLarge(base64Data: string): Promise<{ data: string; originalPages: number; slicedPages: number; wasSliced: boolean }> {
+    try {
+        const pdfBuffer = Buffer.from(base64Data, 'base64');
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        const pageCount = pdfDoc.getPageCount();
+        
+        const MAX_PAGES = 500;
+        if (pageCount > MAX_PAGES) {
+            console.log(`[EBD Slicer] PDF has ${pageCount} pages, slicing to first ${MAX_PAGES} pages to avoid Gemini page limits.`);
+            const slicedDoc = await PDFDocument.create();
+            const pagesToCopy = Array.from({ length: MAX_PAGES }, (_, i) => i);
+            const copiedPages = await slicedDoc.copyPages(pdfDoc, pagesToCopy);
+            copiedPages.forEach(page => slicedDoc.addPage(page));
+            const pdfBytes = await slicedDoc.save();
+            const newBase64 = Buffer.from(pdfBytes).toString('base64');
+            return {
+                data: newBase64,
+                originalPages: pageCount,
+                slicedPages: MAX_PAGES,
+                wasSliced: true
+            };
+        }
+        return {
+            data: base64Data,
+            originalPages: pageCount,
+            slicedPages: pageCount,
+            wasSliced: false
+        };
+    } catch (e) {
+        console.error("[EBD Slicer] Error reading or slicing PDF:", e);
+        return {
+            data: base64Data,
+            originalPages: 0,
+            slicedPages: 0,
+            wasSliced: false
+        };
+    }
+}
+
 app.post("/api/gemini/analisar-ebd", async (req, res) => {
     try {
         const { fileData, mimeType, prompt, isValidation } = req.body;
@@ -184,9 +224,25 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         });
 
         const contents = [];
-        
+        let modifiedPrompt = prompt || '';
+        let fileDataToUse = fileData;
+        let wasSliced = false;
+        let originalPages = 0;
+        let slicedPages = 0;
+
         if (fileData && mimeType) {
-            const base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData;
+            let base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData;
+            
+            if (mimeType === "application/pdf") {
+                const sliceResult = await slicePdfIfTooLarge(base64Data);
+                if (sliceResult.wasSliced) {
+                    base64Data = sliceResult.data;
+                    wasSliced = true;
+                    originalPages = sliceResult.originalPages;
+                    slicedPages = sliceResult.slicedPages;
+                }
+            }
+
             contents.push({
                 inlineData: {
                     data: base64Data,
@@ -195,8 +251,12 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
             });
         }
         
-        if (prompt) {
-            contents.push({ text: prompt });
+        if (wasSliced) {
+            modifiedPrompt = `${modifiedPrompt}\n\n[Atenção: O arquivo PDF original continha ${originalPages} páginas, o que excede o limite suportado pelo Gemini de 1000 páginas. O sistema reduziu automaticamente para as primeiras ${slicedPages} páginas para possibilitar a extração com IA. Por favor, extraia as lições presentes nestas primeiras ${slicedPages} páginas.]`;
+        }
+
+        if (modifiedPrompt) {
+            contents.push({ text: modifiedPrompt });
         }
 
         const response = await ai.models.generateContent({
@@ -209,7 +269,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         });
 
         res.json({ text: response.text });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini EBD route error:", error);
         res.status(500).json({ error: String(error.message || error) });
     }
