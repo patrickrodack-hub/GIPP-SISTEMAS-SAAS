@@ -129,6 +129,44 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
             try {
                 setAnalyzing(true);
                 
+                // If the file is an image, compress/resize it to stay well within 4.5MB Vercel payload limit
+                if (file.type.startsWith("image/")) {
+                    try {
+                        addToast("Otimizando imagem para processamento rápido...", "info");
+                        base64Data = await new Promise<string>((resolve) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const maxDim = 1200;
+                                let width = img.width;
+                                let height = img.height;
+                                if (width > maxDim || height > maxDim) {
+                                    if (width > height) {
+                                        height = Math.round((height * maxDim) / width);
+                                        width = maxDim;
+                                    } else {
+                                        width = Math.round((width * maxDim) / height);
+                                        height = maxDim;
+                                    }
+                                }
+                                const canvas = document.createElement('canvas');
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    resolve(canvas.toDataURL(file.type, 0.75));
+                                } else {
+                                    resolve(base64Data);
+                                }
+                            };
+                            img.onerror = () => resolve(base64Data);
+                            img.src = base64Data;
+                        });
+                    } catch (imageErr) {
+                        console.error("Erro ao otimizar imagem:", imageErr);
+                    }
+                }
+
                 if (file.type === "application/pdf") {
                     try {
                         addToast("Otimizando PDF para processamento rápido...", "info");
@@ -143,26 +181,43 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                         const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
                         const pageCount = pdfDoc.getPageCount();
                         
-                        // Slice to first 15 pages to stay well within Vercel's 10s execution limit and 4.5MB payload limit
-                        const MAX_PAGES = Math.min(15, pageCount);
+                        // Limit to maximum 10 pages for super-fast processing and avoiding Vercel serverless timeouts
+                        let maxPages = Math.min(10, pageCount);
+                        let finalBase64 = base64Data;
                         
-                        if (pageCount > MAX_PAGES) {
+                        while (maxPages >= 1) {
                             const slicedDoc = await PDFDocument.create();
-                            const pagesToCopy = Array.from({ length: MAX_PAGES }, (_, i) => i);
+                            const pagesToCopy = Array.from({ length: maxPages }, (_, i) => i);
                             const copiedPages = await slicedDoc.copyPages(pdfDoc, pagesToCopy);
                             copiedPages.forEach(page => slicedDoc.addPage(page));
                             const pdfBytes = await slicedDoc.save();
                             
+                            // Safe binary conversion that avoids Call Stack size exceeded
                             let binary = '';
                             const resultBytes = new Uint8Array(pdfBytes);
                             const resultLen = resultBytes.byteLength;
-                            for (let i = 0; i < resultLen; i++) {
-                                binary += String.fromCharCode(resultBytes[i]);
+                            const chunkSize = 8192;
+                            for (let i = 0; i < resultLen; i += chunkSize) {
+                                binary += String.fromCharCode.apply(null, resultBytes.subarray(i, i + chunkSize) as any);
                             }
                             const newBase64 = btoa(binary);
-                            base64Data = `data:application/pdf;base64,${newBase64}`;
-                            addToast(`PDF otimizado de ${pageCount} para as primeiras ${MAX_PAGES} páginas (2-3 lições completas).`, "success");
+                            const newSizeInMB = (newBase64.length * 0.75) / (1024 * 1024);
+                            
+                            if (newSizeInMB <= 3.5 || maxPages === 1) {
+                                finalBase64 = `data:application/pdf;base64,${newBase64}`;
+                                addToast(`PDF otimizado com sucesso para as primeiras ${maxPages} páginas (${newSizeInMB.toFixed(2)}MB).`, "success");
+                                break;
+                            }
+                            
+                            // Adjust pages downwards if still exceeding payload limit
+                            if (maxPages > 8) maxPages = 8;
+                            else if (maxPages > 4) maxPages = 4;
+                            else if (maxPages > 2) maxPages = 2;
+                            else if (maxPages > 1) maxPages = 1;
+                            else break;
                         }
+                        
+                        base64Data = finalBase64;
                     } catch (slicingError) {
                         console.error("Erro ao otimizar o PDF no cliente:", slicingError);
                     }
@@ -178,7 +233,19 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                         prompt: "Extraia o conteúdo da revista da Escola Bíblica Dominical (EBD) deste documento. Estruture como JSON contendo: { titulo_revista: string, capa_tema: string, licoes: [ { numero: number, titulo: string, texto_aureo: string, verdade_pratica: string, leitura_biblica: string, introducao: string, topicos: [ { titulo: string, conteudo: string } ], conclusao: string } ] }. Extraia o máximo de conteúdo que conseguir para os tópicos."
                     })
                 });
-                const responseData = await response.json();
+                
+                const responseText = await response.text();
+                let responseData: any = null;
+                
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (jsonErr) {
+                    if (!response.ok) {
+                        throw new Error(`Erro de limite ou timeout no servidor (${response.status}): O arquivo é muito pesado ou o processamento demorou muito.`);
+                    } else {
+                        throw new Error("Não foi possível decodificar a resposta do servidor.");
+                    }
+                }
                 
                 if (!response.ok) {
                     throw new Error(responseData?.error?.message || responseData?.message || 'Erro na API Gemini');
