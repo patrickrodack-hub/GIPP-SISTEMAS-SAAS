@@ -165,13 +165,14 @@ app.post("/api/gemini/generate", async (req, res) => {
 
 async function slicePdfIfTooLarge(base64Data: string): Promise<{ data: string; originalPages: number; slicedPages: number; wasSliced: boolean }> {
     try {
-        const pdfBuffer = Buffer.from(base64Data, 'base64');
-        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        const cleanBase64 = base64Data.replace(/^data:application\/pdf;base64,/, '').replace(/[^A-Za-z0-9+/=]/g, "");
+        const pdfBuffer = Buffer.from(cleanBase64, 'base64');
+        const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
         const pageCount = pdfDoc.getPageCount();
         
-        const MAX_PAGES = 500;
+        const MAX_PAGES = 200;
         if (pageCount > MAX_PAGES) {
-            console.log(`[EBD Slicer] PDF has ${pageCount} pages, slicing to first ${MAX_PAGES} pages to avoid Gemini page limits.`);
+            console.log(`[EBD Slicer] PDF has ${pageCount} pages, slicing to first ${MAX_PAGES} pages to avoid Gemini page limits and Vercel timeouts.`);
             const slicedDoc = await PDFDocument.create();
             const pagesToCopy = Array.from({ length: MAX_PAGES }, (_, i) => i);
             const copiedPages = await slicedDoc.copyPages(pdfDoc, pagesToCopy);
