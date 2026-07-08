@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+const fs = require('fs');
+
+const content = `import React, { useState, useRef, useEffect } from 'react';
 import { BookOpen, RefreshCw, Trash2, Sparkles, BookMarked, Eye, ChevronLeft, ChevronRight, BookText, Bookmark, FileText, ZoomIn, ZoomOut, Maximize, Image as ImageIcon } from 'lucide-react';
 
 export default function ModuleRevistasInterativas({ db, isPortal = false }: { db?: any, isPortal?: boolean }) {
@@ -8,7 +9,6 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
     const [analyzing, setAnalyzing] = useState(false);
     const [viewingRevista, setViewingRevista] = useState<any>(null);
     const [activeLessonIdx, setActiveLessonIdx] = useState<number>(0);
-    const [direction, setDirection] = useState<number>(0);
     const [zoomLevel, setZoomLevel] = useState<number>(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,8 +62,8 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                 }
                 let extractedText = responseData.text;
                 if (!extractedText) throw new Error("Texto extraído vazio ou inválido.");
-                if (extractedText.includes('```json')) {
-                    extractedText = extractedText.replace(/```json/g, '').replace(/```/g, '').trim();
+                if (extractedText.includes('\`\`\`json')) {
+                    extractedText = extractedText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
                 }
                 const parsed = JSON.parse(extractedText);
                 
@@ -113,26 +113,15 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                     </button>
                     
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 bg-stone-100 rounded-full px-4 py-2 border border-stone-200">
-                            <ZoomOut size={16} className="text-stone-500" />
-                            <input 
-                                type="range" 
-                                min="0.5" max="1.5" step="0.05" 
-                                value={zoomLevel} 
-                                onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-                                className="w-24 accent-stone-700 cursor-pointer"
-                                title="Ajustar Zoom"
-                            />
-                            <ZoomIn size={16} className="text-stone-500" />
-                            <button onClick={handleZoomReset} className="ml-2 px-2 text-xs font-bold text-stone-600 hover:text-stone-900 transition-colors border-l border-stone-300" title="Zoom Original">{Math.round(zoomLevel * 100)}%</button>
+                        <div className="flex items-center bg-stone-100 rounded-full p-1 border border-stone-200">
+                            <button onClick={handleZoomOut} className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-200 rounded-full transition-colors" title="Reduzir Zoom"><ZoomOut size={16} /></button>
+                            <button onClick={handleZoomReset} className="px-3 text-xs font-bold text-stone-600 hover:text-stone-900 transition-colors" title="Zoom Original">{Math.round(zoomLevel * 100)}%</button>
+                            <button onClick={handleZoomIn} className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-200 rounded-full transition-colors" title="Aumentar Zoom"><ZoomIn size={16} /></button>
                         </div>
                         
                         <div className="flex items-center gap-2">
                             <button 
-                                onClick={() => {
-                                    setDirection(-1);
-                                    setActiveLessonIdx(Math.max(0, activeLessonIdx - 1));
-                                }}
+                                onClick={() => setActiveLessonIdx(Math.max(0, activeLessonIdx - 1))}
                                 disabled={activeLessonIdx === 0}
                                 className="p-2 rounded-full hover:bg-stone-200 text-stone-700 disabled:opacity-50 transition-colors"
                             >
@@ -142,10 +131,7 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                                 Lição {activeLessonIdx + 1} de {viewingRevista.licoes?.length || 0}
                             </span>
                             <button 
-                                onClick={() => {
-                                    setDirection(1);
-                                    setActiveLessonIdx(Math.min((viewingRevista.licoes?.length || 1) - 1, activeLessonIdx + 1));
-                                }}
+                                onClick={() => setActiveLessonIdx(Math.min((viewingRevista.licoes?.length || 1) - 1, activeLessonIdx + 1))}
                                 disabled={activeLessonIdx === (viewingRevista.licoes?.length || 1) - 1}
                                 className="p-2 rounded-full hover:bg-stone-200 text-stone-700 disabled:opacity-50 transition-colors"
                             >
@@ -158,19 +144,9 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                 {/* Magazine Layout */}
                 {licao ? (
                     <div 
-                        className="max-w-6xl mx-auto mt-12 px-6 md:px-12 transition-transform duration-300 ease-in-out origin-top perspective-[2000px]"
-                        style={{ transform: `scale(${zoomLevel})` }}
+                        className="max-w-6xl mx-auto mt-12 px-6 md:px-12 transition-transform duration-300 ease-in-out origin-top"
+                        style={{ transform: \`scale(\${zoomLevel})\` }}
                     >
-                        <AnimatePresence mode="wait" custom={direction}>
-                            <motion.div
-                                key={activeLessonIdx}
-                                custom={direction}
-                                initial={{ opacity: 0, rotateY: direction > 0 ? 90 : -90, transformOrigin: direction > 0 ? 'right center' : 'left center' }}
-                                animate={{ opacity: 1, rotateY: 0, transformOrigin: direction > 0 ? 'right center' : 'left center' }}
-                                exit={{ opacity: 0, rotateY: direction > 0 ? -90 : 90, transformOrigin: direction > 0 ? 'left center' : 'right center' }}
-                                transition={{ duration: 0.6, ease: "easeInOut" }}
-                                className="w-full h-full"
-                            >
                         {/* Header Banner - Stylized Visual Placeholder */}
                         <div className="relative w-full h-[500px] rounded-[1rem] overflow-hidden mb-16 shadow-2xl group bg-stone-200 border-4 border-white flex flex-col items-center justify-center">
                             {/* This is the placeholder for AI Generated Images */}
@@ -180,7 +156,7 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                             </div>
                             
                             <img 
-                                src={`https://picsum.photos/seed/${encodeURIComponent(licao.titulo || 'bible')}/1200/600`} 
+                                src={\`https://picsum.photos/seed/\${encodeURIComponent(licao.titulo || 'bible')}/1200/600\`} 
                                 alt={licao.titulo}
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 mix-blend-overlay z-10"
                             />
@@ -235,12 +211,14 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                             {licao.introducao && (
                                 <div className="mb-16">
                                     <h3 className="text-stone-900 font-sans font-black text-sm mb-8 uppercase tracking-[0.3em] border-b border-stone-200 pb-4 inline-block">Introdução</h3>
-                                    <p className="text-stone-800 text-xl leading-[2.2] font-serif text-justify first-letter:text-7xl first-letter:font-black first-letter:text-indigo-900 first-letter:float-left first-letter:mr-4 first-letter:mt-2"
+                                    <p className="text-stone-800 text-xl leading-[2.2] font-serif text-justify"
                                        style={{
                                            textIndent: '0',
-                                           fontFamily: '"Playfair Display", "Merriweather", serif'
                                        }}>
-                                        {licao.introducao}
+                                        <span className="float-left text-8xl font-black text-indigo-900 leading-[0.8] pr-4 pt-2" style={{ fontFamily: '"Playfair Display", serif' }}>
+                                            {licao.introducao.charAt(0)}
+                                        </span>
+                                        {licao.introducao.substring(1)}
                                     </p>
                                 </div>
                             )}
@@ -257,12 +235,15 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                                         </div>
                                         
                                         {/* Stylized Visual Placeholder for Topic Image */}
-                                        <div className="w-full h-[250px] md:h-[350px] bg-stone-50 border-2 border-dashed border-stone-300 mb-10 flex flex-col items-center justify-center text-stone-400 relative overflow-hidden group transition-all hover:bg-stone-100 hover:border-indigo-300">
-                                            <ImageIcon size={48} className="mb-3 opacity-50 group-hover:scale-110 transition-transform text-indigo-400" />
-                                            <span className="font-sans text-xs font-bold uppercase tracking-[0.2em] opacity-60 text-stone-500">
-                                                Espaço Reservado - Imagem Gerada por IA
-                                            </span>
-                                            <div className="absolute inset-0 bg-stone-200/20 animate-pulse pointer-events-none"></div>
+                                        <div className="w-full h-[250px] md:h-[350px] bg-stone-100 border border-stone-200 mb-10 flex flex-col items-center justify-center text-stone-400 relative overflow-hidden group">
+                                            <ImageIcon size={48} className="mb-3 opacity-40 group-hover:scale-110 transition-transform" />
+                                            <span className="font-sans text-xs font-bold uppercase tracking-[0.2em] opacity-50">Espaço para Arte Gráfica</span>
+                                            {/* Simulate an image for now */}
+                                            <img 
+                                                src={\`https://picsum.photos/seed/\${encodeURIComponent(topico.titulo || 'topic')}/800/400\`} 
+                                                alt="Topic"
+                                                className="absolute inset-0 w-full h-full object-cover opacity-10 mix-blend-multiply grayscale"
+                                            />
                                         </div>
 
                                         <div className="text-stone-800 text-xl leading-[2.2] font-serif columns-1 md:columns-2 gap-16 text-justify">
@@ -298,8 +279,6 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                                 </div>
                             )}
                         </div>
-                        </motion.div>
-                        </AnimatePresence>
                     </div>
                 ) : (
                     <div className="flex items-center justify-center h-[60vh]">
@@ -347,7 +326,7 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                     <div key={revista.id} className="bg-white shadow-md hover:shadow-2xl transition-all flex flex-col group overflow-hidden border border-stone-200 rounded-none">
                         <div className="h-64 bg-stone-100 relative overflow-hidden flex flex-col items-center justify-center border-b-4 border-indigo-900">
                             <img 
-                                src={`https://picsum.photos/seed/${encodeURIComponent(revista.titulo_revista)}/400/500`}
+                                src={\`https://picsum.photos/seed/\${encodeURIComponent(revista.titulo_revista)}/400/500\`}
                                 alt="Capa"
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 mix-blend-multiply"
                             />
@@ -416,3 +395,6 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
         </div>
     );
 }
+`;
+fs.writeFileSync('src/components/ModuleRevistasInterativas.tsx', content, 'utf8');
+console.log("Updated ModuleRevistasInterativas.tsx with editorial layout");
