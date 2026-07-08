@@ -149,7 +149,7 @@ app.post("/api/gemini/generate", async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-2.5-flash",
             contents: String(prompt || ''),
             config: config
         });
@@ -200,7 +200,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-pro",
+            model: "gemini-2.5-flash",
             contents: contents,
             config: {
                 systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
@@ -266,7 +266,7 @@ app.post("/api/financeiro/analisar-extrato", async (req, res) => {
         };
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-2.5-flash",
             contents: [filePart, textPart],
             config: {
                 responseMimeType: "application/json",

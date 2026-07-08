@@ -62,6 +62,7 @@ import ModuleCertificados from './components/ModuleCertificados';
 import ModuleEBD from './components/ModuleEBD';
 import ModuleGestaoCursos from './components/ModuleGestaoCursos';
 import ModuleTeologia from './components/ModuleTeologia';
+import ModuleRevistasInterativas from './components/ModuleRevistasInterativas';
 import ModuleRedeSocial from './components/ModuleRedeSocial';
 import ModuleConfiguracoesGerais from './components/ModuleConfiguracoesGerais';
 import { DiagnosticsDashboard } from './components/DiagnosticsDashboard';
@@ -9593,6 +9594,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_ministerios') && checkPlan('ministerio_familia') && <MenuItem id="ministerio_familia" icon={Heart} label="Ministério da Família" />}
                         {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                         {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
+                        {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="revistas_interativas" icon={BookOpen} label="Revistas Interativas" />}
                         {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     </div>
                 )}

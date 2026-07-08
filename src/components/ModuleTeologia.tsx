@@ -2441,7 +2441,11 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                                 })
                                             });
                                             const resData = await response.json();
+                                            if (!response.ok) {
+                                                throw new Error(resData?.error?.message || resData?.message || 'Erro na API Gemini');
+                                            }
                                             let jsonStr = resData.text;
+                                            if (!jsonStr) throw new Error("Texto vazio retornado pela API");
                                             if (jsonStr.includes('```json')) {
                                                 jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
                                             }

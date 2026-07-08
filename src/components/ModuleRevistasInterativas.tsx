@@ -46,7 +46,11 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                 });
                 const responseData = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(responseData?.error?.message || responseData?.message || 'Erro na API Gemini');
+                }
                 let extractedText = responseData.text;
+                if (!extractedText) throw new Error("Texto extraído vazio ou inválido.");
                 if (extractedText.includes('```json')) {
                     extractedText = extractedText.replace(/```json/g, '').replace(/```/g, '').trim();
                 }
