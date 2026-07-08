@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, RefreshCw, Trash2, Sparkles, BookMarked, Eye, ChevronLeft, ChevronRight, BookText, Bookmark, FileText, ZoomIn, ZoomOut, Maximize, Image as ImageIcon } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { PDFDocument } from 'pdf-lib';
 import { ChurchContext, ConfirmModal } from '../App';
 
 // Self-contained page turn sound synthesizer utilizing Web Audio API
@@ -123,10 +124,50 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
         const reader = new FileReader();
 
         reader.onload = async (event) => {
-            const base64Data = event.target?.result as string;
+            let base64Data = event.target?.result as string;
             
             try {
                 setAnalyzing(true);
+                
+                if (file.type === "application/pdf") {
+                    try {
+                        addToast("Otimizando PDF para processamento rápido...", "info");
+                        const base64Clean = base64Data.includes(",") ? base64Data.split(",")[1] : base64Data;
+                        const binaryString = atob(base64Clean);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        
+                        const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+                        const pageCount = pdfDoc.getPageCount();
+                        
+                        // Slice to first 15 pages to stay well within Vercel's 10s execution limit and 4.5MB payload limit
+                        const MAX_PAGES = Math.min(15, pageCount);
+                        
+                        if (pageCount > MAX_PAGES) {
+                            const slicedDoc = await PDFDocument.create();
+                            const pagesToCopy = Array.from({ length: MAX_PAGES }, (_, i) => i);
+                            const copiedPages = await slicedDoc.copyPages(pdfDoc, pagesToCopy);
+                            copiedPages.forEach(page => slicedDoc.addPage(page));
+                            const pdfBytes = await slicedDoc.save();
+                            
+                            let binary = '';
+                            const resultBytes = new Uint8Array(pdfBytes);
+                            const resultLen = resultBytes.byteLength;
+                            for (let i = 0; i < resultLen; i++) {
+                                binary += String.fromCharCode(resultBytes[i]);
+                            }
+                            const newBase64 = btoa(binary);
+                            base64Data = `data:application/pdf;base64,${newBase64}`;
+                            addToast(`PDF otimizado de ${pageCount} para as primeiras ${MAX_PAGES} páginas (2-3 lições completas).`, "success");
+                        }
+                    } catch (slicingError) {
+                        console.error("Erro ao otimizar o PDF no cliente:", slicingError);
+                    }
+                }
+
                 addToast("Editorando revista com Inteligência Artificial...", "info");
                 const response = await fetch('/api/gemini/analisar-ebd', {
                     method: 'POST',

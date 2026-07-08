@@ -170,7 +170,7 @@ async function slicePdfIfTooLarge(base64Data: string): Promise<{ data: string; o
         const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
         const pageCount = pdfDoc.getPageCount();
         
-        const MAX_PAGES = 200;
+        const MAX_PAGES = 40;
         if (pageCount > MAX_PAGES) {
             console.log(`[EBD Slicer] PDF has ${pageCount} pages, slicing to first ${MAX_PAGES} pages to avoid Gemini page limits and Vercel timeouts.`);
             const slicedDoc = await PDFDocument.create();
