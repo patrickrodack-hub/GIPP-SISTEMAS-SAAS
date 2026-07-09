@@ -15125,7 +15125,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             // Passo 1: Inicializando núcleo do sistema (Browser, RAM, cache check)
             setProgress(15);
             setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'active' } : s));
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => setTimeout(resolve, 80));
             if (isCancelled) return;
 
             const hasLocalStorage = typeof localStorage !== 'undefined';
@@ -15140,7 +15140,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             // Passo 2: Conectando ao Banco de Dados Firestore (Teste Real)
             setProgress(35);
             setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'active' } : s));
-            await new Promise(resolve => setTimeout(resolve, 400));
+            await new Promise(resolve => setTimeout(resolve, 50));
             if (isCancelled) return;
 
             let dbResultDesc = '';
@@ -15160,7 +15160,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             // Passo 3: Carregando módulos de interface UI/UX
             setProgress(55);
             setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'active' } : s));
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => setTimeout(resolve, 80));
             if (isCancelled) return;
 
             const loadedCount = 34; // standard UI layers
@@ -15173,7 +15173,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             // Passo 4: Verificando cadastro da instituição
             setProgress(75);
             setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'active' } : s));
-            await new Promise(resolve => setTimeout(resolve, 600));
+            await new Promise(resolve => setTimeout(resolve, 50));
             if (isCancelled) return;
 
             const instName = saasSettings?.nome || saasSettings?.saas_nome_sistema || "GIPP - Administração Geral";
@@ -15186,7 +15186,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             // Passo 5: Verificação se os servidores estão OK (Chamada Real de API)
             setProgress(90);
             setSteps(prev => prev.map((s, idx) => idx === 4 ? { ...s, status: 'active' } : s));
-            await new Promise(resolve => setTimeout(resolve, 400));
+            await new Promise(resolve => setTimeout(resolve, 50));
             if (isCancelled) return;
 
             let serverDesc = '';
@@ -15209,7 +15209,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             // Passo 6: Sincronizando animações gráficas (Ambiente Prontinho)
             setProgress(100);
             setSteps(prev => prev.map((s, idx) => idx === 5 ? { ...s, status: 'active' } : s));
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => setTimeout(resolve, 80));
             if (isCancelled) return;
 
             setSteps(prev => prev.map((s, idx) => idx === 5 ? { 
@@ -15218,7 +15218,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                 desc: "Motor gráfico instanciado" 
             } : s));
             
-            await new Promise(resolve => setTimeout(resolve, 600));
+            await new Promise(resolve => setTimeout(resolve, 100));
             if (!isCancelled) {
                 onComplete();
             }
