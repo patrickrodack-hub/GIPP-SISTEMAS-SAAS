@@ -47,11 +47,24 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.8.0 */}
+            <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance">
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v8.8.0 - Revistas Interativas IA, Gestão Avançada de Usuários & Experiência Imersiva</h3>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Módulo de Revistas Interativas IA:</strong> Lançamento do novo leitor de revistas teológicas e acadêmicas (EBD) integrado ao fluxo da Secretaria Eclesiástica, com folheamento 3D realista, transição de escala fluida e controles integrados.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Experiência de Leitura Imersiva (Fullscreen):</strong> Suporte completo à leitura em tela cheia com overlay com z-index máximo, ajuste responsivo a resoluções desktop e mobile, e gestos de toque (swipe) para virar as páginas horizontalmente.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Matriz de Permissões Refinada:</strong> Inclusão nativa de <code className="text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded text-xs">access_revistas_interativas</code> na matriz de perfis (Pastores, Secretários, Administradores, Superintendentes e Auxiliares) e distribuição nos pacotes de planos (Standard e Avançado).</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Indicador de Performance:</strong> Indicador de carregamento (spinner) integrado ao leitor de revistas, garantindo feedback imediato de renderização de PDFs.</li>
+                </ul>
+            </div>
+            
             {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.7.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-700 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v8.7.0 - Governança Eclesiástica Estendida, Controle de Restrições Unificadas & Matriz de Recursos Avançados</h3>
-                <p className="text-xs text-indigo-700 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <p className="text-xs text-indigo-700 font-black uppercase mb-3 tracking-wider">Julho 2026 (Anterior)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Matriz de Permissões de Planos Refinada:</strong> Alinhamento estrito dos 42 módulos da GIPP nos pacotes Básico, Standard e Avançado, incluindo os novos módulos de Universidade Teológica e EAD de Capacitação de forma nativa no painel de liberação de planos e faturamento.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Governança de Usuários Modulados (32 Módulos):</strong> Novo barramento de restrição de segurança no nível modulado, permitindo que a liderança restrinja ou libere individualmente o acesso à Universidade Teológica GIPP, EAD Cursos, Ministério da Família e todos os outros módulos de apoio.</li>
@@ -64,7 +77,7 @@ const ModuleChangelog = () => (
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance">
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-indigo-900 font-[Outfit]">v8.6.0 - Finanças de Alta Paridade, Reconciliação Bancária & Exportador Universitário PDF</h3>
-                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Atual)</p>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Junho 2026 (Anterior)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Paridade Adaptativa DDA vs Razão:</strong> Algoritmo de cálculo de score dinâmico que cruza valores, datas e devedores reais para estabelecer índice percentual de acurácia em conciliações contábeis.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Auto-Conciliação Multi-Lote:</strong> Execução inteligente de transações em massa para todas as guias e faturas com conformidade e fidelidade igual ou superior a 90%.</li>

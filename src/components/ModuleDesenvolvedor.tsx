@@ -172,7 +172,7 @@ const ModuleDesenvolvedor = () => {
             saas_nome_sistema: "GIPP"
         };
         const metadata = `// =================================================================
-// DEPOSIT DOSSIER - SYSTEM GIPP v8.7.0
+// DEPOSIT DOSSIER - SYSTEM GIPP v8.8.0
 // OWNER: \${igrejaData.nome}
 // CNPJ: \${igrejaData.cnpj}
 // DOMAIN: \${typeof window !== 'undefined' ? window.location.origin : 'localhost'}
@@ -220,7 +220,7 @@ CNPJ/CPF (se houver): \${suspectCnpj || "NÃO CADASTRADO"}
 
 Prezado(a) Senhor(a),
     
-Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v8.7.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
+Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v8.8.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
 
 Constatou-se o uso não autorizado, engenharia reversa, plágio ou cópia idêntica de porções fundamentais de nosso código-fonte, banco de dados ou layout estético do sistema GIPP na seguinte esfera:
 "\${unauthorizedDetails || "Cópia não autorizada do painel eclesiástico e banco de dados."}"
@@ -3576,7 +3576,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v8.7.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
+                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v8.8.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
                                             navigator.clipboard.writeText(eulaText);
                                             addToast("Termo de EULA copiado para a área de transferência!", "success");
                                         }}
