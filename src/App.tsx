@@ -9594,7 +9594,6 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_ministerios') && checkPlan('ministerio_familia') && <MenuItem id="ministerio_familia" icon={Heart} label="Ministério da Família" />}
                         {hasPermission('access_salinha_kids') && checkPlan('salinha_kids') && <MenuItem id="salinha_kids" icon={Baby} label="Salinha Kids" />}
                         {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="secretaria_ebd" icon={GraduationCap} label="Gestão EBD" />}
-                        {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="revistas_interativas" icon={BookOpen} label="Revistas Interativas" />}
                         {hasPermission('access_missoes') && checkPlan('missoes_painel') && <MenuItem id="missoes_painel" icon={Globe} label="Depto. de Missões" />}
                     </div>
                 )}
@@ -9615,6 +9614,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                 <div>
                     <MenuGroup label="Secretaria Eclesiástica" />
                     {hasPermission('access_boletim') && checkPlan('boletim') && <MenuItem id="boletim" icon={Newspaper} label="Boletim Digital" />}
+                    {hasPermission('access_ebd') && checkPlan('secretaria_ebd') && <MenuItem id="revistas_interativas" icon={BookOpen} label="Revistas Interativas" />}
                     {checkPlan('biblia') && <MenuItem id="biblia" icon={Book} label="Bíblia de Estudo" />}
                     {hasPermission('access_email') && checkPlan('email_interno') && <MenuItem id="email_interno" icon={Mail} label="Webmail Direto" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
@@ -13738,6 +13738,7 @@ const PortalEBD = ({ user, db }) => {
                     headerBg="from-emerald-600 via-teal-700 to-slate-950"
                     defaultWidth={1000}
                     defaultHeight={750}
+                    initialFullscreen={true}
                     footer={
                         <>
                             {!aiLesson.loading && (

@@ -16,6 +16,7 @@ interface InteractiveWindowProps {
   saveLabel?: string;
   onSave?: () => void;
   isSaving?: boolean;
+  initialFullscreen?: boolean;
 }
 
 export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
@@ -33,6 +34,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
   saveLabel = 'Salvar Dados',
   onSave,
   isSaving = false,
+  initialFullscreen = false,
 }) => {
   // Compute best default size depending on screen space
   const initialWidth = Math.min(defaultWidth, typeof window !== 'undefined' ? window.innerWidth - 24 : defaultWidth);
@@ -41,7 +43,7 @@ export const InteractiveWindow: React.FC<InteractiveWindowProps> = ({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ width: initialWidth, height: initialHeight });
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(initialFullscreen);
 
   const posRef = useRef(position);
   const sizeRef = useRef(size);

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, RefreshCw, Trash2, Sparkles, BookMarked, Eye, ChevronLeft, ChevronRight, BookText, Bookmark, FileText, ZoomIn, ZoomOut, Maximize, Image as ImageIcon } from 'lucide-react';
+import { BookOpen, RefreshCw, Trash2, Sparkles, BookMarked, Eye, ChevronLeft, ChevronRight, BookText, Bookmark, FileText, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, Minimize2, Maximize2, X } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { PDFDocument } from 'pdf-lib';
 import { ChurchContext, ConfirmModal } from '../App';
@@ -57,7 +57,47 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
     const [activeLessonIdx, setActiveLessonIdx] = useState<number>(0);
     const [direction, setDirection] = useState<number>(0);
     const [zoomLevel, setZoomLevel] = useState<number>(1);
+    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Touch gesture support (swipe page-turn)
+    const touchStartX = useRef<number | null>(null);
+    const touchEndX = useRef<number | null>(null);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.targetTouches[0].clientX;
+        touchEndX.current = e.targetTouches[0].clientX;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        touchEndX.current = e.targetTouches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStartX.current || !touchEndX.current || !viewingRevista) return;
+        const diffX = touchStartX.current - touchEndX.current;
+        const minSwipeDistance = 60; // minimum px to trigger page-turn
+
+        if (diffX > minSwipeDistance) {
+            // Swipe Left -> Next Page (turn page forward)
+            if (activeLessonIdx < (viewingRevista.licoes?.length || 1) - 1) {
+                playPageTurnSound();
+                setDirection(1);
+                setActiveLessonIdx(prev => prev + 1);
+            }
+        } else if (diffX < -minSwipeDistance) {
+            // Swipe Right -> Previous Page (turn page backward)
+            if (activeLessonIdx > 0) {
+                playPageTurnSound();
+                setDirection(-1);
+                setActiveLessonIdx(prev => prev - 1);
+            }
+        }
+
+        // Reset
+        touchStartX.current = null;
+        touchEndX.current = null;
+    };
 
     // State for ConfirmModal
     const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ id: string } | null>(null);
@@ -319,8 +359,48 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
         const progressPercent = ((activeLessonIdx + 1) / totalLessons) * 100;
         
         return (
-            <div id="interactive_magazine_view" className="animate-fadeIn min-h-screen bg-[#f4f1ea] pb-24 font-serif overflow-x-hidden w-full max-w-full relative">
-                {/* Fixed Top Progress Bar */}
+            <>
+                {/* Backdrop overlay for ultrawide and beautiful background separation in fullscreen mode */}
+                {isFullscreen && (
+                    <div 
+                        className="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-[99990] transition-opacity duration-300"
+                        onClick={() => setIsFullscreen(false)} 
+                    />
+                )}
+                
+                <motion.div 
+                    id="interactive_magazine_view" 
+                    className={`bg-[#f4f1ea] pb-24 font-serif overflow-x-hidden relative ${
+                        isFullscreen 
+                            ? 'fixed inset-0 w-[100vw] h-[100vh] max-w-[1300px] mx-auto shadow-2xl border-x border-stone-200 z-[99999] overflow-y-auto' 
+                            : 'min-h-screen w-full max-w-full'
+                    }`}
+                    initial={false}
+                    animate={isFullscreen ? { scale: [0.95, 1], opacity: [0.9, 1] } : { scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {/* Floating controls in top right */}
+                    <div className="absolute top-4 right-4 z-[80] flex items-center gap-2">
+                        <button 
+                            onClick={() => setIsFullscreen(!isFullscreen)} 
+                            className="bg-white/60 backdrop-blur-md border border-stone-200/80 text-stone-700 hover:text-stone-900 hover:bg-white/95 p-2 rounded-full shadow-md transition-all hover:scale-105 cursor-pointer flex items-center justify-center w-10 h-10"
+                            title={isFullscreen ? "Minimizar" : "Maximizar"}
+                        >
+                            {isFullscreen ? <Minimize2 size={18} /> : <Maximize size={18} />}
+                        </button>
+                        <button 
+                            onClick={() => { setViewingRevista(null); setZoomLevel(1); setIsFullscreen(false); }} 
+                            className="bg-white/60 backdrop-blur-md border border-stone-200/80 text-stone-700 hover:text-rose-600 hover:bg-rose-50/95 p-2 rounded-full shadow-md transition-all hover:scale-105 cursor-pointer flex items-center justify-center w-10 h-10"
+                            title="Fechar Leitura"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* Fixed Top Progress Bar */}
                 <div className="fixed top-0 left-0 right-0 h-1.5 bg-stone-200 z-[60] overflow-hidden">
                     <motion.div 
                         className="h-full bg-indigo-600"
@@ -332,9 +412,23 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
 
                 {/* Navbar */}
                 <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-stone-200 px-4 md:px-6 py-4 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-sm font-sans">
-                    <button onClick={() => { setViewingRevista(null); setZoomLevel(1); }} className="text-stone-600 font-bold flex items-center gap-2 hover:text-indigo-600 transition-colors self-start sm:self-auto">
-                        <ChevronLeft size={20} /> Biblioteca
-                    </button>
+                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                        <button 
+                            onClick={() => { setViewingRevista(null); setZoomLevel(1); setIsFullscreen(false); }} 
+                            className="bg-stone-100 hover:bg-rose-50 hover:text-rose-600 px-3 py-1.5 rounded-lg text-stone-600 font-bold flex items-center gap-2 hover:border-rose-200 border border-stone-200 transition-all text-xs cursor-pointer shadow-2xs"
+                        >
+                            <X size={14} /> Fechar Leitura
+                        </button>
+                        
+                        <button 
+                            onClick={() => setIsFullscreen(!isFullscreen)} 
+                            className="bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-indigo-700 font-bold flex items-center gap-2 border border-indigo-200 transition-all text-xs cursor-pointer shadow-2xs"
+                            title={isFullscreen ? "Minimizar" : "Tela Cheia"}
+                        >
+                            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                            {isFullscreen ? "Minimizar" : "Maximizar"}
+                        </button>
+                    </div>
                     
                     <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
                         <div className="flex items-center gap-2 bg-stone-100 rounded-full px-3 py-1.5 border border-stone-200">
@@ -542,7 +636,8 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                         <p className="text-stone-500 font-sans font-medium uppercase tracking-widest text-center px-4">Nenhuma lição encontrada para este índice.</p>
                     </div>
                 )}
-            </div>
+            </motion.div>
+          </>
         );
     }
 

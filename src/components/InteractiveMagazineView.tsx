@@ -9,6 +9,7 @@ interface InteractiveMagazineViewProps {
   revista: string;
   licaoNum: string;
   capaUrl: string | null;
+  loading?: boolean;
 }
 
 // Curated high-quality, lightweight public domain biblical and spiritual images
@@ -176,10 +177,24 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
   lessonText,
   revista,
   licaoNum,
-  capaUrl
+  capaUrl,
+  loading = false
 }) => {
   const [activeTab, setActiveTab] = useState<'reading' | 'magazine'>('magazine');
   const [customNotes, setCustomNotes] = useState<string>('');
+
+  // Local state to simulate loading/rendering transition when lessonText or licaoNum changes
+  const [isLocalLoading, setIsLocalLoading] = useState(true);
+
+  React.useEffect(() => {
+    setIsLocalLoading(true);
+    const timer = setTimeout(() => {
+      setIsLocalLoading(false);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [lessonText, licaoNum]);
+
+  const isLoading = loading || isLocalLoading;
 
   // helper to get the best contextual image for a topic or introductory section based on exact keywords
   const getIllustrationForTopic = useCallback((title: string, paragraphs: string[], index: number) => {
@@ -335,6 +350,26 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     if (capaUrl && capaUrl !== 'null' && !capaUrl.includes('URL_CAPA')) return capaUrl;
     return DEFAULT_COVERS[parseInt(licaoNum) % DEFAULT_COVERS.length];
   }, [capaUrl, licaoNum]);
+
+  if (isLoading) {
+    return (
+      <div id="interactive_magazine_loader" className="flex flex-col items-center justify-center min-h-[500px] w-full bg-slate-50/50 p-8 text-center animate-fadeIn font-sans">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 rounded-full border-4 border-emerald-100/50 animate-ping opacity-75"></div>
+          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin relative z-10"></div>
+          <div className="absolute inset-0 flex items-center justify-center z-20">
+            <Sparkles className="text-emerald-500 animate-pulse" size={20} />
+          </div>
+        </div>
+        <h4 className="font-['Outfit'] font-extrabold text-lg text-slate-800 tracking-tight mb-2 animate-pulse">
+          Renderizando Revista Ilustrada
+        </h4>
+        <p className="text-xs font-semibold text-slate-500 max-w-sm leading-relaxed mx-auto">
+          Otimizando fontes editoriais, estruturando tópicos teológicos e carregando ilustrações temáticas em alta definição...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
