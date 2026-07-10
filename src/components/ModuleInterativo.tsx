@@ -4,7 +4,7 @@ import {
   Maximize2, Minimize2, X, Award, Users, Check, Pause, 
   RotateCcw, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, 
   Coins, SkipForward, Flame, MessageCircle, HelpCircle as HelpIcon,
-  CheckCircle2, AlertTriangle, ChevronRight, Info, EyeOff, LayoutGrid, SlidersHorizontal
+  CheckCircle2, AlertTriangle, ChevronRight, Info, EyeOff, LayoutGrid, SlidersHorizontal, Move
 } from 'lucide-react';
 
 // ==========================================
@@ -306,10 +306,14 @@ export default function ModuleInterativo() {
   }, []);
 
   const updateHighScore = (game: 'tetris' | 'show', val: number) => {
-    if (val > scores[game]) {
-      setScores(prev => ({ ...prev, [game]: val }));
-      localStorage.setItem(`gipp_game_${game}_score`, val.toString());
-    }
+    setScores(prev => {
+      if (val > prev[game]) {
+        const next = { ...prev, [game]: val };
+        localStorage.setItem(`gipp_game_${game}_score`, val.toString());
+        return next;
+      }
+      return prev;
+    });
   };
 
   return (
@@ -377,7 +381,7 @@ export default function ModuleInterativo() {
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">Teologia</span>
                 </h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Inspirado na atmosfera do clássico "Show do Milhão". Avance pelas perguntas teológicas de níveis crescentes e conquiste prêmios fictícios até R$ 1 Milhão! Conte com ajuda das Cartas, Universitários, Placas e Pulos.
+                  Inspirado na atmosfera do clássico "Show do Milhão". Avance pelas perguntas teológicas de níveis crescentes e conquiste prêmios fictícios até 1.000.000 Pts! Conte com ajuda das Cartas, Universitários, Placas e Pulos.
                 </p>
               </div>
 
@@ -385,7 +389,7 @@ export default function ModuleInterativo() {
               <div className="border-t border-slate-800 pt-6 mt-6 flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Maior Prêmio</p>
-                  <p className="text-xl font-black text-amber-400">R$ {scores.show.toLocaleString('pt-BR')}</p>
+                  <p className="text-xl font-black text-amber-400">{scores.show.toLocaleString('pt-BR')} Pts</p>
                 </div>
                 <button 
                   onClick={() => { setActiveGame('show'); setIsFullscreen(false); }}
@@ -484,6 +488,67 @@ function TetrisGame({ onGameOver, highScore }: TetrisProps) {
   // Opções: 'right' (Direita), 'left' (Esquerda), 'center' (Centro)
   const [mobileControllerPos, setMobileControllerPos] = useState<'left' | 'center' | 'right'>('right');
 
+  // Estados para arrastar o painel direcional (controle móvel) de forma livre
+  const [dpadOffset, setDpadOffset] = useState({ x: 0, y: 0 });
+  const dpadDragStart = useRef({ x: 0, y: 0 });
+  const dpadOffsetStart = useRef({ x: 0, y: 0 });
+  const [isDraggingDpad, setIsDraggingDpad] = useState(false);
+
+  const handleDpadMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Só botão esquerdo
+    dpadDragStart.current = { x: e.clientX, y: e.clientY };
+    dpadOffsetStart.current = { ...dpadOffset };
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - dpadDragStart.current.x;
+      const dy = moveEvent.clientY - dpadDragStart.current.y;
+      setIsDraggingDpad(true);
+      setDpadOffset({
+        x: dpadOffsetStart.current.x + dx,
+        y: dpadOffsetStart.current.y + dy
+      });
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      setTimeout(() => {
+        setIsDraggingDpad(false);
+      }, 50);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleDpadTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    dpadDragStart.current = { x: touch.clientX, y: touch.clientY };
+    dpadOffsetStart.current = { ...dpadOffset };
+
+    const onTouchMove = (moveEvent: TouchEvent) => {
+      const touchMove = moveEvent.touches[0];
+      const dx = touchMove.clientX - dpadDragStart.current.x;
+      const dy = touchMove.clientY - dpadDragStart.current.y;
+      setIsDraggingDpad(true);
+      setDpadOffset({
+        x: dpadOffsetStart.current.x + dx,
+        y: dpadOffsetStart.current.y + dy
+      });
+    };
+
+    const onTouchEnd = () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      setTimeout(() => {
+        setIsDraggingDpad(false);
+      }, 50);
+    };
+
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onTouchEnd);
+  };
+
   // Estados das peças de Tetris
   const [currentPiece, setCurrentPiece] = useState<{
     shape: number[][];
@@ -574,11 +639,13 @@ function TetrisGame({ onGameOver, highScore }: TetrisProps) {
       filteredGrid.unshift(Array(COLS).fill(''));
     }
 
+    let nextScore = score;
     if (clearedLines > 0) {
       const pointsTable = [0, 100, 300, 500, 800];
       const points = pointsTable[clearedLines] * level;
+      nextScore = score + points;
       
-      setScore(prev => prev + points);
+      setScore(nextScore);
       setLines(prev => {
         const nextLines = prev + clearedLines;
         const nextLevel = Math.floor(nextLines / 10) + 1;
@@ -594,7 +661,7 @@ function TetrisGame({ onGameOver, highScore }: TetrisProps) {
     if (checkCollision(SHAPES[currentNext], Math.floor((COLS - SHAPES[currentNext][0].length) / 2), 0, filteredGrid)) {
       setIsLost(true);
       setIsPlaying(false);
-      onGameOver(score);
+      onGameOver(nextScore);
     } else {
       setGrid(filteredGrid);
       spawnPiece(currentNext);
@@ -911,23 +978,23 @@ function TetrisGame({ onGameOver, highScore }: TetrisProps) {
         <div className="bg-slate-900/60 border border-slate-850 p-3 rounded-2xl flex flex-col gap-2">
           <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
             <SlidersHorizontal size={12} className="text-indigo-400" />
-            <span>Posição do Controle</span>
+            <span>Alinhamento Inicial</span>
           </div>
           <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button 
-              onClick={() => setMobileControllerPos('left')} 
+              onClick={() => { setMobileControllerPos('left'); setDpadOffset({ x: 0, y: 0 }); }} 
               className={`py-1 text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer ${mobileControllerPos === 'left' ? 'bg-indigo-650 text-white' : 'text-slate-500 hover:text-slate-300'}`}
             >
               Esq.
             </button>
             <button 
-              onClick={() => setMobileControllerPos('center')} 
+              onClick={() => { setMobileControllerPos('center'); setDpadOffset({ x: 0, y: 0 }); }} 
               className={`py-1 text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer ${mobileControllerPos === 'center' ? 'bg-indigo-650 text-white' : 'text-slate-500 hover:text-slate-300'}`}
             >
               Meio
             </button>
             <button 
-              onClick={() => setMobileControllerPos('right')} 
+              onClick={() => { setMobileControllerPos('right'); setDpadOffset({ x: 0, y: 0 }); }} 
               className={`py-1 text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer ${mobileControllerPos === 'right' ? 'bg-indigo-650 text-white' : 'text-slate-500 hover:text-slate-300'}`}
             >
               Dir.
@@ -936,10 +1003,33 @@ function TetrisGame({ onGameOver, highScore }: TetrisProps) {
         </div>
 
         {/* CONTROLES VIRTUAIS COM POSIÇÃO DINÂMICA NA INTERFACE */}
-        <div className={`bg-slate-900 border border-slate-800 p-4 rounded-3xl shadow-xl flex flex-col items-center gap-4 transition-all duration-300 ${
-          mobileControllerPos === 'left' ? 'xl:order-first' : mobileControllerPos === 'center' ? 'max-w-[180px] mx-auto' : ''
-        }`}>
-          <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest text-center">Painel Direcional</p>
+        <div 
+          className={`bg-slate-900 border p-4 rounded-3xl shadow-2xl flex flex-col items-center gap-4 transition-transform duration-75 relative select-none ${
+            mobileControllerPos === 'left' ? 'xl:order-first' : mobileControllerPos === 'center' ? 'max-w-[180px] mx-auto' : ''
+          } ${isDraggingDpad ? 'cursor-grabbing border-indigo-500/55 shadow-indigo-500/10' : 'border-slate-800'}`}
+          style={{ transform: `translate(${dpadOffset.x}px, ${dpadOffset.y}px)`, touchAction: 'none' }}
+        >
+          {/* DRAG HANDLE HEADER */}
+          <div 
+            onMouseDown={handleDpadMouseDown}
+            onTouchStart={handleDpadTouchStart}
+            className="w-full pb-2 border-b border-slate-800/60 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing select-none"
+            title="Arraste para mover o painel livremente"
+          >
+            <div className="flex items-center gap-1.5">
+              <Move size={12} className="text-indigo-400 shrink-0" />
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Painel Direcional</span>
+            </div>
+            {(dpadOffset.x !== 0 || dpadOffset.y !== 0) && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setDpadOffset({ x: 0, y: 0 }); }}
+                className="text-[9px] bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider cursor-pointer"
+                title="Resetar posição livre"
+              >
+                Reset
+              </button>
+            )}
+          </div>
           
           <div className="grid grid-cols-3 gap-2 w-full max-w-[160px] relative">
             <div></div>
@@ -1252,9 +1342,9 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
           </div>
         </div>
 
-        <h4 className="text-xl font-bold text-white mb-3">Teste seus conhecimentos bíblicos valendo R$ 1 Milhão fictício!</h4>
+        <h4 className="text-xl font-bold text-white mb-3">Teste seus conhecimentos bíblicos valendo 1.000.000 Pts fictícios!</h4>
         <p className="text-sm text-slate-400 max-w-lg leading-relaxed mb-8">
-          Responda a perguntas elaboradas com base na **Declaração de Fé (CPAD/CGADB)**. Você começará no nível Fácil e subirá até o milhão. Use suas ajudas de forma inteligente para não ser eliminado!
+          Responda a perguntas elaboradas com base na **Declaração de Fé (CPAD/CGADB)**. Você começará no nível Fácil e subirá até 1.000.000 Pts. Use suas ajudas de forma inteligente para não ser eliminado!
         </p>
 
         {/* BOTAO CORRIGIDO - BRILHANTE E POLIDO, NADA DE 550 */}
@@ -1269,7 +1359,7 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
     );
   }
 
-  // TELA DE VITÓRIA DE R$ 1 MILHÃO!
+  // TELA DE VITÓRIA DE 1.000.000 Pts!
   if (gameState === 'won') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto w-full select-none">
@@ -1283,7 +1373,7 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
         </p>
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full mb-8">
           <p className="text-xs text-slate-500 font-extrabold uppercase tracking-widest mb-1">Prêmio Final Conquistado</p>
-          <p className="text-4xl font-black text-amber-400 tracking-tight">R$ 1.000.000</p>
+          <p className="text-4xl font-black text-amber-400 tracking-tight">1.000.000 Pts</p>
         </div>
         <button 
           onClick={initGameQuestions}
@@ -1308,7 +1398,7 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
         <p className="text-xs text-slate-400 mb-6">Você encerrou sua rodada do Show do Cristão.</p>
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl w-full mb-8">
           <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest mb-1">Prêmio Conquistado</p>
-          <p className="text-3xl font-black text-emerald-450">R$ {finalPrize.toLocaleString('pt-BR')}</p>
+          <p className="text-3xl font-black text-emerald-450">{finalPrize.toLocaleString('pt-BR')} Pts</p>
         </div>
         <div className="flex flex-col gap-3 w-full">
           <button 
@@ -1346,7 +1436,7 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
           </div>
           <div className="text-right">
             <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Valendo</p>
-            <p className="text-2xl font-black text-amber-400">R$ {prizeStatus.target.toLocaleString('pt-BR')}</p>
+            <p className="text-2xl font-black text-amber-400">{prizeStatus.target.toLocaleString('pt-BR')} Pts</p>
           </div>
         </div>
 
@@ -1509,7 +1599,7 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
               onClick={stopGame}
               className="w-full mt-4 py-3 bg-rose-600/15 border border-rose-500/35 hover:bg-rose-600 hover:text-white text-rose-300 font-bold text-xs rounded-2xl transition-all cursor-pointer"
             >
-              🛑 Parar o Jogo (Garante R$ {prizeStatus.stop.toLocaleString('pt-BR')})
+              🛑 Parar o Jogo (Garante {prizeStatus.stop.toLocaleString('pt-BR')} Pts)
             </button>
           )}
         </div>
@@ -1559,25 +1649,38 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
         {/* HISTÓRICO DE PRÊMIOS */}
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl hidden lg:block">
           <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest mb-3">Tabela de Premiação</p>
-          <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto pr-1">
-            {PRIZES.slice().reverse().map((prize, idx) => {
-              const realIndex = PRIZES.length - 1 - idx;
-              const isCurrent = realIndex === currentQuestionIndex;
-              const isPassed = realIndex < currentQuestionIndex;
+          <div className="flex flex-col gap-1">
+            {(() => {
+              const total = PRIZES.length;
+              const countToShow = 10;
+              let start = currentQuestionIndex - Math.floor(countToShow / 2);
+              if (start < 0) start = 0;
+              if (start + countToShow > total) start = total - countToShow;
+              const end = start + countToShow;
 
-              return (
-                <div 
-                  key={idx} 
-                  className={`flex justify-between items-center px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    isCurrent ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-400/50 scale-[1.02]' :
-                    isPassed ? 'text-indigo-400 bg-indigo-500/5 line-through op-60' : 'text-slate-500'
-                  }`}
-                >
-                  <span className="text-[10px]">Pergunta {realIndex + 1}</span>
-                  <span>R$ {prize.toLocaleString('pt-BR')}</span>
-                </div>
-              );
-            })}
+              const visible = [];
+              for (let i = start; i < end; i++) {
+                visible.push({ index: i, prize: PRIZES[i] });
+              }
+
+              return visible.reverse().map(({ index: realIndex, prize }) => {
+                const isCurrent = realIndex === currentQuestionIndex;
+                const isPassed = realIndex < currentQuestionIndex;
+
+                return (
+                  <div 
+                    key={realIndex} 
+                    className={`flex justify-between items-center px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      isCurrent ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-400/50 scale-[1.02]' :
+                      isPassed ? 'text-indigo-400 bg-indigo-500/5 line-through opacity-60' : 'text-slate-500'
+                    }`}
+                  >
+                    <span className="text-[10px]">Pergunta {realIndex + 1}</span>
+                    <span>{prize.toLocaleString('pt-BR')} Pts</span>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
 
