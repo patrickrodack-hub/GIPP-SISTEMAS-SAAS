@@ -23,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -91,6 +91,7 @@ import ModuleFrotas from './components/ModuleFrotas';
 import ModuleCelulas from './components/ModuleCelulas';
 import ModuleBoletim from './components/ModuleBoletim';
 import ModuleLivroAtas from './components/ModuleLivroAtas';
+import ModuleInterativo from './components/ModuleInterativo';
 const ModuleManualUsuario = lazy(() => import('./components/ModuleManualUsuario'));
 const ModuleAmparoLegal = lazy(() => import('./components/ModuleAmparoLegal'));
 const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSoftware'));
@@ -14600,10 +14601,11 @@ const MemberPortalLayout = () => {
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
+        { id: 'portal_interativo', icon: Gamepad2, label: 'Interatividade', hoverColor: 'group-hover:text-indigo-400' },
     ];
 
     const filteredBaseNavItems = baseNavItems.filter(item => {
-        if (item.id === 'portal_home') return true;
+        if (item.id === 'portal_home' || item.id === 'portal_interativo') return true;
         if (item.id === 'portal_professor_ebd') {
             return isProfessor;
         }
@@ -14660,6 +14662,7 @@ const MemberPortalLayout = () => {
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_cursos': return <PortalCursos user={user} />;
             case 'portal_informativo': return <ModuleBoletim />;
+            case 'portal_interativo': return <ModuleInterativo />;
             default: return <PortalHome user={user} db={db} setView={setView} />;
         }
     };
