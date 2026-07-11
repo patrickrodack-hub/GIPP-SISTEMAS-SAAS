@@ -150,7 +150,7 @@ app.post("/api/gemini/generate", async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: String(prompt || ''),
             config: config
         });
@@ -158,7 +158,30 @@ app.post("/api/gemini/generate", async (req, res) => {
         res.json({ text: response.text });
     } catch (error: any) {
         console.error("Gemini API server route error:", error);
-        res.status(500).json({ error: String(error.message || error) });
+        const errStr = String(error.message || error || "");
+        let parsedError = null;
+        try {
+            if (errStr.trim().startsWith('{') || errStr.trim().startsWith('[')) {
+                parsedError = JSON.parse(errStr);
+            }
+        } catch (e) {}
+
+        const msg = parsedError?.error?.message || parsedError?.message || errStr;
+        const code = parsedError?.error?.code || parsedError?.code;
+        const status = parsedError?.error?.status || parsedError?.status;
+
+        if (
+            msg.includes("prepayment credits are depleted") ||
+            msg.includes("RESOURCE_EXHAUSTED") ||
+            status === "RESOURCE_EXHAUSTED" ||
+            code === 429
+        ) {
+            res.status(429).json({
+                error: "Seus créditos pré-pagos da API do Gemini acabaram (erro 429 / RESOURCE_EXHAUSTED). Por favor, acesse o Google AI Studio (https://aistudio.google.com/projects) para adicionar saldo à sua fatura ou trocar a chave de API nas configurações."
+            });
+            return;
+        }
+        res.status(500).json({ error: msg });
     }
 });
 
@@ -261,7 +284,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: contents,
             config: {
                 systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
@@ -272,7 +295,30 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         res.json({ text: response.text });
     } catch (error: any) {
         console.error("Gemini EBD route error:", error);
-        res.status(500).json({ error: String(error.message || error) });
+        const errStr = String(error.message || error || "");
+        let parsedError = null;
+        try {
+            if (errStr.trim().startsWith('{') || errStr.trim().startsWith('[')) {
+                parsedError = JSON.parse(errStr);
+            }
+        } catch (e) {}
+
+        const msg = parsedError?.error?.message || parsedError?.message || errStr;
+        const code = parsedError?.error?.code || parsedError?.code;
+        const status = parsedError?.error?.status || parsedError?.status;
+
+        if (
+            msg.includes("prepayment credits are depleted") ||
+            msg.includes("RESOURCE_EXHAUSTED") ||
+            status === "RESOURCE_EXHAUSTED" ||
+            code === 429
+        ) {
+            res.status(429).json({
+                error: "Seus créditos pré-pagos da API do Gemini acabaram (erro 429 / RESOURCE_EXHAUSTED). Por favor, acesse o Google AI Studio (https://aistudio.google.com/projects) para adicionar saldo à sua fatura ou trocar a chave de API nas configurações."
+            });
+            return;
+        }
+        res.status(500).json({ error: msg });
     }
 });
 
@@ -327,7 +373,7 @@ app.post("/api/financeiro/analisar-extrato", async (req, res) => {
         };
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: [filePart, textPart],
             config: {
                 responseMimeType: "application/json",
@@ -358,7 +404,30 @@ app.post("/api/financeiro/analisar-extrato", async (req, res) => {
         res.json(JSON.parse(textResponse.trim()));
     } catch (error: any) {
         console.error("Erro no processamento do extrato via IA:", error);
-        res.status(500).json({ error: String(error.message || error) });
+        const errStr = String(error.message || error || "");
+        let parsedError = null;
+        try {
+            if (errStr.trim().startsWith('{') || errStr.trim().startsWith('[')) {
+                parsedError = JSON.parse(errStr);
+            }
+        } catch (e) {}
+
+        const msg = parsedError?.error?.message || parsedError?.message || errStr;
+        const code = parsedError?.error?.code || parsedError?.code;
+        const status = parsedError?.error?.status || parsedError?.status;
+
+        if (
+            msg.includes("prepayment credits are depleted") ||
+            msg.includes("RESOURCE_EXHAUSTED") ||
+            status === "RESOURCE_EXHAUSTED" ||
+            code === 429
+        ) {
+            res.status(429).json({
+                error: "Seus créditos pré-pagos da API do Gemini acabaram (erro 429 / RESOURCE_EXHAUSTED). Por favor, acesse o Google AI Studio (https://aistudio.google.com/projects) para adicionar saldo à sua fatura ou trocar a chave de API nas configurações."
+            });
+            return;
+        }
+        res.status(500).json({ error: msg });
     }
 });
 

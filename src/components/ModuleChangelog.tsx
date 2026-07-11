@@ -22,7 +22,7 @@ import {
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
-, Gamepad2 } from 'lucide-react';
+} from 'lucide-react';
 
 import { 
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 

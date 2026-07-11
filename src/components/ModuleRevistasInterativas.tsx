@@ -288,7 +288,7 @@ export default function ModuleRevistasInterativas({ db, isPortal = false }: { db
                 }
                 
                 if (!response.ok) {
-                    throw new Error(responseData?.error?.message || responseData?.message || 'Erro na API Gemini');
+                    throw new Error(responseData?.error?.message || responseData?.error || responseData?.message || 'Erro na API Gemini');
                 }
                 let extractedText = responseData.text;
                 if (!extractedText) throw new Error("Texto extraído vazio ou inválido.");

@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         };
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: [filePart, textPart],
             config: {
                 responseMimeType: "application/json",
@@ -92,6 +92,28 @@ export default async function handler(req, res) {
         return res.status(200).json(JSON.parse(textResponse.trim()));
     } catch (error) {
         console.error("Erro no processamento do extrato via IA no Vercel:", error);
-        return res.status(500).json({ error: String(error.message || error) });
+        const errStr = String(error.message || error || "");
+        let parsedError = null;
+        try {
+            if (errStr.trim().startsWith('{') || errStr.trim().startsWith('[')) {
+                parsedError = JSON.parse(errStr);
+            }
+        } catch (e) {}
+
+        const msg = parsedError?.error?.message || parsedError?.message || errStr;
+        const code = parsedError?.error?.code || parsedError?.code;
+        const status = parsedError?.error?.status || parsedError?.status;
+
+        if (
+            msg.includes("prepayment credits are depleted") ||
+            msg.includes("RESOURCE_EXHAUSTED") ||
+            status === "RESOURCE_EXHAUSTED" ||
+            code === 429
+        ) {
+            return res.status(429).json({
+                error: "Seus créditos pré-pagos da API do Gemini acabaram (erro 429 / RESOURCE_EXHAUSTED). Por favor, acesse o Google AI Studio (https://aistudio.google.com/projects) para adicionar saldo à sua fatura ou trocar a chave de API nas configurações."
+            });
+        }
+        return res.status(500).json({ error: msg });
     }
 }

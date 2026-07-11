@@ -167,7 +167,7 @@ export const callGeminiAI = async (prompt, retries = 5) => {
       // Se tivermos chave de API no cliente, chamamos diretamente a API do Gemini
       if (clientApiKey && clientApiKey.trim() !== "") {
         try {
-          const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientApiKey.trim()}`;
+          const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${clientApiKey.trim()}`;
           const response = await fetch(directUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
