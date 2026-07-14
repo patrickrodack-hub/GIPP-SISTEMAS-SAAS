@@ -45,11 +45,15 @@ const PORTUGUESE_TO_ENGLISH_BOOKS: Record<string, string> = {
     '3 João': '3 John', 'Judas': 'Jude', 'Apocalipse': 'Revelation'
 };
 
-// Função para buscar texto na API gratuita do bible-api.com com tradução Almeida (JFA)
-const fetchFreeBibleText = async (bookName: string, chapter: number): Promise<string> => {
+// Função para buscar texto na API gratuita do bible-api.com com tradução Almeida (JFA) ou KJV
+const fetchFreeBibleText = async (bookName: string, chapter: number, translationId: string): Promise<string> => {
     const englishBook = PORTUGUESE_TO_ENGLISH_BOOKS[bookName] || bookName;
     try {
-        const url = `https://bible-api.com/${encodeURIComponent(englishBook)}+${chapter}?translation=almeida`;
+        let apiTranslation = "almeida";
+        if (translationId.toLowerCase() === "kjv") {
+            apiTranslation = "kjv";
+        }
+        const url = `https://bible-api.com/${encodeURIComponent(englishBook)}+${chapter}?translation=${apiTranslation}`;
         const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
@@ -64,9 +68,10 @@ const fetchFreeBibleText = async (bookName: string, chapter: number): Promise<st
 };
 
 // Gerador de Estudo e Esboço Local Inteligente de Contingência
-const generateLocalStudy = (bookName: string, chapter: number, bibleText: string): string => {
+const generateLocalStudy = (bookName: string, chapter: number, bibleText: string, translationId: string): string => {
+    const translationName = translationId.toUpperCase();
     return `[TEXTO]
-# 📖 ${bookName} ${chapter} (Almeida)
+# 📖 ${bookName} ${chapter} (${translationName})
 
 ${bibleText || "Texto bíblico temporariamente indisponível. Por favor, verifique sua conexão com a internet."}
 
@@ -75,7 +80,7 @@ ${bibleText || "Texto bíblico temporariamente indisponível. Por favor, verifiq
 ## 🌍 Contexto Histórico e Teológico de ${bookName}
 Este capítulo faz parte do livro de ${bookName}. O estudo e a leitura de cada capítulo ampliam nossa compreensão doutrinária sobre a Revelação Divina e a providência do Senhor para com Seu povo, em consonância com a Declaração de Fé da denominação.
 
-Ao lermos ${bookName} capítulo ${chapter}, somos convidados a meditar nos ensinamentos eternos do Senhor, compreendendo as exortações práticas, os eventos históricos e as promessas de salvação e edificação que se cumprem na comunhão da Igreja.
+Ao lermos ${bookName} capítulo ${chapter} na versão ${translationName}, somos convidados a meditar nos ensinamentos eternos do Senhor, compreendendo as exortações práticas, os eventos históricos e as promessas de salvação e edificação que se cumprem na comunhão da Igreja.
 
 [ESBOCO]
 ## 📝 Esboço Homilético para ${bookName} ${chapter}
@@ -136,6 +141,42 @@ O estudo detalhado de ${bookName} ${chapter} nos ensina que a Palavra de Deus é
 // Exporting component
 const ModuleBiblia = () => {
     const { db, setDoc, doc, dbFirestore, appId, user, addToast, isOnline } = useContext(ChurchContext);
+    
+    // Perfil de Gamificação e Preferências de Tradução
+    const profile = db.membros?.find((m: any) => m.id === user?.id) || user || {};
+    const [selectedTranslation, setSelectedTranslation] = useState<string>('nvi');
+
+    useEffect(() => {
+        if (profile?.biblia_traducao) {
+            setSelectedTranslation(profile.biblia_traducao);
+        } else {
+            const saved = localStorage.getItem('biblia_pref_traducao');
+            if (saved) {
+                setSelectedTranslation(saved);
+            }
+        }
+    }, [profile?.biblia_traducao]);
+
+    const handleSetTranslation = async (translationId: string) => {
+        setSelectedTranslation(translationId);
+        localStorage.setItem('biblia_pref_traducao', translationId);
+        if (user?.id && dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', user.id), {
+                    biblia_traducao: translationId
+                }, { merge: true });
+                addToast(`Tradução preferida salva: ${translationId.toUpperCase()}`, "success");
+            } catch (err) {
+                console.error("Erro ao salvar tradução preferida:", err);
+            }
+        }
+
+        // Se o usuário já estiver lendo um capítulo, recarrega-o automaticamente na nova tradução
+        if (selectedBook && selectedChapter) {
+            handleSelectChapter(selectedBook, selectedChapter, translationId);
+        }
+    };
+
     const [selectedBook, setSelectedBook] = useState<any>(null);
     const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
     const [readingData, setReadingData] = useState<any>(null); // Text and Study
@@ -310,7 +351,8 @@ const ModuleBiblia = () => {
         ].filter(page => page && page.trim() !== '');
     };
 
-    const handleSelectChapter = async (book: any, chapter: number) => {
+    const handleSelectChapter = async (book: any, chapter: number, translationOverride?: string) => {
+        const activeTranslation = translationOverride || selectedTranslation;
         setSelectedChapter(chapter);
         setIsLoading(true);
         setReadingData(null);
@@ -323,7 +365,7 @@ const ModuleBiblia = () => {
         setQuizComplete(false);
         setQuizFailed(false);
 
-        const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${chapter}`;
+        const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${chapter}_${activeTranslation.toLowerCase()}`;
         
         try {
             // Tenta obter primeiro do cache offline IndexedDB
@@ -339,26 +381,26 @@ const ModuleBiblia = () => {
             // Busca texto sagrado na API gratuita para economizar créditos e evitar cota esgotada da IA
             let bibleText = "";
             if (isOnline) {
-                bibleText = await fetchFreeBibleText(book.name, chapter);
+                bibleText = await fetchFreeBibleText(book.name, chapter, activeTranslation);
             }
 
             // Tenta IA se houver conexão e chave configurada, senão usa o gerador local imediato
             let result = "";
             if (isOnline) {
-                const prompt = `Atue como a Bíblia Sagrada na versão Almeida e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${chapter}.
+                const prompt = `Atue como a Bíblia Sagrada na versão ${activeTranslation.toUpperCase()} e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${chapter}.
                 
-${bibleText ? `O texto bíblico completo do capítulo (Almeida) é o seguinte:\n${bibleText}\n\n` : `Por favor, transcreva o texto bíblico completo de ${book.name} capítulo ${chapter}.\n\n`}
+${bibleText ? `O texto bíblico completo do capítulo (${activeTranslation.toUpperCase()}) é o seguinte:\n${bibleText}\n\n` : `Por favor, transcreva o texto bíblico completo de ${book.name} capítulo ${chapter} na versão ${activeTranslation.toUpperCase()}.\n\n`}
 
 POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
 
 [TEXTO]
-# 📖 ${book.name} ${chapter} (Almeida)
-${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]`}
+# 📖 ${book.name} ${chapter} (${activeTranslation.toUpperCase()})
+${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo de ${book.name} ${chapter} na versão ${activeTranslation.toUpperCase()}, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]`}
 
 [CONTEXTO]
 # 📚 ESTUDO DO PREGADOR
 ## 🌍 Contexto Histórico e Teológico
-[Explique brevemente o cenário deste capítulo e sua consonância doutrinária na teologia pentecostal tradicional]
+[Explique brevemente o cenário deste capítulo na tradução ${activeTranslation.toUpperCase()} e sua consonância doutrinária na teologia pentecostal tradicional]
 
 [ESBOCO]
 ## 📝 Esboço Homilético
@@ -410,7 +452,7 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
             // Contingência / Modo Offline sem Cache ou sem Chave de API
             if (!result || result.trim() === "" || result.startsWith("Erro na IA:")) {
                 if (bibleText) {
-                    result = generateLocalStudy(book.name, chapter, bibleText);
+                    result = generateLocalStudy(book.name, chapter, bibleText, activeTranslation);
                 } else if (!isOnline) {
                     addToast("Este capítulo não está disponível offline. Conecte-se à internet para carregá-lo.", "warning");
                     setIsLoading(false);
@@ -431,6 +473,7 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                         content: result,
                         bookName: book.name,
                         chapter: chapter,
+                        translation: activeTranslation,
                         cachedBy: user?.nome || 'Membro',
                         createdAt: new Date().toISOString()
                     });
@@ -464,13 +507,13 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
 
         setDownloadingBook(book.name);
         setDownloadProgress({ current: 1, total: book.chapters });
-        addToast(`Iniciando download completo de ${book.name} (${book.chapters} capítulos) com API Gratuita e IA de Estudo...`, "info");
+        addToast(`Iniciando download completo de ${book.name} (${book.chapters} capítulos) na tradução ${selectedTranslation.toUpperCase()} com API Gratuita e IA de Estudo...`, "info");
 
         let successCount = 0;
         
         for (let cap = 1; cap <= book.chapters; cap++) {
             setDownloadProgress({ current: cap, total: book.chapters });
-            const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+            const cacheKey = `bible_study_${book.name.toLowerCase().replace(/\s+/g, '_')}_${cap}_${selectedTranslation.toLowerCase()}`;
             
             try {
                 const cached = await getMedia(cacheKey);
@@ -480,24 +523,24 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                 }
 
                 // Busca texto sagrado na API gratuita
-                const bibleText = await fetchFreeBibleText(book.name, cap);
+                const bibleText = await fetchFreeBibleText(book.name, cap, selectedTranslation);
 
                 // Tenta IA se houver conexão, senão gera estudo local rápido e economiza cota
                 let result = "";
-                const prompt = `Atue como a Bíblia Sagrada na versão Almeida e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
+                const prompt = `Atue como a Bíblia Sagrada na versão ${selectedTranslation.toUpperCase()} e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
                 
-${bibleText ? `O texto bíblico completo do capítulo (Almeida) é o seguinte:\n${bibleText}\n\n` : `Por favor, transcreva o texto bíblico completo de ${book.name} capítulo ${cap}.\n\n`}
+${bibleText ? `O texto bíblico completo do capítulo (${selectedTranslation.toUpperCase()}) é o seguinte:\n${bibleText}\n\n` : `Por favor, transcreva o texto bíblico completo de ${book.name} capítulo ${cap} na versão ${selectedTranslation.toUpperCase()}.\n\n`}
 
 POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
 
 [TEXTO]
-# 📖 ${book.name} ${cap} (Almeida)
-${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]`}
+# 📖 ${book.name} ${cap} (${selectedTranslation.toUpperCase()})
+${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo de ${book.name} ${cap} na versão ${selectedTranslation.toUpperCase()}, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]`}
 
 [CONTEXTO]
 # 📚 ESTUDO DO PREGADOR
 ## 🌍 Contexto Histórico e Teológico
-[Explique brevemente o cenário deste capítulo]
+[Explique brevemente o cenário deste capítulo na tradução ${selectedTranslation.toUpperCase()}]
 
 [ESBOCO]
 ## 📝 Esboço Homilético
@@ -536,7 +579,7 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                 }
 
                 if (!result || result.trim() === "" || result.startsWith("Erro na IA:")) {
-                    result = generateLocalStudy(book.name, cap, bibleText);
+                    result = generateLocalStudy(book.name, cap, bibleText, selectedTranslation);
                 }
 
                 if (result) {
@@ -550,6 +593,7 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                                 content: result,
                                 bookName: book.name,
                                 chapter: cap,
+                                translation: selectedTranslation,
                                 cachedBy: user?.nome || 'Membro',
                                 createdAt: new Date().toISOString()
                             });
@@ -573,8 +617,7 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
         updateCachedChapters();
     };
 
-    // Metricas do perfil de gamificação
-    const profile = db.membros?.find((m: any) => m.id === user?.id) || user || {};
+    // Metricas do perfil de gamificação (usando o perfil já declarado acima)
     const biblePoints = profile.biblia_pontos || 0;
     const completedChapters = profile.biblia_capitulos_concluidos || [];
 
@@ -685,7 +728,25 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                 <div className="p-6 bg-slate-900 text-[#f4f1ea] border-b-4 border-amber-600 flex flex-col items-center text-center shrink-0 relative">
                     <BookOpen size={36} className="text-amber-500 mb-2"/>
                     <h2 className="font-serif text-2xl font-black uppercase tracking-widest leading-none">Bíblia de Estudo</h2>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-2 font-bold">NVI • Edição do Pregador</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-2 font-bold">
+                        {selectedTranslation.toUpperCase()} • Edição do Pregador
+                    </p>
+
+                    {/* Dropdown de Traduções da Bíblia */}
+                    <div className="mt-4 w-full max-w-[220px]">
+                        <label htmlFor="bible-translation-select" className="sr-only">Tradução da Bíblia</label>
+                        <select 
+                            id="bible-translation-select"
+                            value={selectedTranslation}
+                            onChange={(e) => handleSetTranslation(e.target.value)}
+                            className="w-full bg-slate-800 text-[#f4f1ea] text-xs font-bold border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer hover:bg-slate-750 transition-colors"
+                        >
+                            <option value="nvi">NVI (Nova Versão Internacional)</option>
+                            <option value="almeida">ARA (Almeida Revista e Atualizada)</option>
+                            <option value="acf">ACF (Almeida Corrigida Fiel)</option>
+                            <option value="kjv">KJV (King James Version)</option>
+                        </select>
+                    </div>
                     
                     {!isOnline && (
                         <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
@@ -762,9 +823,11 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                                     
                                     <div className="grid grid-cols-5 gap-2">
                                         {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(cap => {
-                                            const keyToCheck = `${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
-                                            const isStudied = completedChapters.includes(keyToCheck);
-                                            const cacheKey = `bible_study_${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+                                            const keyToCheckLegacy = `${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}`;
+                                            const keyToCheckWithTranslation = `${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}_${selectedTranslation.toLowerCase()}`;
+                                            const isStudied = completedChapters.includes(keyToCheckLegacy) || completedChapters.includes(keyToCheckWithTranslation);
+                                            
+                                            const cacheKey = `bible_study_${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${cap}_${selectedTranslation.toLowerCase()}`;
                                             const isChapterCached = cachedChapters.has(cacheKey);
                                             return (
                                                 <button 
@@ -943,10 +1006,10 @@ ${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando
                                 
                                 <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-slate-800/10">
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBook?.name || ''} • Capítulo {selectedChapter}</span>
-                                    {selectedBook && completedChapters.includes(`${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`) && (
+                                    {selectedBook && (completedChapters.includes(`${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`) || completedChapters.includes(`${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}_${selectedTranslation.toLowerCase()}`)) && (
                                         <span className="text-[10px] bg-amber-500 text-white font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm font-sans">★ ESTUDADO</span>
                                     )}
-                                    <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded shadow-sm">NVI</span>
+                                    <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded shadow-sm uppercase">{selectedTranslation}</span>
                                 </div>
 
                                 <div className="prose prose-lg md:prose-xl max-w-none prose-slate font-serif prose-headings:font-black prose-headings:text-slate-900 prose-p:leading-loose prose-strong:text-slate-900 prose-a:text-amber-600 marker:text-amber-500 whitespace-pre-wrap animate-entrance">
