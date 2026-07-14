@@ -417,13 +417,111 @@ const DynamicPrintStyles = ({ orientation, marginType, mode }: { orientation: 'p
 
 const OsThemeStyles = () => (
     <style>{`
-        body[data-os-theme="win11"] { background-color: #f3f4f6; background-image: none; font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif; }
-        body[data-os-theme="win11"] .glass-modern, body[data-os-theme="win11"] .glass-card, body[data-os-theme="win11"] .glass-panel { background: rgba(255, 255, 255, 0.7) !important; backdrop-filter: blur(40px) saturate(200%) !important; border: 1px solid rgba(255, 255, 255, 0.8) !important; border-radius: 16px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05) !important; }
-        body[data-os-theme="win11"].theme-dark { background-color: #111111; }
-        body[data-os-theme="win11"].theme-dark .glass-modern, body[data-os-theme="win11"].theme-dark .glass-card { background: rgba(30, 30, 30, 0.7) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
-        body[data-os-theme="win11"] button { border-radius: 8px !important; }
-        body[data-os-theme="win11"] input, body[data-os-theme="win11"] select, body[data-os-theme="win11"] textarea { border-radius: 8px !important; border-bottom: 2px solid var(--primary) !important; }
-        body[data-os-theme="win11"] svg { stroke-width: 1.5px !important; stroke-linecap: round !important; stroke-linejoin: round !important; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.05)); }
+        body[data-os-theme="win11"] { 
+            background-color: #f3f4f6; 
+            font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif !important; 
+        }
+        body[data-os-theme="win11"].theme-dark { 
+            background-color: #101015 !important; 
+        }
+
+        @keyframes win11-start-menu-up {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .animate-slideUp {
+            animation: win11-start-menu-up 0.22s cubic-bezier(0.1, 0.9, 0.15, 1) forwards !important;
+        }
+
+        body[data-os-theme="win11"] ::-webkit-scrollbar {
+            width: 8px !important;
+            height: 8px !important;
+        }
+        body[data-os-theme="win11"] ::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+        body[data-os-theme="win11"] ::-webkit-scrollbar-thumb {
+            background: rgba(100, 100, 100, 0.25) !important;
+            border: 2px solid transparent !important;
+            background-clip: padding-box !important;
+            border-radius: 99px !important;
+        }
+        body[data-os-theme="win11"] ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 100, 100, 0.45) !important;
+            border: 2px solid transparent !important;
+            background-clip: padding-box !important;
+        }
+
+        /* Fluent Acrylic glass panel styling */
+        body[data-os-theme="win11"] .glass-modern, 
+        body[data-os-theme="win11"] .glass-card, 
+        body[data-os-theme="win11"] .glass-panel,
+        body[data-os-theme="win11"] .bg-white/80,
+        body[data-os-theme="win11"] .bg-slate-50/80 { 
+            background: rgba(255, 255, 255, 0.75) !important; 
+            backdrop-filter: blur(40px) saturate(180%) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.5) !important; 
+            border-radius: 12px !important; 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04) !important; 
+            color: #1f2937 !important;
+        }
+        body[data-os-theme="win11"].theme-dark .glass-modern, 
+        body[data-os-theme="win11"].theme-dark .glass-card,
+        body[data-os-theme="win11"].theme-dark .glass-panel,
+        body[data-os-theme="win11"].theme-dark .bg-[#24242b],
+        body[data-os-theme="win11"].theme-dark .bg-[#1a1a1f] { 
+            background: rgba(32, 32, 40, 0.8) !important; 
+            backdrop-filter: blur(40px) saturate(180%) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.07) !important; 
+            border-radius: 12px !important; 
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4) !important; 
+            color: #f3f4f6 !important;
+        }
+
+        body[data-os-theme="win11"] button { 
+            border-radius: 6px !important; 
+            font-weight: 500 !important;
+            transition: all 0.15s ease-out !important;
+        }
+
+        /* Fluent Inputs */
+        body[data-os-theme="win11"] input, 
+        body[data-os-theme="win11"] select, 
+        body[data-os-theme="win11"] textarea { 
+            background-color: rgba(255, 255, 255, 0.8) !important; 
+            border: 1px solid rgba(0, 0, 0, 0.15) !important; 
+            border-bottom: 2px solid rgba(0, 0, 0, 0.4) !important; 
+            color: #1f2937 !important;
+            border-radius: 4px !important; 
+            padding: 8px 12px !important;
+            transition: all 0.15s ease-out !important;
+        }
+        body[data-os-theme="win11"].theme-dark input, 
+        body[data-os-theme="win11"].theme-dark select, 
+        body[data-os-theme="win11"].theme-dark textarea { 
+            background-color: rgba(20, 20, 25, 0.7) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3) !important; 
+            color: #f3f4f6 !important;
+        }
+        body[data-os-theme="win11"] input:focus, 
+        body[data-os-theme="win11"] select:focus, 
+        body[data-os-theme="win11"] textarea:focus { 
+            border-color: #0078d4 !important;
+            border-bottom: 2px solid #0078d4 !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        body[data-os-theme="win11"] svg { 
+            stroke-width: 1.5px !important; 
+        }
 
         body[data-os-theme="winxp"] {
             background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Bliss_%28Windows_XP%29.png/1440px-Bliss_%28Windows_XP%29.png') center/cover no-repeat fixed, linear-gradient(to bottom, #5998D6 0%, #76A8D9 50%, #75A943 50%, #4D8E2E 100%) !important;
@@ -942,6 +1040,168 @@ const OsThemeStyles = () => (
             opacity: 0.9 !important; 
         }
 
+        /* THEME: LINUX MODERN UBUNTU / GNOME */
+        body[data-os-theme="linux"] { 
+            background-color: #1f0b1a !important; 
+            color: #f5f0f3 !important; 
+            font-family: 'Ubuntu', 'Inter', system-ui, sans-serif !important; 
+        }
+        
+        /* Modern Linux Scrollbar override */
+        body[data-os-theme="linux"] ::-webkit-scrollbar {
+            width: 8px !important;
+            height: 8px !important;
+        }
+        body[data-os-theme="linux"] ::-webkit-scrollbar-track {
+            background: #150d14 !important;
+            border-radius: 4px !important;
+        }
+        body[data-os-theme="linux"] ::-webkit-scrollbar-thumb {
+            background: #df542c !important;
+            border-radius: 4px !important;
+        }
+        body[data-os-theme="linux"] ::-webkit-scrollbar-thumb:hover {
+            background: #f0643b !important;
+        }
+
+        body[data-os-theme="linux"] .glass-modern, 
+        body[data-os-theme="linux"] .glass-card, 
+        body[data-os-theme="linux"] .glass-panel, 
+        body[data-os-theme="linux"] aside, 
+        body[data-os-theme="linux"] .bg-white, 
+        body[data-os-theme="linux"] .bg-slate-50,
+        body[data-os-theme="linux"] .bg-white\/80,
+        body[data-os-theme="linux"] .bg-slate-50\/80 { 
+            background: rgba(32, 24, 30, 0.90) !important; 
+            backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.06) !important; 
+            border-radius: 12px !important; 
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important; 
+            color: #f5f0f3 !important;
+        }
+
+        body[data-os-theme="linux"] .glass-card:hover,
+        body[data-os-theme="linux"] tr:hover td {
+            background-color: rgba(223, 84, 44, 0.05) !important;
+        }
+
+        /* Text colors and typography in Linux */
+        body[data-os-theme="linux"] h1, 
+        body[data-os-theme="linux"] h2, 
+        body[data-os-theme="linux"] h3, 
+        body[data-os-theme="linux"] .text-slate-800,
+        body[data-os-theme="linux"] .text-slate-900,
+        body[data-os-theme="linux"] .text-slate-700 { 
+            color: #f7f4f6 !important; 
+        }
+        body[data-os-theme="linux"] .text-slate-600, 
+        body[data-os-theme="linux"] .text-slate-500,
+        body[data-os-theme="linux"] .text-slate-400 { 
+            color: rgba(247, 244, 246, 0.65) !important; 
+        }
+
+        /* Replace violet/indigo with Linux Orange / Aubergine gradients */
+        body[data-os-theme="linux"] .text-gradient,
+        body[data-os-theme="linux"] .text-indigo-600,
+        body[data-os-theme="linux"] .text-indigo-500 {
+            background: linear-gradient(135deg, #df542c, #aea79f) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: #df542c !important;
+        }
+        
+        body[data-os-theme="linux"] .bg-indigo-50,
+        body[data-os-theme="linux"] .bg-indigo-100\/50 {
+            background-color: rgba(223, 84, 44, 0.08) !important;
+            color: #df542c !important;
+        }
+        
+        body[data-os-theme="linux"] .border-indigo-100 {
+            border-color: rgba(223, 84, 44, 0.15) !important;
+        }
+
+        body[data-os-theme="linux"] svg { 
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+            color: #aea79f !important;
+        }
+        body[data-os-theme="linux"] .text-indigo-600 svg,
+        body[data-os-theme="linux"] .text-indigo-500 svg,
+        body[data-os-theme="linux"] .bg-indigo-600 svg {
+            color: #ffffff !important;
+        }
+
+        /* Linux Buttons */
+        body[data-os-theme="linux"] button.bg-gradient-to-r, 
+        body[data-os-theme="linux"] .bg-indigo-600, 
+        body[data-os-theme="linux"] .bg-indigo-500,
+        body[data-os-theme="linux"] .bg-emerald-500,
+        body[data-os-theme="linux"] .bg-emerald-600 { 
+            background: linear-gradient(180deg, #df542c 0%, #c54421 100%) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            box-shadow: 0 4px 12px rgba(223, 84, 44, 0.2) !important; 
+            color: #ffffff !important; 
+            border-radius: 8px !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        body[data-os-theme="linux"] button.bg-gradient-to-r:hover,
+        body[data-os-theme="linux"] .bg-indigo-600:hover,
+        body[data-os-theme="linux"] .bg-indigo-500:hover { 
+            background: linear-gradient(180deg, #f0643b 0%, #df542c 100%) !important; 
+            box-shadow: 0 6px 16px rgba(223, 84, 44, 0.3) !important; 
+            transform: translateY(-1px);
+        }
+
+        /* Linux Input Fields */
+        body[data-os-theme="linux"] input, 
+        body[data-os-theme="linux"] select, 
+        body[data-os-theme="linux"] textarea { 
+            background-color: #150d14 !important; 
+            border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+            color: #ffffff !important; 
+            border-radius: 8px !important; 
+            padding: 10px 14px !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4) !important; 
+            transition: all 0.2s ease-in-out !important;
+        }
+        body[data-os-theme="linux"] input:focus, 
+        body[data-os-theme="linux"] select:focus,
+        body[data-os-theme="linux"] textarea:focus { 
+            border-color: #df542c !important; 
+            box-shadow: 0 0 0 3px rgba(223, 84, 44, 0.2) !important; 
+            background-color: #150d14 !important; 
+        }
+
+        /* Tables */
+        body[data-os-theme="linux"] table th { 
+            background-color: #1a1119 !important; 
+            border-bottom: 2px solid #df542c !important; 
+            color: #df542c !important; 
+            font-weight: bold !important;
+        }
+        body[data-os-theme="linux"] table td { 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; 
+            color: #e2e8f0 !important; 
+        }
+
+        /* Modern GNOME Shell Windows Decoration for Modals */
+        body[data-os-theme="linux"] .interactive-window-backdrop {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            backdrop-filter: blur(4px) !important;
+        }
+        body[data-os-theme="linux"] .interactive-window-main {
+            background: #221820 !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5) !important;
+            overflow: hidden;
+        }
+        body[data-os-theme="linux"] .interactive-window-header {
+            background: #1b1118 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #ffffff !important;
+            padding: 12px 18px !important;
+        }
+
     `}</style>
 );
 
@@ -1355,13 +1615,13 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     // Opacidade da película de contraste (de 0 a 100, padrão 40)
     const overlayOpacity = context?.db?.igreja?.papel_parede_opacidade !== undefined ? Number(context?.db?.igreja?.papel_parede_opacidade) : 40;
     
-    // Classes de cores base em caso de não haver papel de parede
     const getBaseThemeStyles = () => {
         if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
         if (theme === 'winxp') return "bg-[#5998D6]";
         if (theme === 'win95') return "bg-[#008080]";
         if (theme === 'premium_black') return "bg-[#050505]";
         if (theme === 'msdos') return "bg-[#000022]";
+        if (theme === 'linux') return "bg-[#1f0b1a]";
         if (theme === 'futuristic') return "bg-[#03001e]";
         if (isLightTheme) {
             if (isSplash) {
@@ -1391,7 +1651,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         </div>
     );
 
-    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic';
+    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic' || osTheme === 'linux' || theme === 'linux';
 
     return (
         <div className={`absolute inset-0 overflow-hidden ${papelParede ? '' : getBaseThemeStyles()}`}>
@@ -1478,6 +1738,40 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                     {/* Brilhos de relva */}
                     <div className="absolute bottom-[10%] left-[35%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-60" style={{ animationDuration: '3s' }} />
                     <div className="absolute bottom-[15%] right-[45%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-40" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }} />
+                </>
+            )}
+
+            {activeAnim === 'win11' && (
+                <>
+                    <style>{`
+                        @keyframes win11-blob-1 {
+                            0%, 100% { transform: translate(0px, 0px) scale(1); }
+                            33% { transform: translate(30px, -50px) scale(1.15); }
+                            66% { transform: translate(-20px, 20px) scale(0.9); }
+                        }
+                        @keyframes win11-blob-2 {
+                            0%, 100% { transform: translate(0px, 0px) scale(1); }
+                            50% { transform: translate(-40px, 40px) scale(1.2); }
+                        }
+                    `}</style>
+                    {isLightTheme ? (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#eef2f7] via-[#f3f4f6] to-[#ffffff]"></div>
+                            <div className="absolute top-[20%] left-[30%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-r from-sky-300 to-indigo-300 opacity-[0.45] blur-[120px]" style={{ animation: 'win11-blob-1 18s infinite ease-in-out' }}></div>
+                            <div className="absolute bottom-[20%] right-[20%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-r from-violet-200 to-sky-200 opacity-[0.4] blur-[130px]" style={{ animation: 'win11-blob-2 22s infinite ease-in-out', animationDelay: '-6s' }}></div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#020d20] via-[#080d1e] to-[#010310]"></div>
+                            <div className="absolute top-[20%] left-[30%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 opacity-[0.25] blur-[130px]" style={{ animation: 'win11-blob-1 18s infinite ease-in-out' }}></div>
+                            <div className="absolute bottom-[20%] right-[20%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-r from-purple-500 to-blue-500 opacity-[0.22] blur-[140px]" style={{ animation: 'win11-blob-2 22s infinite ease-in-out', animationDelay: '-6s' }}></div>
+                        </>
+                    )}
+
+                    <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay pointer-events-none" style={{ 
+                        backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+                        backgroundSize: '24px 24px'
+                    }}></div>
                 </>
             )}
 
@@ -1573,6 +1867,24 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                 </>
             )}
 
+            {activeAnim === 'linux' && (
+                <>
+                    <style>{`
+                        @keyframes linux-drift-wave {
+                            0%, 100% { transform: translateY(0) scale(1); opacity: 0.15; }
+                            50% { transform: translateY(-40px) scale(1.15); opacity: 0.35; }
+                        }
+                    `}</style>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#1f0b1a] via-[#24061a] to-[#0c000a]"></div>
+                    <div className="absolute top-[15%] right-[20%] w-[45vw] h-[45vw] rounded-full bg-[#df542c]/06 blur-[130px] pointer-events-none" style={{ animation: 'linux-drift-wave 16s infinite ease-in-out' }}></div>
+                    <div className="absolute bottom-[15%] left-[8%] w-[48vw] h-[48vw] rounded-full bg-[#601959]/08 blur-[140px] pointer-events-none" style={{ animation: 'linux-drift-wave 20s infinite ease-in-out', animationDelay: '-5s' }}></div>
+                    <div className="absolute inset-0 opacity-[0.012] mix-blend-overlay pointer-events-none" style={{ 
+                        backgroundImage: 'radial-gradient(circle, #df542c 1px, transparent 1px)',
+                        backgroundSize: '30px 30px'
+                    }}></div>
+                </>
+            )}
+
             {(activeAnim === 'stars' || activeAnim === 'splash' || (activeAnim === 'default' && !papelParede)) && (
                 <>
                     {isLightTheme ? (
@@ -1633,7 +1945,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
         { id: 'default', label: 'GIPP Padrão' }, { id: 'premium_black', label: 'Premium Black' },
         { id: 'win11', label: 'Windows 11' }, { id: 'winxp', label: 'Windows XP' },
         { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'MS-DOS 6.22' },
-        { id: 'futuristic', label: 'GIPP Sci-Fi Futurista' }
+        { id: 'linux', label: 'Linux Ubuntu' }, { id: 'futuristic', label: 'GIPP Sci-Fi' }
     ];
     let btnClass = variant === 'dark' ? `p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white flex items-center gap-2 ${className}` : variant === 'mobile' ? `p-2 bg-slate-50 text-slate-500 rounded-lg flex items-center gap-2 ${className}` : `p-3 bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl text-slate-600 flex items-center gap-2 ${className}`;
 
@@ -14383,7 +14695,7 @@ const MemberPortalLayout = () => {
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-    const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic';
+    const isThemeDark = osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux';
 
     const handleVerificarPagamento = async () => {
         setVerificandoPix(true);
@@ -14460,7 +14772,7 @@ const MemberPortalLayout = () => {
     }
 
     const getHeaderStyles = () => {
-        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic') {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-black/70 border-b border-white/10 text-white backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
@@ -14473,7 +14785,7 @@ const MemberPortalLayout = () => {
     };
 
     const getFooterStyles = () => {
-        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic') {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-black/70 border-t border-white/10 text-white/70 backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
@@ -14486,7 +14798,7 @@ const MemberPortalLayout = () => {
     };
 
     const getBottomSheetStyles = () => {
-        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic') {
+        if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-slate-900/70 text-white border-t border-white/10 backdrop-blur-md";
         }
         if (osTheme === 'winxp') {
@@ -14816,9 +15128,294 @@ const MemberPortalLayout = () => {
     );
 };
 
+const Win11Logo = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="text-sky-500 shrink-0">
+        <rect x="2" y="2" width="9.5" height="9.5" />
+        <rect x="12.5" y="2" width="9.5" height="9.5" />
+        <rect x="2" y="12.5" width="9.5" height="9.5" />
+        <rect x="12.5" y="12.5" width="9.5" height="9.5" />
+    </svg>
+);
+
+const SquareOutlineIcon = ({ size = 12 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" className="shrink-0">
+        <rect x="2" y="2" width="12" height="12" rx="1.5" />
+    </svg>
+);
+
 const AppLayout = () => {
-    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission, dismissedAnnouncement, setDismissedAnnouncement } = useContext(ChurchContext);
+    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission, dismissedAnnouncement, setDismissedAnnouncement, theme, setTheme } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
+
+    // --- LINUX UBUNTU / GNOME DESKTOP ARCHITECTURE & WINDOWS 11 ---
+    const [openedModules, setOpenedModules] = useState<string[]>(['dashboard']);
+    const [minimizedModules, setMinimizedModules] = useState<string[]>([]);
+    const [linuxLauncherOpen, setLinuxLauncherOpen] = useState(false);
+    const [launcherSearch, setLauncherSearch] = useState('');
+    const [win11LauncherOpen, setWin11LauncherOpen] = useState(false);
+    const [win11Search, setWin11Search] = useState('');
+
+    useEffect(() => {
+        if ((osTheme === 'linux' || osTheme === 'win11') && view) {
+            if (!openedModules.includes(view)) {
+                setOpenedModules(prev => [...prev, view]);
+            }
+            if (minimizedModules.includes(view)) {
+                setMinimizedModules(prev => prev.filter(m => m !== view));
+            }
+        }
+    }, [view, osTheme]);
+
+    const handleCloseModule = (id: string) => {
+        const nextOpened = openedModules.filter(m => m !== id);
+        setOpenedModules(nextOpened);
+        setMinimizedModules(prev => prev.filter(m => m !== id));
+        if (view === id) {
+            if (nextOpened.length > 0) {
+                setView(nextOpened[nextOpened.length - 1]);
+            } else {
+                setView('dashboard');
+            }
+        }
+    };
+
+    const ALL_AVAILABLE_MODULES = [
+        { id: 'dashboard', icon: LayoutDashboard, label: "Visão Geral", color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { id: 'curso_teologia', icon: BookOpen, label: "Universidade Teológica GIPP", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'secretaria_ebd', icon: GraduationCap, label: "Gestão EBD (Escola)", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+        { id: 'cad_membro', icon: Users, label: "Membros & Acessos", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+        { id: 'visitantes', icon: HeartHandshake, label: "Visitantes & CRM", color: 'text-rose-500', bg: 'bg-rose-500/10' },
+        { id: 'cad_igreja', icon: Building2, label: "Igreja Sede & Filiais", color: 'text-amber-500', bg: 'bg-amber-500/10' },
+        { id: 'cad_patrimonio', icon: Package, label: "Patrimônio & Inventário", color: 'text-teal-500', bg: 'bg-teal-500/10' },
+        { id: 'controle_frotas', icon: Car, label: "Controle de Frotas", color: 'text-blue-600', bg: 'bg-blue-600/10' },
+        { id: 'cad_celula', icon: Share2, label: "Células e Grupos", color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        { id: 'cad_departamento', icon: Briefcase, label: "Ministérios", color: 'text-pink-500', bg: 'bg-pink-500/10' },
+        { id: 'ministerio_louvor', icon: Music, label: "Ministério de Louvor", color: 'text-violet-500', bg: 'bg-violet-500/10' },
+        { id: 'ministerio_midia', icon: Video, label: "Ministério de Mídia", color: 'text-sky-500', bg: 'bg-sky-500/10' },
+        { id: 'ministerio_familia', icon: Heart, label: "Ministério da Família", color: 'text-rose-600', bg: 'bg-rose-600/10' },
+        { id: 'salinha_kids', icon: Baby, label: "Salinha Kids", color: 'text-pink-400', bg: 'bg-pink-400/10' },
+        { id: 'missoes_painel', icon: Globe, label: "Depto. de Missões", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
+        { id: 'fin_entrada', icon: ArrowUpCircle, label: "Receitas (Entradas)", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'fin_saida', icon: ArrowDownCircle, label: "Despesas (Saídas)", color: 'text-rose-500', bg: 'bg-rose-500/10' },
+        { id: 'fin_dre', icon: Activity, label: "DRE & Balanço", color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+        { id: 'fin_conciliacao', icon: FileCheck, label: "Conciliação Bancária", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+        { id: 'fin_carnes', icon: CreditCard, label: "Carnês & Campanhas", color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10' },
+        { id: 'fin_utilitarios', icon: Settings, label: "Utilitários Financeiros", color: 'text-slate-500', bg: 'bg-slate-500/10' },
+        { id: 'dp_contabilidade', icon: Users, label: "Recursos Humanos / RH", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
+        { id: 'boletim', icon: Newspaper, label: "Boletim Digital", color: 'text-orange-500', bg: 'bg-orange-500/10' },
+        { id: 'biblia', icon: Book, label: "Bíblia de Estudo", color: 'text-amber-600', bg: 'bg-amber-600/10' },
+        { id: 'email_interno', icon: Mail, label: "Webmail Direto", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'secretaria_integrada', icon: ClipboardList, label: "Secretaria & Tarefas", color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { id: 'secretaria_livro_atas', icon: BookOpen, label: "Livro de Atas", color: 'text-amber-500', bg: 'bg-amber-500/10' },
+        { id: 'secretaria_certificados', icon: Award, label: "Certificados", color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+        { id: 'gestao_cursos', icon: GraduationCap, label: "Cursos EAD", color: 'text-green-500', bg: 'bg-green-500/10' },
+        { id: 'relatorios', icon: FileText, label: "Relatórios PDF", color: 'text-slate-600', bg: 'bg-slate-600/10' },
+        { id: 'carteirinha_studio', icon: IdCard, label: "Estúdio Carteirinhas", color: 'text-pink-500', bg: 'bg-pink-500/10' },
+        { id: 'rede_social', icon: ImagePlus, label: "Estúdio de Artes", color: 'text-rose-500', bg: 'bg-rose-500/10' },
+        { id: 'credencial_lote', icon: Badge, label: "Credencial em Lote", color: 'text-violet-500', bg: 'bg-violet-500/10' },
+        { id: 'assistente_ai', icon: Sparkles, label: "Pastoral IA", color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        { id: 'config_sistema', icon: Settings, label: "Configurações Gerais", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
+        { id: 'config_visual', icon: Palette, label: "Configurações Visuais", color: 'text-purple-600', bg: 'bg-purple-600/10' },
+        { id: 'config_backup', icon: Database, label: "Backup Geral", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'auditoria', icon: ShieldCheck, label: "Auditoria & Logs", color: 'text-slate-500', bg: 'bg-slate-500/10' },
+        { id: 'lixeira', icon: Trash2, label: "Lixeira Virtual", color: 'text-rose-500', bg: 'bg-rose-500/10' },
+        { id: 'changelog', icon: History, label: "Atualizações", color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10' },
+        { id: 'sobre', icon: Info, label: "Sobre o GIPP", color: 'text-teal-500', bg: 'bg-teal-500/10' },
+        { id: 'manual', icon: BookOpen, label: "Manual do Usuário", color: 'text-indigo-500', bg: 'bg-indigo-500/10' }
+    ];
+
+    const getModuleMeta = (id: string) => {
+        const found = ALL_AVAILABLE_MODULES.find(m => m.id === id);
+        return found ? { label: found.label, icon: found.icon } : { label: id, icon: LayoutDashboard };
+    };
+
+    const checkPlanLocal = (moduleId: string) => {
+        let targetModuleId = moduleId;
+        if (moduleId === 'ministerio_louvor' || moduleId === 'ministerio_midia' || moduleId === 'ministerio_familia') {
+            targetModuleId = 'cad_departamento';
+        }
+        if (user?.id === 'dev') return true; 
+        const plano = db.igreja?.plano || 'avancado';
+
+        const defaultPlanos: Record<string, string[]> = {
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
+        };
+
+        const PLAN_MODULES = { ...defaultPlanos };
+        if (db.igreja?.planos_config) {
+            ['basico', 'standard', 'avancado'].forEach(pKey => {
+                if (db.igreja.planos_config[pKey]) {
+                    PLAN_MODULES[pKey] = [...db.igreja.planos_config[pKey]];
+                }
+            });
+        }
+
+        return PLAN_MODULES[plano]?.includes(targetModuleId) || false;
+    };
+
+    const isModuleAllowed = (moduleId: string) => {
+        const mapping: Record<string, string> = {
+            'cad_membro': 'access_membros',
+            'visitantes': 'access_visitantes',
+            'cad_igreja': 'access_igreja',
+            'cad_patrimonio': 'access_patrimonio',
+            'controle_frotas': 'access_frotas',
+            'cad_celula': 'access_celulas',
+            'cad_usuario': 'master',
+            'acessos_portal': 'access_membros',
+            'cad_departamento': 'access_ministerios',
+            'ministerio_louvor': 'access_ministerios',
+            'ministerio_midia': 'access_ministerios',
+            'ministerio_familia': 'access_ministerios',
+            'salinha_kids': 'access_salinha_kids',
+            'secretaria_ebd': 'access_ebd',
+            'missoes_painel': 'access_missoes',
+            'fin_entrada': 'access_fin_entradas',
+            'fin_saida': 'access_fin_saidas',
+            'fin_dre': 'access_fin_analise',
+            'fin_conciliacao': 'access_fin_analise',
+            'fin_carnes': 'access_fin_carnes',
+            'fin_utilitarios': 'access_fin_cadastros',
+            'dp_contabilidade': 'access_fin_saidas',
+            'boletim': 'access_boletim',
+            'email_interno': 'access_email',
+            'secretaria_integrada': 'access_sec_agenda',
+            'secretaria_livro_atas': 'access_sec_agenda',
+            'secretaria_certificados': 'access_sec_certificados',
+            'gestao_cursos': 'access_gestao_cursos',
+            'curso_teologia': 'access_teologia',
+            'relatorios': 'access_sec_relatorios',
+            'carteirinha_studio': 'access_sec_certificados',
+            'rede_social': 'access_midia',
+            'credencial_lote': 'access_sec_certificados',
+            'assistente_ai': 'access_ia',
+            'config_sistema': 'access_config_sistema',
+            'config_visual': 'access_config_visual',
+            'config_backup': 'access_config_backup',
+            'auditoria': 'access_auditoria',
+            'lixeira': 'access_lixeira',
+            'desenvolvedor': 'master'
+        };
+
+        const reqAccess = mapping[moduleId] || 'public';
+        return hasPermission(reqAccess) && checkPlanLocal(moduleId);
+    };
+
+    const handleDockItemClick = (mid: string) => {
+        if (view !== mid) {
+            setView(mid);
+            setMinimizedModules(prev => prev.filter(m => m !== mid));
+        } else {
+            if (minimizedModules.includes(mid)) {
+                setMinimizedModules(prev => prev.filter(m => m !== mid));
+            } else {
+                setMinimizedModules(prev => [...prev, mid]);
+            }
+        }
+    };
+
+    const LinuxDesktop = () => {
+        const desktopShortcuts = [
+            { id: 'dashboard', label: "Visão Geral", icon: LayoutDashboard, color: 'text-blue-400' },
+            { id: 'curso_teologia', label: "Univ. Teológica", icon: BookOpen, color: 'text-emerald-400' },
+            { id: 'secretaria_ebd', label: "Escola Dominical", icon: GraduationCap, color: 'text-indigo-400' },
+            { id: 'assistente_ai', label: "Pastoral IA", icon: Sparkles, color: 'text-purple-400' },
+            { id: 'rede_social', label: "Estúdio de Artes", icon: ImagePlus, color: 'text-rose-400' },
+            { id: 'config_visual', label: "Config. Visuais", icon: Palette, color: 'text-pink-400' },
+        ].filter(s => isModuleAllowed(s.id));
+
+        const [timeString, setTimeString] = useState('');
+        const [dateString, setDateString] = useState('');
+
+        useEffect(() => {
+            const updateClock = () => {
+                const now = new Date();
+                setTimeString(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+                setDateString(now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+            };
+            updateClock();
+            const interval = setInterval(updateClock, 30000);
+            return () => clearInterval(interval);
+        }, []);
+
+        return (
+            <div className="h-full flex flex-col justify-start items-center text-center p-6 select-none animate-fadeIn">
+                <div className="mt-16 mb-16 text-white drop-shadow-lg">
+                    <h1 className="text-7xl font-black tracking-tight">{timeString || '19:17'}</h1>
+                    <p className="text-sm font-bold text-slate-200 mt-2 capitalize">{dateString || 'segunda-feira, 13 de julho de 2026'}</p>
+                </div>
+
+                <div className="w-full max-w-4xl">
+                    <div className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-6">Atalhos da Área de Trabalho</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 justify-center">
+                        {desktopShortcuts.map(s => {
+                            const ShortcutIcon = s.icon;
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => setView(s.id)}
+                                    className="flex flex-col items-center justify-center p-4 rounded-2xl bg-black/20 hover:bg-black/40 border border-white/5 hover:border-white/10 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 group cursor-pointer shadow-lg backdrop-blur-xs w-full aspect-square"
+                                >
+                                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                        <ShortcutIcon className={`${s.color} group-hover:text-white transition-colors`} size={24} />
+                                    </div>
+                                    <span className="text-[11px] font-bold text-white/95 leading-snug text-center">
+                                        {s.label}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+    // --------------------------------------------------
+
+    const Win11Desktop = () => {
+        const desktopShortcuts = [
+            { id: 'dashboard', label: "Este Computador", icon: MonitorPlay, color: 'text-sky-500' },
+            { id: 'lixeira', label: "Lixeira Virtual", icon: Trash2, color: 'text-rose-500' },
+            { id: 'assistente_ai', label: "Pastoral IA", icon: Sparkles, color: 'text-purple-500' },
+            { id: 'curso_teologia', label: "Univ. Teológica", icon: BookOpen, color: 'text-emerald-500' },
+            { id: 'fin_entrada', label: "Painel Financeiro", icon: DollarSign, color: 'text-amber-500' },
+            { id: 'config_sistema', label: "Configurações", icon: Settings, color: 'text-indigo-500' },
+        ].filter(s => isModuleAllowed(s.id));
+
+        const isLight = theme === 'light';
+
+        return (
+            <div className="h-full w-full flex flex-col justify-start items-start p-6 select-none animate-fadeIn relative">
+                {/* Desktop shortcuts layout: left-aligned grid like real Windows */}
+                <div className="flex flex-col gap-3 max-h-[80vh] flex-wrap items-start justify-start text-left">
+                    {desktopShortcuts.map(s => {
+                        const ShortcutIcon = s.icon;
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => setView(s.id)}
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 border border-transparent w-24 hover:border-white/10 ${
+                                    isLight 
+                                        ? 'hover:bg-slate-300/30 text-slate-800' 
+                                        : 'hover:bg-white/5 text-white'
+                                } cursor-pointer group`}
+                            >
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+                                    <ShortcutIcon className={`${s.color} transition-colors drop-shadow-md`} size={32} />
+                                </div>
+                                <span className="text-[11px] font-medium leading-tight text-center break-all line-clamp-2 w-full drop-shadow-xs">
+                                    {s.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+    // --------------------------------------------------
 
     const handleVerificarPagamento = async () => {
         setVerificandoPix(true);
@@ -14949,6 +15546,691 @@ const AppLayout = () => {
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
     const currentProps = MODULE_REGISTRY[view]?.props || {};
     const access = MODULE_REGISTRY[view]?.access || 'public';
+
+    if (osTheme === 'linux') {
+        const isMinimized = minimizedModules.includes(view) || !view;
+        const mMeta = getModuleMeta(view);
+        const WindowIcon = mMeta.icon;
+
+        return (
+            <div className="flex h-screen w-full font-sans text-slate-100 bg-[#1f0b1a] relative overflow-hidden select-none">
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <ThemeBackground theme="linux" />
+                </div>
+
+                {/* Main Desktop Container */}
+                <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden pb-16">
+                    {/* Top Bar for GNOME (Activities and Panel) */}
+                    <div className="h-8 bg-[#111]/90 backdrop-blur border-b border-white/5 flex items-center justify-between px-4 z-[80] text-xs font-bold shrink-0">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setLinuxLauncherOpen(true)}
+                                className="hover:text-[#e95420] text-white/95 transition-colors cursor-pointer"
+                            >
+                                Atividades
+                            </button>
+                            {view && (
+                                <span className="text-white/40 font-normal">
+                                    {mMeta.label}
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-white/95 font-black text-center absolute left-1/2 -translate-x-1/2">
+                            {new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="flex items-center gap-3 text-white/80">
+                            <Wifi size={13} className="text-emerald-400" />
+                            <span>100%</span>
+                            <div className="flex items-center gap-1.5 ml-2">
+                                <OsThemeToggle variant="dark" />
+                                <AnimBgToggle variant="dark" />
+                                <ThemeToggle variant="dark" />
+                                <FullScreenToggle variant="dark" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Content Workspace Area */}
+                    <div className="flex-1 relative p-4 overflow-hidden min-h-0">
+                        {/* If minimized or no active view, render the clean Desktop background with shortcuts */}
+                        {(isMinimized || !view) ? (
+                            <div className="absolute inset-0 z-0 overflow-y-auto custom-scrollbar">
+                                <LinuxDesktop />
+                            </div>
+                        ) : null}
+
+                        {/* Active Window */}
+                        {view && (
+                            <div className={`absolute inset-0 p-2 md:p-4 flex flex-col transition-all duration-500 ease-out z-10 ${
+                                isMinimized 
+                                    ? 'opacity-0 scale-75 translate-y-[200px] pointer-events-none' 
+                                    : 'opacity-100 scale-100 translate-y-0'
+                            }`}>
+                                <div className="flex-1 flex flex-col bg-[#24242b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden min-h-0">
+                                    {/* Ubuntu Yaru Header */}
+                                    <div className="bg-[#1e1e24] border-b border-white/5 px-4 py-3 flex items-center justify-between text-white select-none shrink-0">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 rounded-lg bg-white/5 flex items-center justify-center">
+                                                <WindowIcon className="text-[#e95420]" size={15} />
+                                            </div>
+                                            <span className="text-xs font-extrabold tracking-wide text-slate-100">
+                                                {mMeta.label}
+                                            </span>
+                                        </div>
+
+                                        {/* Yaru Buttons */}
+                                        <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={() => setMinimizedModules(prev => [...prev, view])}
+                                                className="w-4.5 h-4.5 rounded-full bg-amber-500 hover:bg-amber-600 flex items-center justify-center text-[10px] text-amber-950 font-black transition-colors border border-amber-600/30 cursor-pointer"
+                                                title="Minimizar"
+                                            >
+                                                _
+                                            </button>
+                                            <button 
+                                                className="w-4.5 h-4.5 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-[9px] text-emerald-950 font-black transition-colors border border-emerald-600/30 cursor-pointer"
+                                                title="Maximizar"
+                                            >
+                                                ⤢
+                                            </button>
+                                            <button 
+                                                onClick={() => handleCloseModule(view)}
+                                                className="w-4.5 h-4.5 rounded-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center text-[10px] text-rose-950 font-black transition-colors border border-rose-600/30 cursor-pointer"
+                                                title="Fechar"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* App/Module Window Content Workspace */}
+                                    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#24242b] text-slate-100 custom-scrollbar relative">
+                                        {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'marketing_social' && view !== 'changelog' && view !== 'sobre') ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                                                <Lock size={64} className="text-rose-500 mb-8 animate-bounce"/>
+                                                <h2 className="text-3xl font-black text-white tracking-tight mb-2">Acesso Inativo</h2>
+                                                <p className="text-sm text-slate-300 font-medium max-w-md">Este módulo está inativo para a conta de Assistente Virtual Mary.</p>
+                                            </div>
+                                        ) : hasPermission(access) ? (
+                                            <ErrorBoundary>
+                                                <Suspense fallback={
+                                                    <div className="h-48 flex flex-col items-center justify-center text-center p-12 text-slate-300 font-bold bg-white/5 rounded-3xl border border-white/10 shadow-sm animate-pulse max-w-md mx-auto mt-12">
+                                                        <RefreshCw className="animate-spin mb-4 text-[#e95420]" size={32} />
+                                                        <span className="text-sm font-bold">Iniciando módulo no GNOME...</span>
+                                                    </div>
+                                                }>
+                                                    <CurrentModule {...currentProps} />
+                                                </Suspense>
+                                            </ErrorBoundary>
+                                        ) : (
+                                            <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                                                <Lock size={64} className="text-rose-500 mb-8"/>
+                                                <h2 className="text-3xl font-black text-white">Acesso Restrito</h2>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Fixed GNOME Bottom Panel (Taskbar/Dock) */}
+                    <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#15151a]/95 border-t border-white/10 flex items-center justify-between px-6 z-[95] shadow-2xl backdrop-blur-md text-white select-none shrink-0">
+                        {/* Start Menu / Applications Launcher Button */}
+                        <button 
+                            onClick={() => setLinuxLauncherOpen(!linuxLauncherOpen)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#e95420] text-white font-extrabold text-xs transition-all hover:bg-[#ff6a37] shadow-lg shadow-[#e95420]/20 cursor-pointer shrink-0"
+                            title="Menu de Aplicativos GIPP"
+                        >
+                            <LayoutDashboard size={14} />
+                            <span>Menu Iniciar</span>
+                        </button>
+
+                        {/* Open Window/Module Tabs / Dock Items */}
+                        <div className="flex items-center gap-3 px-4 max-w-[60%] overflow-x-auto no-scrollbar py-1 shrink-0">
+                            {openedModules.map(mid => {
+                                const mInfo = getModuleMeta(mid);
+                                const DockIcon = mInfo.icon;
+                                const isActive = view === mid && !minimizedModules.includes(mid);
+                                return (
+                                    <button
+                                        key={mid}
+                                        onClick={() => handleDockItemClick(mid)}
+                                        className={`relative p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center group cursor-pointer ${
+                                            isActive 
+                                                ? 'bg-white/15 border border-white/10 shadow-inner' 
+                                                : 'hover:bg-white/5 border border-transparent'
+                                        }`}
+                                        title={mInfo.label}
+                                    >
+                                        <DockIcon size={20} className={isActive ? 'text-[#e95420]' : 'text-white/70 group-hover:text-white'} />
+                                        
+                                        {/* Ubuntu style indicator dot */}
+                                        <span className={`absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-[#e95420] transition-all duration-300 ${
+                                            isActive ? 'scale-100 opacity-100' : 'scale-50 opacity-40 group-hover:opacity-100 group-hover:scale-100'
+                                        }`} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* System Status / Quick Settings panel shortcut */}
+                        <div className="flex items-center gap-3 text-xs font-bold text-white/80 shrink-0">
+                            <Clock size={13} />
+                            <span>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-white/20">|</span>
+                            <button 
+                                onClick={() => handleLogoutRequest()}
+                                className="text-rose-400 hover:text-rose-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+                                title="Terminar Sessão"
+                            >
+                                <LogOut size={13} /> Sair
+                            </button>
+                        </div>
+                    </div>
+                </main>
+
+                {/* GNOME Applications Overlay Launcher */}
+                {linuxLauncherOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black/85 backdrop-blur-lg z-[100] flex flex-col items-center justify-start pt-16 px-6 animate-fadeIn text-white"
+                        onClick={() => setLinuxLauncherOpen(false)}
+                    >
+                        <div 
+                            className="w-full max-w-4xl flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Search Bar */}
+                            <div className="relative mb-10 w-full max-w-2xl mx-auto">
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/50" size={22} />
+                                <input 
+                                    type="text"
+                                    autoFocus
+                                    placeholder="Pesquisar aplicativos e módulos do GIPP..."
+                                    value={launcherSearch}
+                                    onChange={(e) => setLauncherSearch(e.target.value)}
+                                    className="w-full pl-14 pr-12 py-3.5 bg-white/10 border border-white/15 rounded-2xl text-lg text-white placeholder-white/40 focus:outline-none focus:border-[#e95420] focus:ring-2 focus:ring-[#e95420]/30 transition-all shadow-inner"
+                                />
+                                {launcherSearch && (
+                                    <button 
+                                        onClick={() => setLauncherSearch('')}
+                                        className="absolute right-5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Grid of Apps */}
+                            <div className="flex-1 overflow-y-auto max-h-[55vh] custom-scrollbar px-2 py-4">
+                                {ALL_AVAILABLE_MODULES.filter(m => {
+                                    if (!isModuleAllowed(m.id)) return false;
+                                    if (!launcherSearch) return true;
+                                    return m.label.toLowerCase().includes(launcherSearch.toLowerCase()) || 
+                                           m.id.toLowerCase().includes(launcherSearch.toLowerCase());
+                                }).length === 0 ? (
+                                    <div className="text-center text-white/40 py-12">
+                                        <Search size={48} className="mx-auto mb-4 opacity-50" />
+                                        <p className="text-lg font-bold">Nenhum aplicativo encontrado</p>
+                                        <p className="text-xs mt-1">Verifique a ortografia ou tente outro termo</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 justify-center">
+                                        {ALL_AVAILABLE_MODULES.filter(m => {
+                                            if (!isModuleAllowed(m.id)) return false;
+                                            if (!launcherSearch) return true;
+                                            return m.label.toLowerCase().includes(launcherSearch.toLowerCase()) || 
+                                                   m.id.toLowerCase().includes(launcherSearch.toLowerCase());
+                                        }).map(m => {
+                                            const IconComp = m.icon;
+                                            const isOpened = openedModules.includes(m.id);
+                                            return (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => {
+                                                        setView(m.id);
+                                                        setLinuxLauncherOpen(false);
+                                                        setLauncherSearch('');
+                                                    }}
+                                                    className="flex flex-col items-center text-center group cursor-pointer"
+                                                >
+                                                    <div className="w-16 h-16 rounded-2xl bg-white/5 hover:bg-[#e95420]/20 border border-white/10 group-hover:border-[#e95420]/40 flex items-center justify-center mb-2.5 shadow-md group-hover:shadow-[#e95420]/20 transition-all duration-300 transform group-hover:scale-110 relative">
+                                                        <IconComp className={`${m.color} group-hover:text-white transition-colors`} size={30} />
+                                                        {isOpened && (
+                                                            <span className="absolute bottom-1 w-2 h-2 rounded-full bg-[#e95420]" />
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs font-bold text-white/80 group-hover:text-white line-clamp-2 max-w-[95px] leading-snug">
+                                                        {m.label}
+                                                    </span>
+                                                </button>
+                                            );
+                                        }).filter(Boolean)}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer bar with quick settings & logout */}
+                            <div className="border-t border-white/10 mt-8 pt-6 flex justify-between items-center text-white/60 text-xs font-bold">
+                                <div className="flex items-center gap-3 bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
+                                    <div className="w-8 h-8 rounded-full bg-[#e95420] text-white flex items-center justify-center font-bold">
+                                        {user?.nome?.charAt(0)}
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-white text-xs font-extrabold">{user?.nome}</p>
+                                        <p className="text-[10px] text-white/50">{user?.funcao_administrativa || user?.cargo || 'Membro'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <button 
+                                        onClick={() => {
+                                            setView('config_sistema');
+                                            setLinuxLauncherOpen(false);
+                                        }}
+                                        className="hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                                    >
+                                        <Settings size={14} /> Configurações
+                                    </button>
+                                    <span className="text-white/20">|</span>
+                                    <button 
+                                        onClick={() => {
+                                            setLinuxLauncherOpen(false);
+                                            handleLogoutRequest();
+                                        }}
+                                        className="text-rose-400 hover:text-rose-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+                                    >
+                                        <LogOut size={14} /> Sair
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (osTheme === 'win11') {
+        const isMinimized = minimizedModules.includes(view) || !view;
+        const mMeta = getModuleMeta(view);
+        const WindowIcon = mMeta.icon;
+        const isLight = theme === 'light';
+
+        // Windows 11 Colors
+        const windowBg = isLight 
+            ? 'bg-white/85 border-slate-200/60 shadow-slate-300/30 text-slate-800' 
+            : 'bg-[#1b1b22]/90 border-white/10 shadow-black/80 text-white';
+
+        const headerBg = isLight
+            ? 'bg-slate-50/90 border-slate-200/40 text-slate-800'
+            : 'bg-[#1e1e24]/95 border-b border-white/5 text-white';
+
+        const taskbarBg = isLight
+            ? 'bg-slate-100/80 border-slate-200/50 shadow-slate-200/20 text-slate-800'
+            : 'bg-[#101015]/85 border-white/10 shadow-black/40 text-white';
+
+        return (
+            <div className={`flex h-screen w-full font-sans relative overflow-hidden select-none ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <ThemeBackground theme="win11" />
+                </div>
+
+                {/* Main Desktop Container */}
+                <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden pb-12">
+                    {/* Desktop Content Workspace Area */}
+                    <div className="flex-1 relative p-2 md:p-4 overflow-hidden min-h-0">
+                        {/* If minimized or no active view, render the clean Desktop background with shortcuts */}
+                        {(isMinimized || !view) ? (
+                            <div className="absolute inset-0 z-0 overflow-y-auto custom-scrollbar">
+                                <Win11Desktop />
+                            </div>
+                        ) : null}
+
+                        {/* Active Window */}
+                        {view && (
+                            <div className={`absolute inset-0 p-1 md:p-3 flex flex-col transition-all duration-300 ease-out z-10 ${
+                                isMinimized 
+                                    ? 'opacity-0 scale-95 translate-y-[100px] pointer-events-none' 
+                                    : 'opacity-100 scale-100 translate-y-0'
+                            }`}>
+                                <div className={`flex-1 flex flex-col border rounded-xl shadow-2xl overflow-hidden min-h-0 backdrop-blur-3xl ${windowBg}`}>
+                                    {/* Windows 11 Header */}
+                                    <div className={`px-4 py-2 flex items-center justify-between select-none shrink-0 border-b ${headerBg}`}>
+                                        <div className="flex items-center gap-2.5">
+                                            <WindowIcon size={16} className="text-sky-500 shrink-0" />
+                                            <span className="text-xs font-semibold tracking-wide">
+                                                {mMeta.label}
+                                            </span>
+                                        </div>
+
+                                        {/* Windows 11 Controls */}
+                                        <div className="flex items-center">
+                                            {/* Minimize */}
+                                            <button 
+                                                onClick={() => setMinimizedModules(prev => [...prev, view])}
+                                                className={`w-11 h-8 flex items-center justify-center text-xs font-light transition-colors cursor-pointer ${
+                                                    isLight ? 'hover:bg-black/5 text-slate-700' : 'hover:bg-white/5 text-slate-300'
+                                                }`}
+                                                title="Minimizar"
+                                            >
+                                                <Minus size={14} />
+                                            </button>
+                                            {/* Maximize */}
+                                            <button 
+                                                className={`w-11 h-8 flex items-center justify-center text-xs font-light transition-colors cursor-pointer ${
+                                                    isLight ? 'hover:bg-black/5 text-slate-700' : 'hover:bg-white/5 text-slate-300'
+                                                }`}
+                                                title="Maximizar"
+                                            >
+                                                <SquareOutlineIcon size={12} />
+                                            </button>
+                                            {/* Close */}
+                                            <button 
+                                                onClick={() => handleCloseModule(view)}
+                                                className="w-11 h-8 flex items-center justify-center text-xs font-light transition-colors hover:bg-rose-600 hover:text-white cursor-pointer"
+                                                title="Fechar"
+                                            >
+                                                <X size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* App/Module Window Content Workspace */}
+                                    <div className={`flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative ${isLight ? 'bg-white/95' : 'bg-[#18181f]/95'}`}>
+                                        {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'marketing_social' && view !== 'changelog' && view !== 'sobre') ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                                                <Lock size={64} className="text-rose-500 mb-8 animate-bounce"/>
+                                                <h2 className="text-3xl font-black tracking-tight mb-2">Acesso Inativo</h2>
+                                                <p className="text-sm text-slate-400 font-medium max-w-md">Este módulo está inativo para a conta de Assistente Virtual Mary.</p>
+                                            </div>
+                                        ) : hasPermission(access) ? (
+                                            <ErrorBoundary>
+                                                <Suspense fallback={
+                                                    <div className="h-48 flex flex-col items-center justify-center text-center p-12 text-slate-400 font-bold bg-white/5 rounded-3xl border border-white/10 shadow-sm animate-pulse max-w-md mx-auto mt-12">
+                                                        <RefreshCw className="animate-spin mb-4 text-blue-500" size={32} />
+                                                        <span className="text-sm font-semibold">Iniciando no Windows 11...</span>
+                                                    </div>
+                                                }>
+                                                    <CurrentModule {...currentProps} />
+                                                </Suspense>
+                                            </ErrorBoundary>
+                                        ) : (
+                                            <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                                                <Lock size={64} className="text-rose-500 mb-8"/>
+                                                <h2 className="text-3xl font-black">Acesso Restrito</h2>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Windows 11 Centered Bottom Taskbar */}
+                    <div className={`fixed bottom-0 left-0 right-0 h-12 flex items-center justify-between px-4 z-[95] shadow-2xl backdrop-blur-md select-none shrink-0 border-t ${taskbarBg}`}>
+                        {/* Left widget (Weather / News simulator) */}
+                        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold hover:bg-white/5 dark:hover:bg-white/5 px-2.5 py-1.5 rounded-md cursor-pointer transition-colors shrink-0">
+                            <Cloud size={14} className="text-blue-400" />
+                            <div className="text-left leading-none">
+                                <span className="block text-[10px] opacity-75">Joinville</span>
+                                <span className="text-[11px]">21°C</span>
+                            </div>
+                        </div>
+
+                        {/* Centered Taskbar Buttons (Start + Search + App Icons) */}
+                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 shrink-0">
+                            {/* Start Button */}
+                            <button 
+                                onClick={() => setWin11LauncherOpen(!win11LauncherOpen)}
+                                className={`w-10 h-10 flex items-center justify-center rounded-md transition-all duration-200 cursor-pointer ${
+                                    win11LauncherOpen 
+                                        ? 'bg-white/15 shadow-inner' 
+                                        : 'hover:bg-white/10 dark:hover:bg-white/5'
+                                }`}
+                                title="Menu Iniciar"
+                            >
+                                <Win11Logo />
+                            </button>
+
+                            {/* Search Button */}
+                            <button 
+                                onClick={() => {
+                                    setWin11LauncherOpen(true);
+                                    setTimeout(() => {
+                                        const el = document.getElementById('win11-search-input');
+                                        if (el) el.focus();
+                                    }, 100);
+                                }}
+                                className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-white/10 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                                title="Pesquisar"
+                            >
+                                <Search size={18} className="text-sky-500" />
+                            </button>
+
+                            {/* Divider line if active app exists */}
+                            {openedModules.length > 0 && (
+                                <span className="h-6 w-px bg-slate-300/40 dark:bg-white/10 mx-1" />
+                            )}
+
+                            {/* Open and Pinned App Dock Icons */}
+                            <div className="flex items-center gap-1">
+                                {openedModules.map(mid => {
+                                    const mInfo = getModuleMeta(mid);
+                                    const DockIcon = mInfo.icon;
+                                    const isActive = view === mid && !minimizedModules.includes(mid);
+                                    return (
+                                        <button
+                                            key={mid}
+                                            onClick={() => handleDockItemClick(mid)}
+                                            className={`relative w-10 h-10 flex items-center justify-center rounded-md transition-all duration-200 group cursor-pointer ${
+                                                isActive 
+                                                    ? 'bg-slate-200/50 dark:bg-white/10' 
+                                                    : 'hover:bg-white/10 dark:hover:bg-white/5'
+                                            }`}
+                                            title={mInfo.label}
+                                        >
+                                            <DockIcon size={18} className={isActive ? 'text-blue-500' : 'opacity-80 group-hover:opacity-100'} />
+                                            
+                                            {/* Windows 11 style active indicator line */}
+                                            <span className={`absolute bottom-0.5 rounded-full bg-blue-500 transition-all duration-300 ${
+                                                isActive ? 'w-4 h-[3px]' : 'w-1.5 h-[3px] opacity-0 group-hover:opacity-50'
+                                            }`} />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Right Status Tray (Time, Date, Wifi, battery) */}
+                        <div className="flex items-center gap-1 text-xs font-semibold shrink-0">
+                            {/* Fast Action Toggles (Wifi/Volume/Battery block) */}
+                            <div className="flex items-center gap-2 hover:bg-white/10 dark:hover:bg-white/5 px-2 py-1.5 rounded-md cursor-pointer transition-colors">
+                                <Wifi size={14} className="text-blue-500" />
+                                <Clock size={14} className="opacity-70" />
+                            </div>
+
+                            {/* Clock and Date column */}
+                            <div className="hover:bg-white/10 dark:hover:bg-white/5 px-2.5 py-1 rounded-md cursor-pointer transition-colors text-right leading-tight">
+                                <span className="block text-[11px] font-medium">
+                                    {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className="block text-[9px] opacity-75 font-normal">
+                                    {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                </span>
+                            </div>
+
+                            {/* LogOut block */}
+                            <button 
+                                onClick={() => handleLogoutRequest()}
+                                className="ml-1 p-2 hover:bg-red-500/10 text-rose-500 hover:text-red-500 rounded-md transition-all cursor-pointer"
+                                title="Desligar / Sair"
+                            >
+                                <LogOut size={14} />
+                            </button>
+                        </div>
+                    </div>
+                </main>
+
+                {/* Windows 11 Start Menu Overlay */}
+                {win11LauncherOpen && (
+                    <div 
+                        className="fixed inset-0 bg-transparent z-[100] flex justify-center items-end pb-14 animate-fadeIn"
+                        onClick={() => setWin11LauncherOpen(false)}
+                    >
+                        {/* Start Menu Popup */}
+                        <div 
+                            className={`w-full max-w-lg rounded-xl border p-6 flex flex-col justify-start shadow-[0_32px_64px_rgba(0,0,0,0.4)] backdrop-blur-3xl animate-slideUp cursor-default ${
+                                isLight 
+                                    ? 'bg-[#f3f4f6]/95 border-slate-200/80 text-slate-800' 
+                                    : 'bg-[#1c1c24]/95 border-white/10 text-white'
+                            }`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Search bar inside Start Menu */}
+                            <div className="relative mb-5 w-full">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-55" size={15} />
+                                <input 
+                                    id="win11-search-input"
+                                    type="text"
+                                    placeholder="Pesquisar aplicativos, configurações e documentos..."
+                                    value={win11Search}
+                                    onChange={(e) => setWin11Search(e.target.value)}
+                                    className={`w-full pl-10 pr-8 py-2 text-xs border rounded-md transition-all ${
+                                        isLight 
+                                            ? 'bg-white border-slate-200 text-slate-800 focus:border-blue-500 focus:bg-white' 
+                                            : 'bg-black/20 border-white/10 text-white focus:border-blue-500 focus:bg-[#111115]'
+                                    }`}
+                                />
+                                {win11Search && (
+                                    <button 
+                                        onClick={() => setWin11Search('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Fixados (Pinned Section) */}
+                            <div className="mb-4 text-left">
+                                <div className="flex justify-between items-center px-1 mb-2.5">
+                                    <span className="text-xs font-bold">Fixados</span>
+                                    <button 
+                                        onClick={() => setWin11Search('')}
+                                        className="text-[10px] text-blue-500 hover:underline cursor-pointer"
+                                    >
+                                        Todos os aplicativos
+                                    </button>
+                                </div>
+
+                                <div className="max-h-[30vh] overflow-y-auto custom-scrollbar">
+                                    {ALL_AVAILABLE_MODULES.filter(m => {
+                                        if (!isModuleAllowed(m.id)) return false;
+                                        if (!win11Search) return true;
+                                        return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
+                                               m.id.toLowerCase().includes(win11Search.toLowerCase());
+                                    }).length === 0 ? (
+                                        <div className="text-center py-8 opacity-50 text-xs">
+                                            Nenhum aplicativo encontrado
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-4 gap-y-4 gap-x-2">
+                                            {ALL_AVAILABLE_MODULES.filter(m => {
+                                                if (!isModuleAllowed(m.id)) return false;
+                                                if (!win11Search) return true;
+                                                return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
+                                                       m.id.toLowerCase().includes(win11Search.toLowerCase());
+                                            }).map(m => {
+                                                const IconComp = m.icon;
+                                                return (
+                                                    <button
+                                                        key={m.id}
+                                                        onClick={() => {
+                                                            setView(m.id);
+                                                            setWin11LauncherOpen(false);
+                                                            setWin11Search('');
+                                                        }}
+                                                        className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all border border-transparent hover:border-white/5 cursor-pointer group ${
+                                                            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                                                        }`}
+                                                    >
+                                                        <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-1 bg-white/5 group-hover:scale-110 transition-transform">
+                                                            <IconComp className={`${m.color} transition-colors`} size={22} />
+                                                        </div>
+                                                        <span className="text-[10px] font-medium text-center line-clamp-2 w-full leading-tight opacity-90 group-hover:opacity-100 font-sans">
+                                                            {m.label}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Recommended / sugeridos section */}
+                            <div className="border-t border-slate-300/30 dark:border-white/10 pt-4 mt-auto">
+                                <div className="text-xs font-bold text-left mb-2 px-1">Recomendados</div>
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                    <button 
+                                        onClick={() => { setView('sobre'); setWin11LauncherOpen(false); }}
+                                        className={`flex items-center gap-2.5 p-1.5 rounded-lg text-xs hover:bg-white/5 transition-all cursor-pointer ${
+                                            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <Info size={14} className="text-blue-500 shrink-0" />
+                                        <div className="leading-tight">
+                                            <p className="font-semibold">Sobre o GIPP</p>
+                                            <p className="text-[9px] opacity-60">Manual & Informações</p>
+                                        </div>
+                                    </button>
+                                    <button 
+                                        onClick={() => { setView('changelog'); setWin11LauncherOpen(false); }}
+                                        className={`flex items-center gap-2.5 p-1.5 rounded-lg text-xs hover:bg-white/5 transition-all cursor-pointer ${
+                                            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <History size={14} className="text-fuchsia-500 shrink-0" />
+                                        <div className="leading-tight">
+                                            <p className="font-semibold font-sans">Atualizações</p>
+                                            <p className="text-[9px] opacity-60">Notas de lançamento</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Start Menu Footer (User profile + Power button) */}
+                            <div className={`border-t mt-4 pt-4 flex justify-between items-center text-xs font-semibold ${
+                                isLight ? 'border-slate-200' : 'border-white/10'
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
+                                        {user?.nome?.charAt(0)}
+                                    </div>
+                                    <div className="text-left leading-tight">
+                                        <p className="font-bold">{user?.nome}</p>
+                                        <p className="text-[9px] opacity-65">{user?.funcao_administrativa || user?.cargo || 'Membro'}</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setWin11LauncherOpen(false);
+                                        handleLogoutRequest();
+                                    }}
+                                    className="p-2 hover:bg-red-500/10 text-rose-500 rounded-md transition-all cursor-pointer flex items-center gap-1"
+                                    title="Desligar sistema"
+                                >
+                                    <LogOut size={14} />
+                                    <span>Desligar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen font-sans text-slate-900 relative overflow-hidden">
             <div className="absolute inset-0 z-0 pointer-events-none">
