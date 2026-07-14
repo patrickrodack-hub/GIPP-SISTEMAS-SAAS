@@ -81,6 +81,7 @@ const ModuleConfiguracoesGerais = () => {
     const [selectedRoleForPortal, setSelectedRoleForPortal] = useState('SUPERINTENDENTE');
     const [selectedPortalFeatures, setSelectedPortalFeatures] = useState<string[]>([]);
     const [isSavingPortalConfig, setIsSavingPortalConfig] = useState(false);
+    const [memberAutoLogin, setMemberAutoLogin] = useState(db.igreja?.member_auto_login === true);
     const [salinhaKidsLideresCargos, setSalinhaKidsLideresCargos] = useState<string[]>([]);
     const [isSavingSalinhaConfig, setIsSavingSalinhaConfig] = useState(false);
     const [portalPastorLideresCargos, setPortalPastorLideresCargos] = useState<string[]>([]);
@@ -1573,6 +1574,28 @@ const ModuleConfiguracoesGerais = () => {
                                     <h3 className="text-base font-black">Permissões de Acesso do Portal</h3>
                                     <p className="text-xs text-slate-500">Mapeie módulos visíveis aos membros de acordo com seu cargo.</p>
                                 </div>
+                            </div>
+
+                            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider">Login Automático</h4>
+                                    <p className="text-[10px] text-emerald-600 font-medium">Lembrar o último acesso e logar diretamente.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" className="sr-only peer" checked={memberAutoLogin} onChange={async (e) => {
+                                        const val = e.target.checked;
+                                        setMemberAutoLogin(val);
+                                        try {
+                                            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+                                            await updateDoc(configRef, { member_auto_login: val });
+                                            addToast("Preferência de Login Automático gravada com sucesso!", "success");
+                                        } catch (err) {
+                                            console.error(err);
+                                            addToast("Erro ao gravar configuração.", "error");
+                                        }
+                                    }} />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-600"></div>
+                                </label>
                             </div>
 
                             <div className="space-y-2">

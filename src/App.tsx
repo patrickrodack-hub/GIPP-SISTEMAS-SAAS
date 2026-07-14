@@ -16687,6 +16687,37 @@ export default function App() {
       }
   }, [db]);
 
+  useEffect(() => {
+      try {
+          if (db.igreja?.member_auto_login === true && !user && view === 'login') {
+              const savedId = localStorage.getItem('gipp_auto_login_member_id');
+              if (savedId) {
+                  const foundMember = (db.membros || []).find(m => m.id === savedId);
+                  if (foundMember) {
+                      const isLiberado = foundMember.acesso_portal_liberado || (foundMember.senha_portal && foundMember.acesso_portal_liberado !== false);
+                      if (isLiberado && foundMember.senha_portal) {
+                          const userFuncaoAdm = (foundMember.funcao_administrativa || 'NENHUMA').toUpperCase();
+                          const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+                          const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+                          const allowedModules = foundMember.portal_permissoes_personalizadas 
+                              ? defaultModules.filter((mId: string) => foundMember.portal_permissoes_personalizadas.includes(mId))
+                              : defaultModules;
+                              
+                          setUser({ 
+                              ...foundMember, 
+                              tipo: 'membro',
+                              portal_permissoes: allowedModules
+                          });
+                          setView('portal_home');
+                      }
+                  }
+              }
+          }
+      } catch (err) {
+          console.warn("Auto-login failed", err);
+      }
+  }, [db.igreja?.member_auto_login, db.membros, user, view]);
+
   const globalSearchResults = useMemo(() => {
       if (!globalSearchQuery.trim()) return [];
       const queryClean = globalSearchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -18189,6 +18220,9 @@ export default function App() {
                       tipo: 'membro',
                       portal_permissoes: allowedModules
                   });
+                  if (db.igreja?.member_auto_login) {
+                      localStorage.setItem('gipp_auto_login_member_id', foundMember.id);
+                  }
                   setView('portal_home');
                   addToast(`A Paz do Senhor, ${foundMember.nome.split(' ')[0]}!`, 'success');
                   logAction('LOGIN', 'Membro acedeu ao portal de autoatendimento', 'membros', foundMember.id);
@@ -18258,8 +18292,10 @@ export default function App() {
           sessionStorage.removeItem('portal_session_member_name');
       }
 
-      auth.signOut(); 
-      setUser(null); 
+      localStorage.removeItem('gipp_auto_login_member_id');
+
+      auth.signOut();
+      setUser(null);
       setLoginData({ user: '', pass: '' }); 
       setFirstAccessData({ nome: '', data_nascimento: '', senha: '', confirmar: '' });
       setIsFirstAccess(false);
