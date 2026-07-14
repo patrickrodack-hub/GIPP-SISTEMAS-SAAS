@@ -23,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -16649,6 +16649,20 @@ export default function App() {
   const [user, setUser] = useState(null); 
   const [authUser, setAuthUser] = useState(null); 
   const [view, setView] = useState('login');
+  const [isSystemBooting, setIsSystemBooting] = useState(false); // NOVO: Controla a animação inicial antes de tudo
+  const [isHalted, setIsHalted] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('gipp-theme') || 'light');
+  const [osTheme, setOsTheme] = useState(localStorage.getItem('gipp-ostheme') || 'default');
+  const [animBgEnabled, setAnimBgEnabled] = useState(() => {
+      const saved = localStorage.getItem('gipp-animbg-enabled');
+      return saved !== 'false';
+  });
+  const [isMobileDevice, setIsMobileDevice] = useState(() => {
+      if (typeof navigator !== 'undefined') {
+          return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+      return false;
+  }); // NOVO: Identifica acesso por telemóvel
   const [showHelpHub, setShowHelpHub] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -16760,7 +16774,8 @@ export default function App() {
                   { label: "CLS", sublabel: "Limpa a tela e reseta o prompt", category: "Comando", icon: Terminal, type: "cmd", action: "cls" },
                   { label: "VER", sublabel: "Exibe a versão do sistema", category: "Comando", icon: Terminal, type: "cmd", view: "dashboard" },
                   { label: "HELP", sublabel: "Exibe esta lista de comandos", category: "Comando", icon: Terminal, type: "cmd", view: "dashboard" },
-                  { label: "LOGOFF", sublabel: "Encerra a sessão atual", category: "Comando", icon: Terminal, type: "cmd", action: "logoff" }
+                  { label: "LOGOFF", sublabel: "Encerra a sessão atual", category: "Comando", icon: Terminal, type: "cmd", action: "logoff" },
+                  { label: "HALT", sublabel: "Desliga o sistema", category: "Comando", icon: Terminal, type: "cmd", action: "halt" }
               ];
           } else if (queryClean === "ver") {
               return [
@@ -16773,6 +16788,10 @@ export default function App() {
           } else if (queryClean === "logoff") {
               return [
                   { label: "LOGOFF", sublabel: "Pressione ENTER ou clique para sair", category: "Comando", icon: Terminal, type: "cmd", action: "logoff" }
+              ];
+          } else if (queryClean === "halt") {
+              return [
+                  { label: "HALT", sublabel: "Pressione ENTER ou clique para desligar", category: "Comando", icon: Terminal, type: "cmd", action: "halt" }
               ];
           }
       }
@@ -17076,22 +17095,9 @@ export default function App() {
   const [installMobileOS, setInstallMobileOS] = useState<'ios' | 'android' | null>(null);
   const [installStep, setInstallStep] = useState<number>(1);
   const [isNotificationConfirmed, setIsNotificationConfirmed] = useState<boolean>(false);
-  const [theme, setTheme] = useState(localStorage.getItem('gipp-theme') || 'light');
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [showFirstAccessDropdown, setShowFirstAccessDropdown] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine); // NOVO: Estado de conexão
-  const [isSystemBooting, setIsSystemBooting] = useState(false); // NOVO: Controla a animação inicial antes de tudo
-  const [osTheme, setOsTheme] = useState(localStorage.getItem('gipp-ostheme') || 'default'); // NOVO: Estado do Tema do Sistema
-  const [animBgEnabled, setAnimBgEnabled] = useState(() => {
-      const saved = localStorage.getItem('gipp-animbg-enabled');
-      return saved !== 'false';
-  });
-  const [isMobileDevice, setIsMobileDevice] = useState(() => {
-      if (typeof navigator !== 'undefined') {
-          return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      }
-      return false;
-  }); // NOVO: Identifica acesso por telemóvel
 
   const notifications = useMemo(() => {
     const notifs = [];
@@ -19193,6 +19199,14 @@ export default function App() {
       );
   };
 
+  if (isHalted) {
+    return (
+      <div className="fixed inset-0 bg-black z-[999999] flex flex-col items-center justify-center font-mono cursor-none select-none">
+        <p className="text-[#ffb000] text-xl sm:text-2xl md:text-4xl font-bold tracking-widest text-center animate-pulse drop-shadow-[0_0_8px_rgba(255,176,0,0.8)]">IT IS NOW SAFE TO TURN OFF YOUR COMPUTER</p>
+      </div>
+    );
+  }
+
   if (!user) { 
     return ( 
       <ChurchContext.Provider value={ctxValues}>
@@ -20045,6 +20059,9 @@ export default function App() {
                                     } else if (first.action === 'logoff') {
                                         setGlobalSearchOpen(false);
                                         handleLogoutRequest();
+                                    } else if (first.action === 'halt') {
+                                        setGlobalSearchOpen(false);
+                                        setIsHalted(true);
                                     } else if (first.view) {
                                         setView(first.view);
                                         setGlobalSearchOpen(false);
@@ -20091,6 +20108,9 @@ export default function App() {
                                                     } else if (res.action === 'logoff') {
                                                         setGlobalSearchOpen(false);
                                                         handleLogoutRequest();
+                                                    } else if (res.action === 'halt') {
+                                                        setGlobalSearchOpen(false);
+                                                        setIsHalted(true);
                                                     } else if (res.view) {
                                                         setView(res.view);
                                                         setGlobalSearchOpen(false);
