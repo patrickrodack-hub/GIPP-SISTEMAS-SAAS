@@ -13,7 +13,6 @@ import { ChurchContext, playNotificationSound, playMenuSound } from '../App';
 import { validateEmail, validateWhatsApp, formatWhatsApp } from '../utils/validation';
 import { GlobalFooter } from './GlobalFooter';
 import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
-import { DiagnosticsDashboard } from './DiagnosticsDashboard';
 
 // Constantes de Mapeamento do Portal de Membros por Função Administrativa
 import { 
@@ -39,7 +38,7 @@ const ModuleConfiguracoesGerais = () => {
     } = context;
 
     // Active tab state
-    const [activeTab, setActiveTab] = useState<'global' | 'visual' | 'backup' | 'portal' | 'notificacoes' | 'performance' | 'conexao' | 'auditoria' | 'impressora' | 'suporte'>('global');
+    const [activeTab, setActiveTab] = useState<'global' | 'visual' | 'backup' | 'portal' | 'notificacoes' | 'performance' | 'auditoria' | 'impressora' | 'suporte'>('global');
 
     // TAB 1: Global Settings
     const [globalSite, setGlobalSite] = useState(db.igreja?.site || db.igreja?.saas_site || '');
@@ -1094,12 +1093,6 @@ const ModuleConfiguracoesGerais = () => {
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'performance' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
                     <RefreshCw size={13}/> Aceleração
-                </button>
-                <button 
-                    onClick={() => setActiveTab('conexao')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'conexao' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
-                >
-                    <Wifi size={13}/> Rede / Diagnósticos
                 </button>
                 <button 
                     onClick={() => setActiveTab('auditoria')}
@@ -2374,12 +2367,7 @@ const ModuleConfiguracoesGerais = () => {
                     </div>
                 )}
 
-                {/* DIAGNOSTIC SPEEDTEST CHANNELS */}
-                {activeTab === 'conexao' && (
-                    <div className="bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] shadow-xs animate-entrance">
-                        <DiagnosticsDashboard />
-                    </div>
-                )}
+
 
                 {/* AUDIT LOG TABLE & PRINTOUT */}
                 {activeTab === 'auditoria' && (

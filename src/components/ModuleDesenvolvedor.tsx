@@ -44,6 +44,7 @@ import {
 } from '../App';
 
 import { SAAS_MODULES_LIST, generateSaaSMarketingMessages } from './ModuleDivulgacaoData';
+import { DiagnosticsDashboard } from './DiagnosticsDashboard';
 
 // Exporting component
 const ModuleDesenvolvedor = () => {
@@ -1272,6 +1273,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         {id: 'assistente', label: 'Assistente Virtual (IA)', icon: MessageSquare},
         {id: 'config', label: 'Config. do App', icon: Settings},
         {id: 'chaves_api', label: 'Integrações e APIs', icon: Key},
+        {id: 'conexao', label: 'Rede / Diagnósticos', icon: Wifi},
         {id: 'inpi', label: 'Passo a Passo INPI', icon: Fingerprint},
         {id: 'protecao', label: 'EULA & Combate à Pirataria', icon: Lock},
         {id: 'avaliacao', label: 'Laudo & Valuation', icon: Scale},
@@ -3522,6 +3524,13 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                 </Button>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* === ABA: REDE / DIAGNÓSTICOS === */}
+                {tab === 'conexao' && (
+                    <div className="bg-white border border-slate-205 p-6 md:p-8 rounded-[2rem] shadow-xs animate-entrance">
+                        <DiagnosticsDashboard />
                     </div>
                 )}
 
