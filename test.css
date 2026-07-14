@@ -1,0 +1,127 @@
+body[data-os-theme="msdos"] { 
+    background-color: #000000 !important; 
+    background-image: none !important; 
+    font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace !important; 
+    color: #00FF00 !important; 
+    text-transform: uppercase !important; 
+    letter-spacing: 1px !important;
+}
+
+body[data-os-theme="msdos"] * { 
+    border-radius: 0 !important; 
+    box-shadow: none !important; 
+    backdrop-filter: none !important; 
+}
+
+body[data-os-theme="msdos"] [class*="bg-"] { 
+    background-color: #000000 !important; 
+    background-image: none !important; 
+    border-color: #00FF00 !important;
+}
+
+body[data-os-theme="msdos"] [class*="border-"] { 
+    border-color: #00FF00 !important;
+}
+
+body[data-os-theme="msdos"] [class*="text-"] { 
+    color: #00FF00 !important; 
+    text-shadow: none !important; 
+    -webkit-text-fill-color: #00FF00 !important; 
+}
+
+/* Headers in Yellow */
+body[data-os-theme="msdos"] h1, 
+body[data-os-theme="msdos"] h2, 
+body[data-os-theme="msdos"] h3, 
+body[data-os-theme="msdos"] [class*="text-xl"], 
+body[data-os-theme="msdos"] [class*="text-2xl"] {
+    color: #FFFF00 !important;
+    -webkit-text-fill-color: #FFFF00 !important;
+    font-weight: bold !important;
+}
+
+/* Buttons like function keys */
+body[data-os-theme="msdos"] button { 
+    background-color: #000088 !important; 
+    border: 2px solid #FFFFFF !important; 
+    color: #FFFFFF !important; 
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-weight: bold !important;
+    transition: none !important; 
+    position: relative;
+    padding: 4px 8px !important;
+}
+
+body[data-os-theme="msdos"] button:hover { 
+    background-color: #FFFFFF !important; 
+    color: #000000 !important; 
+    -webkit-text-fill-color: #000000 !important;
+    border-color: #000088 !important;
+}
+
+body[data-os-theme="msdos"] button:hover *, 
+body[data-os-theme="msdos"] tr:hover td * { 
+    color: #000000 !important; 
+    background-color: transparent !important; 
+    -webkit-text-fill-color: #000000 !important; 
+}
+
+/* Inputs like terminal fields */
+body[data-os-theme="msdos"] input, 
+body[data-os-theme="msdos"] select, 
+body[data-os-theme="msdos"] textarea { 
+    background-color: #000000 !important; 
+    border: none !important;
+    border-bottom: 2px solid #00FFFF !important; 
+    color: #00FFFF !important; 
+    -webkit-text-fill-color: #00FFFF !important;
+    padding-bottom: 2px !important;
+}
+body[data-os-theme="msdos"] input:focus, 
+body[data-os-theme="msdos"] select:focus, 
+body[data-os-theme="msdos"] textarea:focus { 
+    background-color: #004444 !important; 
+    color: #FFFFFF !important; 
+    -webkit-text-fill-color: #FFFFFF !important; 
+    outline: none !important; 
+}
+
+body[data-os-theme="msdos"] svg { 
+    color: inherit !important; 
+    filter: none !important; 
+    stroke-width: 2px !important; 
+}
+
+/* Table rows alternating or hover */
+body[data-os-theme="msdos"] tr {
+    border-bottom: 1px dashed #00FF00 !important;
+}
+
+body[data-os-theme="msdos"] tr:hover td { 
+    background-color: #00FF00 !important; 
+    color: #000000 !important; 
+}
+body[data-os-theme="msdos"] th {
+    color: #FFFF00 !important;
+    -webkit-text-fill-color: #FFFF00 !important;
+    border-bottom: 2px solid #FFFF00 !important;
+}
+
+body[data-os-theme="msdos"] img { 
+    filter: grayscale(100%) contrast(1.5) sepia(1) hue-rotate(80deg) saturate(3) !important; 
+    border: 1px solid #00FF00 !important; 
+}
+
+/* Modal windows like drawn boxes */
+body[data-os-theme="msdos"] .glass-modern, 
+body[data-os-theme="msdos"] .glass-card, 
+body[data-os-theme="msdos"] .bg-white,
+body[data-os-theme="msdos"] .bg-slate-50 {
+    background: #000000 !important;
+    border: 4px double #00FF00 !important;
+}
+
+/* Sidebar styling */
+body[data-os-theme="msdos"] aside {
+    border-right: 4px double #00FF00 !important;
+}

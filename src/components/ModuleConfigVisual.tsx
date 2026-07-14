@@ -151,7 +151,7 @@ const ModuleConfigVisual = () => {
                             { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
                             { id: 'winxp', name: 'Windows XP (Luna)', label: 'WinXP', desc: 'Retrô vibrante dos anos 2005, com cabeçalhos azuis e botões verdes.' },
                             { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
-                            { id: 'msdos', name: 'MS-DOS 6.22 (Terminal)', label: 'MS-DOS', desc: 'Visual retrô hacking de terminal de comandos em fósforo verde sobre preto.' },
+                            { id: 'msdos', name: 'Sistema COBOL (Mainframe)', label: 'COBOL', desc: 'Visual clássico de terminal AS/400 ou mainframe IBM, fontes mono espaçadas em fósforo verde com destaques coloridos.' },
                             { id: 'linux', name: 'Linux Ubuntu (GNOME)', label: 'Linux', desc: 'Soberbo tema inspirado na elegância do Ubuntu e do ecossistema GNOME, com gradientes aubergine e detalhes em laranja Yaru.' },
                             { id: 'premium_black', name: 'Premium Black & Gold', label: 'Luxo', desc: 'Tema escuro requintado com contrastes profundos e acabamentos em dourado.' },
                             { id: 'futuristic', name: 'GIPP Sci-Fi Futurista', label: 'Futurista', desc: 'Estética cibernética de alta performance com realces neon ciano/rosa e acabamento holográfico.' }
@@ -218,7 +218,7 @@ const ModuleConfigVisual = () => {
                                 previewTheme === 'win95' ? 'bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#808080] border-b-[#808080] outline-1 outline-black p-0.5' :
                                 previewTheme === 'winxp' ? 'bg-[#d4d0c8] rounded-t-lg border-2 border-[#0054e3] p-0.5' :
                                 previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
-                                previewTheme === 'msdos' ? 'bg-black border-2 border-green-500 p-2 text-green-500 font-mono text-[11px]' :
+                                previewTheme === 'msdos' ? 'bg-black border-4 border-double border-green-500 p-2 text-green-500 font-mono text-[11px]' :
                                 previewTheme === 'linux' ? 'bg-[#221820] rounded-2xl border border-white/10 p-1 shadow-2xl text-slate-100' :
                                 previewTheme === 'premium_black' ? 'bg-[#0a0a0a] border border-[#D4AF37] p-2 text-slate-100' :
                                 previewTheme === 'futuristic' ? 'bg-black/90 border border-[#00f0ff] p-2 text-slate-100 shadow-[0_0_15px_rgba(0,240,255,0.25)]' :
@@ -226,7 +226,7 @@ const ModuleConfigVisual = () => {
                               }`}
                               style={{ 
                                 fontFamily: previewTheme === 'win95' || previewTheme === 'winxp' ? "'Tahoma', sans-serif" : 
-                                             previewTheme === 'msdos' ? "'Courier New', monospace" : "inherit"
+                                             previewTheme === 'msdos' ? "'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
                               }}
                             >
                                 {/* Barra de título simulada */}
@@ -235,7 +235,7 @@ const ModuleConfigVisual = () => {
                                     previewTheme === 'win95' ? 'bg-[#000080] text-white font-bold' :
                                     previewTheme === 'winxp' ? 'bg-gradient-to-r from-[#0054e3] to-[#278df1] text-white font-bold rounded-t-md' :
                                     previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
-                                    previewTheme === 'msdos' ? 'bg-green-950 border-b border-green-500 pb-1 mb-2 font-mono text-green-400 font-bold' :
+                                    previewTheme === 'msdos' ? 'bg-black border-b border-green-500 pb-1 mb-2 font-mono text-yellow-400 font-bold uppercase tracking-wider' :
                                     previewTheme === 'linux' ? 'bg-[#1b1118] rounded-t-xl p-2 border-b border-white/5 text-white font-bold' :
                                     previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border-b border-[#D4AF37]/40 pb-1 mb-2 text-[#D4AF37] font-bold' :
                                     previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#03001e] to-[#120012] border-b border-[#00f0ff]/40 pb-1 mb-2 text-[#00f0ff] font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' :
@@ -292,7 +292,7 @@ const ModuleConfigVisual = () => {
                                         <div className={`p-1.5 text-[10px] truncate ${
                                             previewTheme === 'win95' ? 'bg-white border-t-1.5 border-l-1.5 border-t-[#404040] border-l-[#404040] border-r-1.5 border-b-1.5 border-r-white border-b-white text-black' :
                                             previewTheme === 'winxp' ? 'bg-white border border-blue-600 text-black rounded' :
-                                            previewTheme === 'msdos' ? 'border border-green-500 bg-black text-green-400 font-mono' :
+                                            previewTheme === 'msdos' ? 'border-b-2 border-cyan-400 bg-black text-cyan-400 font-mono font-bold' :
                                             previewTheme === 'linux' ? 'border border-white/10 bg-[#150d14] text-white rounded-lg' :
                                             previewTheme === 'premium_black' ? 'border border-[#D4AF37]/40 bg-black text-[#D4AF37]' :
                                             previewTheme === 'futuristic' ? 'border border-[#00f0ff]/50 bg-slate-950 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]' :
@@ -307,7 +307,7 @@ const ModuleConfigVisual = () => {
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
                                             previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded shadow-xs' :
-                                            previewTheme === 'msdos' ? 'border border-green-500 bg-green-950 text-green-400 font-mono text-center font-bold' :
+                                            previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
                                             previewTheme === 'linux' ? 'bg-gradient-to-b from-[#e95420] to-[#df3812] border border-transparent text-white rounded-lg text-center font-bold shadow-[0_4px_10px_rgba(223,56,18,0.3)]' :
                                             previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border border-[#D4AF37] text-[#D4AF37] text-center font-bold' :
                                             previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#00f0ff] to-[#ff007f] border border-white/10 text-white text-center font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)] rounded-lg' :
@@ -318,7 +318,7 @@ const ModuleConfigVisual = () => {
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
                                             previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded' :
-                                            previewTheme === 'msdos' ? 'border border-green-500 bg-black text-green-400 font-mono text-center' :
+                                            previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
                                             previewTheme === 'linux' ? 'bg-[#3a3a44] border border-white/5 text-white rounded-lg text-center font-bold' :
                                             previewTheme === 'premium_black' ? 'bg-black border border-slate-700 text-slate-400 text-center' :
                                             previewTheme === 'futuristic' ? 'bg-slate-900/80 border border-[#ff007f]/40 text-[#ff007f] text-center rounded-lg shadow-[0_0_8px_rgba(255,0,127,0.15)]' :

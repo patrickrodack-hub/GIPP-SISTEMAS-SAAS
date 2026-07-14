@@ -909,18 +909,27 @@ const OsThemeStyles = () => (
         body[data-os-theme="win95"] svg { stroke-width: 2px !important; stroke-linecap: square !important; stroke-linejoin: miter !important; shape-rendering: crispEdges !important; color: #000000 !important; filter: drop-shadow(1px 1px 0px #ffffff); }
         body[data-os-theme="win95"] .border-b.border-white\\/30 svg, body[data-os-theme="win95"] .border-b.border-slate-100 svg, body[data-os-theme="win95"] .bg-slate-900 svg { color: #ffffff !important; filter: drop-shadow(1px 1px 0px #000000); }
 
-        body[data-os-theme="msdos"] { background-color: #000000 !important; background-image: none !important; font-family: 'Courier New', Courier, monospace !important; color: #33ff00 !important; text-transform: uppercase !important; }
-        body[data-os-theme="msdos"] * { border-radius: 0 !important; box-shadow: none !important; backdrop-filter: none !important; border-color: #33ff00 !important; }
-        body[data-os-theme="msdos"] [class*="bg-"] { background-color: #000000 !important; background-image: none !important; }
-        body[data-os-theme="msdos"] [class*="text-"] { color: #33ff00 !important; text-shadow: none !important; -webkit-text-fill-color: #33ff00 !important; }
-        body[data-os-theme="msdos"] button { background-color: #000000 !important; border: 1px solid #33ff00 !important; color: #33ff00 !important; transition: none !important; }
-        body[data-os-theme="msdos"] button:hover, body[data-os-theme="msdos"] tr:hover td, body[data-os-theme="msdos"] .hover\\:bg-slate-50:hover { background-color: #33ff00 !important; color: #000000 !important; }
-        body[data-os-theme="msdos"] button:hover *, body[data-os-theme="msdos"] tr:hover td * { color: #000000 !important; background-color: transparent !important; -webkit-text-fill-color: #000000 !important; }
-        body[data-os-theme="msdos"] input, body[data-os-theme="msdos"] select, body[data-os-theme="msdos"] textarea { background-color: #000000 !important; border: 1px solid #33ff00 !important; color: #33ff00 !important; }
-        body[data-os-theme="msdos"] input:focus, body[data-os-theme="msdos"] select:focus, body[data-os-theme="msdos"] textarea:focus { background-color: #33ff00 !important; color: #000000 !important; -webkit-text-fill-color: #000000 !important; outline: none !important; }
-        body[data-os-theme="msdos"] svg { color: #33ff00 !important; filter: none !important; stroke-width: 2px !important; }
-        body[data-os-theme="msdos"] button:hover svg { color: #000000 !important; }
-        body[data-os-theme="msdos"] img { filter: grayscale(100%) contrast(1.5) sepia(1) hue-rotate(80deg) saturate(3) !important; border: 1px solid #33ff00 !important; }
+        body[data-os-theme="msdos"] { background-color: #000000 !important; background-image: none !important; font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace !important; color: #00ff00 !important; text-transform: uppercase !important; letter-spacing: 1px !important; }
+        body[data-os-theme="msdos"] * { border-radius: 0 !important; box-shadow: none !important; backdrop-filter: none !important; border-color: #00ff00 !important; }
+        body[data-os-theme="msdos"] [class*="bg-"] { background-color: #000000 !important; background-image: none !important; border-color: #00ff00 !important; }
+        body[data-os-theme="msdos"] [class*="border-"] { border-color: #00ff00 !important; }
+        body[data-os-theme="msdos"] [class*="text-"] { color: #00ff00 !important; text-shadow: none !important; -webkit-text-fill-color: #00ff00 !important; }
+        body[data-os-theme="msdos"] h1, body[data-os-theme="msdos"] h2, body[data-os-theme="msdos"] h3, body[data-os-theme="msdos"] h4, body[data-os-theme="msdos"] [class*="text-xl"], body[data-os-theme="msdos"] [class*="text-2xl"], body[data-os-theme="msdos"] [class*="text-3xl"] { color: #ffff00 !important; -webkit-text-fill-color: #ffff00 !important; font-weight: bold !important; text-shadow: none !important; }
+        body[data-os-theme="msdos"] button { background-color: #0000aa !important; border: 2px solid #ffffff !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; font-weight: bold !important; transition: none !important; padding-top: 4px !important; padding-bottom: 4px !important; }
+        body[data-os-theme="msdos"] button * { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+        body[data-os-theme="msdos"] button:hover { background-color: #ffffff !important; color: #000000 !important; -webkit-text-fill-color: #000000 !important; border-color: #0000aa !important; }
+        body[data-os-theme="msdos"] button:hover * { color: #000000 !important; -webkit-text-fill-color: #000000 !important; background-color: transparent !important; }
+        body[data-os-theme="msdos"] input, body[data-os-theme="msdos"] select, body[data-os-theme="msdos"] textarea { background-color: #000000 !important; border: none !important; border-bottom: 2px solid #00ffff !important; color: #00ffff !important; -webkit-text-fill-color: #00ffff !important; outline: none !important; caret-color: transparent !important; }
+        @keyframes msdos-blink-cursor { 0%, 100% { border-right-color: transparent !important; } 50% { border-right-color: #00ff00 !important; } }
+        body[data-os-theme="msdos"] input:focus, body[data-os-theme="msdos"] select:focus, body[data-os-theme="msdos"] textarea:focus { background-color: #004444 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; outline: none !important; border-right: 12px solid #00ff00 !important; animation: msdos-blink-cursor 1s step-end infinite; }
+        body[data-os-theme="msdos"] svg { filter: none !important; stroke-width: 2.5px !important; }
+        body[data-os-theme="msdos"] tr { border-bottom: 1px dashed #00ff00 !important; }
+        body[data-os-theme="msdos"] tr:hover td { background-color: #00ff00 !important; color: #000000 !important; }
+        body[data-os-theme="msdos"] tr:hover td * { color: #000000 !important; -webkit-text-fill-color: #000000 !important; }
+        body[data-os-theme="msdos"] th { color: #ffff00 !important; -webkit-text-fill-color: #ffff00 !important; border-bottom: 2px solid #ffff00 !important; }
+        body[data-os-theme="msdos"] img { filter: grayscale(100%) contrast(2) sepia(1) hue-rotate(80deg) saturate(4) !important; border: 2px solid #00ff00 !important; }
+        body[data-os-theme="msdos"] .glass-modern, body[data-os-theme="msdos"] .glass-card, body[data-os-theme="msdos"] .glass-panel, body[data-os-theme="msdos"] .bg-white, body[data-os-theme="msdos"] .bg-slate-50 { background-color: #000000 !important; border: 4px double #00ff00 !important; }
+        body[data-os-theme="msdos"] aside { border-right: 4px double #00ff00 !important; }
 
         body[data-os-theme="premium_black"] { background-color: #050505; background-image: radial-gradient(circle at top right, #1a1a1a 0%, #000000 70%), radial-gradient(circle at bottom left, #111111 0%, #000000 70%) !important; font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important; color: #ffffff !important; }
         body[data-os-theme="premium_black"] .glass-modern, body[data-os-theme="premium_black"] .glass-card, body[data-os-theme="premium_black"] .glass-panel, body[data-os-theme="premium_black"] aside, body[data-os-theme="premium_black"] .bg-white, body[data-os-theme="premium_black"] .bg-slate-50 { background: linear-gradient(135deg, rgba(20, 20, 20, 0.8) 0%, rgba(5, 5, 5, 0.95) 100%) !important; backdrop-filter: blur(30px) saturate(200%) !important; border: 1px solid rgba(212, 175, 55, 0.4) !important; box-shadow: 0 20px 50px -10px rgba(0,0,0,1), inset 0 1px 0 rgba(212, 175, 55, 0.2), 0 0 15px rgba(212, 175, 55, 0.05) !important; color: #ffffff !important; }
@@ -1944,7 +1953,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const themesList = [
         { id: 'default', label: 'GIPP Padrão' }, { id: 'premium_black', label: 'Premium Black' },
         { id: 'win11', label: 'Windows 11' }, { id: 'winxp', label: 'Windows XP' },
-        { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'MS-DOS 6.22' },
+        { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'Sistema COBOL' },
         { id: 'linux', label: 'Linux Ubuntu' }, { id: 'futuristic', label: 'GIPP Sci-Fi' }
     ];
     let btnClass = variant === 'dark' ? `p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white flex items-center gap-2 ${className}` : variant === 'mobile' ? `p-2 bg-slate-50 text-slate-500 rounded-lg flex items-center gap-2 ${className}` : `p-3 bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl text-slate-600 flex items-center gap-2 ${className}`;
@@ -15166,6 +15175,31 @@ const AppLayout = () => {
         }
     }, [view, osTheme]);
 
+    useEffect(() => {
+        if (osTheme === 'msdos') {
+            try {
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                if (AudioContext) {
+                    const audioCtx = new AudioContext();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(750, audioCtx.currentTime); 
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                }
+            } catch (e) {
+                console.log("Audio play prevented", e);
+            }
+        }
+    }, [osTheme]);
+
     const handleCloseModule = (id: string) => {
         const nextOpened = openedModules.filter(m => m !== id);
         setOpenedModules(nextOpened);
@@ -16675,6 +16709,42 @@ export default function App() {
           { label: "Auditoria de Logs", view: "auditoria", category: "Navegação", icon: Shield },
           { label: "Suporte Técnico Dev", view: "suporte_dev", category: "Navegação", icon: Headset }
       ];
+
+      if (osTheme === "msdos") {
+          if (queryClean === "dir") {
+              const fakeFiles = [
+                  { label: "AUTOEXEC.BAT", sublabel: "128 bytes", view: "dashboard", category: "Arquivo de Sistema", icon: FileText, type: "file" },
+                  { label: "CONFIG.SYS", sublabel: "256 bytes", view: "dashboard", category: "Arquivo de Sistema", icon: FileText, type: "file" },
+                  { label: "GIPP.EXE", sublabel: "1.4 MB", view: "dashboard", category: "Executável Principal", icon: Terminal, type: "file" },
+                  { label: "COBOL.LIB", sublabel: "840 KB", view: "dashboard", category: "Biblioteca", icon: Database, type: "file" }
+              ];
+              const dateStr = new Date().toLocaleDateString('pt-BR');
+              return [
+                  ...modules.map(m => ({ ...m, type: 'module', sublabel: `<DIR>   ${dateStr}  ${m.label.split(' ')[0].toUpperCase()}` })),
+                  ...fakeFiles
+              ];
+          } else if (queryClean === "help") {
+              return [
+                  { label: "DIR", sublabel: "Lista arquivos e diretórios", category: "Comando", icon: Terminal, type: "cmd", view: "dashboard" },
+                  { label: "CLS", sublabel: "Limpa a tela e reseta o prompt", category: "Comando", icon: Terminal, type: "cmd", action: "cls" },
+                  { label: "VER", sublabel: "Exibe a versão do sistema", category: "Comando", icon: Terminal, type: "cmd", view: "dashboard" },
+                  { label: "HELP", sublabel: "Exibe esta lista de comandos", category: "Comando", icon: Terminal, type: "cmd", view: "dashboard" },
+                  { label: "LOGOFF", sublabel: "Encerra a sessão atual", category: "Comando", icon: Terminal, type: "cmd", action: "logoff" }
+              ];
+          } else if (queryClean === "ver") {
+              return [
+                  { label: "GIPP DOS v2.10 - (C) 1985 GIPP Systems", sublabel: "Todos os direitos reservados.", category: "Sistema", icon: Terminal, type: "cmd", view: "dashboard" }
+              ];
+          } else if (queryClean === "cls") {
+              return [
+                  { label: "CLS", sublabel: "Pressione ENTER ou clique para limpar a tela", category: "Comando", icon: Terminal, type: "cmd", action: "cls" }
+              ];
+          } else if (queryClean === "logoff") {
+              return [
+                  { label: "LOGOFF", sublabel: "Pressione ENTER ou clique para sair", category: "Comando", icon: Terminal, type: "cmd", action: "logoff" }
+              ];
+          }
+      }
       
       modules.forEach(m => {
           if (m.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(queryClean)) {
@@ -19931,6 +20001,22 @@ export default function App() {
                             placeholder="Busca Global GIPP (Pesquise Membros, Células ou Telas...)" 
                             value={globalSearchQuery}
                             onChange={e => setGlobalSearchQuery(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && globalSearchResults.length > 0) {
+                                    const first = globalSearchResults[0];
+                                    if (first.action === 'cls') {
+                                        setGlobalSearchQuery('');
+                                    } else if (first.action === 'logoff') {
+                                        setGlobalSearchOpen(false);
+                                        handleLogoutRequest();
+                                    } else if (first.view) {
+                                        setView(first.view);
+                                        setGlobalSearchOpen(false);
+                                        setGlobalSearchQuery('');
+                                        addToast(`Navegando para: ${first.label}`, 'success');
+                                    }
+                                }
+                            }}
                             className="flex-1 bg-transparent border-none text-slate-800 text-base font-bold outline-none placeholder:text-slate-400 uppercase"
                             autoFocus
                         />
@@ -19964,18 +20050,25 @@ export default function App() {
                                             <button 
                                                 key={idx} 
                                                 onClick={() => {
-                                                    setView(res.view);
-                                                    setGlobalSearchOpen(false);
-                                                    setGlobalSearchQuery('');
-                                                    addToast(`Navegando para: ${res.label}`, 'success');
+                                                    if (res.action === 'cls') {
+                                                        setGlobalSearchQuery('');
+                                                    } else if (res.action === 'logoff') {
+                                                        setGlobalSearchOpen(false);
+                                                        handleLogoutRequest();
+                                                    } else if (res.view) {
+                                                        setView(res.view);
+                                                        setGlobalSearchOpen(false);
+                                                        setGlobalSearchQuery('');
+                                                        addToast(`Navegando para: ${res.label}`, 'success');
+                                                    }
                                                 }}
                                                 className="w-full text-left p-3 hover:bg-indigo-50/60 active:bg-indigo-50 rounded-2xl transition-all border border-transparent hover:border-indigo-100 flex items-center justify-between group cursor-pointer"
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className="p-2.5 bg-slate-50 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 rounded-xl transition-all shadow-xs border border-slate-100"><IconComponent size={18} /></div>
                                                     <div>
-                                                        <div className="text-sm font-black text-slate-750 group-hover:text-indigo-950 transition-colors">{res.label}</div>
-                                                        <div className="text-xs text-slate-450 group-hover:text-indigo-650 transition-colors font-semibold">{res.sublabel || res.category}</div>
+                                                        <div className={`text-sm font-black text-slate-750 group-hover:text-indigo-950 transition-colors ${osTheme === 'msdos' && res.type === 'cmd' ? 'animate-typewriter overflow-hidden whitespace-nowrap inline-block' : ''}`}>{res.label}</div>
+                                                        <div className={`text-xs text-slate-450 group-hover:text-indigo-650 transition-colors font-semibold ${osTheme === 'msdos' && res.type === 'cmd' ? 'animate-typewriter overflow-hidden whitespace-nowrap inline-block' : ''}`}>{res.sublabel || res.category}</div>
                                                     </div>
                                                 </div>
                                                 <div className="text-[10px] font-black uppercase text-indigo-500 group-hover:translate-x-1 transition-transform tracking-wider bg-indigo-50/40 px-2 py-1 rounded-lg border border-indigo-50/20">Acessar</div>
