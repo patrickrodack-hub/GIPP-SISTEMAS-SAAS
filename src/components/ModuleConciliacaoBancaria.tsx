@@ -553,6 +553,10 @@ const ModuleConciliacaoBancaria = () => {
 
                     const extractedTransactions = await response.json();
                     
+                    if (extractedTransactions && typeof extractedTransactions === 'object' && 'error' in extractedTransactions) {
+                        throw new Error(extractedTransactions.error);
+                    }
+                    
                     if (!Array.isArray(extractedTransactions)) {
                         throw new Error("Formato de retorno inválido da inteligência artificial.");
                     }

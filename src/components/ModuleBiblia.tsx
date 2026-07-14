@@ -18,6 +18,121 @@ import {
 
 import { BIBLE_BOOKS } from './ModuleDevSuporte';
 
+// Mapeamento de Livros em Português para Inglês para a API gratuita bible-api.com
+const PORTUGUESE_TO_ENGLISH_BOOKS: Record<string, string> = {
+    'Gênesis': 'Genesis', 'Êxodo': 'Exodus', 'Levítico': 'Leviticus',
+    'Números': 'Numbers', 'Deuteronômio': 'Deuteronomy', 'Josué': 'Joshua',
+    'Juízes': 'Judges', 'Rute': 'Ruth', '1 Samuel': '1 Samuel',
+    '2 Samuel': '2 Samuel', '1 Reis': '1 Kings', '2 Reis': '2 Kings',
+    '1 Crônicas': '1 Chronicles', '2 Crônicas': '2 Chronicles', 'Esdras': 'Ezra',
+    'Neemias': 'Nehemiah', 'Ester': 'Esther', 'Jó': 'Job',
+    'Salmos': 'Psalms', 'Provérbios': 'Proverbs', 'Eclesiastes': 'Ecclesiastes',
+    'Cânticos': 'Song of Solomon', 'Isaías': 'Isaiah', 'Jeremias': 'Jeremiah',
+    'Lamentações': 'Lamentations', 'Ezequiel': 'Ezekiel', 'Daniel': 'Daniel',
+    'Oseias': 'Hosea', 'Joel': 'Joel', 'Amós': 'Amos',
+    'Obadias': 'Obadiah', 'Jonas': 'Jonah', 'Miqueias': 'Micah',
+    'Naum': 'Nahum', 'Habacuque': 'Habakkuk', 'Sofonias': 'Zephaniah',
+    'Ageu': 'Haggai', 'Zacarias': 'Zechariah', 'Malaquias': 'Malachi',
+    
+    'Mateus': 'Matthew', 'Marcos': 'Mark', 'Lucas': 'Luke',
+    'João': 'John', 'Atos': 'Acts', 'Romanos': 'Romans',
+    '1 Coríntios': '1 Corinthians', '2 Coríntios': '2 Corinthians', 'Gálatas': 'Galatians',
+    'Efésios': 'Ephesians', 'Filipenses': 'Philippians', 'Colossenses': 'Colossians',
+    '1 Tessalonicenses': '1 Thessalonians', '2 Tessalonicenses': '2 Thessalonians', '1 Timóteo': '1 Timothy',
+    '2 Timóteo': '2 Timothy', 'Tito': 'Titus', 'Filemom': 'Philemon',
+    'Hebreus': 'Hebrews', 'Tiago': 'James', '1 Pedro': '1 Peter',
+    '2 Pedro': '2 Peter', '1 João': '1 John', '2 João': '2 John',
+    '3 João': '3 John', 'Judas': 'Jude', 'Apocalipse': 'Revelation'
+};
+
+// Função para buscar texto na API gratuita do bible-api.com com tradução Almeida (JFA)
+const fetchFreeBibleText = async (bookName: string, chapter: number): Promise<string> => {
+    const englishBook = PORTUGUESE_TO_ENGLISH_BOOKS[bookName] || bookName;
+    try {
+        const url = `https://bible-api.com/${encodeURIComponent(englishBook)}+${chapter}?translation=almeida`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.verses && data.verses.length > 0) {
+                return data.verses.map((v: any) => `**${v.verse}** ${v.text.trim()}`).join('\n\n');
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao carregar texto da Bíblia gratuita:", e);
+    }
+    return "";
+};
+
+// Gerador de Estudo e Esboço Local Inteligente de Contingência
+const generateLocalStudy = (bookName: string, chapter: number, bibleText: string): string => {
+    return `[TEXTO]
+# 📖 ${bookName} ${chapter} (Almeida)
+
+${bibleText || "Texto bíblico temporariamente indisponível. Por favor, verifique sua conexão com a internet."}
+
+[CONTEXTO]
+# 📚 ESTUDO DO PREGADOR
+## 🌍 Contexto Histórico e Teológico de ${bookName}
+Este capítulo faz parte do livro de ${bookName}. O estudo e a leitura de cada capítulo ampliam nossa compreensão doutrinária sobre a Revelação Divina e a providência do Senhor para com Seu povo, em consonância com a Declaração de Fé da denominação.
+
+Ao lermos ${bookName} capítulo ${chapter}, somos convidados a meditar nos ensinamentos eternos do Senhor, compreendendo as exortações práticas, os eventos históricos e as promessas de salvação e edificação que se cumprem na comunhão da Igreja.
+
+[ESBOCO]
+## 📝 Esboço Homilético para ${bookName} ${chapter}
+**Tema Sugerido:** Aliança, Fidelidade e Edificação em ${bookName}
+**Texto-Base:** ${bookName} ${chapter}
+
+**I. Buscando a Vontade Divina**
+- A importância de se submeter à vontade de Deus revelada nas Escrituras.
+- Aplicação prática de fidelidade no testemunho cristão diário.
+
+**II. Perseverança em Meio às Provações**
+- Como a fé viva nos fortalece para superar as adversidades e crescer na graça.
+- Oração incessante e confiança inabalável nas promessas do Altíssimo.
+
+**III. O Caminho de Santificação e Serviço**
+- O compromisso de servir ao próximo e glorificar a Deus com nossas ações e palavras.
+- Santidade pessoal e dedicação à obra do Reino.
+
+[CONCLUSAO]
+## 💡 Conclusão e Aplicação Prática
+O estudo detalhado de ${bookName} ${chapter} nos ensina que a Palavra de Deus é viva, eficaz e apta a guiar cada passo do crente sincero. Que possamos guardar estas verdades em nossos corações, servindo à Igreja do Senhor com dedicação, alegria e reverência.
+
+[QUIZ]
+[
+  {
+    "q": "Qual é a atitude do coração que mais edifica ao ler, pregar ou estudar as Escrituras Sagradas em ${bookName} ${chapter}?",
+    "options": [
+      "Efetuar a leitura de forma rápida, puramente acadêmica ou fria",
+      "Meditar profundamente com espírito submisso, aplicando os preceitos éticos na retidão e prática diária",
+      "Desprezar o estudo histórico das notas ou debater vazios literários",
+      "Simplesmente acumular pontos para autoafirmação teológica"
+    ],
+    "answer": 1
+  },
+  {
+    "q": "Segundo as exposições teológicas, de que forma o crente sincero obtém crescimento e edificação espiritual?",
+    "options": [
+      "Dedicando-se à leitura assídua das escrituras, comunhão viva na igreja, oração e Escola Dominical",
+      "Afastando-se de qualquer tipo de comunhão pastoral ou eclesiástica",
+      "Debatendo apenas as traduções gregas sem demonstrar amor ao irmão",
+      "Não assumindo nenhum compromisso litúrgico"
+    ],
+    "answer": 0
+  },
+  {
+    "q": "Qual o principal propósito para o estudo sistematizado dos Esboços de Pregação gerados no livro de ${bookName}?",
+    "options": [
+      "Capacitar o obreiro e o crente a compreender e anunciar em fidelidade as mensagens eternas de Deus",
+      "Disputar com outras igrejas em retórica teórica fria",
+      "Estimular discussões vazias sobre versos soltos",
+      "Excluir-se de cultos pastorais presenciais"
+    ],
+    "answer": 0
+  }
+]`;
+};
+
 // Exporting component
 const ModuleBiblia = () => {
     const { db, setDoc, doc, dbFirestore, appId, user, addToast, isOnline } = useContext(ChurchContext);
@@ -221,25 +336,29 @@ const ModuleBiblia = () => {
                 return;
             }
 
-            // Se não houver cache e estiver offline, avisa o usuário
-            if (!isOnline) {
-                addToast("Este capítulo não está disponível offline. Conecte-se à internet para carregá-lo.", "warning");
-                setIsLoading(false);
-                return;
+            // Busca texto sagrado na API gratuita para economizar créditos e evitar cota esgotada da IA
+            let bibleText = "";
+            if (isOnline) {
+                bibleText = await fetchFreeBibleText(book.name, chapter);
             }
-            
-            const prompt = `Atue como a Bíblia Sagrada na versão NVI (Nova Versão Internacional) e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${chapter}.
-            
+
+            // Tenta IA se houver conexão e chave configurada, senão usa o gerador local imediato
+            let result = "";
+            if (isOnline) {
+                const prompt = `Atue como a Bíblia Sagrada na versão Almeida e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${chapter}.
+                
+${bibleText ? `O texto bíblico completo do capítulo (Almeida) é o seguinte:\n${bibleText}\n\n` : `Por favor, transcreva o texto bíblico completo de ${book.name} capítulo ${chapter}.\n\n`}
+
 POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
 
 [TEXTO]
-# 📖 ${book.name} ${chapter} (NVI)
-[Transcreva aqui TODO o texto bíblico do capítulo exato na versão NVI, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]
+# 📖 ${book.name} ${chapter} (Almeida)
+${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]`}
 
 [CONTEXTO]
 # 📚 ESTUDO DO PREGADOR
 ## 🌍 Contexto Histórico e Teológico
-[Explique brevemente o cenário deste capítulo]
+[Explique brevemente o cenário deste capítulo e sua consonância doutrinária na teologia pentecostal tradicional]
 
 [ESBOCO]
 ## 📝 Esboço Homilético
@@ -247,7 +366,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 **Texto-Base:** [Versículo chave do capítulo]
 
 **I. [Primeiro Tópico Principal]**
-- [Breve explicação]
+- [Breve explicação pentecostal]
 - [Referência cruzada]
 
 **II. [Segundo Tópico Principal]**
@@ -279,12 +398,26 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
     "answer": 2
   }
 ]
-]
-`;
+]`;
 
-            const result = await callGeminiAI(prompt, 3);
-            if (!result) {
-                throw new Error("Resposta da IA vazia");
+                try {
+                    result = await callGeminiAI(prompt, 2);
+                } catch (e) {
+                    console.warn("Erro ao chamar Gemini AI no estudo do capítulo:", e);
+                }
+            }
+
+            // Contingência / Modo Offline sem Cache ou sem Chave de API
+            if (!result || result.trim() === "" || result.startsWith("Erro na IA:")) {
+                if (bibleText) {
+                    result = generateLocalStudy(book.name, chapter, bibleText);
+                } else if (!isOnline) {
+                    addToast("Este capítulo não está disponível offline. Conecte-se à internet para carregá-lo.", "warning");
+                    setIsLoading(false);
+                    return;
+                } else {
+                    throw new Error("Não foi possível obter o texto sagrado.");
+                }
             }
             
             // Grava no IndexedDB automaticamente para uso offline futuro
@@ -313,7 +446,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
             setReadingData(result);
         } catch (error) {
             console.error(error);
-            addToast("Falha ao buscar o capítulo bíblico com a IA.", "error");
+            addToast("Falha ao buscar o capítulo bíblico com a API.", "error");
         } finally {
             setIsLoading(false);
         }
@@ -331,7 +464,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 
         setDownloadingBook(book.name);
         setDownloadProgress({ current: 1, total: book.chapters });
-        addToast(`Iniciando download completo de ${book.name} (${book.chapters} capítulos) com IA de Estudo...`, "info");
+        addToast(`Iniciando download completo de ${book.name} (${book.chapters} capítulos) com API Gratuita e IA de Estudo...`, "info");
 
         let successCount = 0;
         
@@ -346,13 +479,20 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                     continue;
                 }
 
-                const prompt = `Atue como a Bíblia Sagrada na versão NVI e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
-            
+                // Busca texto sagrado na API gratuita
+                const bibleText = await fetchFreeBibleText(book.name, cap);
+
+                // Tenta IA se houver conexão, senão gera estudo local rápido e economiza cota
+                let result = "";
+                const prompt = `Atue como a Bíblia Sagrada na versão Almeida e como a Bíblia de Estudo do Pregador (CPAD). O usuário deseja estudar: ${book.name} capítulo ${cap}.
+                
+${bibleText ? `O texto bíblico completo do capítulo (Almeida) é o seguinte:\n${bibleText}\n\n` : `Por favor, transcreva o texto bíblico completo de ${book.name} capítulo ${cap}.\n\n`}
+
 POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PARA SEPARAR CADA SEÇÃO:
 
 [TEXTO]
-# 📖 ${book.name} ${cap} (NVI)
-[Transcreva aqui TODO o texto bíblico do capítulo exato na versão NVI, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]
+# 📖 ${book.name} ${cap} (Almeida)
+${bibleText ? bibleText : `[Transcreva aqui o texto bíblico completo, separando os versículos por quebra de linha com números em negrito, ex: **1** No princípio...]`}
 
 [CONTEXTO]
 # 📚 ESTUDO DO PREGADOR
@@ -389,7 +529,16 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
 ]
 ]`;
 
-                const result = await callGeminiAI(prompt, 3);
+                try {
+                    result = await callGeminiAI(prompt, 1); // 1 tentativa apenas em lotes para alta performance
+                } catch (e) {
+                    console.warn(`Erro IA ao pré-baixar capítulo ${cap} de ${book.name}:`, e);
+                }
+
+                if (!result || result.trim() === "" || result.startsWith("Erro na IA:")) {
+                    result = generateLocalStudy(book.name, cap, bibleText);
+                }
+
                 if (result) {
                     await storeMedia(cacheKey, result);
 
@@ -413,7 +562,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                 }
                 
                 // Leve atraso para consistência nas requisições da API
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 200));
             } catch (err) {
                 console.error(`Erro ao pré-baixar o capítulo ${cap} de ${book.name}:`, err);
             }
@@ -490,7 +639,8 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
             if (newScore >= 2) {
                 // Aprovado (70% ou mais)
                 setQuizComplete(true);
-                const chapterKey = `${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`;
+                const bookKey = selectedBook?.name ? selectedBook.name.toLowerCase().replace(/\s+/g, '_') : '';
+                const chapterKey = `${bookKey}_${selectedChapter}`;
                 
                 if (!completedChapters.includes(chapterKey)) {
                     const updatedChapters = [...completedChapters, chapterKey];
@@ -588,7 +738,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                                 </div>
                             ) : (
                                 <div className="animate-entrance">
-                                    <button onClick={() => { setSelectedBook(null); setSelectedChapter(null); setReadingData(null); }} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 mb-4 px-2 py-1 bg-slate-50 rounded-lg w-full border border-slate-200">
+                                    <button onClick={() => { setSelectedBook(null); setSelectedChapter(null); setReadingData(null); setReadingPages([]); }} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 mb-4 px-2 py-1 bg-slate-50 rounded-lg w-full border border-slate-200">
                                         <ChevronLeft size={16}/> Voltar ao Índice
                                     </button>
                                     
@@ -792,8 +942,8 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                             <div className="max-w-3xl mx-auto bg-[#faf8f5] shadow-[0_10px_40px_rgba(0,0,0,0.05)] rounded-sm border border-[#e5e0d8] p-8 md:p-14 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px]/50 font-serif">
                                 
                                 <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-slate-800/10">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBook.name} • Capítulo {selectedChapter}</span>
-                                    {completedChapters.includes(`${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`) && (
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBook?.name || ''} • Capítulo {selectedChapter}</span>
+                                    {selectedBook && completedChapters.includes(`${selectedBook.name.toLowerCase().replace(/\s+/g, '_')}_${selectedChapter}`) && (
                                         <span className="text-[10px] bg-amber-500 text-white font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm font-sans">★ ESTUDADO</span>
                                     )}
                                     <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded shadow-sm">NVI</span>
@@ -809,7 +959,7 @@ POR FAVOR, SIGA ESTA ESTRUTURA RIGOROSAMENTE EM MARKDOWN E USE AS TAGS ABAIXO PA
                                         <div className="bg-amber-50/50 border border-amber-200/60 rounded-3xl p-6 md:p-8 text-center max-w-lg mx-auto shadow-sm">
                                             <Award size={36} className="text-amber-500 mx-auto mb-3 animate-bounce" />
                                             <h4 className="font-serif text-xl font-black text-slate-800 leading-tight">Estudo de Compreensão Bíblica</h4>
-                                            <p className="text-slate-500 text-xs mt-2 font-medium max-w-sm mx-auto font-sans">Você completou todos os esboços e tópicos explicativos de {selectedBook.name} {selectedChapter}. Coloque à prova seus conhecimentos para ganhar **+100 XP**!</p>
+                                            <p className="text-slate-500 text-xs mt-2 font-medium max-w-sm mx-auto font-sans">Você completou todos os esboços e tópicos explicativos de {selectedBook?.name || ''} {selectedChapter}. Coloque à prova seus conhecimentos para ganhar **+100 XP**!</p>
                                             
                                             <button
                                                 onClick={handleStartQuiz}

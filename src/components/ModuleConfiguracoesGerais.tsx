@@ -9,7 +9,7 @@ import {
   Cpu, HardDrive, Activity, CheckCircle2, XCircle, History
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
-import { ChurchContext } from '../App';
+import { ChurchContext, playNotificationSound, playMenuSound } from '../App';
 import { validateEmail, validateWhatsApp, formatWhatsApp } from '../utils/validation';
 import { GlobalFooter } from './GlobalFooter';
 import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
@@ -195,6 +195,155 @@ const ModuleConfiguracoesGerais = () => {
         email: user?.usuario || user?.id || 'admin@sistema.com'
     });
     const [supportTicketId, setSupportTicketId] = useState<string | null>(null);
+
+    // Configurações de Notificações Push Locais (Agenda, Escalas e Alertas do Navegador)
+    const [localNotifEnabled, setLocalNotifEnabled] = useState<boolean>(() => {
+        return localStorage.getItem('gipp_local_notif_enabled') === 'true';
+    });
+    const [localNotifEscalas, setLocalNotifEscalas] = useState<boolean>(() => {
+        return localStorage.getItem('gipp_local_notif_escalas') !== 'false';
+    });
+    const [localNotifAgenda, setLocalNotifAgenda] = useState<boolean>(() => {
+        return localStorage.getItem('gipp_local_notif_agenda') !== 'false';
+    });
+    const [localNotifLembretes, setLocalNotifLembretes] = useState<boolean>(() => {
+        return localStorage.getItem('gipp_local_notif_lembretes') !== 'false';
+    });
+    const [localNotifSound, setLocalNotifSound] = useState<boolean>(() => {
+        return localStorage.getItem('gipp_local_notif_sound') !== 'false';
+    });
+    const [localNotifPermission, setLocalNotifPermission] = useState<string>(() => {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            return Notification.permission;
+        }
+        return 'default';
+    });
+    const [localNotifTimer, setLocalNotifTimer] = useState<number>(5);
+    const [localNotifTestMsg, setLocalNotifTestMsg] = useState<string>("Sua escala de recepção do Culto de Santa Ceia inicia em 15 minutos!");
+    const [scheduledAlerts, setScheduledAlerts] = useState<any[]>(() => {
+        const saved = localStorage.getItem('gipp_scheduled_alerts');
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [simulatedNotifications, setSimulatedNotifications] = useState<any[]>([]);
+
+    // Guardar configurações locais
+    const saveLocalNotifConfigs = (key: string, value: any) => {
+        localStorage.setItem(key, String(value));
+    };
+
+    // Solicitar permissão nativa para notificações
+    const requestLocalNotificationPermission = async () => {
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            addToast("Notificações locais não são suportadas por este navegador.", "error");
+            return;
+        }
+        try {
+            const permission = await Notification.requestPermission();
+            setLocalNotifPermission(permission);
+            if (permission === 'granted') {
+                setLocalNotifEnabled(true);
+                saveLocalNotifConfigs('gipp_local_notif_enabled', true);
+                addToast("Excelente! Permissão de notificações concedida.", "success");
+                triggerLocalNotification("Notificações Ativas", "Os alertas locais de escala e agenda do GIPP estão ativados!", "success");
+            } else {
+                addToast("Permissão de notificações recusada pelo usuário ou navegador.", "warning");
+            }
+        } catch (err) {
+            console.warn("Erro ao solicitar permissão de notificações no iframe:", err);
+            addToast("Aviso: Chamada bloqueada pela política de Sandbox do Iframe. Exibindo simulação na tela.", "info");
+            setLocalNotifPermission('denied');
+        }
+    };
+
+    // Disparar notificação (nativa ou simulada)
+    const triggerLocalNotification = (title: string, body: string, type: 'success' | 'info' | 'warning' = 'info') => {
+        if (localNotifSound) {
+            try {
+                playNotificationSound();
+            } catch (e) {
+                console.warn("Could not play notification sound:", e);
+            }
+        }
+
+        // Tentar notificação nativa do S.O.
+        let nativeTriggered = false;
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification(title, {
+                    body: body,
+                    icon: '/favicon.ico'
+                });
+                nativeTriggered = true;
+            } catch (err) {
+                console.warn("Native Notification API failed inside sandbox:", err);
+            }
+        }
+
+        // Sempre gerar a simulação visual no topo caso queira ver o feedback no preview
+        const newSim = {
+            id: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            title: title,
+            body: body,
+            time: new Date().toLocaleTimeString(),
+            type: type,
+            native: nativeTriggered
+        };
+        setSimulatedNotifications(prev => [...prev, newSim]);
+
+        // Autodispensar simulação em 6 segundos
+        setTimeout(() => {
+            setSimulatedNotifications(prev => prev.filter(n => n.id !== newSim.id));
+        }, 6000);
+    };
+
+    // Agendar uma notificação local
+    const handleScheduleLocalAlert = () => {
+        if (!localNotifTestMsg.trim()) {
+            addToast("Por favor, digite uma mensagem para o alerta.", "warning");
+            return;
+        }
+
+        const id = `alert_${Date.now()}`;
+        const delayMs = localNotifTimer * 1000;
+        const targetTime = new Date(Date.now() + delayMs);
+
+        const newAlert = {
+            id: id,
+            message: localNotifTestMsg,
+            time: targetTime.toLocaleTimeString(),
+            delaySeconds: localNotifTimer,
+            createdAt: new Date().toLocaleTimeString()
+        };
+
+        const updatedAlerts = [...scheduledAlerts, newAlert];
+        setScheduledAlerts(updatedAlerts);
+        localStorage.setItem('gipp_scheduled_alerts', JSON.stringify(updatedAlerts));
+
+        addToast(`Alerta agendado! Disparo em ${localNotifTimer} segundos.`, "success");
+
+        // Executa o timeout do disparo
+        setTimeout(() => {
+            triggerLocalNotification("Alerta de Escala / Agenda", localNotifTestMsg, "info");
+            // Remover dos agendados
+            setScheduledAlerts(prev => {
+                const filtered = prev.filter(a => a.id !== id);
+                localStorage.setItem('gipp_scheduled_alerts', JSON.stringify(filtered));
+                return filtered;
+            });
+        }, delayMs);
+    };
+
+    // Limpar simulação
+    const dismissSimulated = (id: string) => {
+        setSimulatedNotifications(prev => prev.filter(n => n.id !== id));
+    };
+
+    // Limpar agendamentos pendentes
+    const clearScheduledAlerts = () => {
+        setScheduledAlerts([]);
+        localStorage.removeItem('gipp_scheduled_alerts');
+        addToast("Agendamentos locais limpos.", "info");
+    };
 
     // Sync database settings
     useEffect(() => {
@@ -1533,59 +1682,238 @@ const ModuleConfiguracoesGerais = () => {
 
                 {/* NOTIFICATION TRIGGERS */}
                 {activeTab === 'notificacoes' && (
-                    <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-[2rem] max-w-4xl space-y-6 animate-entrance">
-                        <div className="flex items-center gap-2 pb-4 border-b">
-                            <Bell size={22} className="text-indigo-600" />
-                            <div>
-                                <h3 className="text-base font-black">Lógica de Notificações Push (eSocial)</h3>
-                                <p className="text-xs text-slate-500">Mantenha os membros sempre a par de boletins litúrgicos, obrigações de escala etc.</p>
+                    <div className="space-y-6 animate-entrance max-w-4xl">
+                        {/* 1. eSocial / FCM Push Notifications Card */}
+                        <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm">
+                            <div className="flex items-center gap-2 pb-4 border-b">
+                                <Bell size={22} className="text-indigo-600" />
+                                <div>
+                                    <h3 className="text-base font-black font-[Outfit]">Notificações Push em Nuvem (eSocial GIPP)</h3>
+                                    <p className="text-xs text-slate-500">Mantenha toda a igreja informada via feeds em tempo real enviados diretamente dos servidores.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Canal de Escuta Remota</h4>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-600">Permissão de S.O.:</span>
+                                            <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded border ${fcmPermission === 'granted' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
+                                                {fcmPermission || 'Sem Registro'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-600">Estado na Nuvem:</span>
+                                            <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded border ${fcmStatus === 'subscribed' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500'}`}>
+                                                {fcmStatus || 'Inativo'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={requestFcmPermission}
+                                        className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black tracking-wider uppercase shadow transition-all cursor-pointer"
+                                    >
+                                        Solicitar Token Push GIPP
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Token de Registro do Navegador</h4>
+                                    <div className="bg-slate-100 p-4 rounded-xl border border-slate-150 font-mono text-[10px] break-all group relative max-h-24 overflow-y-auto">
+                                        {fcmToken ? (
+                                            <>
+                                                <p className="text-slate-600 select-all leading-tight">{fcmToken}</p>
+                                                <button 
+                                                    onClick={() => { navigator.clipboard.writeText(fcmToken); addToast("Token copiado!", "success"); }}
+                                                    className="absolute top-2 right-2 bg-white border text-[8px] font-black uppercase px-2 py-0.5 rounded shadow cursor-pointer"
+                                                >
+                                                    Copiar
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <span className="text-slate-400 italic">// Nenhum token push corporativo registrado para este dispositivo.</span>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">Qualquer atualização de escala ou informativo institucional envia sinais eletrônicos automáticos via Google Cloud Messaging.</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-slate-50/50 p-5 rounded-2xl border flex flex-col justify-between">
-                                <div className="space-y-3">
-                                    <h4 className="text-xs font-black uppercase text-slate-400">Canal Ativo Navegador</h4>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold">Permissão FCM:</span>
-                                        <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded border ${fcmPermission === 'granted' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
-                                            {fcmPermission || 'Sem Registro'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold">Estado de Escuta:</span>
-                                        <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded border ${fcmStatus === 'subscribed' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500'}`}>
-                                            {fcmStatus || 'Inativo'}
-                                        </span>
-                                    </div>
+                        {/* 2. LOCAL BROWSER NOTIFICATIONS & SCHEDULING CARD */}
+                        <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm">
+                            <div className="flex items-center gap-2 pb-4 border-b">
+                                <Sparkles size={22} className="text-indigo-600" />
+                                <div>
+                                    <h3 className="text-base font-black font-[Outfit]">Configuração de Notificações Push Locais</h3>
+                                    <p className="text-xs text-slate-500">Ative e configure alertas locais emitidos diretamente do seu navegador para monitorar escalas de serviço e a agenda litúrgica.</p>
                                 </div>
-
-                                <button 
-                                    onClick={requestFcmPermission}
-                                    className="w-full mt-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold tracking-wider uppercase shadow transition-all"
-                                >
-                                    Solicitar Token Push
-                                </button>
                             </div>
 
-                            <div className="space-y-4">
-                                <h4 className="text-xs font-black uppercase text-slate-400">Token Corporativo de Teste</h4>
-                                <div className="bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border font-mono text-[10px] break-all group relative">
-                                    {fcmToken ? (
-                                        <>
-                                            <p className="text-slate-600 dark:text-slate-400 prose select-all">{fcmToken}</p>
-                                            <button 
-                                                onClick={() => { navigator.clipboard.writeText(fcmToken); addToast("Token copiado!", "success"); }}
-                                                className="absolute top-2 right-2 bg-white border text-[8px] font-black uppercase px-2 py-0.5 rounded shadow group-hover:block"
-                                            >
-                                                Copiar
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <span className="text-slate-400 italic">// Nenhum token de teste foi gerado para este navegador ainda.</span>
-                                    )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Left: Activation & Config Toggles */}
+                                <div className="space-y-5">
+                                    <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-150 space-y-4">
+                                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Permissão de Notificação Local</h4>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-600">Notificações Locais:</span>
+                                            <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full border ${localNotifPermission === 'granted' && localNotifEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                {localNotifPermission === 'granted' && localNotifEnabled ? 'Habilitado' : 'Desabilitado'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-600">Permissão do Navegador:</span>
+                                            <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded border font-mono ${localNotifPermission === 'granted' ? 'bg-emerald-50 text-emerald-600' : localNotifPermission === 'denied' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                {localNotifPermission}
+                                            </span>
+                                        </div>
+
+                                        <button 
+                                            type="button"
+                                            onClick={requestLocalNotificationPermission}
+                                            className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black tracking-wider uppercase shadow transition-all cursor-pointer flex items-center justify-center gap-2"
+                                        >
+                                            <Bell size={13} />
+                                            {localNotifPermission === 'granted' ? 'Renovar Permissão Local' : 'Permitir no Sistema Operacional'}
+                                        </button>
+                                    </div>
+
+                                    {/* Preference Toggles */}
+                                    <div className="bg-white p-5 rounded-2xl border border-slate-150 space-y-3.5">
+                                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Preferências de Escala e Agenda</h4>
+                                        
+                                        <label className="flex items-center justify-between cursor-pointer p-1.5 hover:bg-slate-50 rounded-xl transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">Alertas de Escalas Ativas</span>
+                                                <span className="text-[10px] text-slate-400">Notificar quando você for escalado nos ministérios</span>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={localNotifEscalas} 
+                                                onChange={(e) => { setLocalNotifEscalas(e.target.checked); saveLocalNotifConfigs('gipp_local_notif_escalas', e.target.checked); }}
+                                                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                            />
+                                        </label>
+
+                                        <label className="flex items-center justify-between cursor-pointer p-1.5 hover:bg-slate-50 rounded-xl transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">Modificações na Agenda</span>
+                                                <span className="text-[10px] text-slate-400">Notificar alterações de horários de cultos, ensaios e reuniões</span>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={localNotifAgenda} 
+                                                onChange={(e) => { setLocalNotifAgenda(e.target.checked); saveLocalNotifConfigs('gipp_local_notif_agenda', e.target.checked); }}
+                                                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                            />
+                                        </label>
+
+                                        <label className="flex items-center justify-between cursor-pointer p-1.5 hover:bg-slate-50 rounded-xl transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">Lembretes de Escala</span>
+                                                <span className="text-[10px] text-slate-400">Emitir alerta prévio de obrigações de escala</span>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={localNotifLembretes} 
+                                                onChange={(e) => { setLocalNotifLembretes(e.target.checked); saveLocalNotifConfigs('gipp_local_notif_lembretes', e.target.checked); }}
+                                                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                            />
+                                        </label>
+
+                                        <label className="flex items-center justify-between cursor-pointer p-1.5 hover:bg-slate-50 rounded-xl transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">Sinal Sonoro</span>
+                                                <span className="text-[10px] text-slate-400">Tocar som GIPP junto com a notificação</span>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={localNotifSound} 
+                                                onChange={(e) => { setLocalNotifSound(e.target.checked); saveLocalNotifConfigs('gipp_local_notif_sound', e.target.checked); }}
+                                                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                            />
+                                        </label>
+                                    </div>
                                 </div>
-                                <p className="text-[10px] text-slate-450 leading-relaxed font-sans font-semibold">Toda alteração de escala ou webmail dispara feeds silenciosos de pushes às credenciais ativas cadastrados na nuvem.</p>
+
+                                {/* Right: Immediate test & Manual Scheduling Simulator */}
+                                <div className="space-y-5">
+                                    <div className="bg-slate-50 p-5 rounded-2xl border border-dashed border-slate-300 space-y-4">
+                                        <h4 className="text-xs font-black uppercase text-indigo-600 tracking-wider flex items-center gap-1.5 font-[Outfit]">
+                                            <Clock size={12} />
+                                            Simulador e Agendador de Alertas
+                                        </h4>
+                                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                                            Ideal para testar o recebimento de alertas de escala no sistema operacional. Caso esteja visualizando o app em modo iframe sandbox, o GIPP exibirá uma simulação idêntica no topo da tela.
+                                        </p>
+
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5">Mensagem do Alerta de Teste</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={localNotifTestMsg}
+                                                    onChange={(e) => setLocalNotifTestMsg(e.target.value)}
+                                                    placeholder="Ex: Escala de Louvor alterada para o próximo culto!"
+                                                    className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-indigo-500"
+                                                />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5">Disparar em</label>
+                                                    <select 
+                                                        value={localNotifTimer}
+                                                        onChange={(e) => setLocalNotifTimer(Number(e.target.value))}
+                                                        className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-indigo-500 cursor-pointer font-bold"
+                                                    >
+                                                        <option value={3}>3 segundos</option>
+                                                        <option value={5}>5 segundos</option>
+                                                        <option value={10}>10 segundos</option>
+                                                        <option value={30}>30 segundos</option>
+                                                        <option value={60}>1 minuto</option>
+                                                    </select>
+                                                </div>
+                                                <div className="flex items-end">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => triggerLocalNotification("Teste de S.O. GIPP", localNotifTestMsg, "success")}
+                                                        className="w-full py-2 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-xl text-xs font-black uppercase transition-all cursor-pointer border border-slate-250/60"
+                                                    >
+                                                        Teste Rápido
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                type="button"
+                                                onClick={handleScheduleLocalAlert}
+                                                className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-black tracking-wider uppercase shadow transition-all cursor-pointer flex items-center justify-center gap-2"
+                                            >
+                                                <Clock size={13} />
+                                                Agendar Alerta Temporizado
+                                            </button>
+                                        </div>
+
+                                        {scheduledAlerts.length > 0 && (
+                                            <div className="pt-4 border-t border-slate-200/60 space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase text-slate-400">Agendamentos Ativos ({scheduledAlerts.length})</span>
+                                                    <button type="button" onClick={clearScheduledAlerts} className="text-[9px] font-black uppercase text-rose-500 hover:text-rose-700 transition-colors">Limpar</button>
+                                                </div>
+                                                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                                                    {scheduledAlerts.map((alert: any) => (
+                                                        <div key={alert.id} className="bg-slate-100 p-2 rounded-xl border border-slate-200 flex items-center justify-between text-[10px] text-slate-600">
+                                                            <span className="truncate font-semibold max-w-[150px]">{alert.message}</span>
+                                                            <span className="font-mono text-indigo-600 font-bold">em {alert.delaySeconds}s ({alert.time})</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2259,6 +2587,39 @@ const ModuleConfiguracoesGerais = () => {
                     </div>
                 )}
             </div>
+
+            {/* Floating Simulated System Notifications */}
+            {simulatedNotifications.length > 0 && (
+                <div className="fixed top-4 right-4 z-[9999] space-y-3 w-80 max-w-[calc(100vw-2rem)] pointer-events-auto">
+                    {simulatedNotifications.map(notif => (
+                        <div key={notif.id} className="bg-slate-900/95 text-white p-4 rounded-2xl shadow-2xl border border-slate-700/50 backdrop-blur-md flex gap-3 animate-entrance relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
+                            <div className="p-1.5 bg-indigo-500/20 text-indigo-400 rounded-xl h-fit">
+                                <Bell size={16} />
+                            </div>
+                            <div className="flex-1 min-w-0 pr-4">
+                                <div className="flex justify-between items-baseline">
+                                    <h4 className="text-xs font-black tracking-tight">{notif.title}</h4>
+                                    <span className="text-[9px] font-semibold text-slate-400 font-mono">{notif.time}</span>
+                                </div>
+                                <p className="text-[11px] text-slate-200 mt-1 font-medium leading-relaxed">{notif.body}</p>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider">
+                                        {notif.native ? "🔔 Notificação de S.O." : "💻 Simulação Local (Sandbox)"}
+                                    </span>
+                                </div>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => dismissSimulated(notif.id)} 
+                                className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors text-lg font-bold"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

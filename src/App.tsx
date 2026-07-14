@@ -62,7 +62,6 @@ import ModuleCertificados from './components/ModuleCertificados';
 import ModuleEBD from './components/ModuleEBD';
 import ModuleGestaoCursos from './components/ModuleGestaoCursos';
 import ModuleTeologia from './components/ModuleTeologia';
-import ModuleRevistasInterativas from './components/ModuleRevistasInterativas';
 import ModuleRedeSocial from './components/ModuleRedeSocial';
 import ModuleConfiguracoesGerais from './components/ModuleConfiguracoesGerais';
 import { DiagnosticsDashboard } from './components/DiagnosticsDashboard';
@@ -3505,7 +3504,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                  const gruposPermissoes = [
                      { titulo: "Administrativo & Cadastros", opcoes: [ { id: 'access_membros', label: 'Gestão de Membros & Acessos do Portal' }, { id: 'access_visitantes', label: 'CRM de Visitantes & Consolidação' }, { id: 'access_igreja', label: 'Matriz, Filiais & Contas Bancárias' }, { id: 'access_patrimonio', label: 'Gestão de Patrimônio & Inventário' }, { id: 'access_frotas', label: 'Controle de Frotas & Gastos' }, { id: 'access_celulas', label: 'Células e Grupos' }, { id: 'access_ministerios', label: 'Ministérios (Departamentos)' } ] },
                      { titulo: "Financeiro", opcoes: [ { id: 'access_fin_entradas', label: 'Entradas e Dízimos' }, { id: 'access_fin_saidas', label: 'Saídas e Despesas' }, { id: 'access_fin_analise', label: 'DRE, Relatórios & Conciliação Bancária' }, { id: 'access_fin_carnes', label: 'Gestão de Carnês & Engajamento' }, { id: 'access_fin_cadastros', label: 'Utilitários (Fornecedores/C. Custo)' } ] },
-                     { titulo: "Secretaria & Módulos", opcoes: [ { id: 'access_sec_agenda', label: 'Secretaria Digital (Agenda/Tarefas/Whats)' }, { id: 'access_sec_certificados', label: 'Certificados, Estúdio de Carteirinhas & Credenciais' }, { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, { id: 'access_ebd', label: 'Gestão EBD (Turmas/Chamadas)' }, { id: 'access_revistas_interativas', label: 'Revistas Interativas IA (Estudo EBD)' }, { id: 'access_gestao_cursos', label: 'EAD Cursos de Capacitação' }, { id: 'access_teologia', label: 'Universidade Teológica GIPP' }, { id: 'access_missoes', label: 'Missões (Missionários/Agências/Caixa)' } ] },
+                     { titulo: "Secretaria & Módulos", opcoes: [ { id: 'access_sec_agenda', label: 'Secretaria Digital (Agenda/Tarefas/Whats)' }, { id: 'access_sec_certificados', label: 'Certificados, Estúdio de Carteirinhas & Credenciais' }, { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, { id: 'access_ebd', label: 'Gestão EBD (Turmas/Chamadas)' }, { id: 'access_gestao_cursos', label: 'EAD Cursos de Capacitação' }, { id: 'access_teologia', label: 'Universidade Teológica GIPP' }, { id: 'access_missoes', label: 'Missões (Missionários/Agências/Caixa)' } ] },
                      { titulo: "Comunicação, Mídia & IA", opcoes: [ { id: 'access_midia', label: 'Estúdio GIPP (Artes e Redes Sociais)' }, { id: 'access_boletim', label: 'Gestão do Boletim Digital' }, { id: 'access_email', label: 'Webmail Direto (Caixa de Entrada)' }, { id: 'access_ia', label: 'Assistente Pastoral IA' }, { id: 'access_interativo', label: 'Módulo Interativo & Gamificação' } ] },
                      { titulo: "Configurações Avançadas", opcoes: [ { id: 'access_config_sistema', label: 'Configurações Gerais' }, { id: 'access_config_visual', label: 'Personalização Visual' }, { id: 'access_config_backup', label: 'Backup Geral de Dados' }, { id: 'access_auditoria', label: 'Auditoria & Logs' }, { id: 'access_lixeira', label: 'Lixeira Virtual' } ] }
                  ];
@@ -9423,8 +9422,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
         const defaultPlanos = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'revistas_interativas', 'access_interativo'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'revistas_interativas', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -9615,7 +9614,6 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                 <div>
                     <MenuGroup label="Secretaria Eclesiástica" />
                     {hasPermission('access_boletim') && checkPlan('boletim') && <MenuItem id="boletim" icon={Newspaper} label="Boletim Digital" />}
-                    {hasPermission('access_revistas_interativas') && checkPlan('revistas_interativas') && <MenuItem id="revistas_interativas" icon={BookOpen} label="Revistas Interativas" />}
                     {checkPlan('biblia') && <MenuItem id="biblia" icon={Book} label="Bíblia de Estudo" />}
                     {hasPermission('access_email') && checkPlan('email_interno') && <MenuItem id="email_interno" icon={Mail} label="Webmail Direto" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
@@ -11275,18 +11273,11 @@ const PortalHome = ({ user, db, setView }) => {
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_ebd') && (
-                    <>
                     <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group">
                         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Estudo EBD</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
                     </button>
-                    <button onClick={() => setView('portal_revistas_interativas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all flex flex-col items-start group">
-                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpen size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Revistas IA</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Oficiais & Resumos</span>
-                    </button>
-                    </>
                 )}
                 {isProfessor && (
                     <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1">
@@ -14654,7 +14645,6 @@ const MemberPortalLayout = () => {
             case 'portal_tesoureiro': return <ModulePortalTesoureiro />;
             case 'portal_financas': return <PortalFinanceiro user={user} db={db} isTesoureiro={isTesoureiro} />;
             case 'portal_ebd': return <PortalEBD user={user} db={db} />;
-            case 'portal_revistas_interativas': return <ModuleRevistasInterativas db={db} isPortal={true} />;
             case 'portal_professor_ebd': return <ModuleEBD isProfessorOnly={true} />;
             case 'portal_frequencia': return <PortalFrequencia user={user} db={db} />;
             case 'portal_salinha_kids': return <ModuleSalinhaKids mode="portal" />;
@@ -14928,7 +14918,6 @@ const AppLayout = () => {
         'carteirinha_studio': { component: ModuleCarteirinha, access: 'access_sec_certificados' },
         'credencial_lote': { component: ModuleCredencial, access: 'access_sec_certificados' },
         'secretaria_ebd': { component: ModuleEBD, access: 'access_ebd' },
-        'revistas_interativas': { component: ModuleRevistasInterativas, access: 'access_revistas_interativas' },
         'salinha_kids': { component: ModuleSalinhaKids, access: 'access_salinha_kids' },
         'gestao_cursos': { component: ModuleGestaoCursos, access: 'access_gestao_cursos' },
         'curso_teologia': { component: ModuleTeologia, access: 'access_teologia' },
@@ -15396,7 +15385,6 @@ export default function App() {
           { label: "Conciliação Bancária DDA", view: "fin_conciliacao", category: "Navegação", icon: CreditCard },
           { label: "Curso de Teologia / Faculdade", view: "curso_teologia", category: "Navegação", icon: GraduationCap },
           { label: "Escola Bíblica Dominical (EBD)", view: "secretaria_ebd", category: "Navegação", icon: BookOpenText },
-          { label: "Revistas Interativas (IA)", view: "revistas_interativas", category: "Navegação", icon: BookOpen },
           { label: "Células e Pequenos Grupos", view: "cad_celula", category: "Navegação", icon: Home },
           { label: "Secretaria Integrada & Agenda", view: "secretaria_integrada", category: "Navegação", icon: FileText },
           { label: "Assistente Pastoral IA", view: "assistente_ai", category: "Navegação", icon: Sparkles },
@@ -16960,11 +16948,11 @@ export default function App() {
       if (user.funcao_administrativa) {
           const role = user.funcao_administrativa.toUpperCase();
           if (role === 'PASTOR PRESIDENTE' || role === 'PASTOR AUXILIAR') {
-              const pastorPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_revistas_interativas', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
+              const pastorPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
               if (pastorPerms.includes(perm)) return true;
           }
           if (role === 'SECRETARIO') {
-              const secPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_revistas_interativas', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+              const secPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (secPerms.includes(perm)) return true;
           }
           if (role === 'TESOUREIRO' || role === 'CONTADOR') {
@@ -16972,7 +16960,7 @@ export default function App() {
               if (financialPerms.includes(perm)) return true;
           }
           if (role === 'ADMINISTRADOR') {
-              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_revistas_interativas', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+              const adminPerms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (adminPerms.includes(perm)) return true;
           }
           if (role === 'ADVOGADO') {
@@ -16988,11 +16976,11 @@ export default function App() {
               if (coordPerms.includes(perm)) return true;
           }
           if (role === 'SUPERINTENDENTE') {
-              const superPerms = ['access_ebd', 'access_revistas_interativas', 'access_sec_agenda', 'access_manual'];
+              const superPerms = ['access_ebd', 'access_sec_agenda', 'access_manual'];
               if (superPerms.includes(perm)) return true;
           }
           if (role === 'AUXILIAR') {
-              const auxPerms = ['access_sec_agenda', 'access_ebd', 'access_revistas_interativas', 'access_gestao_cursos', 'access_manual'];
+              const auxPerms = ['access_sec_agenda', 'access_ebd', 'access_gestao_cursos', 'access_manual'];
               if (auxPerms.includes(perm)) return true;
           }
       }
