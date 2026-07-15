@@ -41,3 +41,28 @@
 .animate-typewriter {
     animation: typewriter 0.5s steps(40, end) forwards;
 }
+
+/* Alternating colors for all table body rows in the system to improve readability */
+tbody tr:nth-child(even) {
+  background-color: rgba(99, 102, 241, 0.05) !important; /* light mode: distinct indigo-tinted slate */
+}
+tbody tr:nth-child(odd) {
+  background-color: #ffffff !important;
+}
+
+/* Support for dark mode themes and high-contrast tables */
+[data-os-theme="dark"] tbody tr:nth-child(even),
+[data-os-theme="premium_black"] tbody tr:nth-child(even),
+[data-os-theme="msdos"] tbody tr:nth-child(even),
+[data-os-theme="futuristic"] tbody tr:nth-child(even),
+[data-os-theme="linux"] tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.06) !important; /* dark mode: distinct light-slate tint */
+}
+[data-os-theme="dark"] tbody tr:nth-child(odd),
+[data-os-theme="premium_black"] tbody tr:nth-child(odd),
+[data-os-theme="msdos"] tbody tr:nth-child(odd),
+[data-os-theme="futuristic"] tbody tr:nth-child(odd),
+[data-os-theme="linux"] tbody tr:nth-child(odd) {
+  background-color: transparent !important;
+}
+

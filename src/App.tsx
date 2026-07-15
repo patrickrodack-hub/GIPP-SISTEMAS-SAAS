@@ -3205,7 +3205,7 @@ export const GenericTable = ({
           </thead>
           <tbody className="divide-y divide-white/40 bg-transparent">
             {paginatedData.map((item, idx) => (
-              <tr key={item.id || `row-${idx}`} className="hover:bg-white/60 transition-all duration-300 group/row relative border-l-4 border-transparent hover:border-indigo-500">
+              <tr key={item.id || `row-${idx}`} className={`hover:bg-white/60 transition-all duration-300 group/row relative border-l-4 border-transparent hover:border-indigo-500 ${idx % 2 === 0 ? 'bg-white/40' : 'bg-slate-50/10'}`}>
                 {onSelectionChange && <td className="px-4 py-5"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={()=>handleSelect(item.id)} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"/></td>}
                 {columns.map((c, i) => {
                     let cellContent;
@@ -3280,6 +3280,84 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
     const [tempMember, setTempMember] = useState({ id: '', funcao: '' });
     const [loadingAiPlan, setLoadingAiPlan] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Crescimento Eclesiástico States
+    const [membroFormTab, setMembroFormTab] = useState<'dados' | 'crescimento'>('dados');
+    const [histDate, setHistDate] = useState('');
+    const [histType, setHistType] = useState('Consagração');
+    const [histTargetCargo, setHistTargetCargo] = useState('');
+    const [histResponsible, setHistResponsible] = useState('');
+    const [histAta, setHistAta] = useState('');
+    const [editingHistId, setEditingHistId] = useState<string | null>(null);
+
+    const handleAddOrUpdateHistory = () => {
+        if (!histDate || !histType || !histResponsible || !histAta) {
+            addToast("Por favor, preencha todos os campos obrigatórios do histórico.", "warning");
+            return;
+        }
+
+        const currentHistory = Array.isArray(data.crescimento_eclesiastico) ? data.crescimento_eclesiastico : [];
+
+        if (editingHistId) {
+            const updated = currentHistory.map(item => {
+                if (item.id === editingHistId) {
+                    return {
+                        ...item,
+                        data: histDate,
+                        tipo: histType,
+                        cargo_alvo: histTargetCargo || '',
+                        responsavel: histResponsible,
+                        ata: histAta
+                    };
+                }
+                return item;
+            });
+            setData({ ...data, crescimento_eclesiastico: updated });
+            addToast("Histórico de crescimento eclesiástico atualizado com sucesso!", "success");
+            setEditingHistId(null);
+        } else {
+            const newRecord = {
+                id: `hist_${Date.now()}`,
+                data: histDate,
+                tipo: histType,
+                cargo_alvo: histTargetCargo || '',
+                responsavel: histResponsible,
+                ata: histAta
+            };
+            setData({ ...data, crescimento_eclesiastico: [...currentHistory, newRecord] });
+            addToast("Histórico de crescimento eclesiástico adicionado!", "success");
+        }
+
+        setHistDate('');
+        setHistType('Consagração');
+        setHistTargetCargo('');
+        setHistResponsible('');
+        setHistAta('');
+    };
+
+    const handleEditHistory = (record) => {
+        setEditingHistId(record.id);
+        setHistDate(record.data || '');
+        setHistType(record.tipo || 'Consagração');
+        setHistTargetCargo(record.cargo_alvo || '');
+        setHistResponsible(record.responsavel || '');
+        setHistAta(record.ata || '');
+    };
+
+    const handleDeleteHistory = (recordId) => {
+        const currentHistory = Array.isArray(data.crescimento_eclesiastico) ? data.crescimento_eclesiastico : [];
+        const filtered = currentHistory.filter(item => item.id !== recordId);
+        setData({ ...data, crescimento_eclesiastico: filtered });
+        addToast("Histórico de crescimento eclesiástico removido.", "info");
+        if (editingHistId === recordId) {
+            setEditingHistId(null);
+            setHistDate('');
+            setHistType('Consagração');
+            setHistTargetCargo('');
+            setHistResponsible('');
+            setHistAta('');
+        }
+    };
 
     const handleInternalSave = async () => {
         setIsSaving(true);
@@ -3663,8 +3741,28 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
              case 'membro':
                  return (
                     <div className="space-y-6">
-                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
-                            <h4 className="text-sm font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2"><User size={16} /> 1. Dados Pessoais & Filiação</h4>
+                        {/* Navegação de Abas do Membro */}
+                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner mb-2">
+                            <button
+                                type="button"
+                                onClick={() => setMembroFormTab('dados')}
+                                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${membroFormTab === 'dados' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/40' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                            >
+                                <User size={14} /> Dados Cadastrais
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMembroFormTab('crescimento')}
+                                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${membroFormTab === 'crescimento' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/40' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                            >
+                                <TrendingUp size={14} /> Crescimento Eclesiástico
+                            </button>
+                        </div>
+
+                        {membroFormTab === 'dados' ? (
+                            <div className="space-y-6 animate-entrance">
+                                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                                    <h4 className="text-sm font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2"><User size={16} /> 1. Dados Pessoais & Filiação</h4>
                             <div className="flex gap-4 items-center mb-4">
                                 <div className="w-24 h-24 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden relative group">
                                     {data.foto ? <img src={data.foto} className="w-full h-full object-cover" /> : <Camera size={32} className="text-slate-300"/>}
@@ -3819,6 +3917,159 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 )}
                             </div>
                         </div>
+                        </div>
+                        ) : (
+                            <div className="space-y-6 animate-entrance">
+                                {/* Form para Registrar Crescimento */}
+                                <div className="bg-gradient-to-br from-indigo-50/50 to-white p-5 rounded-2xl border border-indigo-100 shadow-sm space-y-4 text-left">
+                                    <div className="flex justify-between items-center pb-2 border-b border-indigo-100">
+                                        <h4 className="text-xs font-black text-indigo-700 uppercase tracking-widest flex items-center gap-1.5">
+                                            <Award size={14} /> {editingHistId ? 'Editar Cerimônia' : 'Registrar Nova Cerimônia'}
+                                        </h4>
+                                        {editingHistId && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => {
+                                                    setEditingHistId(null);
+                                                    setHistDate('');
+                                                    setHistType('Consagração');
+                                                    setHistTargetCargo('');
+                                                    setHistResponsible('');
+                                                    setHistAta('');
+                                                }} 
+                                                className="text-[10px] font-bold text-rose-500 hover:bg-rose-50 px-2 py-1 rounded transition-colors cursor-pointer"
+                                            >
+                                                Cancelar Edição
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormInput 
+                                            label="Data da Cerimônia" 
+                                            type="date" 
+                                            value={histDate} 
+                                            onChange={v => setHistDate(v)} 
+                                            required 
+                                        />
+                                        <FormSelect 
+                                            label="Tipo de Cerimônia" 
+                                            value={histType} 
+                                            onChange={v => setHistType(v)} 
+                                            options={['Batismo em Águas', 'Consagração', 'Ordenação', 'Separação de cargos eclesiais', 'Outro']} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormInput 
+                                            label="Responsável (Quem Realizou)" 
+                                            value={histResponsible} 
+                                            onChange={v => setHistResponsible(v)} 
+                                            required 
+                                            placeholder="Ex: Pr. Geraldo de Souza" 
+                                        />
+                                        <FormInput 
+                                            label="Nº da Ata da Assembleia" 
+                                            value={histAta} 
+                                            onChange={v => setHistAta(v)} 
+                                            required 
+                                            placeholder="Ex: Ata 142/2026" 
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <FormInput 
+                                            label="Cargo Alvo / Detalhes (Opcional)" 
+                                            value={histTargetCargo} 
+                                            onChange={v => setHistTargetCargo(v)} 
+                                            placeholder="Ex: Auxiliar, Diácono, Presbítero, etc." 
+                                        />
+                                    </div>
+                                    <div className="flex justify-end pt-2">
+                                        <button 
+                                            type="button" 
+                                            onClick={handleAddOrUpdateHistory} 
+                                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-100 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            {editingHistId ? (
+                                                <><Check size={14} /> Atualizar Registro</>
+                                            ) : (
+                                                <><Plus size={14} /> Adicionar ao Histórico</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Listagem de Crescimento Eclesiástico */}
+                                <div className="space-y-3 text-left">
+                                    <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">Histórico de Crescimento Eclesiástico</h4>
+                                    <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                                        {Array.isArray(data.crescimento_eclesiastico) && data.crescimento_eclesiastico.length > 0 ? (
+                                            data.crescimento_eclesiastico.map((record, index) => {
+                                                const getCeremonyBadgeClass = (tipo) => {
+                                                    const t = String(tipo).toLowerCase();
+                                                    if (t.includes('batismo')) return 'bg-blue-50 text-blue-600 border-blue-100';
+                                                    if (t.includes('consagra')) return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+                                                    if (t.includes('ordena')) return 'bg-purple-50 text-purple-600 border-purple-100';
+                                                    if (t.includes('separa')) return 'bg-amber-50 text-amber-600 border-amber-100';
+                                                    return 'bg-slate-50 text-slate-600 border-slate-150';
+                                                };
+                                                return (
+                                                    <div 
+                                                        key={record.id || index} 
+                                                        className="flex items-center justify-between p-4 bg-white border border-slate-150 rounded-2xl shadow-sm hover:border-slate-300 transition-colors"
+                                                    >
+                                                        <div className="text-left space-y-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 border rounded-md ${getCeremonyBadgeClass(record.tipo)}`}>
+                                                                    {record.tipo}
+                                                                </span>
+                                                                <span className="text-xs font-black text-slate-700">
+                                                                    {formatDateLocal(record.data)}
+                                                                </span>
+                                                                {record.cargo_alvo && (
+                                                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50/50 border border-indigo-100/50 px-1.5 py-0.5 rounded uppercase">
+                                                                        Cargo: {record.cargo_alvo}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-slate-600 font-medium">
+                                                                Realizado por: <strong className="text-slate-800 uppercase">{record.responsavel}</strong>
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                                                Ata da Assembleia: {record.ata}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => handleEditHistory(record)} 
+                                                                className="p-2 text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors border border-indigo-100 bg-white cursor-pointer" 
+                                                                title="Editar"
+                                                            >
+                                                                <Edit size={14}/>
+                                                            </button>
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => handleDeleteHistory(record.id)} 
+                                                                className="p-2 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-xl transition-colors border border-rose-100 bg-white cursor-pointer" 
+                                                                title="Excluir"
+                                                            >
+                                                                <Trash2 size={14}/>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                                <TrendingUp className="mx-auto text-slate-300 mb-2 animate-pulse" size={32} />
+                                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Nenhum registro de crescimento</p>
+                                                <p className="text-[10px] text-slate-400 mt-1">Preencha o formulário acima para registrar cerimônias, batismos ou consagrações.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                  );
              case 'usuario':
@@ -7580,6 +7831,38 @@ export const PrintSystem = ({
                                      <Box label="Pastor Presidente Origem" value={m.pastor_origem_presidente} span={2}/>
                                  </>
                              )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-sm bg-slate-800 text-white p-1 px-2 uppercase tracking-widest">5. Histórico de Crescimento Eclesiástico</h3>
+                        <div className="border border-slate-400">
+                            {Array.isArray(m.crescimento_eclesiastico) && m.crescimento_eclesiastico.length > 0 ? (
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-100 border-b border-slate-300">
+                                            <th className="p-2 font-bold uppercase text-[9px] text-slate-600 border-r border-slate-300">Data</th>
+                                            <th className="p-2 font-bold uppercase text-[9px] text-slate-600 border-r border-slate-300">Cerimônia / Tipo</th>
+                                            <th className="p-2 font-bold uppercase text-[9px] text-slate-600 border-r border-slate-300">Responsável</th>
+                                            <th className="p-2 font-bold uppercase text-[9px] text-slate-600 border-r border-slate-300">Nº Ata</th>
+                                            <th className="p-2 font-bold uppercase text-[9px] text-slate-600">Cargo Alvo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-350">
+                                        {m.crescimento_eclesiastico.map((rec: any, idx: number) => (
+                                            <tr key={idx} className="hover:bg-slate-50/50">
+                                                <td className="p-2 font-semibold text-slate-700 border-r border-slate-300">{formatDateLocal(rec.data)}</td>
+                                                <td className="p-2 font-bold text-indigo-700 uppercase border-r border-slate-300">{rec.tipo}</td>
+                                                <td className="p-2 font-semibold text-slate-800 uppercase border-r border-slate-300">{rec.responsavel}</td>
+                                                <td className="p-2 text-slate-500 font-mono text-[10px] border-r border-slate-300">{rec.ata}</td>
+                                                <td className="p-2 font-bold text-emerald-700 uppercase">{rec.cargo_alvo || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="p-4 text-center italic text-slate-400 font-medium">Nenhum registro de crescimento eclesiástico arquivado.</div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -13108,6 +13391,18 @@ const PortalTarefas = ({ user, db }) => {
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedTaskForHistory, setSelectedTaskForHistory] = useState<any>(null);
 
+    // States for Configurar Lembrete modal
+    const [reminderModalOpen, setReminderModalOpen] = useState(false);
+    const [selectedTaskForReminder, setSelectedTaskForReminder] = useState<any>(null);
+    const [customReminderTime, setCustomReminderTime] = useState("");
+    const [selectedReminderOption, setSelectedReminderOption] = useState("1hour");
+
+    const isToday = (dateStr?: string) => {
+        if (!dateStr) return false;
+        const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+        return dateStr === todayStr;
+    };
+
     const minhasTarefas = (db.tarefas || []).filter(t => 
         (t.equipe || []).some(m => m.id === user.id || m.nome === user.nome)
     ).sort((a, b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
@@ -13169,36 +13464,50 @@ const PortalTarefas = ({ user, db }) => {
         }
     };
 
-    const handleAddAlarm = async (task: any, option: string) => {
+    const handleAddAlarm = async (task: any, option: string, customTimeStr?: string) => {
         try {
             if ('Notification' in window && Notification.permission !== 'granted') {
                 await Notification.requestPermission();
             }
             
-            const parts = task.data ? task.data.split('-') : [];
-            let taskDate: Date;
-            if (parts.length === 3) {
-                taskDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 8, 0, 0); // Default to 8 AM on day
+            let targetTime: number;
+            let optionLabel = 'Lembrete';
+            
+            if (option === 'custom' && customTimeStr) {
+                targetTime = new Date(customTimeStr).getTime();
+                optionLabel = `Horário Específico: ${new Date(customTimeStr).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})}`;
             } else {
-                taskDate = new Date();
+                const parts = task.data ? task.data.split('-') : [];
+                let taskDate: Date;
+                if (parts.length === 3) {
+                    let hour = 8;
+                    let min = 0;
+                    if (task.hora && task.hora.includes(':')) {
+                        const hParts = task.hora.split(':');
+                        hour = parseInt(hParts[0]) || 8;
+                        min = parseInt(hParts[1]) || 0;
+                    }
+                    taskDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), hour, min, 0);
+                } else {
+                    taskDate = new Date();
+                }
+                
+                let offset = 0;
+                if (option === '1day') {
+                    offset = 24 * 60 * 60 * 1000;
+                    optionLabel = '1 dia antes';
+                    targetTime = taskDate.getTime() - offset;
+                } else if (option === '1hour') {
+                    offset = 60 * 60 * 1000;
+                    optionLabel = '1 hora antes';
+                    targetTime = taskDate.getTime() - offset;
+                } else {
+                    optionLabel = 'No dia da tarefa (08h)';
+                    targetTime = taskDate.getTime();
+                }
             }
             
-            let offset = 0;
-            let optionLabel = 'No Dia do Compromisso';
-            
-            if (option === '1day') {
-                offset = 24 * 60 * 60 * 1000;
-                optionLabel = '1 dia antes';
-            } else if (option === '1hour') {
-                offset = 60 * 60 * 1000;
-                optionLabel = '1 hora antes';
-            } else {
-                optionLabel = 'No dia (08h)';
-            }
-            
-            const targetTime = taskDate.getTime() - offset;
-            
-            const alarmId = `${task.id}_${option}`;
+            const alarmId = `${task.id}_${option}_${Date.now()}`;
             const newAlarm = {
                 id: alarmId,
                 taskId: task.id,
@@ -13209,7 +13518,7 @@ const PortalTarefas = ({ user, db }) => {
                 optionLabel: optionLabel
             };
             
-            const updated = activeAlarms.filter(a => a.id !== alarmId);
+            const updated = activeAlarms.filter(a => a.taskId !== task.id || !a.id.includes(option));
             updated.push(newAlarm);
             
             localStorage.setItem('gipp_local_alarms', JSON.stringify(updated));
@@ -13218,6 +13527,35 @@ const PortalTarefas = ({ user, db }) => {
         } catch (err) {
             console.error(err);
             addToast("Erro ao programar alarme.", "error");
+        }
+    };
+
+    const handleEnableDesktopNotifications = async (task: any) => {
+        if (!('Notification' in window)) {
+            addToast("Seu navegador não suporta notificações desktop.", "error");
+            return;
+        }
+        
+        try {
+            let permission = Notification.permission;
+            if (permission !== 'granted') {
+                permission = await Notification.requestPermission();
+            }
+            
+            if (permission === 'granted') {
+                new Notification(`GIPP: Notificações Desktop Ativas`, {
+                    body: `Você receberá avisos sobre a tarefa de hoje: "${task.descricao}"`,
+                    icon: db.igreja?.logo || undefined
+                });
+                
+                await handleAddAlarm(task, 'today_desktop');
+                addToast("Notificações Desktop autorizadas e ativas para esta tarefa!", "success");
+            } else {
+                addToast("Permissão de notificações recusada pelo navegador.", "warning");
+            }
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao solicitar notificações desktop.", "error");
         }
     };
 
@@ -13249,7 +13587,7 @@ const PortalTarefas = ({ user, db }) => {
         }
         
         const targetTime = taskDate.getTime() - offset;
-        const newAlarmId = `${task.id}_${newOption}`;
+        const newAlarmId = `${task.id}_${newOption}_${Date.now()}`;
         
         const updated = activeAlarms.filter(a => a.id !== alarmId);
         const newAlarm = {
@@ -13338,7 +13676,7 @@ const PortalTarefas = ({ user, db }) => {
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <select 
-                                            value={alarm.id.split('_').slice(1).join('_') || 'on_hour'} 
+                                            value={alarm.id.split('_')[1] || 'on_hour'} 
                                             onChange={(e) => handleEditAlarmOption(alarm.id, e.target.value)}
                                             className="text-[10px] font-black bg-slate-50 border border-slate-200 rounded-lg p-1 text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                                         >
@@ -13366,161 +13704,157 @@ const PortalTarefas = ({ user, db }) => {
                 </div>
             )}
             
-            <div className="glass-modern rounded-[2rem] shadow-sm border border-white/50 p-6 md:p-8">
+            <div className="glass-modern rounded-[2rem] shadow-sm border border-white/50 p-6 md:p-8 overflow-hidden">
                 {minhasTarefas.length > 0 ? (
-                    <div className="space-y-4">
-                        {minhasTarefas.map((t, i) => {
-                            const membroInfo = (t.equipe || []).find(m => m.id === user.id || m.nome === user.nome);
-                            const minhaFuncao = membroInfo?.funcao_escala || 'Membro da Equipe';
-                            const rsvpStatus = membroInfo?.status_presenca;
-                            
-                            return (
-                                <div key={i} className="flex flex-col gap-4 p-5 md:p-6 rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-md transition-all group animate-entrance">
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between items-start mb-4">
-                                            <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded bg-slate-100 text-slate-500 tracking-wider border border-slate-200">{t.categoria}</span>
-                                            
-                                            <div className="flex items-center gap-2">
-                                                {/* Botão Sincronizar Google Agenda específico da tarefa */}
-                                                <a 
-                                                    href={getGoogleCalendarUrl(t)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#1a73e8]/10 hover:bg-[#1a73e8]/25 text-[#1a73e8] border border-[#1a73e8]/20 text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                                                    title="Sincronizar esta tarefa com a Google Agenda"
-                                                >
-                                                    <svg className="w-3.5 h-3.5 fill-current text-[#1a73e8]" viewBox="0 0 24 24">
-                                                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                                                    </svg>
-                                                    Sincronizar com Google Agenda
-                                                </a>
+                    <div className="overflow-x-auto">
+                        <table className="minhas-tarefas-tabela w-full text-sm border-collapse border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                            <thead>
+                                <tr className="bg-slate-50 text-slate-500 text-[10px] uppercase font-bold tracking-wider border-b border-slate-200">
+                                    <th className="p-4 text-left">Tarefa / Categoria</th>
+                                    <th className="p-4 text-left">Data e Prazo</th>
+                                    <th className="p-4 text-left">Função Atribuída</th>
+                                    <th className="p-4 text-center">Status</th>
+                                    <th className="p-4 text-center">Sua Confirmação (RSVP)</th>
+                                    <th className="p-4 text-right">Ações de Lembrete</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {minhasTarefas.map((t, i) => {
+                                    const membroInfo = (t.equipe || []).find(m => m.id === user.id || m.nome === user.nome);
+                                    const minhaFuncao = membroInfo?.funcao_escala || 'Membro da Equipe';
+                                    const rsvpStatus = membroInfo?.status_presenca;
+                                    const isDueToday = isToday(t.data);
+                                    const taskAlarms = activeAlarms.filter(a => a.taskId === t.id && !a.triggered);
 
-                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase shadow-sm ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'} `}>
+                                    return (
+                                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                            {/* Tarefa / Categoria */}
+                                            <td className="p-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-bold text-slate-800 text-sm line-clamp-1">{t.descricao}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wider border border-slate-200 w-fit">{t.categoria}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Data e Prazo */}
+                                            <td className="p-4 text-xs font-semibold text-slate-600">
+                                                {t.data ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="flex items-center gap-1"><Calendar size={12} className="text-indigo-500"/> {formatDateLocal(t.data)}</span>
+                                                        {new Date(t.data).getTime() < Date.now() && t.status !== 'Concluido' && (
+                                                            <span className="text-rose-500 text-[9px] font-black uppercase mt-0.5">(Atrasada)</span>
+                                                        )}
+                                                    </div>
+                                                ) : <span className="text-slate-400 italic">Sem data</span>}
+                                            </td>
+
+                                            {/* Função Atribuída */}
+                                            <td className="p-4">
+                                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-tight inline-block">{minhaFuncao}</span>
+                                            </td>
+
+                                            {/* Status */}
+                                            <td className="p-4 text-center">
+                                                <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-wider ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'} `}>
                                                     {t.status}
                                                 </span>
-                                            </div>
-                                        </div>
-                                        <h4 className="font-bold text-slate-800 text-lg mb-3">{t.descricao}</h4>
-                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 inline-block mb-4 shadow-sm">
-                                            <p className="text-xs text-indigo-600 font-bold flex items-center gap-2">
-                                                <Target size={14}/> Função na Escala: <span className="font-black uppercase text-slate-700">{minhaFuncao}</span>
-                                            </p>
-                                        </div>
-                                        {t.data && (
-                                            <p className="text-xs text-slate-500 font-medium flex items-center gap-2 mb-2">
-                                                <Calendar size={14} className="text-indigo-500"/> Data marcada: {formatDateLocal(t.data)}
-                                                {new Date(t.data).getTime() < Date.now() && t.status !== 'Concluido' && (
-                                                    <span className="text-rose-500 font-bold ml-2 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">(Atrasada)</span>
-                                                )}
-                                            </p>
-                                        )}
-                                    </div>
-                                    
-                                    {/* Seção de Confirmação de Presença (Tarefas) */}
-                                    <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div className="flex flex-col gap-0.5">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><CheckSquare size={14}/> Confirma a sua presença?</p>
-                                            
-                                            {/* Alarm Status Badges */}
-                                            {activeAlarms.filter(a => a.taskId === t.id && !a.triggered).length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                                    {activeAlarms.filter(a => a.taskId === t.id && !a.triggered).map(alarm => (
-                                                        <span key={alarm.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-indigo-50 border border-indigo-200 text-indigo-600 shadow-2xs">
-                                                            <Bell size={9} className="animate-pulse" />
-                                                            {alarm.optionLabel}
-                                                            <button 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const updated = activeAlarms.filter(a => a.id !== alarm.id);
-                                                                    localStorage.setItem('gipp_local_alarms', JSON.stringify(updated));
-                                                                    setActiveAlarms(updated);
-                                                                    addToast("Lembrete local cancelado.", "info");
-                                                                }}
-                                                                className="text-indigo-400 hover:text-indigo-600 ml-1 font-bold cursor-pointer"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                            {/* Botão de Histórico de Presença */}
-                                            <button 
-                                                onClick={() => {
-                                                    setSelectedTaskForHistory(t);
-                                                    setHistoryModalOpen(true);
-                                                }}
-                                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-                                                title="Histórico de presença confirmada nesta tarefa"
-                                            >
-                                                <History size={13} className="text-slate-500" /> Histórico de Presença
-                                            </button>
+                                            </td>
 
-                                            {/* Botão de Lembrete Local com Dropdown */}
-                                            <div className="relative inline-block text-left w-full sm:w-auto">
-                                                <button 
-                                                    onClick={() => setReminderMenuOpen(reminderMenuOpen === t.id ? null : t.id)}
-                                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
-                                                >
-                                                    <Bell size={13} className="text-indigo-500" /> Lembrar-me
-                                                </button>
-                                                
-                                                {reminderMenuOpen === t.id && (
-                                                    <>
-                                                        <div className="fixed inset-0 z-30" onClick={() => setReminderMenuOpen(null)} />
-                                                        <div className="absolute right-0 bottom-full sm:bottom-auto sm:top-full mb-2 sm:mb-0 sm:mt-2 w-56 rounded-2xl bg-white border border-slate-200 shadow-xl z-40 p-2 text-left">
-                                                            <p className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 border-b border-slate-100 tracking-wider">Calendário Aparelho</p>
-                                                            <button 
-                                                                onClick={() => { handleCreateICSFile(t); setReminderMenuOpen(null); }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                                                            >
-                                                                <Calendar size={14} className="text-blue-500" /> Baixar Convite (.ics)
-                                                            </button>
-                                                            
-                                                            <p className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 border-t border-slate-100 border-b border-slate-100 tracking-wider mt-1">Alarme Local Browser</p>
-                                                            <button 
-                                                                onClick={() => { handleAddAlarm(t, 'on_hour'); setReminderMenuOpen(null); }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                                                            >
-                                                                <Bell size={14} className="text-amber-500" /> Alarme No Dia (08h)
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => { handleAddAlarm(t, '1hour'); setReminderMenuOpen(null); }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                                                            >
-                                                                <Clock size={14} className="text-amber-500" /> Alarme 1 hora antes
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => { handleAddAlarm(t, '1day'); setReminderMenuOpen(null); }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                                                            >
-                                                                <Calendar size={14} className="text-amber-500" /> Alarme 1 dia antes
-                                                            </button>
+                                            {/* Sua Confirmação (RSVP) */}
+                                            <td className="p-4 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button 
+                                                        onClick={() => handleRSVP(t.id, 'confirmado')}
+                                                        className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 shadow-sm' : 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300 hover:text-emerald-600'}`}
+                                                        title="Confirmar Presença"
+                                                    >
+                                                        <CheckCircle size={12} /> Presente
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleRSVP(t.id, 'recusado')}
+                                                        className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${rsvpStatus === 'recusado' ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' : 'bg-white text-slate-400 border-slate-200 hover:border-rose-300 hover:text-rose-600'}`}
+                                                        title="Informar Ausência"
+                                                    >
+                                                        <Ban size={12} /> Ausente
+                                                    </button>
+                                                </div>
+                                            </td>
+
+                                            {/* Ações de Lembrete e Ativações */}
+                                            <td className="p-4 text-right">
+                                                <div className="flex flex-col items-end gap-1.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {/* Histórico button */}
+                                                        <button 
+                                                            onClick={() => {
+                                                                setSelectedTaskForHistory(t);
+                                                                setHistoryModalOpen(true);
+                                                            }}
+                                                            className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 cursor-pointer animate-all"
+                                                            title="Histórico de presença"
+                                                        >
+                                                            <History size={11} /> Histórico
+                                                        </button>
+
+                                                        {/* Configurar Lembrete button */}
+                                                        <button 
+                                                            onClick={() => {
+                                                                setSelectedTaskForReminder(t);
+                                                                setCustomReminderTime(t.data ? `${t.data}T08:00` : "");
+                                                                setSelectedReminderOption("1hour");
+                                                                setReminderModalOpen(true);
+                                                            }}
+                                                            className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer"
+                                                            title="Configurar Lembrete Personalizado"
+                                                        >
+                                                            <Bell size={11} className="text-amber-600" /> Configurar Lembrete
+                                                        </button>
+
+                                                        {/* Sincronizar Google Agenda button */}
+                                                        <a 
+                                                            href={getGoogleCalendarUrl(t)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#1a73e8] border border-blue-200 text-[10px] font-bold transition-all cursor-pointer"
+                                                            title="Sincronizar com Google Agenda"
+                                                        >
+                                                            <svg className="w-3 h-3 fill-current text-[#1a73e8]" viewBox="0 0 24 24">
+                                                                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                                                            </svg>
+                                                            Sincronizar
+                                                        </a>
+                                                    </div>
+
+                                                    {/* Ativar Notificações Desktop (For tasks due today) */}
+                                                    {isDueToday && (
+                                                        <button 
+                                                            onClick={() => handleEnableDesktopNotifications(t)}
+                                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm shadow-indigo-500/20"
+                                                            title="Ativar Notificações Desktop do Navegador"
+                                                        >
+                                                            <Bell size={12} className="animate-pulse" /> Ativar Notificações Desktop
+                                                        </button>
+                                                    )}
+
+                                                    {/* Registered Alarms Indicator inside Row */}
+                                                    {taskAlarms.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                                                            {taskAlarms.map(alarm => (
+                                                                <span key={alarm.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black bg-indigo-50 border border-indigo-200 text-indigo-600">
+                                                                    <Bell size={8} /> {alarm.optionLabel}
+                                                                </span>
+                                                            ))}
                                                         </div>
-                                                    </>
-                                                )}
-                                            </div>
- 
-                                            <button 
-                                                onClick={() => handleRSVP(t.id, 'confirmado')}
-                                                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-400 hover:text-emerald-600'}`}
-                                            >
-                                                <CheckCircle size={14} /> Estarei Presente
-                                            </button>
-                                            <button 
-                                                onClick={() => handleRSVP(t.id, 'recusado')}
-                                                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${rsvpStatus === 'recusado' ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-rose-400 hover:text-rose-600'}`}
-                                            >
-                                                <Ban size={14} /> Não Estarei
-                                            </button>
-                                        </div>
-                                    </div>
- 
-                                </div>
-                            )
-                        })}
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 ) : (
                     <div className="text-center p-10 flex flex-col items-center border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
@@ -13599,6 +13933,111 @@ const PortalTarefas = ({ user, db }) => {
                                     })()}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </InteractiveWindow>,
+                document.body
+            )}
+
+            {/* Modal de Configurar Lembrete */}
+            {reminderModalOpen && selectedTaskForReminder && createPortal(
+                <InteractiveWindow
+                    id="escala_lembrete_modal"
+                    title="Configurar Lembrete"
+                    subtitle={`Escolha quando deseja ser lembrado da tarefa: ${selectedTaskForReminder.descricao}`}
+                    onClose={() => {
+                        setReminderModalOpen(false);
+                        setSelectedTaskForReminder(null);
+                    }}
+                    headerBg="from-amber-500 via-amber-600 to-amber-700"
+                    defaultWidth={480}
+                    defaultHeight={420}
+                >
+                    <div className="p-6 space-y-4">
+                        <p className="text-xs text-slate-500">
+                            Configure um alarme local no seu navegador ou um lembrete personalizado para a tarefa <span className="font-bold text-slate-700">"{selectedTaskForReminder.descricao}"</span>.
+                        </p>
+                        
+                        <div className="space-y-3">
+                            <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Selecione o Tempo do Lembrete</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedReminderOption === '1hour' ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                                    <input 
+                                        type="radio" 
+                                        name="reminder_option" 
+                                        value="1hour" 
+                                        checked={selectedReminderOption === '1hour'}
+                                        onChange={(e) => setSelectedReminderOption(e.target.value)}
+                                        className="text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-800">1 hora antes</p>
+                                        <p className="text-[10px] text-slate-500">Receber um aviso 1 hora antes do horário programado.</p>
+                                    </div>
+                                </label>
+                                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedReminderOption === '1day' ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                                    <input 
+                                        type="radio" 
+                                        name="reminder_option" 
+                                        value="1day" 
+                                        checked={selectedReminderOption === '1day'}
+                                        onChange={(e) => setSelectedReminderOption(e.target.value)}
+                                        className="text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-800">1 dia antes</p>
+                                        <p className="text-[10px] text-slate-500">Receber um aviso 1 dia antes da tarefa.</p>
+                                    </div>
+                                </label>
+                                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedReminderOption === 'custom' ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                                    <input 
+                                        type="radio" 
+                                        name="reminder_option" 
+                                        value="custom" 
+                                        checked={selectedReminderOption === 'custom'}
+                                        onChange={(e) => setSelectedReminderOption(e.target.value)}
+                                        className="text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-800">Horário específico da tarefa</p>
+                                        <p className="text-[10px] text-slate-500">Definir um dia e hora exatos para soar o alarme.</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {selectedReminderOption === 'custom' && (
+                            <div className="space-y-1.5 animate-fadeIn">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Definir Data/Hora Personalizada</label>
+                                <input 
+                                    type="datetime-local" 
+                                    value={customReminderTime}
+                                    onChange={(e) => setCustomReminderTime(e.target.value)}
+                                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex gap-2 justify-end pt-4 border-t border-slate-100">
+                            <button 
+                                onClick={() => {
+                                    setReminderModalOpen(false);
+                                    setSelectedTaskForReminder(null);
+                                }}
+                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={async () => {
+                                    await handleAddAlarm(selectedTaskForReminder, selectedReminderOption, selectedReminderOption === 'custom' ? customReminderTime : undefined);
+                                    setReminderModalOpen(false);
+                                    setSelectedTaskForReminder(null);
+                                }}
+                                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
+                            >
+                                Confirmar Lembrete
+                            </button>
                         </div>
                     </div>
                 </InteractiveWindow>,
@@ -16676,12 +17115,15 @@ export default function App() {
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
-  const [db, setDbState] = useState(() => {
+  const [db, _setDbState] = useState(() => {
       try {
           const cached = localStorage.getItem('gipp_portal_db_cache');
           if (cached) {
               const parsed = JSON.parse(cached);
               if (parsed && typeof parsed === 'object' && parsed.igreja) {
+                  if (Array.isArray(parsed.membros)) {
+                      parsed.membros.sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
+                  }
                   return parsed;
               }
           }
@@ -16690,6 +17132,21 @@ export default function App() {
       }
       return MOCK_DB;
   });
+
+  const setDbState = (val: any) => {
+      _setDbState((prev: any) => {
+          let resolved = typeof val === 'function' ? val(prev) : val;
+          if (resolved && Array.isArray(resolved.membros)) {
+              resolved = {
+                  ...resolved,
+                  membros: [...resolved.membros].sort((a: any, b: any) => 
+                      (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+                  )
+              };
+          }
+          return resolved;
+      });
+  };
 
   useEffect(() => {
       try {

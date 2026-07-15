@@ -523,7 +523,7 @@ Retorne o texto corrido direto, limpo, sem introduções ou observações, pront
   // Suggested members logic
   const filteredMembros = db.membros ? db.membros.filter((m: any) =>
     m.nome?.toLowerCase().includes((memberSearchQuery || '').toLowerCase())
-  ).slice(0, 5) : [];
+  ).sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })).slice(0, 5) : [];
 
   const fillMemberToData = (membro: any) => {
     setSelectedMember(membro);

@@ -51,7 +51,7 @@ const ModuleMembros = memo(() => {
         congregacaoFilter === 'todas' || 
         m.congregacao_id === congregacaoFilter || 
         (!m.congregacao_id && congregacaoFilter === 'sede')
-    );
+    ).sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
 
     const handleExportMembrosCSV = () => {
         if (membrosFiltrados.length === 0) {

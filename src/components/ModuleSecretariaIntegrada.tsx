@@ -15,7 +15,7 @@ import {
   Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
-  MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
+  MoreVertical, Bell, BellRing, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
@@ -53,6 +53,12 @@ const ModuleSecretariaIntegrada = () => {
     const [loadingAi, setLoadingAi] = useState(false);
     const [viewMode, setViewMode] = useState('kanban'); // NOVO: Controle de visualização (Lista ou Kanban)
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas'); // NOVO: Filtro de Congregação
+
+    // States for Task Reminder Modal
+    const [showReminderModal, setShowReminderModal] = useState(false);
+    const [selectedTaskForReminder, setSelectedTaskForReminder] = useState<any>(null);
+    const [reminderType, setReminderType] = useState('1_hour'); // '1_hour' | '1_day' | 'specific'
+    const [reminderSpecificTime, setReminderSpecificTime] = useState('');
 
     // Form States for Contatos da Secretaria
     const [contactForm, setContactForm] = useState({
@@ -376,6 +382,85 @@ const ModuleSecretariaIntegrada = () => {
         }
     };
 
+    const handleSaveReminder = async (e) => {
+        if (e) e.preventDefault();
+        if (!selectedTaskForReminder) return;
+
+        try {
+            const updatedTask = {
+                ...selectedTaskForReminder,
+                lembrete: {
+                    tipo: reminderType,
+                    hora_especifica: reminderType === 'specific' ? reminderSpecificTime : ''
+                },
+                updated_at: new Date().toISOString()
+            };
+
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas', selectedTaskForReminder.id), updatedTask, { merge: true });
+            logAction('EDIÇÃO', `Configurou lembrete para a tarefa "${selectedTaskForReminder.descricao}"`, 'tarefas', selectedTaskForReminder.id);
+            addToast("Lembrete configurado com sucesso!", "success");
+            setShowReminderModal(false);
+            setSelectedTaskForReminder(null);
+        } catch (error) {
+            console.error(error);
+            addToast("Erro ao configurar o lembrete.", "error");
+        }
+    };
+
+    const handleEnableDesktopNotifications = async () => {
+        if (!("Notification" in window)) {
+            addToast("Este navegador não suporta notificações de desktop.", "error");
+            return;
+        }
+
+        try {
+            if (Notification.permission === "granted") {
+                activateTodayNotifications();
+            } else if (Notification.permission !== "denied") {
+                const permission = await Notification.requestPermission();
+                if (permission === "granted") {
+                    activateTodayNotifications();
+                } else {
+                    addToast("Permissão para notificações foi negada.", "error");
+                }
+            } else {
+                addToast("Permissão para notificações foi negada anteriormente. Ative nas configurações do navegador.", "warning");
+            }
+        } catch (error) {
+            console.error("Erro ao solicitar permissão de notificações", error);
+            addToast("Não foi possível solicitar permissão para notificações de desktop.", "error");
+        }
+    };
+
+    const activateTodayNotifications = () => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const tasksToday = (db.tarefas || []).filter((t: any) => t.data === todayStr);
+
+        if (tasksToday.length === 0) {
+            addToast("Notificações ativas! Nenhuma tarefa vencendo hoje.", "info");
+            try {
+                new Notification("GIPP - Gestão de Igreja", {
+                    body: "Notificações de desktop ativadas com sucesso! Nenhuma tarefa com vencimento para hoje.",
+                    icon: "/favicon.ico"
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        } else {
+            addToast(`Notificações ativas! Você possui ${tasksToday.length} tarefa(s) hoje.`, "success");
+            try {
+                const descricoes = tasksToday.map((t: any) => t.descricao).join(', ');
+                new Notification("Tarefas de Hoje - GIPP", {
+                    body: `Você tem ${tasksToday.length} tarefa(s) agendada(s) para hoje: ${descricoes}`,
+                    icon: "/favicon.ico",
+                    requireInteraction: true
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
+
     const seedAgendaAD = async () => {
         try {
             const padraoAD = [
@@ -488,16 +573,42 @@ const ModuleSecretariaIntegrada = () => {
                         </div>
 
                         {viewMode === 'lista' ? (
-                             <GenericTable title="" type="tarefa" data={tarefasFiltradas} columns={[{header:'Descrição', key:'descricao'}, {header:'Tipo', key:'categoria', render: c => <span className="text-[10px] uppercase font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded">{c.categoria}</span>}, {header:'Equipe', key:'equipe', render: t => (<div className="flex -space-x-2">{(t.equipe || []).slice(0, 4).map((m, i) => (<div key={i} className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600" title={`${m.nome} - ${m.funcao_escala}`}>{m.nome ? m.nome.charAt(0) : '?'}</div>))}{(t.equipe || []).length > 4 && <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-500">+{t.equipe.length-4}</div>}{(!t.equipe || t.equipe.length === 0) && <span className="text-xs text-slate-400">-</span>}</div>)}, {header:'Data', key:'data', render:d=>formatDateLocal(d.data)}, {header:'Status', key:'status'}]} customActions={(item) => (
-                                <div className="flex gap-2">
-                                     <button onClick={() => handlePrintEvent(item)} className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all shadow-sm border border-slate-200 bg-white" title="Imprimir"><Printer size={18}/></button>
-                                     <button onClick={() => {
-                                         const equipeText = (item.equipe || []).map(m => ` - ${m.nome} (${m.funcao_escala})`).join('\n');
-                                         const text = encodeURIComponent(`📋 *ESCALA DE TRABALHO*\n\nMissão: *${item.descricao}*\nData: ${formatDateLocal(item.data)}\n\n*EQUIPE:*\n${equipeText}\n\nDeus conte com você! 💪`);
-                                         window.open(`https://wa.me/?text=${text}`, '_blank');
-                                     }} className="p-2.5 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all shadow-sm border border-emerald-100 bg-white" title="Enviar via WhatsApp"><MessageCircle size={18}/></button>
+                            <div className="minhas-tarefas-tabela flex flex-col flex-1 h-full gap-4">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-50 via-indigo-50/50 to-white border border-indigo-150 p-4 rounded-2xl shadow-xs">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-100/80 rounded-xl text-indigo-600">
+                                            <BellRing size={20} className="animate-pulse" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold text-slate-800">Permissão de Notificações Desktop</p>
+                                            <p className="text-[10px] text-slate-500 font-medium">Seja alertado sobre as tarefas que vencem hoje diretamente no seu sistema operacional.</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={handleEnableDesktopNotifications}
+                                        className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-100 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                                        title="Ativar Notificações Desktop"
+                                    >
+                                        <Bell size={14}/> Ativar Notificações Desktop
+                                    </button>
                                 </div>
-                             )} />
+                                <GenericTable title="" type="tarefa" data={tarefasFiltradas} columns={[{header:'Descrição', key:'descricao'}, {header:'Tipo', key:'categoria', render: c => <span className="text-[10px] uppercase font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded">{c.categoria}</span>}, {header:'Equipe', key:'equipe', render: t => (<div className="flex -space-x-2">{(t.equipe || []).slice(0, 4).map((m, i) => (<div key={i} className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600" title={`${m.nome} - ${m.funcao_escala}`}>{m.nome ? m.nome.charAt(0) : '?'}</div>))}{(t.equipe || []).length > 4 && <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-500">+{t.equipe.length-4}</div>}{(!t.equipe || t.equipe.length === 0) && <span className="text-xs text-slate-400">-</span>}</div>)}, {header:'Data', key:'data', render:d=>formatDateLocal(d.data)}, {header:'Status', key:'status'}, {header:'Lembrete', key:'lembrete', render: d => d.lembrete ? (<span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-150 inline-flex items-center gap-1.5"><Bell size={11} className="text-indigo-500 animate-pulse"/> {d.lembrete.tipo === '1_hour' ? '1h antes' : d.lembrete.tipo === '1_day' ? '1 dia antes' : `${d.lembrete.hora_especifica ? new Date(d.lembrete.hora_especifica).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'}) : 'Específico'}`}</span>) : (<span className="text-[10px] text-slate-400 font-semibold italic">Não configurado</span>)}]} customActions={(item) => (
+                                    <div className="flex gap-2">
+                                         <button onClick={() => {
+                                             setSelectedTaskForReminder(item);
+                                             setReminderType(item.lembrete?.tipo || '1_hour');
+                                             setReminderSpecificTime(item.lembrete?.hora_especifica || '');
+                                             setShowReminderModal(true);
+                                         }} className="p-2.5 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all shadow-sm border border-indigo-100 bg-white" title="Configurar Lembrete"><Bell size={18}/></button>
+                                         <button onClick={() => handlePrintEvent(item)} className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all shadow-sm border border-slate-200 bg-white" title="Imprimir"><Printer size={18}/></button>
+                                         <button onClick={() => {
+                                             const equipeText = (item.equipe || []).map(m => ` - ${m.nome} (${m.funcao_escala})`).join('\n');
+                                             const text = encodeURIComponent(`📋 *ESCALA DE TRABALHO*\n\nMissão: *${item.descricao}*\nData: ${formatDateLocal(item.data)}\n\n*EQUIPE:*\n${equipeText}\n\nDeus conte com você! 💪`);
+                                             window.open(`https://wa.me/?text=${text}`, '_blank');
+                                         }} className="p-2.5 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all shadow-sm border border-emerald-100 bg-white" title="Enviar via WhatsApp"><MessageCircle size={18}/></button>
+                                    </div>
+                                 )} />
+                            </div>
                         ) : (
                             <div className="flex-1 flex gap-6 overflow-x-auto custom-scrollbar pb-2 pt-2 items-start h-[calc(100vh-250px)]">
                                 {[
@@ -529,8 +640,14 @@ const ModuleSecretariaIntegrada = () => {
                                                     <div className="flex justify-between items-start mb-3 pl-2">
                                                         <span className={`text-[9px] uppercase font-black px-2.5 py-1 rounded bg-slate-100 text-slate-500 tracking-wider shadow-sm`}>{task.categoria}</span>
                                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={() => openModal('tarefa', task)} className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors"><Edit size={16}/></button>
-                                                            <button onClick={() => deleteItem('tarefa', task.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                                                            <button onClick={() => {
+                                                                setSelectedTaskForReminder(task);
+                                                                setReminderType(task.lembrete?.tipo || '1_hour');
+                                                                setReminderSpecificTime(task.lembrete?.hora_especifica || '');
+                                                                setShowReminderModal(true);
+                                                            }} className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors" title="Configurar Lembrete"><Bell size={16}/></button>
+                                                            <button onClick={() => openModal('tarefa', task)} className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors" title="Editar"><Edit size={16}/></button>
+                                                            <button onClick={() => deleteItem('tarefa', task.id)} className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors" title="Excluir"><Trash2 size={16}/></button>
                                                         </div>
                                                     </div>
                                                     <h5 className="font-bold text-slate-800 text-sm mb-5 pl-2 leading-snug">{task.descricao}</h5>
@@ -542,8 +659,9 @@ const ModuleSecretariaIntegrada = () => {
                                                             {(task.equipe || []).length > 3 && <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-500 shadow-sm">+{task.equipe.length-3}</div>}
                                                             {(!task.equipe || task.equipe.length === 0) && <span className="text-[10px] text-slate-400 font-medium italic">Sem equipe</span>}
                                                         </div>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex flex-col items-end gap-1.5">
                                                             {task.data && <span className={`text-[10px] font-bold flex items-center gap-1 px-2 py-1 rounded-lg border ${new Date(task.data) < new Date() && task.status !== 'Concluido' ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}><Calendar size={12}/> {formatDateLocal(task.data)}</span>}
+                                                            {task.lembrete && <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded border border-indigo-100 flex items-center gap-1" title={task.lembrete.tipo === '1_hour' ? 'Lembrete: 1h antes' : task.lembrete.tipo === '1_day' ? 'Lembrete: 1 dia antes' : `Lembrete: ${task.lembrete.hora_especifica}`}><Bell size={10} className="animate-pulse"/> {task.lembrete.tipo === '1_hour' ? '1h antes' : task.lembrete.tipo === '1_day' ? '1 dia antes' : 'Configurado'}</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -563,7 +681,7 @@ const ModuleSecretariaIntegrada = () => {
                 )}
                 {tab === 'whatsapp' && (
                     <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
-                         <div className="lg:col-span-2 h-full flex flex-col"><GenericTable title="Selecione os Membros" type="membro" data={db.membros} columns={[{header:'Nome', key:'nome'}, {header:'Telefone', key:'telefone'}]} onSelectionChange={setSelectedMembers} customActions={null} /></div>
+                         <div className="lg:col-span-2 h-full flex flex-col"><GenericTable title="Selecione os Membros" type="membro" data={[...(db.membros || [])].sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }))} columns={[{header:'Nome', key:'nome'}, {header:'Telefone', key:'telefone'}]} onSelectionChange={setSelectedMembers} customActions={null} /></div>
                          <div className="glass-modern p-6 rounded-[2.5rem] flex flex-col h-full overflow-y-auto">
                              <div className="mb-6">
                                  <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2 mb-4"><MessageCircle size={20} className="text-emerald-500"/> Templates Animados</h3>
@@ -1459,6 +1577,95 @@ const ModuleSecretariaIntegrada = () => {
                                 );
                             })}
                         </div>
+                    </div>
+                </InteractiveWindow>,
+                document.body
+            )}
+
+            {showReminderModal && createPortal(
+                <InteractiveWindow
+                    id="secretaria_tarefa_lembrete_modal"
+                    title="Configurar Lembrete"
+                    subtitle={selectedTaskForReminder?.descricao || "Tarefa"}
+                    onClose={() => {
+                        setShowReminderModal(false);
+                        setSelectedTaskForReminder(null);
+                    }}
+                    headerBg="from-indigo-600 via-indigo-700 to-indigo-800"
+                    defaultWidth={480}
+                    defaultHeight={500}
+                    footer={
+                        <>
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    setShowReminderModal(false);
+                                    setSelectedTaskForReminder(null);
+                                }} 
+                                className="px-5 py-2.5 hover:bg-slate-100 border border-slate-250 rounded-xl text-slate-600 text-sm font-semibold transition-all cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={handleSaveReminder} 
+                                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-100 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                                <Save size={16}/> Salvar Lembrete
+                            </button>
+                        </>
+                    }
+                >
+                    <div className="space-y-6 text-left text-slate-700 p-1">
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Tarefa Selecionada</p>
+                            <p className="text-sm font-bold text-slate-800 mb-2">{selectedTaskForReminder?.descricao}</p>
+                            <div className="flex gap-4 text-xs font-semibold text-slate-500">
+                                <span className="flex items-center gap-1"><Calendar size={14}/> Data: {formatDateLocal(selectedTaskForReminder?.data)}</span>
+                                <span className="flex items-center gap-1"><CheckCircle size={14}/> Status: {selectedTaskForReminder?.status}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">Escolha o Momento do Lembrete</p>
+                            <div className="grid grid-cols-1 gap-3">
+                                {[
+                                    { key: '1_hour', label: '1 hora antes', desc: 'Disparar notificação 1 hora antes do início previsto.' },
+                                    { key: '1_day', label: '1 dia antes', desc: 'Disparar notificação no dia anterior.' },
+                                    { key: 'specific', label: 'Horário específico', desc: 'Defina uma data e horário exatos para disparar.' }
+                                ].map(option => (
+                                    <label 
+                                        key={option.key} 
+                                        className={`flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${reminderType === option.key ? 'bg-indigo-50/70 border-indigo-200 shadow-xs' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                        <input 
+                                            type="radio" 
+                                            name="reminder_type"
+                                            checked={reminderType === option.key}
+                                            onChange={() => setReminderType(option.key)}
+                                            className="mt-1 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                        />
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-800">{option.label}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">{option.desc}</p>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {reminderType === 'specific' && (
+                            <div className="animate-entrance">
+                                <label className="block text-xs font-bold text-slate-500 mb-2">Selecione Data e Hora Específica</label>
+                                <input 
+                                    type="datetime-local" 
+                                    value={reminderSpecificTime}
+                                    onChange={e => setReminderSpecificTime(e.target.value)}
+                                    className="input-futuristic w-full p-3 rounded-2xl text-sm bg-white border border-slate-200 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                                    required
+                                />
+                            </div>
+                        )}
                     </div>
                 </InteractiveWindow>,
                 document.body
