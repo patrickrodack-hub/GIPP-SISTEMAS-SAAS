@@ -1590,42 +1590,70 @@ app.post("/api/admin/trigger-agenda-reminders", async (req, res) => {
     }
 });
 
-async function start() {
-    if (process.env.NODE_ENV !== "production") {
-        const vite = await createViteServer({
-            server: { middlewareMode: true },
-            appType: "spa",
-        });
-        app.use(vite.middlewares);
-    } else {
-        const distPath = path.join(process.cwd(), 'dist');
-        app.use(express.static(distPath));
-        app.get('*', (req, res) => {
-            res.sendFile(path.join(distPath, 'index.html'));
-        });
-    }
+let viteMiddleware: any = null;
 
-    app.listen(PORT, "0.0.0.0", () => {
+async function start() {
+    // Registra o middleware dinâmico após todas as rotas de API.
+    // Isso garante que requisições de front-end sejam delegadas ao Vite ou servidas como estáticas.
+    app.use((req, res, next) => {
+        if (viteMiddleware) {
+            viteMiddleware(req, res, next);
+        } else {
+            if (process.env.NODE_ENV !== "production") {
+                if (req.path.startsWith("/api")) {
+                    next();
+                } else {
+                    res.setHeader("Content-Type", "text/html; charset=utf-8");
+                    res.send("<html><head><meta charset='utf-8'></head><body><h3>Iniciando o servidor de desenvolvimento, por favor aguarde alguns segundos e recarregue a página...</h3></body></html>");
+                }
+            } else {
+                next();
+            }
+        }
+    });
+
+    // 1. Iniciamos o escuta da porta imediatamente para liberar as sondagens de saúde (health check)
+    app.listen(PORT, "0.0.0.0", async () => {
         console.log(`Server running on http://localhost:${PORT}`);
         
-        // Iniciar serviço de segundo plano (verificador financeiro)
-        // Executa uma checagem inicial após 5 segundos do boot do servidor
+        // 2. Inicialização em segundo plano dependendo do ambiente
+        if (process.env.NODE_ENV !== "production") {
+            try {
+                console.log("[Vite] Inicializando servidor de desenvolvimento em segundo plano...");
+                const vite = await createViteServer({
+                    server: { middlewareMode: true },
+                    appType: "spa",
+                });
+                viteMiddleware = vite.middlewares;
+                console.log("[Vite] Servidor de desenvolvimento carregado com sucesso!");
+            } catch (err) {
+                console.error("[Vite] Falha crítica ao inicializar o Vite:", err);
+            }
+        } else {
+            const distPath = path.join(process.cwd(), 'dist');
+            app.use(express.static(distPath));
+            app.get('*', (req, res) => {
+                res.sendFile(path.join(distPath, 'index.html'));
+            });
+            console.log("[Server] Arquivos estáticos de produção configurados.");
+        }
+
+        // 3. Iniciar serviços de segundo plano de forma assíncrona com tempos seguros
         setTimeout(async () => {
             try {
                 await checkPendingFinancialTitlesAndNotify();
             } catch (err) {
                 console.error("[Serviço de Segundo Plano] Falha na verificação financeira inicial:", err);
             }
-        }, 5000);
+        }, 15000);
 
-        // Executa uma checagem inicial de lembretes da agenda após 8 segundos do boot do servidor
         setTimeout(async () => {
             try {
                 await checkScheduledEventRemindersAndNotify();
             } catch (err) {
                 console.error("[Serviço de Segundo Plano] Falha na verificação de agenda inicial:", err);
             }
-        }, 8000);
+        }, 20000);
 
         // Agenda a checagem diária para rodar a cada 24 horas (86400000 ms)
         setInterval(async () => {
