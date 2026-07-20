@@ -660,7 +660,7 @@ const ModuleUsuarios = memo(() => {
                   {formData.nivel === 'restrito' && (
                     <div className="border-t border-slate-100 pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
-                        <h5 className="text-xs font-black text-indigo-700 uppercase tracking-widest">Preenchimento Base Recomendado</h5>
+                        <h5 className="text-xs font-black text-indigo-700 uppercase tracking-widest">Módulo de Governança Administrativa</h5>
                         <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed font-bold">Importe um conjunto recomendado de permissões ao selecionar uma governança administrativa:</p>
                       </div>
                       <select 

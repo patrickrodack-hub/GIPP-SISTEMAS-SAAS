@@ -3205,7 +3205,13 @@ export const GenericTable = ({
           </thead>
           <tbody className="divide-y divide-white/40 bg-transparent">
             {paginatedData.map((item, idx) => (
-              <tr key={item.id || `row-${idx}`} className={`hover:bg-white/60 transition-all duration-300 group/row relative border-l-4 border-transparent hover:border-indigo-500 ${idx % 2 === 0 ? 'bg-white/40' : 'bg-slate-50/10'}`}>
+              <motion.tr 
+                key={`${item.id || idx}-${currentPage}-${searchTerm}-${Object.keys(colFilters).length}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: Math.min(idx * 0.04, 0.4) }}
+                className={`hover:bg-white/60 transition-all duration-300 group/row relative border-l-4 border-transparent hover:border-indigo-500 ${idx % 2 === 0 ? 'bg-white/40' : 'bg-slate-50/10'}`}
+              >
                 {onSelectionChange && <td className="px-4 py-5"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={()=>handleSelect(item.id)} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"/></td>}
                 {columns.map((c, i) => {
                     let cellContent;
@@ -3245,7 +3251,7 @@ export const GenericTable = ({
                     )}
                   </div>
                 </td>
-              </tr>
+              </motion.tr>
             ))}
             {paginatedData.length === 0 && (
                 <tr><td colSpan={columns.length + 2} className="px-8 py-10 text-center text-slate-500 italic">Nenhum registro encontrado.</td></tr>
@@ -13390,6 +13396,7 @@ const PortalTarefas = ({ user, db }) => {
     const [reminderMenuOpen, setReminderMenuOpen] = useState<string | null>(null);
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedTaskForHistory, setSelectedTaskForHistory] = useState<any>(null);
+    const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
     // States for Configurar Lembrete modal
     const [reminderModalOpen, setReminderModalOpen] = useState(false);
@@ -13461,6 +13468,69 @@ const PortalTarefas = ({ user, db }) => {
             addToast("Dispositivo: Convite de Calendário (.ics) descarregado! Abra para salvar no telemóvel.", "success");
         } catch (err) {
             addToast("Erro ao gerar arquivo de convite.", "error");
+        }
+    };
+
+    const handleExportAllICS = () => {
+        try {
+            if (minhasTarefas.length === 0) {
+                addToast("Você não possui compromissos para exportar.", "warning");
+                return;
+            }
+            const icsLines = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//GIPP//ChurchManagement//PT',
+                'CALSCALE:GREGORIAN',
+                'METHOD:PUBLISH'
+            ];
+            
+            minhasTarefas.forEach((task, idx) => {
+                const title = `Escala GIPP: ${task.categoria} - ${task.descricao}`;
+                const dateStr = task.data ? task.data.replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+                
+                let startHour = "090000";
+                let endHour = "110000";
+                if (task.hora && task.hora.includes(':')) {
+                    const hp = task.hora.split(':');
+                    const hh = hp[0].padStart(2, '0');
+                    const mm = hp[1].padStart(2, '0');
+                    startHour = `${hh}${mm}00`;
+                    const endH = String((parseInt(hh) + 2) % 24).padStart(2, '0');
+                    endHour = `${endH}${mm}00`;
+                }
+                
+                const startTime = `${dateStr}T${startHour}`;
+                const endTime = `${dateStr}T${endHour}`;
+                const desc = `Compromisso na igreja. Tema/Escala: ${task.descricao}. Categoria: ${task.categoria}.`;
+                
+                icsLines.push('BEGIN:VEVENT');
+                icsLines.push(`UID:gipp_task_${task.id || idx}@gipp.app`);
+                icsLines.push('SEQUENCE:0');
+                icsLines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+                icsLines.push(`DTSTART:${startTime}`);
+                icsLines.push(`DTEND:${endTime}`);
+                icsLines.push(`SUMMARY:${title}`);
+                icsLines.push(`DESCRIPTION:${desc}`);
+                icsLines.push('STATUS:CONFIRMED');
+                icsLines.push('END:VEVENT');
+            });
+            
+            icsLines.push('END:VCALENDAR');
+            const icsContent = icsLines.join('\n');
+            
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `minhas_escalas_gipp.ics`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            addToast("Todas as escalas foram exportadas em formato .ics com sucesso!", "success");
+        } catch (err) {
+            addToast("Erro ao exportar escalas para .ics.", "error");
         }
     };
 
@@ -13633,6 +13703,14 @@ const PortalTarefas = ({ user, db }) => {
                             <Printer size={16}/> Imprimir Compromissos
                         </button>
                     )}
+                    {minhasTarefas.length > 0 && (
+                        <button 
+                            onClick={handleExportAllICS}
+                            className="shadow-md flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 px-4.5 font-bold text-xs transition-all border border-emerald-500 cursor-pointer"
+                        >
+                            <Calendar size={16}/> Exportar Escalas (.ics)
+                        </button>
+                    )}
                     {/* Botão de Sincronização global / todos */}
                     {minhasTarefas.length > 0 && (
                         <a 
@@ -13725,132 +13803,258 @@ const PortalTarefas = ({ user, db }) => {
                                     const rsvpStatus = membroInfo?.status_presenca;
                                     const isDueToday = isToday(t.data);
                                     const taskAlarms = activeAlarms.filter(a => a.taskId === t.id && !a.triggered);
+                                    const isFocused = focusedTaskId === t.id;
 
                                     return (
-                                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                            {/* Tarefa / Categoria */}
-                                            <td className="p-4">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-bold text-slate-800 text-sm line-clamp-1">{t.descricao}</span>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wider border border-slate-200 w-fit">{t.categoria}</span>
+                                        <React.Fragment key={t.id || i}>
+                                            <tr className={`hover:bg-slate-50/50 transition-all ${isFocused ? 'bg-indigo-50/20 border-l-4 border-indigo-500 shadow-xs' : ''}`}>
+                                                {/* Tarefa / Categoria */}
+                                                <td className="p-4">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span 
+                                                            onClick={() => setFocusedTaskId(isFocused ? null : t.id)}
+                                                            className="font-bold text-slate-800 text-sm line-clamp-1 cursor-pointer hover:text-indigo-600 hover:underline transition-colors flex items-center gap-1.5"
+                                                            title="Clique para ver em Foco"
+                                                        >
+                                                            {t.descricao}
+                                                        </span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wider border border-slate-200 w-fit">{t.categoria}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            {/* Data e Prazo */}
-                                            <td className="p-4 text-xs font-semibold text-slate-600">
-                                                {t.data ? (
-                                                    <div className="flex flex-col">
-                                                        <span className="flex items-center gap-1"><Calendar size={12} className="text-indigo-500"/> {formatDateLocal(t.data)}</span>
-                                                        {new Date(t.data).getTime() < Date.now() && t.status !== 'Concluido' && (
-                                                            <span className="text-rose-500 text-[9px] font-black uppercase mt-0.5">(Atrasada)</span>
+                                                {/* Data e Prazo */}
+                                                <td className="p-4 text-xs font-semibold text-slate-600">
+                                                    {t.data ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="flex items-center gap-1"><Calendar size={12} className="text-indigo-500"/> {formatDateLocal(t.data)}</span>
+                                                            {new Date(t.data).getTime() < Date.now() && t.status !== 'Concluido' && (
+                                                                <span className="text-rose-500 text-[9px] font-black uppercase mt-0.5">(Atrasada)</span>
+                                                            )}
+                                                        </div>
+                                                    ) : <span className="text-slate-400 italic">Sem data</span>}
+                                                </td>
+
+                                                {/* Função Atribuída */}
+                                                <td className="p-4">
+                                                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-tight inline-block">{minhaFuncao}</span>
+                                                </td>
+
+                                                {/* Status */}
+                                                <td className="p-4 text-center">
+                                                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-wider ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'} `}>
+                                                        {t.status}
+                                                    </span>
+                                                </td>
+
+                                                {/* Sua Confirmação (RSVP) */}
+                                                <td className="p-4 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button 
+                                                            onClick={() => handleRSVP(t.id, 'confirmado')}
+                                                            className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 shadow-sm' : 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300 hover:text-emerald-600'}`}
+                                                            title="Confirmar Presença"
+                                                        >
+                                                            <CheckCircle size={12} /> Presente
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleRSVP(t.id, 'recusado')}
+                                                            className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${rsvpStatus === 'recusado' ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' : 'bg-white text-slate-400 border-slate-200 hover:border-rose-300 hover:text-rose-600'}`}
+                                                            title="Informar Ausência"
+                                                        >
+                                                            <Ban size={12} /> Ausente
+                                                        </button>
+                                                    </div>
+                                                </td>
+
+                                                {/* Ações de Lembrete e Ativações */}
+                                                <td className="p-4 text-right">
+                                                    <div className="flex flex-col items-end gap-1.5">
+                                                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                                            {/* Visualização de Foco button */}
+                                                            <button 
+                                                                onClick={() => setFocusedTaskId(isFocused ? null : t.id)}
+                                                                className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border cursor-pointer ${isFocused ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700 shadow-sm' : 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700'}`}
+                                                                title="Entrar em Visualização de Foco (Ver detalhes completas, equipe e histórico)"
+                                                            >
+                                                                {isFocused ? <Minimize size={11} /> : <Maximize size={11} />}
+                                                                {isFocused ? 'Fechar Foco' : 'Ver em Foco'}
+                                                            </button>
+
+                                                            {/* Histórico button */}
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSelectedTaskForHistory(t);
+                                                                    setHistoryModalOpen(true);
+                                                                }}
+                                                                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 cursor-pointer animate-all"
+                                                                title="Histórico de presença"
+                                                            >
+                                                                <History size={11} /> Histórico
+                                                            </button>
+
+                                                            {/* Configurar Lembrete button */}
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSelectedTaskForReminder(t);
+                                                                    setCustomReminderTime(t.data ? `${t.data}T08:00` : "");
+                                                                    setSelectedReminderOption("1hour");
+                                                                    setReminderModalOpen(true);
+                                                                }}
+                                                                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer"
+                                                                title="Configurar Lembrete Personalizado"
+                                                            >
+                                                                <Bell size={11} className="text-amber-600" /> Configurar Lembrete
+                                                            </button>
+
+                                                            {/* Sincronizar Google Agenda button */}
+                                                            <a 
+                                                                href={getGoogleCalendarUrl(t)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#1a73e8] border border-blue-200 text-[10px] font-bold transition-all cursor-pointer"
+                                                                title="Sincronizar com Google Agenda"
+                                                            >
+                                                                <svg className="w-3 h-3 fill-current text-[#1a73e8]" viewBox="0 0 24 24">
+                                                                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                                                                </svg>
+                                                                Sincronizar
+                                                            </a>
+                                                        </div>
+
+                                                        {/* Ativar Notificações Desktop (For tasks due today) */}
+                                                        {isDueToday && (
+                                                            <button 
+                                                                onClick={() => handleEnableDesktopNotifications(t)}
+                                                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm shadow-indigo-500/20"
+                                                                title="Ativar Notificações Desktop do Navegador"
+                                                            >
+                                                                <Bell size={12} className="animate-pulse" /> Ativar Notificações Desktop
+                                                            </button>
+                                                        )}
+
+                                                        {/* Registered Alarms Indicator inside Row */}
+                                                        {taskAlarms.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                                                                {taskAlarms.map(alarm => (
+                                                                    <span key={alarm.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black bg-indigo-50 border border-indigo-200 text-indigo-600">
+                                                                        <Bell size={8} /> {alarm.optionLabel}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                ) : <span className="text-slate-400 italic">Sem data</span>}
-                                            </td>
+                                                </td>
+                                            </tr>
 
-                                            {/* Função Atribuída */}
-                                            <td className="p-4">
-                                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-tight inline-block">{minhaFuncao}</span>
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="p-4 text-center">
-                                                <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-wider ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'} `}>
-                                                    {t.status}
-                                                </span>
-                                            </td>
-
-                                            {/* Sua Confirmação (RSVP) */}
-                                            <td className="p-4 text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button 
-                                                        onClick={() => handleRSVP(t.id, 'confirmado')}
-                                                        className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 shadow-sm' : 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300 hover:text-emerald-600'}`}
-                                                        title="Confirmar Presença"
-                                                    >
-                                                        <CheckCircle size={12} /> Presente
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleRSVP(t.id, 'recusado')}
-                                                        className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${rsvpStatus === 'recusado' ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' : 'bg-white text-slate-400 border-slate-200 hover:border-rose-300 hover:text-rose-600'}`}
-                                                        title="Informar Ausência"
-                                                    >
-                                                        <Ban size={12} /> Ausente
-                                                    </button>
-                                                </div>
-                                            </td>
-
-                                            {/* Ações de Lembrete e Ativações */}
-                                            <td className="p-4 text-right">
-                                                <div className="flex flex-col items-end gap-1.5">
-                                                    <div className="flex items-center gap-1.5">
-                                                        {/* Histórico button */}
-                                                        <button 
-                                                            onClick={() => {
-                                                                setSelectedTaskForHistory(t);
-                                                                setHistoryModalOpen(true);
-                                                            }}
-                                                            className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 cursor-pointer animate-all"
-                                                            title="Histórico de presença"
+                                            {/* Expandable focused detail box */}
+                                            {isFocused && (
+                                                <tr>
+                                                    <td colSpan={6} className="p-0 border-b border-indigo-100 bg-indigo-50/5">
+                                                        <motion.div 
+                                                            initial={{ opacity: 0, height: 0 }}
+                                                            animate={{ opacity: 1, height: 'auto' }}
+                                                            exit={{ opacity: 0, height: 0 }}
+                                                            transition={{ duration: 0.3 }}
+                                                            className="p-6 overflow-hidden flex flex-col gap-5 text-left"
                                                         >
-                                                            <History size={11} /> Histórico
-                                                        </button>
+                                                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                                                    <CheckSquare size={16} className="text-indigo-600" />
+                                                                    Visualização de Foco: Detalhes do Compromisso
+                                                                </h4>
+                                                                <div className="flex gap-2">
+                                                                    <button 
+                                                                        onClick={() => handleCreateICSFile(t)}
+                                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold transition-all cursor-pointer"
+                                                                        title="Exportar esta escala para .ics"
+                                                                    >
+                                                                        <Download size={11} /> Exportar .ics
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => setFocusedTaskId(null)}
+                                                                        className="text-slate-400 hover:text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded-lg bg-white shadow-2xs hover:bg-slate-50 transition-colors"
+                                                                    >
+                                                                        Fechar Foco
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-2xs space-y-2">
+                                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Descrição / Categoria</p>
+                                                                    <p className="text-sm font-bold text-slate-800">{t.descricao}</p>
+                                                                    <div className="flex items-center gap-2 mt-2">
+                                                                        <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider">{t.categoria}</span>
+                                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${t.status === 'Concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>{t.status}</span>
+                                                                    </div>
+                                                                    {t.hora && (
+                                                                        <div className="pt-2 text-xs text-slate-500 font-medium">
+                                                                            Horário de Início: <span className="font-bold text-slate-700 font-mono">{t.hora}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {t.observacoes && (
+                                                                        <div className="pt-2 border-t border-slate-100 mt-2">
+                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Notas / Observações</p>
+                                                                            <p className="text-xs text-slate-600 mt-1 italic font-medium">{t.observacoes}</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
 
-                                                        {/* Configurar Lembrete button */}
-                                                        <button 
-                                                            onClick={() => {
-                                                                setSelectedTaskForReminder(t);
-                                                                setCustomReminderTime(t.data ? `${t.data}T08:00` : "");
-                                                                setSelectedReminderOption("1hour");
-                                                                setReminderModalOpen(true);
-                                                            }}
-                                                            className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer"
-                                                            title="Configurar Lembrete Personalizado"
-                                                        >
-                                                            <Bell size={11} className="text-amber-600" /> Configurar Lembrete
-                                                        </button>
-
-                                                        {/* Sincronizar Google Agenda button */}
-                                                        <a 
-                                                            href={getGoogleCalendarUrl(t)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#1a73e8] border border-blue-200 text-[10px] font-bold transition-all cursor-pointer"
-                                                            title="Sincronizar com Google Agenda"
-                                                        >
-                                                            <svg className="w-3 h-3 fill-current text-[#1a73e8]" viewBox="0 0 24 24">
-                                                                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                                                            </svg>
-                                                            Sincronizar
-                                                        </a>
-                                                    </div>
-
-                                                    {/* Ativar Notificações Desktop (For tasks due today) */}
-                                                    {isDueToday && (
-                                                        <button 
-                                                            onClick={() => handleEnableDesktopNotifications(t)}
-                                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm shadow-indigo-500/20"
-                                                            title="Ativar Notificações Desktop do Navegador"
-                                                        >
-                                                            <Bell size={12} className="animate-pulse" /> Ativar Notificações Desktop
-                                                        </button>
-                                                    )}
-
-                                                    {/* Registered Alarms Indicator inside Row */}
-                                                    {taskAlarms.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mt-1 justify-end">
-                                                            {taskAlarms.map(alarm => (
-                                                                <span key={alarm.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black bg-indigo-50 border border-indigo-200 text-indigo-600">
-                                                                    <Bell size={8} /> {alarm.optionLabel}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                                <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-2xs">
+                                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Equipe Escalada ({t.equipe?.length || 0})</p>
+                                                                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto no-scrollbar">
+                                                                        {(t.equipe || []).map((m, idx) => (
+                                                                            <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-black text-[9px] flex items-center justify-center uppercase">{m.nome?.charAt(0)}</div>
+                                                                                    <div>
+                                                                                        <p className="text-xs font-bold text-slate-700">{m.nome}</p>
+                                                                                        <p className="text-[9px] text-slate-400 uppercase font-semibold">{m.funcao_escala || 'Membro'}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${m.status_presenca === 'confirmado' ? 'bg-emerald-50 text-emerald-600' : m.status_presenca === 'recusado' ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                                                    {m.status_presenca || 'Pendente'}
+                                                                                </span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Histórico Inline */}
+                                                            <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-2xs">
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Histórico de Presenças nesta Atividade</p>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                                    {(() => {
+                                                                        const hist = (db.tarefas || []).filter(item => 
+                                                                            item.descricao === t.descricao && 
+                                                                            (item.equipe || []).some(m => 
+                                                                                (m.id === user.id || m.nome === user.nome) && 
+                                                                                m.status_presenca === 'confirmado'
+                                                                            )
+                                                                        ).sort((a, b) => new Date(b.data || '1970-01-01').getTime() - new Date(a.data || '1970-01-01').getTime());
+                                                                        
+                                                                        if (hist.length === 0) {
+                                                                            return <p className="text-xs text-slate-400 italic">Nenhuma confirmação histórica registrada.</p>;
+                                                                        }
+                                                                        
+                                                                        return hist.slice(0, 6).map((item, hIdx) => (
+                                                                            <div key={hIdx} className="flex items-center gap-2 text-xs bg-slate-50 border border-slate-100 rounded-lg p-2 font-medium">
+                                                                                <Calendar size={12} className="text-emerald-500" />
+                                                                                <span className="text-slate-700 font-bold">{formatDateLocal(item.data)}</span>
+                                                                                <span className="text-[9px] uppercase font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded ml-auto">Confirmado</span>
+                                                                            </div>
+                                                                        ));
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>
@@ -16761,17 +16965,23 @@ const AppLayout = () => {
                 )}
 
                 {/* Cabeçalho Flutuante com Central de Notificações e Botão do Menu Lateral */}
-                <div className="sticky top-0 z-[60] flex justify-between md:justify-end items-center gap-3 mb-6 print:hidden">
-                    {!sidebarOpen && (
-                        <button 
-                            onClick={() => setSidebarOpen(true)} 
-                            className="md:hidden p-3 rounded-2xl bg-white/80 backdrop-blur border border-slate-200/50 text-slate-700 hover:text-indigo-600 shadow-sm flex items-center justify-center transition-all"
-                            title="Abrir Menu"
-                        >
-                            <Menu size={18} />
-                        </button>
-                    )}
-                    <div className="flex items-center gap-2 ml-auto">
+                <div className="sticky top-0 z-[60] flex justify-between items-center gap-3 mb-6 print:hidden">
+                    <div className="flex items-center gap-3">
+                        {!sidebarOpen && (
+                            <button 
+                                onClick={() => setSidebarOpen(true)} 
+                                className="md:hidden p-3 rounded-2xl bg-white/80 backdrop-blur border border-slate-200/50 text-slate-700 hover:text-indigo-600 shadow-sm flex items-center justify-center transition-all shrink-0"
+                                title="Abrir Menu"
+                            >
+                                <Menu size={18} />
+                            </button>
+                        )}
+                        <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-[10px] md:text-xs uppercase tracking-widest shadow-sm">
+                            <LayoutDashboard size={14} className="shrink-0" />
+                            <span className="hidden sm:inline">MÓDULO: </span>{getUserModule(user)}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto overflow-x-auto no-scrollbar pb-1">
                         <OsThemeToggle />
                         <AnimBgToggle />
                         <ThemeToggle />
@@ -16854,7 +17064,7 @@ const clearBrowserAppCache = () => {
 };
 
 // --- TELA DE CARREGAMENTO (SPLASH SCREEN) PÓS-LOGIN ---
-const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false, isMaryMode = false, saasSettings = {} as any }) => {
+const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', isDevMode = false, isMaryMode = false, saasSettings = {} as any, userModule = "" }) => {
     const [progress, setProgress] = useState(0);
     const [steps, setSteps] = useState([
         { id: 'core', text: "Inicializando núcleo do sistema...", status: 'pending', desc: '' },
@@ -17016,6 +17226,19 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                             por {saasSettings?.saas_nome_desenvolvedor || "PATRICK PESSOA"}
                         </p>
                     </div>
+                    {userModule && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.6, delay: 1.8, type: "spring", bounce: 0.4 }}
+                            className="mt-6 px-8 py-3 bg-indigo-600/30 border border-indigo-400/50 rounded-2xl backdrop-blur-md shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-105 transition-transform" 
+                        >
+                            <span className="text-lg md:text-xl font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
+                                <LayoutDashboard size={24} className="text-indigo-300" />
+                                MÓDULO: <span className="text-indigo-300">{userModule}</span>
+                            </span>
+                        </motion.div>
+                    )}
                     {isDevMode && (
                         <div className="mt-6 px-5 py-2 bg-emerald-500/20 border border-emerald-500/50 rounded-full animate-slide-up-fade backdrop-blur-md shadow-[0_0_15px_rgba(16,185,129,0.3)]" style={{ opacity: 0, animationDelay: '2s', animationFillMode: 'forwards' }}>
                             <span className="text-xs md:text-sm font-black text-emerald-400 uppercase tracking-[0.3em] flex items-center gap-2">
@@ -17062,6 +17285,36 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
             </div>
         </div>
     );
+};
+
+const getUserModule = (u: any) => {
+    if (!u) return "ÁREA PÚBLICA";
+    if (u.id === 'dev') return "DESENVOLVEDOR MASTER";
+    if (u.usuario?.toLowerCase() === 'mary') return "ASSISTENTE VIRTUAL";
+    if (u.tipo === 'membro') {
+        const funcao = u.funcao_administrativa?.toUpperCase() || 'MEMBRO';
+        if (funcao === 'NENHUMA' || !funcao) return "MEMBRO";
+        return funcao;
+    }
+    
+    // Níveis administrativos do sistema SaaS
+    if (u.funcao_administrativa && u.funcao_administrativa !== 'NENHUMA') {
+        const funcMap: Record<string, string> = {
+            'PASTOR PRESIDENTE': 'GABINETE PASTORAL',
+            'SECRETARIO': 'SECRETARIA GERAL',
+            'TESOUREIRO': 'TESOURARIA',
+            'ADMINISTRADOR': 'ADMINISTRAÇÃO GERAL',
+            'ADVOGADO': 'DEPARTAMENTO JURÍDICO',
+            'CONTADOR': 'CONTABILIDADE',
+            'LIDER DE DEPARTAMENTO': 'LIDERANÇA DE DEPARTAMENTOS',
+            'AUXILIAR': 'APOIO ADMINISTRATIVO'
+        };
+        return funcMap[u.funcao_administrativa.toUpperCase()] || u.funcao_administrativa.toUpperCase();
+    }
+    
+    if (u.nivel === 'master' || u.nivel === 'admin' || !u.nivel) return "GOVERNANÇA ADMINISTRATIVA";
+    
+    return u.nivel.toUpperCase();
 };
 
 export default function App() {
@@ -19671,7 +19924,7 @@ export default function App() {
           <GlobalStyles />
           <OsThemeStyles />
           <ToastContainer toasts={toasts} removeToast={removeToast} />
-          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} />}
+          {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} userModule={getUserModule(user)} />}
           
           <div className="absolute top-6 right-6 z-[100] pointer-events-auto hidden sm:flex gap-3">
               <OsThemeToggle variant="dark" />
@@ -20469,7 +20722,7 @@ export default function App() {
         <DynamicPrintStyles orientation={printOrientation} marginType={printMarginType} mode={printMode} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         <FloatingChatWidget />
-        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} />}
+        {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} userModule={getUserModule(user)} />}
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
         <BackupModal backupState={backupState} onConfirm={handleBackupConfirm} onCancel={handleBackupCancel} />
