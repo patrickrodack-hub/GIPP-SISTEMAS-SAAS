@@ -17,13 +17,13 @@ import {
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
   MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic, HelpCircle, Lightbulb,
-  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud,
+  FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudRain, CloudSun, CloudLightning,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -40,6 +40,7 @@ import {
 import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
 
 // --- MODULARIZED IMPORTS ---
+import { Win11PropertiesModal } from './components/Win11PropertiesModal';
 import { InteractiveWindow } from './components/InteractiveWindow';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
@@ -1613,7 +1614,10 @@ const GlobalStyles = () => (
 const ThemeBackground = ({ theme, isSplash = false }) => {
     const context = useContext(ChurchContext);
     const animBgEnabled = context ? context.animBgEnabled : true;
-    const papelParede = context?.db?.igreja?.papel_parede;
+    const papelParedeFromDb = context?.db?.igreja?.papel_parede;
+    const papelParede = (papelParedeFromDb === undefined || papelParedeFromDb === null) && theme === 'macos_tahoe'
+        ? 'https://images.unsplash.com/photo-1618005198143-e5283b519a7f?q=80&w=1400&auto=format&fit=crop'
+        : papelParedeFromDb;
     const osTheme = context?.osTheme || 'default';
     const isLightTheme = context?.theme === 'light';
     
@@ -1622,9 +1626,12 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     const activeAnim = animBgEnabled ? (animacaoTipoSelected === 'auto' ? (isSplash ? 'splash' : theme) : animacaoTipoSelected) : 'none';
     
     // Opacidade da película de contraste (de 0 a 100, padrão 40)
-    const overlayOpacity = context?.db?.igreja?.papel_parede_opacidade !== undefined ? Number(context?.db?.igreja?.papel_parede_opacidade) : 40;
+    const overlayOpacity = (papelParedeFromDb === undefined || papelParedeFromDb === null) && theme === 'macos_tahoe'
+        ? 15
+        : (context?.db?.igreja?.papel_parede_opacidade !== undefined ? Number(context?.db?.igreja?.papel_parede_opacidade) : 40);
     
     const getBaseThemeStyles = () => {
+        if (theme === 'macos_tahoe') return "bg-[#0b0c16]";
         if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
         if (theme === 'winxp') return "bg-[#5998D6]";
         if (theme === 'win95') return "bg-[#008080]";
@@ -1952,6 +1959,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const themesList = [
         { id: 'default', label: 'GIPP Padrão' }, { id: 'premium_black', label: 'Premium Black' },
+        { id: 'macos_tahoe', label: 'macOS 26 Tahoe ' },
         { id: 'win11', label: 'Windows 11' }, { id: 'winxp', label: 'Windows XP' },
         { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'Sistema COBOL' },
         { id: 'linux', label: 'Linux Ubuntu' }, { id: 'futuristic', label: 'GIPP Sci-Fi' }
@@ -15795,6 +15803,13 @@ const SquareOutlineIcon = ({ size = 12 }: { size?: number }) => (
     </svg>
 );
 
+const RestoreOutlineIcon = ({ size = 12 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" className="shrink-0">
+        <path d="M4 4V2.5A1.5 1.5 0 0 1 5.5 1h8A1.5 1.5 0 0 1 15 2.5v8a1.5 1.5 0 0 1-1.5 1.5H12" />
+        <rect x="1" y="4" width="11" height="11" rx="1.5" fill="none" />
+    </svg>
+);
+
 const AppLayout = () => {
     const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission, dismissedAnnouncement, setDismissedAnnouncement, theme, setTheme } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
@@ -15806,6 +15821,552 @@ const AppLayout = () => {
     const [launcherSearch, setLauncherSearch] = useState('');
     const [win11LauncherOpen, setWin11LauncherOpen] = useState(false);
     const [win11Search, setWin11Search] = useState('');
+    const [win11ActiveTab, setWin11ActiveTab] = useState<'pinned' | 'all'>('pinned');
+
+    const [win11ContextMenu, setWin11ContextMenu] = useState<{ x: number, y: number } | null>(null);
+    const [win11PropertiesOpen, setWin11PropertiesOpen] = useState(false);
+
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
+    const [activeDragPos, setActiveDragPos] = useState<{ x: number, y: number } | null>(null);
+
+    // Windows 11 Resizable / Draggable window states
+    const [win11IsMaximized, setWin11IsMaximized] = useState(true);
+    const [win11WindowPos, setWin11WindowPos] = useState({ x: 80, y: 50 });
+    const [win11WindowSize, setWin11WindowSize] = useState({ width: 920, height: 620 });
+    const [win11IsDraggingOrResizing, setWin11IsDraggingOrResizing] = useState(false);
+
+    const win11PosRef = useRef(win11WindowPos);
+    const win11SizeRef = useRef(win11WindowSize);
+
+    useEffect(() => {
+        win11PosRef.current = win11WindowPos;
+    }, [win11WindowPos]);
+
+    useEffect(() => {
+        win11SizeRef.current = win11WindowSize;
+    }, [win11WindowSize]);
+
+    // --- macOS 26 Tahoe ---
+    const [macosLaunchpadOpen, setMacosLaunchpadOpen] = useState(false);
+    const [macosSearch, setMacosSearch] = useState('');
+    const [macosControlCenterOpen, setMacosControlCenterOpen] = useState(false);
+    const [macosIsMaximized, setMacosIsMaximized] = useState(true);
+    const [macosWindowPos, setMacosWindowPos] = useState({ x: 100, y: 60 });
+    const [macosWindowSize, setMacosWindowSize] = useState({ width: 950, height: 630 });
+    const [macosIsDraggingOrResizing, setMacosIsDraggingOrResizing] = useState(false);
+    const [macosDockHoveredIndex, setMacosDockHoveredIndex] = useState<number | null>(null);
+
+    const macosPosRef = useRef(macosWindowPos);
+    const macosSizeRef = useRef(macosWindowSize);
+
+    useEffect(() => {
+        macosPosRef.current = macosWindowPos;
+    }, [macosWindowPos]);
+
+    useEffect(() => {
+        macosSizeRef.current = macosWindowSize;
+    }, [macosWindowSize]);
+
+    const handleMacosWindowDragStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+        if (macosIsMaximized) return;
+        if ('button' in e && e.button !== 0) return;
+
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('input') || target.closest('select') || target.closest('textarea')) {
+            return;
+        }
+
+        setMacosIsDraggingOrResizing(true);
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        const startX = clientX - macosPosRef.current.x;
+        const startY = clientY - macosPosRef.current.y;
+
+        const handleMouseMove = (moveEvent: MouseEvent | TouchEvent) => {
+            const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+            const newX = Math.max(-macosSizeRef.current.width + 120, Math.min(curX - startX, window.innerWidth - 120));
+            const newY = Math.max(0, Math.min(curY - startY, window.innerHeight - 80));
+
+            setMacosWindowPos({ x: newX, y: newY });
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
+            setMacosIsDraggingOrResizing(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleMouseMove);
+        document.addEventListener('touchend', handleMouseUp);
+    };
+
+    const handleMacosWindowResizeStart = (
+        e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
+        direction: 'r' | 'b' | 'br'
+    ) => {
+        if (macosIsMaximized) return;
+        if ('button' in e && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        setMacosIsDraggingOrResizing(true);
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        const startWidth = macosSizeRef.current.width;
+        const startHeight = macosSizeRef.current.height;
+        const startClientX = clientX;
+        const startClientY = clientY;
+
+        const handleMouseMove = (moveEvent: MouseEvent | TouchEvent) => {
+            const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+            const deltaX = curX - startClientX;
+            const deltaY = curY - startClientY;
+
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+
+            if (direction === 'r' || direction === 'br') {
+                newWidth = Math.max(480, Math.min(startWidth + deltaX, window.innerWidth - macosPosRef.current.x - 16));
+            }
+            if (direction === 'b' || direction === 'br') {
+                newHeight = Math.max(320, Math.min(startHeight + deltaY, window.innerHeight - macosPosRef.current.y - 16));
+            }
+
+            setMacosWindowSize({ width: newWidth, height: newHeight });
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
+            setMacosIsDraggingOrResizing(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleMouseMove);
+        document.addEventListener('touchend', handleMouseUp);
+    };
+
+    const handleWin11WindowDragStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+        if (win11IsMaximized) return;
+        if ('button' in e && e.button !== 0) return;
+
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('input') || target.closest('select') || target.closest('textarea')) {
+            return;
+        }
+
+        setWin11IsDraggingOrResizing(true);
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        const startX = clientX - win11PosRef.current.x;
+        const startY = clientY - win11PosRef.current.y;
+
+        const handleMouseMove = (moveEvent: MouseEvent | TouchEvent) => {
+            const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+            const newX = Math.max(-win11SizeRef.current.width + 120, Math.min(curX - startX, window.innerWidth - 120));
+            const newY = Math.max(0, Math.min(curY - startY, window.innerHeight - 80));
+
+            setWin11WindowPos({ x: newX, y: newY });
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
+            setWin11IsDraggingOrResizing(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleMouseMove);
+        document.addEventListener('touchend', handleMouseUp);
+    };
+
+    const handleWin11WindowResizeStart = (
+        e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
+        direction: 'r' | 'b' | 'br'
+    ) => {
+        if (win11IsMaximized) return;
+        if ('button' in e && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        setWin11IsDraggingOrResizing(true);
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        const startWidth = win11SizeRef.current.width;
+        const startHeight = win11SizeRef.current.height;
+        const startClientX = clientX;
+        const startClientY = clientY;
+
+        const handleMouseMove = (moveEvent: MouseEvent | TouchEvent) => {
+            const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+            const deltaX = curX - startClientX;
+            const deltaY = curY - startClientY;
+
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+
+            if (direction === 'r' || direction === 'br') {
+                newWidth = Math.max(480, Math.min(startWidth + deltaX, window.innerWidth - win11PosRef.current.x - 16));
+            }
+            if (direction === 'b' || direction === 'br') {
+                newHeight = Math.max(320, Math.min(startHeight + deltaY, window.innerHeight - win11PosRef.current.y - 16));
+            }
+
+            setWin11WindowSize({ width: newWidth, height: newHeight });
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
+            setWin11IsDraggingOrResizing(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleMouseMove);
+        document.addEventListener('touchend', handleMouseUp);
+    };
+
+    const DEFAULT_SHORTCUTS = useMemo(() => [
+        { id: 'dashboard', label: "Este Computador", x: 2, y: 3 },
+        { id: 'lixeira', label: "Lixeira Virtual", x: 2, y: 16 },
+        { id: 'assistente_ai', label: "Pastoral IA", x: 2, y: 29 },
+        { id: 'curso_teologia', label: "Univ. Teológica", x: 2, y: 42 },
+        { id: 'fin_entrada', label: "Painel Financeiro", x: 2, y: 55 },
+        { id: 'config_sistema', label: "Configurações", x: 2, y: 68 },
+    ], []);
+
+    const [userShortcuts, setUserShortcuts] = useState<{ id: string, label: string, x: number, y: number }[]>([]);
+
+    useEffect(() => {
+        if (user) {
+            const username = (user as any).usuario || (user as any).id || 'default';
+            const saved = localStorage.getItem(`gipp-win11-shortcuts-${username}`);
+            if (saved) {
+                try {
+                    setUserShortcuts(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Erro ao carregar atalhos:", e);
+                    setUserShortcuts(DEFAULT_SHORTCUTS);
+                }
+            } else {
+                setUserShortcuts(DEFAULT_SHORTCUTS);
+            }
+        } else {
+            setUserShortcuts([]);
+        }
+    }, [user, DEFAULT_SHORTCUTS]);
+
+    const saveUserShortcuts = (shortcutsList: typeof userShortcuts) => {
+        if (user) {
+            const username = (user as any).usuario || (user as any).id || 'default';
+            localStorage.setItem(`gipp-win11-shortcuts-${username}`, JSON.stringify(shortcutsList));
+        }
+    };
+
+    const updateShortcutPosition = (id: string, newX: number, newY: number) => {
+        setUserShortcuts(prev => {
+            const updated = prev.map(s => s.id === id ? { ...s, x: newX, y: newY } : s);
+            saveUserShortcuts(updated);
+            return updated;
+        });
+    };
+
+    const autoArrangeWin11Shortcuts = () => {
+        const activeShortcuts = userShortcuts.filter(s => isModuleAllowed(s.id));
+        const arranged = activeShortcuts.map((s, index) => {
+            const col = Math.floor(index / 6);
+            const row = index % 6;
+            const x = 2 + (col * 12);
+            const y = 3 + (row * 13);
+            return { ...s, x, y };
+        });
+        
+        setUserShortcuts(arranged);
+        saveUserShortcuts(arranged);
+        addToast("Ícones organizados de forma uniforme!", "success");
+    };
+
+    const addShortcutToDesktop = (moduleId: string) => {
+        const moduleMeta = ALL_AVAILABLE_MODULES.find(m => m.id === moduleId);
+        if (!moduleMeta) return;
+
+        if (userShortcuts.some(s => s.id === moduleId)) {
+            addToast("Este atalho já está na Área de Trabalho!", "info");
+            return;
+        }
+
+        // Place on column depending on current shortcuts count
+        const colCount = Math.floor(userShortcuts.length / 6);
+        const newX = Math.min(85, 2 + (colCount * 12));
+        const newY = 3 + ((userShortcuts.length % 6) * 13);
+
+        const newShortcuts = [...userShortcuts, {
+            id: moduleId,
+            label: moduleMeta.label,
+            x: newX,
+            y: newY
+        }];
+
+        setUserShortcuts(newShortcuts);
+        saveUserShortcuts(newShortcuts);
+        addToast(`Atalho para "${moduleMeta.label}" adicionado à Área de Trabalho!`, "success");
+    };
+
+    const removeShortcutFromDesktop = (moduleId: string) => {
+        const newShortcuts = userShortcuts.filter(s => s.id !== moduleId);
+        setUserShortcuts(newShortcuts);
+        saveUserShortcuts(newShortcuts);
+        addToast("Atalho removido com sucesso!", "info");
+    };
+
+    // Distinguish mouse drag vs click
+    const handleWin11MouseDown = (e: React.MouseEvent, shortcutId: string) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        let win11DragDistance = 0;
+
+        const container = document.getElementById('win11-desktop-area');
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+
+        const currentShortcut = userShortcuts.find(s => s.id === shortcutId);
+        const initialX = currentShortcut ? currentShortcut.x : 2;
+        const initialY = currentShortcut ? currentShortcut.y : 3;
+
+        setActiveDragId(shortcutId);
+        setActiveDragPos({ x: initialX, y: initialY });
+
+        // Show move cursor only during active drag
+        document.body.style.cursor = 'grabbing';
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const dx = moveEvent.clientX - startX;
+            const dy = moveEvent.clientY - startY;
+            win11DragDistance = Math.sqrt(dx * dx + dy * dy);
+
+            const relativeX = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+            const relativeY = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+
+            const clampedX = Math.max(1, Math.min(92, relativeX - 4));
+            const clampedY = Math.max(1, Math.min(88, relativeY - 4));
+
+            setActiveDragPos({ x: clampedX, y: clampedY });
+        };
+
+        const handleMouseUp = (upEvent: MouseEvent) => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+
+            setActiveDragId(null);
+            setActiveDragPos(null);
+
+            if (win11DragDistance < 5) {
+                setView(shortcutId);
+                if (!openedModules.includes(shortcutId)) {
+                    setOpenedModules(prev => [...prev, shortcutId]);
+                }
+                setMinimizedModules(prev => prev.filter(m => m !== shortcutId));
+            } else {
+                const finalRelativeX = ((upEvent.clientX - rect.left) / rect.width) * 100;
+                const finalRelativeY = ((upEvent.clientY - rect.top) / rect.height) * 100;
+                const clampedX = Math.max(1, Math.min(92, finalRelativeX - 4));
+                const clampedY = Math.max(1, Math.min(88, finalRelativeY - 4));
+                updateShortcutPosition(shortcutId, clampedX, clampedY);
+            }
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleWin11TouchStart = (e: React.TouchEvent, shortcutId: string) => {
+        const touchStart = e.touches[0];
+        const startX = touchStart.clientX;
+        const startY = touchStart.clientY;
+        let win11TouchDragDistance = 0;
+
+        const container = document.getElementById('win11-desktop-area');
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+
+        const currentShortcut = userShortcuts.find(s => s.id === shortcutId);
+        const initialX = currentShortcut ? currentShortcut.x : 2;
+        const initialY = currentShortcut ? currentShortcut.y : 3;
+
+        setActiveDragId(shortcutId);
+        setActiveDragPos({ x: initialX, y: initialY });
+
+        const handleTouchMove = (moveEvent: TouchEvent) => {
+            const touch = moveEvent.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            win11TouchDragDistance = Math.sqrt(dx * dx + dy * dy);
+
+            const relativeX = ((touch.clientX - rect.left) / rect.width) * 100;
+            const relativeY = ((touch.clientY - rect.top) / rect.height) * 100;
+
+            const clampedX = Math.max(1, Math.min(92, relativeX - 4));
+            const clampedY = Math.max(1, Math.min(88, relativeY - 4));
+
+            setActiveDragPos({ x: clampedX, y: clampedY });
+        };
+
+        const handleTouchEnd = (endEvent: TouchEvent) => {
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('touchend', handleTouchEnd);
+
+            setActiveDragId(null);
+            setActiveDragPos(null);
+
+            if (win11TouchDragDistance < 5) {
+                setView(shortcutId);
+                if (!openedModules.includes(shortcutId)) {
+                    setOpenedModules(prev => [...prev, shortcutId]);
+                }
+                setMinimizedModules(prev => prev.filter(m => m !== shortcutId));
+            } else {
+                const touch = endEvent.changedTouches[0];
+                if (touch) {
+                    const finalRelativeX = ((touch.clientX - rect.left) / rect.width) * 100;
+                    const finalRelativeY = ((touch.clientY - rect.top) / rect.height) * 100;
+                    const clampedX = Math.max(1, Math.min(92, finalRelativeX - 4));
+                    const clampedY = Math.max(1, Math.min(88, finalRelativeY - 4));
+                    updateShortcutPosition(shortcutId, clampedX, clampedY);
+                }
+            }
+        };
+
+        document.addEventListener('touchmove', handleTouchMove, { passive: true });
+        document.addEventListener('touchend', handleTouchEnd);
+    };
+
+    // --- CLIMA E PREVISÃO EM TEMPO REAL ---
+    const [win11Weather, setWin11Weather] = useState({
+        temp: 21,
+        city: 'Joinville',
+        state: 'Santa Catarina',
+        humidity: 78,
+        windspeed: 12,
+        apparentTemp: 22,
+        weathercode: 3,
+        icon: 'cloud',
+        loading: false,
+        error: null as string | null
+    });
+    const [win11WidgetsOpen, setWin11WidgetsOpen] = useState(false);
+    const [citySearchQuery, setCitySearchQuery] = useState('');
+    const [searchingCity, setSearchingCity] = useState(false);
+
+    const fetchWeatherForCoords = async (lat: number, lon: number, cityName: string, stateName: string = '') => {
+        try {
+            setWin11Weather(prev => ({ ...prev, loading: true, error: null }));
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relative_humidity_2m,apparent_temperature`);
+            if (!res.ok) throw new Error("Erro de resposta");
+            const data = await res.json();
+            if (data && data.current_weather) {
+                const current = data.current_weather;
+                const temp = Math.round(current.temperature);
+                const code = current.weathercode;
+                
+                let apparentTemp = temp;
+                let humidity = 75;
+                if (data.hourly && data.hourly.time) {
+                    const nowStr = new Date().toISOString().split(':')[0] + ':00';
+                    const idx = data.hourly.time.indexOf(nowStr);
+                    if (idx !== -1) {
+                        apparentTemp = Math.round(data.hourly.apparent_temperature[idx]);
+                        humidity = data.hourly.relative_humidity_2m[idx];
+                    } else {
+                        apparentTemp = Math.round(data.hourly.apparent_temperature[0] || temp);
+                        humidity = data.hourly.relative_humidity_2m[0] || 75;
+                    }
+                }
+
+                let iconType = 'cloud';
+                if (code === 0) iconType = 'sun';
+                else if ([1, 2, 3].includes(code)) iconType = 'cloud-sun';
+                else if ([45, 48].includes(code)) iconType = 'cloud';
+                else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) iconType = 'rain';
+                else if ([95, 96, 99].includes(code)) iconType = 'lightning';
+
+                setWin11Weather({
+                    temp,
+                    city: cityName,
+                    state: stateName,
+                    humidity,
+                    windspeed: Math.round(current.windspeed),
+                    apparentTemp,
+                    weathercode: code,
+                    icon: iconType,
+                    loading: false,
+                    error: null
+                });
+            }
+        } catch (err) {
+            console.error("Weather fetch failed:", err);
+            setWin11Weather(prev => ({ ...prev, loading: false, error: 'Erro de conexão' }));
+        }
+    };
+
+    const searchAndFetchCityWeather = async (name: string) => {
+        if (!name.trim()) return;
+        setSearchingCity(true);
+        try {
+            const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=pt&format=json`);
+            if (!res.ok) throw new Error("Erro de geocodificação");
+            const data = await res.json();
+            if (data && data.results && data.results.length > 0) {
+                const result = data.results[0];
+                const cityName = result.name;
+                const stateName = result.admin1 || '';
+                await fetchWeatherForCoords(result.latitude, result.longitude, cityName, stateName);
+            } else {
+                setWin11Weather(prev => ({ ...prev, error: 'Cidade não encontrada', loading: false }));
+            }
+        } catch (err) {
+            console.error("Geocoding failed:", err);
+            setWin11Weather(prev => ({ ...prev, error: 'Erro de conexão', loading: false }));
+        } finally {
+            setSearchingCity(false);
+        }
+    };
+
+    useEffect(() => {
+        if (osTheme === 'win11') {
+            fetchWeatherForCoords(-26.3045, -48.8456, 'Joinville', 'Santa Catarina');
+        }
+    }, [osTheme]);
 
     useEffect(() => {
         if ((osTheme === 'linux' || osTheme === 'win11') && view) {
@@ -16052,43 +16613,159 @@ const AppLayout = () => {
     // --------------------------------------------------
 
     const Win11Desktop = () => {
-        const desktopShortcuts = [
-            { id: 'dashboard', label: "Este Computador", icon: MonitorPlay, color: 'text-sky-500' },
-            { id: 'lixeira', label: "Lixeira Virtual", icon: Trash2, color: 'text-rose-500' },
-            { id: 'assistente_ai', label: "Pastoral IA", icon: Sparkles, color: 'text-purple-500' },
-            { id: 'curso_teologia', label: "Univ. Teológica", icon: BookOpen, color: 'text-emerald-500' },
-            { id: 'fin_entrada', label: "Painel Financeiro", icon: DollarSign, color: 'text-amber-500' },
-            { id: 'config_sistema', label: "Configurações", icon: Settings, color: 'text-indigo-500' },
-        ].filter(s => isModuleAllowed(s.id));
-
         const isLight = theme === 'light';
+        const activeShortcuts = userShortcuts.filter(s => isModuleAllowed(s.id));
+        
+        // Find current active module meta for the properties manual view
+        const currentActiveModuleMeta = ALL_AVAILABLE_MODULES.find(m => m.id === view) || { id: 'dashboard', label: 'Painel Principal', icon: LayoutDashboard, color: 'text-indigo-500' };
 
         return (
-            <div className="h-full w-full flex flex-col justify-start items-start p-6 select-none animate-fadeIn relative">
-                {/* Desktop shortcuts layout: left-aligned grid like real Windows */}
-                <div className="flex flex-col gap-3 max-h-[80vh] flex-wrap items-start justify-start text-left">
-                    {desktopShortcuts.map(s => {
-                        const ShortcutIcon = s.icon;
+            <div 
+                id="win11-desktop-area" 
+                className="h-full w-full select-none animate-fadeIn relative overflow-hidden min-h-[400px]"
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    setWin11ContextMenu({ x: e.clientX, y: e.clientY });
+                }}
+            >
+                {activeShortcuts.length === 0 ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 opacity-45">
+                        <MonitorPlay size={48} className="mb-2 text-sky-500" />
+                        <p className="text-xs font-bold">Área de Trabalho Vazia</p>
+                        <p className="text-[10px]">Abra o Menu Iniciar -{">"} Todos os aplicativos para adicionar atalhos!</p>
+                    </div>
+                ) : (
+                    activeShortcuts.map(s => {
+                        const mInfo = ALL_AVAILABLE_MODULES.find(m => m.id === s.id);
+                        if (!mInfo) return null;
+                        const ShortcutIcon = mInfo.icon || LayoutDashboard;
+                        const iconColor = mInfo.color || 'text-sky-500';
+
+                        const isDragging = activeDragId === s.id;
+                        const currentX = isDragging && activeDragPos ? activeDragPos.x : s.x;
+                        const currentY = isDragging && activeDragPos ? activeDragPos.y : s.y;
+
                         return (
-                            <button
+                            <div
                                 key={s.id}
-                                onClick={() => setView(s.id)}
-                                className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 border border-transparent w-24 hover:border-white/10 ${
+                                style={{ 
+                                    position: 'absolute', 
+                                    left: `${currentX}%`, 
+                                    top: `${currentY}%`,
+                                    touchAction: 'none',
+                                    zIndex: isDragging ? 50 : 10,
+                                    transition: isDragging ? 'none' : 'left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)'
+                                }}
+                                onMouseDown={(e) => handleWin11MouseDown(e, s.id)}
+                                onTouchStart={(e) => handleWin11TouchStart(e, s.id)}
+                                className={`flex flex-col items-center justify-center p-1 rounded-xl transition-shadow duration-200 border border-transparent w-22 hover:border-white/10 ${
                                     isLight 
                                         ? 'hover:bg-slate-300/30 text-slate-800' 
                                         : 'hover:bg-white/5 text-white'
-                                } cursor-pointer group`}
+                                } group select-none ${isDragging ? 'cursor-grabbing shadow-lg' : 'cursor-default'}`}
                             >
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-                                    <ShortcutIcon className={`${s.color} transition-colors drop-shadow-md`} size={32} />
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-1 group-hover:scale-105 transition-transform pointer-events-none">
+                                    <ShortcutIcon className={`${iconColor} transition-colors drop-shadow-md`} size={30} />
                                 </div>
-                                <span className="text-[11px] font-medium leading-tight text-center break-all line-clamp-2 w-full drop-shadow-xs">
+                                <span className="text-[10px] font-medium leading-tight text-center break-all line-clamp-2 w-full drop-shadow-xs font-sans pointer-events-none">
                                     {s.label}
                                 </span>
-                            </button>
+                                
+                                <button
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeShortcutFromDesktop(s.id);
+                                    }}
+                                    className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center text-[8px] font-black opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md z-20"
+                                    title="Remover Atalho"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         );
-                    })}
-                </div>
+                    })
+                )}
+
+                {/* Right Click Context Menu (Windows 11 design) */}
+                {win11ContextMenu && (
+                    <>
+                        <div 
+                            className="fixed inset-0 z-40 cursor-default" 
+                            onClick={() => setWin11ContextMenu(null)}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                setWin11ContextMenu(null);
+                            }}
+                        />
+                        <div 
+                            style={{ 
+                                left: `${win11ContextMenu.x}px`, 
+                                top: `${win11ContextMenu.y}px` 
+                            }}
+                            className={`fixed z-50 w-64 rounded-xl shadow-2xl border p-1.5 backdrop-blur-md animate-scaleIn select-none font-sans ${
+                                isLight 
+                                    ? 'bg-slate-100/95 border-slate-200/80 text-slate-800 shadow-slate-300/50' 
+                                    : 'bg-[#1a1a20]/95 border-white/10 text-white shadow-black/80'
+                            }`}
+                        >
+                            <button
+                                onClick={() => {
+                                    autoArrangeWin11Shortcuts();
+                                    setWin11ContextMenu(null);
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-xs font-semibold cursor-pointer transition-colors ${
+                                    isLight ? 'hover:bg-slate-200/50' : 'hover:bg-white/5'
+                                }`}
+                            >
+                                <Grid size={14} className="text-sky-500" />
+                                <span>Organizar ícones automaticamente</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setView('config_visual');
+                                    setWin11ContextMenu(null);
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-xs font-semibold cursor-pointer transition-colors ${
+                                    isLight ? 'hover:bg-slate-200/50' : 'hover:bg-white/5'
+                                }`}
+                            >
+                                <Palette size={14} className="text-purple-500" />
+                                <span>Alterar Papel de Parede</span>
+                            </button>
+
+                            <div className={`my-1 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'}`} />
+
+                            <button
+                                onClick={() => {
+                                    setWin11PropertiesOpen(true);
+                                    setWin11ContextMenu(null);
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-xs font-semibold cursor-pointer transition-colors ${
+                                    isLight ? 'hover:bg-slate-200/50' : 'hover:bg-white/5'
+                                }`}
+                            >
+                                <Sliders size={14} className="text-amber-500" />
+                                <span>Propriedades do GIPP</span>
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {/* Win11 Properties Modal (contains the active module manual) */}
+                {win11PropertiesOpen && (
+                    <Win11PropertiesModal
+                        activeModuleId={currentActiveModuleMeta.id}
+                        activeModuleLabel={currentActiveModuleMeta.label}
+                        activeModuleIcon={currentActiveModuleMeta.icon}
+                        activeModuleColor={currentActiveModuleMeta.color}
+                        theme={theme}
+                        onClose={() => setWin11PropertiesOpen(false)}
+                        setView={setView}
+                    />
+                )}
             </div>
         );
     };
@@ -16223,6 +16900,406 @@ const AppLayout = () => {
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
     const currentProps = MODULE_REGISTRY[view]?.props || {};
     const access = MODULE_REGISTRY[view]?.access || 'public';
+
+    if (osTheme === 'macos_tahoe') {
+        const isMinimized = minimizedModules.includes(view) || !view;
+        const mMeta = getModuleMeta(view);
+        const WindowIcon = mMeta.icon || LayoutDashboard;
+
+        // Custom time and date strings for macOS style
+        const now = new Date();
+        const macosTimeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const macosDateString = now.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+        // Dock application list (macOS standard set of apps)
+        const dockApps = [
+            { id: 'dashboard', label: 'Finder', icon: LayoutDashboard, color: 'from-blue-400 to-blue-600' },
+            { id: 'curso_teologia', label: 'Universidade', icon: BookOpen, color: 'from-teal-400 to-emerald-600' },
+            { id: 'secretaria_ebd', label: 'EBD', icon: GraduationCap, color: 'from-violet-400 to-indigo-600' },
+            { id: 'assistente_ai', label: 'Pastoral IA', icon: Sparkles, color: 'from-purple-500 to-pink-500' },
+            { id: 'rede_social', label: 'Artes', icon: ImagePlus, color: 'from-orange-400 to-rose-500' },
+            { id: 'config_visual', label: 'Aparência', icon: Palette, color: 'from-pink-400 to-purple-600' },
+            { id: 'config_sistema', label: 'Ajustes', icon: Settings, color: 'from-gray-400 to-zinc-600' }
+        ].filter(app => isModuleAllowed(app.id));
+
+        // Desktop files on the right side
+        const desktopFiles = [
+            { id: 'gipp_hd', label: 'Macintosh HD', icon: HardDrive, action: () => setView('dashboard') },
+            { id: 'igreja_db', label: 'Igreja.db', icon: Database, action: () => setView('cad_igreja') },
+            { id: 'manual_pdf', label: 'Manual GIPP', icon: FileText, action: () => setView('manual') }
+        ];
+
+        return (
+            <div className="h-screen w-full font-sans text-slate-100 bg-[#0c0d14] relative overflow-hidden select-none flex flex-col">
+                {/* Wallpaper */}
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <ThemeBackground theme="macos_tahoe" />
+                </div>
+
+                {/* --- TOP MENU BAR --- */}
+                <div className="h-6 bg-[#16171d]/60 dark:bg-black/35 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 z-[100] text-[11px] font-semibold text-white select-none shrink-0">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => setMacosLaunchpadOpen(true)}
+                            className="font-bold hover:opacity-80 transition-opacity flex items-center gap-1 cursor-pointer text-sm"
+                            title="Launchpad"
+                        >
+                            
+                        </button>
+                        <button onClick={() => setView('dashboard')} className="font-bold hover:text-white/80 transition-colors uppercase cursor-pointer">
+                            {view ? mMeta.label : 'Finder'}
+                        </button>
+                        <span className="text-white/20">|</span>
+                        <button onClick={() => setView('manual')} className="hidden sm:block text-white/80 hover:text-white cursor-pointer">Ajuda</button>
+                        <button onClick={() => setView('config_sistema')} className="hidden sm:block text-white/80 hover:text-white cursor-pointer">Preferências</button>
+                    </div>
+
+                    {/* Central Clock */}
+                    <div className="text-white/95 font-medium absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+                        <span>{macosDateString}</span>
+                        <span className="text-white/40">•</span>
+                        <span className="font-semibold">{macosTimeString}</span>
+                    </div>
+
+                    {/* Right side controls */}
+                    <div className="flex items-center gap-3">
+                        <Wifi size={12} className="text-emerald-400" />
+                        <span className="text-[10px] text-white/70">100%</span>
+                        
+                        {/* Control Center Trigger */}
+                        <button 
+                            onClick={() => setMacosControlCenterOpen(!macosControlCenterOpen)}
+                            className="p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
+                            title="Central de Controle"
+                        >
+                            <SlidersHorizontal size={11} className="text-white/90" />
+                        </button>
+
+                        <div className="flex items-center gap-1.5 border-l border-white/10 pl-2">
+                            <OsThemeToggle variant="dark" />
+                            <AnimBgToggle variant="dark" />
+                            <ThemeToggle variant="dark" />
+                            <FullScreenToggle variant="dark" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* --- DESKTOP AREA --- */}
+                <div className="flex-1 relative p-4 overflow-hidden min-h-0 z-10" onClick={() => { setMacosControlCenterOpen(false); }}>
+                    {/* Render standard desktop shortcut icons aligned to the right (like Mac) */}
+                    {(isMinimized || !view) && (
+                        <div className="absolute top-8 right-6 flex flex-col gap-6 items-end z-20">
+                            {desktopFiles.map(file => (
+                                <button
+                                    key={file.id}
+                                    onClick={file.action}
+                                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/15 hover:bg-black/35 border border-white/5 hover:border-white/10 transition-all duration-300 w-20 group cursor-pointer text-center"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-400/30 flex items-center justify-center mb-2 group-hover:scale-110 transition-all">
+                                        <file.icon className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" size={18} />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-white leading-tight drop-shadow-md truncate w-full">
+                                        {file.label}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* --- MACOS ACTIVE APPLICATION WINDOW --- */}
+                    {view && (
+                        <div 
+                            style={macosIsMaximized ? {
+                                position: 'absolute',
+                                top: '8px',
+                                left: '8px',
+                                right: '8px',
+                                bottom: '84px',
+                                transition: macosIsDraggingOrResizing ? 'none' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                            } : {
+                                position: 'absolute',
+                                left: `${macosWindowPos.x}px`,
+                                top: `${macosWindowPos.y}px`,
+                                width: `${macosWindowSize.width}px`,
+                                height: `${macosWindowSize.height}px`,
+                                transition: macosIsDraggingOrResizing ? 'none' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                            }}
+                            className={`flex flex-col bg-[#16171e]/95 border border-white/10 rounded-[1.2rem] shadow-[0_30px_70px_rgba(0,0,0,0.65)] overflow-hidden min-h-0 z-30 select-none ${
+                                isMinimized 
+                                    ? 'opacity-0 scale-75 translate-y-[200px] pointer-events-none' 
+                                    : 'opacity-100 scale-100'
+                            }`}
+                        >
+                            {/* Window Header / Titlebar */}
+                            <div 
+                                className="h-11 bg-[#1e2029] border-b border-white/5 flex items-center justify-between px-4 select-none shrink-0 relative cursor-default"
+                                onMouseDown={handleMacosWindowDragStart}
+                                onTouchStart={handleMacosWindowDragStart}
+                                onDoubleClick={() => setMacosIsMaximized(!macosIsMaximized)}
+                            >
+                                {/* macOS Traffic Light Buttons */}
+                                <div className="flex items-center gap-2 z-40">
+                                    <button 
+                                        onClick={() => handleCloseModule(view)}
+                                        className="w-3 h-3 rounded-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center text-[7px] text-rose-950 font-bold transition-all border border-rose-600/30 cursor-pointer group"
+                                        title="Fechar"
+                                    >
+                                        <span className="opacity-0 group-hover:opacity-100 font-black">✕</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setMinimizedModules(prev => [...prev, view])}
+                                        className="w-3 h-3 rounded-full bg-amber-500 hover:bg-amber-600 flex items-center justify-center text-[7px] text-amber-950 font-bold transition-all border border-amber-600/30 cursor-pointer group"
+                                        title="Minimizar"
+                                    >
+                                        <span className="opacity-0 group-hover:opacity-100 font-black">-</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setMacosIsMaximized(!macosIsMaximized)}
+                                        className="w-3 h-3 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-[6px] text-emerald-950 font-bold transition-all border border-emerald-600/30 cursor-pointer group"
+                                        title="Maximizar"
+                                    >
+                                        <span className="opacity-0 group-hover:opacity-100 font-black">⤢</span>
+                                    </button>
+                                </div>
+
+                                {/* Central Title */}
+                                <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none">
+                                    <div className="flex items-center gap-2">
+                                        <WindowIcon size={14} className="text-indigo-400" />
+                                        <span className="text-[11px] font-black tracking-wide text-white">
+                                            {mMeta.label}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Right Side actions */}
+                                <div className="flex items-center gap-2 text-white/50 text-[10px] font-bold z-40">
+                                    <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] uppercase tracking-wider text-indigo-300">GIPP 26 Tahoe</span>
+                                </div>
+                            </div>
+
+                            {/* App Content */}
+                            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative bg-slate-900/40">
+                                <CurrentModule {...currentProps} />
+                            </div>
+
+                            {/* Resizer control helper at bottom right */}
+                            {!macosIsMaximized && (
+                                <div 
+                                    className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end p-0.5"
+                                    onMouseDown={(e) => handleMacosWindowResizeStart(e, 'br')}
+                                    onTouchStart={(e) => handleMacosWindowResizeStart(e, 'br')}
+                                >
+                                    <svg width="8" height="8" viewBox="0 0 8 8" className="text-white/20 fill-current">
+                                        <path d="M6 0 L8 0 L8 8 L0 8 L0 6 L4 6 L4 4 L6 4 Z" />
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* --- THE MACOS DOCK --- */}
+                <div className="h-20 shrink-0 flex items-center justify-center pointer-events-none relative z-50">
+                    <div 
+                        className="pointer-events-auto px-5 py-2.5 bg-zinc-900/50 dark:bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[1.75rem] shadow-2xl flex items-end gap-4 transition-all duration-300 mb-2 hover:py-3.5 hover:px-6"
+                        style={{ boxShadow: '0 24px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.15)' }}
+                    >
+                        {/* Launchpad App Icon */}
+                        <div className="flex flex-col items-center">
+                            <button
+                                onClick={() => setMacosLaunchpadOpen(true)}
+                                className="w-11 h-11 rounded-[0.8rem] bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 hover:scale-125 transition-transform shadow-lg flex items-center justify-center cursor-pointer relative group"
+                                title="Launchpad"
+                            >
+                                <Rocket size={20} className="text-white drop-shadow-md animate-pulse" />
+                                <span className="absolute -top-10 scale-0 group-hover:scale-100 transition-transform bg-black/80 backdrop-blur text-[10px] text-white py-1 px-2.5 rounded-lg whitespace-nowrap font-bold pointer-events-none">
+                                    Launchpad
+                                </span>
+                            </button>
+                            <span className="w-1 h-1 bg-white/20 rounded-full mt-1.5 opacity-0"></span>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="w-px h-10 bg-white/10 self-center"></div>
+
+                        {/* Registered Applications */}
+                        {dockApps.map((app, index) => {
+                            const AppIcon = app.icon;
+                            const isRunning = view === app.id;
+                            const isMin = minimizedModules.includes(app.id);
+
+                            return (
+                                <div key={app.id} className="flex flex-col items-center">
+                                    <button
+                                        onClick={() => {
+                                            if (view === app.id) {
+                                                if (isMin) {
+                                                    setMinimizedModules(prev => prev.filter(m => m !== app.id));
+                                                } else {
+                                                    setMinimizedModules(prev => [...prev, app.id]);
+                                                }
+                                            } else {
+                                                setView(app.id);
+                                                setMinimizedModules(prev => prev.filter(m => m !== app.id));
+                                            }
+                                        }}
+                                        className={`w-11 h-11 rounded-[0.8rem] bg-gradient-to-br ${app.color} hover:scale-125 transition-transform shadow-lg flex items-center justify-center cursor-pointer relative group`}
+                                    >
+                                        <AppIcon size={18} className="text-white drop-shadow-md" />
+                                        <span className="absolute -top-10 scale-0 group-hover:scale-100 transition-transform bg-black/80 backdrop-blur text-[10px] text-white py-1 px-2.5 rounded-lg whitespace-nowrap font-bold pointer-events-none">
+                                            {app.label}
+                                        </span>
+                                    </button>
+                                    {/* Indicator Dot */}
+                                    <span className={`w-1 h-1 rounded-full mt-1.5 transition-all ${isRunning ? 'bg-indigo-300 shadow-[0_0_8px_#818cf8]' : 'bg-transparent'}`}></span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* --- CONTROL CENTER OVERLAY PANEL --- */}
+                {macosControlCenterOpen && (
+                    <>
+                        <div className="fixed inset-0 z-[98]" onClick={() => setMacosControlCenterOpen(false)}></div>
+                        <div className="fixed right-4 top-8 w-72 bg-[#1c1d24]/95 border border-white/10 rounded-2xl shadow-2xl z-[99] p-4 select-none animate-slide-up-fade text-white">
+                            <div className="flex items-center gap-3 border-b border-white/5 pb-3 mb-3">
+                                <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold border border-indigo-500/20 text-lg">
+                                    {user?.nome?.charAt(0)}
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black text-white">{user?.nome || 'Usuário Teológico'}</h4>
+                                    <p className="text-[9px] text-indigo-300 uppercase font-black tracking-wider">{user?.funcao_administrative || user?.cargo || 'Membro'}</p>
+                                </div>
+                            </div>
+
+                            {/* Core sliders */}
+                            <div className="space-y-3 text-xs">
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/5">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="font-bold text-white/70">Volume Doutrinário</span>
+                                        <span className="font-mono text-[10px] text-indigo-400">100%</span>
+                                    </div>
+                                    <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-indigo-500 h-full w-full"></div>
+                                    </div>
+                                </div>
+
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/5">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="font-bold text-white/70">Desempenho da CPU</span>
+                                        <span className="font-mono text-[10px] text-emerald-400">1.2% idle</span>
+                                    </div>
+                                    <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-emerald-500 h-full w-[12%]"></div>
+                                    </div>
+                                </div>
+
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/5">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="font-bold text-white/70">Uso de Memória GIPP</span>
+                                        <span className="font-mono text-[10px] text-purple-400">42MB / 512MB</span>
+                                    </div>
+                                    <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-purple-500 h-full w-[8%]"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions / System Control */}
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                                <button 
+                                    onClick={() => { setView('config_sistema'); setMacosControlCenterOpen(false); }}
+                                    className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 hover:border-white/10 transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer group"
+                                >
+                                    <Settings size={14} className="text-zinc-400 group-hover:text-white transition-colors" />
+                                    <span className="text-[10px] font-bold text-white/70">Ajustes</span>
+                                </button>
+                                <button 
+                                    onClick={() => { setMacosControlCenterOpen(false); handleLogoutRequest(); }}
+                                    className="p-2.5 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl border border-rose-500/20 hover:border-rose-500/30 transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer group"
+                                >
+                                    <LogOut size={14} className="text-rose-400 group-hover:text-rose-300 transition-colors" />
+                                    <span className="text-[10px] font-bold text-rose-300">Finalizar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* --- LAUNCHPAD FULL-SCREEN MODAL --- */}
+                {macosLaunchpadOpen && (
+                    <div className="fixed inset-0 bg-[#0c0d14]/75 backdrop-blur-2xl z-[1000] flex flex-col items-center justify-start p-6 md:p-12 animate-fadeIn select-none">
+                        {/* Search Bar */}
+                        <div className="w-full max-w-md mt-6 relative animate-slide-up-fade" style={{ animationDelay: '0.1s' }}>
+                            <Search className="absolute left-4.5 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+                            <input 
+                                type="text"
+                                value={macosSearch}
+                                onChange={(e) => setMacosSearch(e.target.value)}
+                                placeholder="Buscar aplicativo teológico..."
+                                className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 text-white placeholder-white/30 rounded-2xl text-xs font-bold outline-none focus:border-indigo-400/50 focus:bg-white/10 transition-all shadow-inner"
+                            />
+                            {macosSearch && (
+                                <button 
+                                    onClick={() => setMacosSearch('')}
+                                    className="absolute right-4.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Launcher list */}
+                        <div className="flex-1 w-full max-w-5xl mt-12 overflow-y-auto custom-scrollbar pb-10">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 justify-center">
+                                {ALL_AVAILABLE_MODULES
+                                    .filter(m => isModuleAllowed(m.id))
+                                    .filter(m => m.label.toLowerCase().includes(macosSearch.toLowerCase()))
+                                    .map((m, idx) => {
+                                        const AppIcon = m.icon || LayoutDashboard;
+                                        const gradientColors = m.id === 'curso_teologia' ? 'from-emerald-400 to-teal-600' :
+                                                               m.id === 'assistente_ai' ? 'from-purple-500 to-pink-500' :
+                                                               m.id === 'dashboard' ? 'from-blue-400 to-blue-600' :
+                                                               m.id === 'config_visual' ? 'from-pink-400 to-purple-600' :
+                                                               'from-zinc-500 to-slate-600';
+                                        return (
+                                            <button
+                                                key={m.id}
+                                                onClick={() => {
+                                                    setView(m.id);
+                                                    setMacosLaunchpadOpen(false);
+                                                    setMacosSearch('');
+                                                    setMinimizedModules(prev => prev.filter(mid => mid !== m.id));
+                                                }}
+                                                className="flex flex-col items-center justify-center p-3 rounded-2xl hover:bg-white/5 transition-all duration-300 transform hover:scale-105 group cursor-pointer aspect-square animate-slide-up-fade"
+                                                style={{ animationDelay: `${0.1 + idx * 0.02}s` }}
+                                            >
+                                                <div className={`w-14 h-14 rounded-[1.1rem] bg-gradient-to-br ${gradientColors} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg border border-white/10`}>
+                                                    <AppIcon className="text-white drop-shadow-md" size={24} />
+                                                </div>
+                                                <span className="text-[10px] font-black tracking-wide text-white/90 text-center leading-snug group-hover:text-white transition-colors truncate w-full px-1">
+                                                    {m.label}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+
+                        {/* Back Button */}
+                        <button 
+                            onClick={() => { setMacosLaunchpadOpen(false); setMacosSearch(''); }}
+                            className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/10 text-white/80 hover:text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md mb-6"
+                        >
+                            Fechar Launchpad
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     if (osTheme === 'linux') {
         const isMinimized = minimizedModules.includes(view) || !view;
@@ -16565,15 +17642,34 @@ const AppLayout = () => {
 
                         {/* Active Window */}
                         {view && (
-                            <div className={`absolute inset-0 p-1 md:p-3 flex flex-col transition-all duration-300 ease-out z-10 ${
-                                isMinimized 
-                                    ? 'opacity-0 scale-95 translate-y-[100px] pointer-events-none' 
-                                    : 'opacity-100 scale-100 translate-y-0'
-                            }`}>
-                                <div className={`flex-1 flex flex-col border rounded-xl shadow-2xl overflow-hidden min-h-0 backdrop-blur-3xl ${windowBg}`}>
+                            <div 
+                                style={win11IsMaximized ? undefined : {
+                                    position: 'absolute',
+                                    left: `${win11WindowPos.x}px`,
+                                    top: `${win11WindowPos.y}px`,
+                                    width: `${win11WindowSize.width}px`,
+                                    height: `${win11WindowSize.height}px`,
+                                    transition: win11IsDraggingOrResizing 
+                                        ? 'none' 
+                                        : 'left 0.2s cubic-bezier(0.1, 0.9, 0.2, 1), top 0.2s cubic-bezier(0.1, 0.9, 0.2, 1), width 0.2s cubic-bezier(0.1, 0.9, 0.2, 1), height 0.2s cubic-bezier(0.1, 0.9, 0.2, 1)',
+                                }}
+                                className={`${
+                                    win11IsMaximized ? 'absolute inset-0 p-1 md:p-3' : ''
+                                } flex flex-col z-10 ${
+                                    isMinimized 
+                                        ? 'opacity-0 scale-95 translate-y-[100px] pointer-events-none' 
+                                        : 'opacity-100 scale-100 translate-y-0 transition-all duration-300 ease-out'
+                                }`}
+                            >
+                                <div className={`flex-1 flex flex-col border rounded-xl shadow-2xl overflow-hidden min-h-0 backdrop-blur-3xl relative ${windowBg}`}>
                                     {/* Windows 11 Header */}
-                                    <div className={`px-4 py-2 flex items-center justify-between select-none shrink-0 border-b ${headerBg}`}>
-                                        <div className="flex items-center gap-2.5">
+                                    <div 
+                                        onMouseDown={handleWin11WindowDragStart}
+                                        onTouchStart={handleWin11WindowDragStart}
+                                        onDoubleClick={() => setWin11IsMaximized(!win11IsMaximized)}
+                                        className={`px-4 py-2 flex items-center justify-between select-none shrink-0 border-b ${headerBg} ${win11IsMaximized ? 'cursor-default' : 'cursor-move'}`}
+                                    >
+                                        <div className="flex items-center gap-2.5 pointer-events-none">
                                             <WindowIcon size={16} className="text-sky-500 shrink-0" />
                                             <span className="text-xs font-semibold tracking-wide">
                                                 {mMeta.label}
@@ -16592,14 +17688,19 @@ const AppLayout = () => {
                                             >
                                                 <Minus size={14} />
                                             </button>
-                                            {/* Maximize */}
+                                            {/* Maximize / Restore */}
                                             <button 
+                                                onClick={() => setWin11IsMaximized(!win11IsMaximized)}
                                                 className={`w-11 h-8 flex items-center justify-center text-xs font-light transition-colors cursor-pointer ${
                                                     isLight ? 'hover:bg-black/5 text-slate-700' : 'hover:bg-white/5 text-slate-300'
                                                 }`}
-                                                title="Maximizar"
+                                                title={win11IsMaximized ? "Restaurar" : "Maximizar"}
                                             >
-                                                <SquareOutlineIcon size={12} />
+                                                {win11IsMaximized ? (
+                                                    <RestoreOutlineIcon size={12} />
+                                                ) : (
+                                                    <SquareOutlineIcon size={12} />
+                                                )}
                                             </button>
                                             {/* Close */}
                                             <button 
@@ -16638,19 +17739,207 @@ const AppLayout = () => {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Window Resize Handles (Windows 11 Custom) */}
+                                    {!win11IsMaximized && (
+                                        <>
+                                            {/* Right Border Handle */}
+                                            <div
+                                                onMouseDown={(e) => handleWin11WindowResizeStart(e, 'r')}
+                                                onTouchStart={(e) => handleWin11WindowResizeStart(e, 'r')}
+                                                className="absolute top-0 right-0 w-2 h-full cursor-ew-resize hover:bg-sky-500/10 active:bg-sky-500/20 z-20"
+                                            />
+                                            {/* Bottom Border Handle */}
+                                            <div
+                                                onMouseDown={(e) => handleWin11WindowResizeStart(e, 'b')}
+                                                onTouchStart={(e) => handleWin11WindowResizeStart(e, 'b')}
+                                                className="absolute left-0 bottom-0 w-full h-2 cursor-ns-resize hover:bg-sky-500/10 active:bg-sky-500/20 z-20"
+                                            />
+                                            {/* Bottom-Right Corner Resize Handle */}
+                                            <div
+                                                onMouseDown={(e) => handleWin11WindowResizeStart(e, 'br')}
+                                                onTouchStart={(e) => handleWin11WindowResizeStart(e, 'br')}
+                                                className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize flex items-end justify-end p-0.5 pointer-events-auto z-30 group"
+                                            >
+                                                <div className="w-2.5 h-2.5 border-r border-b border-slate-400 dark:border-slate-500 group-hover:border-sky-500 transition-colors mr-0.5 mb-0.5 rounded-br-xs" />
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
 
+                    {/* Windows 11 Widgets (Weather / Search Panel) */}
+                    <AnimatePresence>
+                        {win11WidgetsOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                                className={`fixed bottom-14 left-4 w-80 rounded-2xl p-4 shadow-2xl z-[96] border backdrop-blur-xl ${
+                                    theme === 'light'
+                                        ? 'bg-white/90 border-slate-200 text-slate-800'
+                                        : 'bg-[#1e1e24]/90 border-slate-700/60 text-white'
+                                }`}
+                            >
+                                {/* Header */}
+                                <div className="flex items-center justify-between border-b pb-2.5 mb-3 border-slate-200 dark:border-slate-700/60">
+                                    <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider opacity-80">
+                                        <Cloud size={14} className="text-sky-500" />
+                                        <span>Widgets de Clima</span>
+                                    </div>
+                                    <button 
+                                        onClick={() => setWin11WidgetsOpen(false)}
+                                        className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+
+                                {/* Search City input */}
+                                <div className="flex gap-1.5 mb-4">
+                                    <div className="relative flex-1">
+                                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Buscar cidade..."
+                                            value={citySearchQuery}
+                                            onChange={(e) => setCitySearchQuery(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    searchAndFetchCityWeather(citySearchQuery);
+                                                }
+                                            }}
+                                            className={`w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg border outline-none transition-all ${
+                                                theme === 'light'
+                                                    ? 'bg-slate-100/80 border-slate-200 focus:bg-white focus:ring-1 focus:ring-indigo-500'
+                                                    : 'bg-slate-800/80 border-slate-700 focus:bg-slate-800 focus:ring-1 focus:ring-indigo-500'
+                                            }`}
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={() => searchAndFetchCityWeather(citySearchQuery)}
+                                        disabled={searchingCity}
+                                        className="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                    >
+                                        {searchingCity ? <RefreshCw size={12} className="animate-spin" /> : 'Buscar'}
+                                    </button>
+                                </div>
+
+                                {/* Weather Information */}
+                                {win11Weather.error ? (
+                                    <div className="p-4 text-center rounded-xl bg-rose-500/10 text-rose-500 text-xs font-medium border border-rose-500/20">
+                                        {win11Weather.error}. Tente buscar outra cidade ou verifique sua conexão.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {/* Main Card */}
+                                        <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                                            theme === 'light' ? 'bg-slate-50/80 border-slate-100' : 'bg-slate-800/40 border-slate-700/40'
+                                        }`}>
+                                            <div>
+                                                <h3 className="text-sm font-black tracking-tight">{win11Weather.city}</h3>
+                                                <p className="text-[10px] opacity-60 font-medium">{win11Weather.state || 'Brasil'}</p>
+                                                <div className="flex items-baseline gap-1 mt-2">
+                                                    <span className="text-3xl font-black font-sans">{win11Weather.temp}°</span>
+                                                    <span className="text-xs opacity-80 font-bold">C</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="flex justify-end mb-1">
+                                                    {win11Weather.loading ? (
+                                                        <RefreshCw size={40} className="text-indigo-400 animate-spin" />
+                                                    ) : win11Weather.icon === 'sun' ? (
+                                                        <Sun size={40} className="text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                                                    ) : win11Weather.icon === 'cloud-sun' ? (
+                                                        <CloudSun size={40} className="text-indigo-400" />
+                                                    ) : win11Weather.icon === 'rain' ? (
+                                                        <CloudRain size={40} className="text-sky-400" />
+                                                    ) : win11Weather.icon === 'lightning' ? (
+                                                        <CloudLightning size={40} className="text-yellow-400 animate-pulse" />
+                                                    ) : (
+                                                        <Cloud size={40} className="text-slate-400" />
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/10">
+                                                    {win11Weather.icon === 'sun' ? 'Ensolarado' :
+                                                     win11Weather.icon === 'cloud-sun' ? 'Parcial. Nublado' :
+                                                     win11Weather.icon === 'rain' ? 'Chuvoso' :
+                                                     win11Weather.icon === 'lightning' ? 'Tempestade' : 'Nublado'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Metrics Grid */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className={`p-2.5 rounded-xl border text-left ${
+                                                theme === 'light' ? 'bg-slate-50/50 border-slate-100' : 'bg-slate-800/20 border-slate-700/20'
+                                            }`}>
+                                                <p className="text-[9px] opacity-65 font-bold uppercase tracking-wider mb-1">Sensação Térmica</p>
+                                                <p className="text-sm font-extrabold">{win11Weather.apparentTemp}°C</p>
+                                            </div>
+                                            <div className={`p-2.5 rounded-xl border text-left ${
+                                                theme === 'light' ? 'bg-slate-50/50 border-slate-100' : 'bg-slate-800/20 border-slate-700/20'
+                                            }`}>
+                                                <p className="text-[9px] opacity-65 font-bold uppercase tracking-wider mb-1">Umidade do Ar</p>
+                                                <p className="text-sm font-extrabold">{win11Weather.humidity}%</p>
+                                            </div>
+                                            <div className={`p-2.5 rounded-xl border text-left ${
+                                                theme === 'light' ? 'bg-slate-50/50 border-slate-100' : 'bg-slate-800/20 border-slate-700/20'
+                                            }`}>
+                                                <p className="text-[9px] opacity-65 font-bold uppercase tracking-wider mb-1">Vento</p>
+                                                <p className="text-sm font-extrabold">{win11Weather.windspeed} km/h</p>
+                                            </div>
+                                            <div className={`p-2.5 rounded-xl border text-left ${
+                                                theme === 'light' ? 'bg-slate-50/50 border-slate-100' : 'bg-slate-800/20 border-slate-700/20'
+                                            }`}>
+                                                <p className="text-[9px] opacity-65 font-bold uppercase tracking-wider mb-1">Localização Atual</p>
+                                                <button 
+                                                    onClick={() => {
+                                                        setCitySearchQuery('Joinville');
+                                                        searchAndFetchCityWeather('Joinville');
+                                                    }}
+                                                    className="text-[10px] font-black text-indigo-500 hover:underline flex items-center gap-1 mt-0.5"
+                                                >
+                                                    <MapPin size={10} /> Redefinir Joinville
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     {/* Windows 11 Centered Bottom Taskbar */}
                     <div className={`fixed bottom-0 left-0 right-0 h-12 flex items-center justify-between px-4 z-[95] shadow-2xl backdrop-blur-md select-none shrink-0 border-t ${taskbarBg}`}>
                         {/* Left widget (Weather / News simulator) */}
-                        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold hover:bg-white/5 dark:hover:bg-white/5 px-2.5 py-1.5 rounded-md cursor-pointer transition-colors shrink-0">
-                            <Cloud size={14} className="text-blue-400" />
+                        <div 
+                            onClick={() => setWin11WidgetsOpen(!win11WidgetsOpen)}
+                            className={`hidden sm:flex items-center gap-2 text-xs font-semibold px-2.5 py-1.5 rounded-md cursor-pointer transition-colors shrink-0 relative ${
+                                win11WidgetsOpen 
+                                    ? 'bg-white/15 dark:bg-white/10 text-white' 
+                                    : 'hover:bg-white/5 dark:hover:bg-white/5'
+                            }`}
+                        >
+                            {win11Weather.loading ? (
+                                <RefreshCw size={14} className="text-blue-400 animate-spin" />
+                            ) : win11Weather.icon === 'sun' ? (
+                                <Sun size={14} className="text-amber-500 animate-pulse" />
+                            ) : win11Weather.icon === 'cloud-sun' ? (
+                                <CloudSun size={14} className="text-sky-300" />
+                            ) : win11Weather.icon === 'rain' ? (
+                                <CloudRain size={14} className="text-blue-400" />
+                            ) : win11Weather.icon === 'lightning' ? (
+                                <CloudLightning size={14} className="text-yellow-400" />
+                            ) : (
+                                <Cloud size={14} className="text-slate-300" />
+                            )}
                             <div className="text-left leading-none">
-                                <span className="block text-[10px] opacity-75">Joinville</span>
-                                <span className="text-[11px]">21°C</span>
+                                <span className="block text-[10px] opacity-75">{win11Weather.city}</span>
+                                <span className="text-[11px] font-bold">{win11Weather.temp}°C</span>
                             </div>
                         </div>
 
@@ -16788,61 +18077,160 @@ const AppLayout = () => {
                                 )}
                             </div>
 
-                            {/* Fixados (Pinned Section) */}
-                            <div className="mb-4 text-left">
-                                <div className="flex justify-between items-center px-1 mb-2.5">
-                                    <span className="text-xs font-bold">Fixados</span>
-                                    <button 
-                                        onClick={() => setWin11Search('')}
-                                        className="text-[10px] text-blue-500 hover:underline cursor-pointer"
-                                    >
-                                        Todos os aplicativos
-                                    </button>
-                                </div>
-
-                                <div className="max-h-[30vh] overflow-y-auto custom-scrollbar">
-                                    {ALL_AVAILABLE_MODULES.filter(m => {
-                                        if (!isModuleAllowed(m.id)) return false;
-                                        if (!win11Search) return true;
-                                        return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
-                                               m.id.toLowerCase().includes(win11Search.toLowerCase());
-                                    }).length === 0 ? (
-                                        <div className="text-center py-8 opacity-50 text-xs">
-                                            Nenhum aplicativo encontrado
+                            {/* Tabbed Section: Fixados or Todos os aplicativos */}
+                            <div className="mb-4 text-left flex-1 min-h-[30vh] flex flex-col justify-start">
+                                {win11ActiveTab === 'pinned' ? (
+                                    <>
+                                        <div className="flex justify-between items-center px-1 mb-2.5 shrink-0">
+                                            <span className="text-xs font-bold uppercase tracking-wider opacity-85">Fixados</span>
+                                            <button 
+                                                onClick={() => setWin11ActiveTab('all')}
+                                                className="text-[11px] font-bold text-sky-500 hover:text-sky-600 transition-colors flex items-center gap-0.5 cursor-pointer"
+                                            >
+                                                <span>Todos os aplicativos</span>
+                                                <ChevronRight size={12} />
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <div className="grid grid-cols-4 gap-y-4 gap-x-2">
+
+                                        <div className="max-h-[30vh] overflow-y-auto custom-scrollbar flex-1">
+                                            {ALL_AVAILABLE_MODULES.filter(m => {
+                                                if (!isModuleAllowed(m.id)) return false;
+                                                // Only show a curated set of pinned apps on default view, or show matches if searching
+                                                if (win11Search) {
+                                                    return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
+                                                           m.id.toLowerCase().includes(win11Search.toLowerCase());
+                                                }
+                                                // Default pinned list
+                                                return ['dashboard', 'curso_teologia', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai'].includes(m.id);
+                                            }).length === 0 ? (
+                                                <div className="text-center py-8 opacity-50 text-xs">
+                                                    Nenhum aplicativo encontrado
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-4 gap-y-4 gap-x-2">
+                                                    {ALL_AVAILABLE_MODULES.filter(m => {
+                                                        if (!isModuleAllowed(m.id)) return false;
+                                                        if (win11Search) {
+                                                            return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
+                                                                   m.id.toLowerCase().includes(win11Search.toLowerCase());
+                                                        }
+                                                        return ['dashboard', 'curso_teologia', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai'].includes(m.id);
+                                                    }).map(m => {
+                                                        const IconComp = m.icon;
+                                                        return (
+                                                            <button
+                                                                key={m.id}
+                                                                onClick={() => {
+                                                                    setView(m.id);
+                                                                    setWin11LauncherOpen(false);
+                                                                    setWin11Search('');
+                                                                }}
+                                                                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all border border-transparent hover:border-white/5 cursor-pointer group ${
+                                                                    isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                                                                }`}
+                                                            >
+                                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-1 bg-white/5 group-hover:scale-110 transition-transform">
+                                                                    <IconComp className={`${m.color} transition-colors`} size={22} />
+                                                                </div>
+                                                                <span className="text-[10px] font-medium text-center line-clamp-2 w-full leading-tight opacity-90 group-hover:opacity-100 font-sans">
+                                                                    {m.label}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between items-center px-1 mb-2.5 shrink-0">
+                                            <button 
+                                                onClick={() => setWin11ActiveTab('pinned')}
+                                                className="text-[11px] font-bold text-sky-500 hover:text-sky-600 transition-colors flex items-center gap-0.5 cursor-pointer"
+                                            >
+                                                <ChevronLeft size={12} />
+                                                <span>Voltar para Fixados</span>
+                                            </button>
+                                            <span className="text-xs font-bold uppercase tracking-wider opacity-85">Todos os aplicativos</span>
+                                        </div>
+
+                                        <div className="max-h-[30vh] overflow-y-auto custom-scrollbar flex-1 space-y-1 pr-1">
                                             {ALL_AVAILABLE_MODULES.filter(m => {
                                                 if (!isModuleAllowed(m.id)) return false;
                                                 if (!win11Search) return true;
                                                 return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
                                                        m.id.toLowerCase().includes(win11Search.toLowerCase());
-                                            }).map(m => {
-                                                const IconComp = m.icon;
-                                                return (
-                                                    <button
-                                                        key={m.id}
-                                                        onClick={() => {
-                                                            setView(m.id);
-                                                            setWin11LauncherOpen(false);
-                                                            setWin11Search('');
-                                                        }}
-                                                        className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all border border-transparent hover:border-white/5 cursor-pointer group ${
-                                                            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
-                                                        }`}
-                                                    >
-                                                        <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-1 bg-white/5 group-hover:scale-110 transition-transform">
-                                                            <IconComp className={`${m.color} transition-colors`} size={22} />
+                                            }).length === 0 ? (
+                                                <div className="text-center py-8 opacity-50 text-xs">
+                                                    Nenhum aplicativo encontrado
+                                                </div>
+                                            ) : (
+                                                ALL_AVAILABLE_MODULES.filter(m => {
+                                                    if (!isModuleAllowed(m.id)) return false;
+                                                    if (!win11Search) return true;
+                                                    return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
+                                                           m.id.toLowerCase().includes(win11Search.toLowerCase());
+                                                }).map(m => {
+                                                    const IconComp = m.icon;
+                                                    const isShortcut = userShortcuts.some(s => s.id === m.id);
+                                                    return (
+                                                        <div
+                                                            key={m.id}
+                                                            className={`flex items-center justify-between p-1.5 px-2.5 rounded-xl border border-transparent transition-all ${
+                                                                isLight ? 'hover:bg-black/5' : 'hover:bg-white/5'
+                                                            }`}
+                                                        >
+                                                            <button
+                                                                onClick={() => {
+                                                                    setView(m.id);
+                                                                    setWin11LauncherOpen(false);
+                                                                    setWin11Search('');
+                                                                }}
+                                                                className="flex items-center gap-3 flex-1 text-left cursor-pointer group"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 group-hover:scale-105 transition-transform shrink-0">
+                                                                    <IconComp className={`${m.color} transition-colors`} size={18} />
+                                                                </div>
+                                                                <span className="text-xs font-semibold leading-tight line-clamp-1 opacity-90 group-hover:opacity-100 font-sans">
+                                                                    {m.label}
+                                                                </span>
+                                                            </button>
+                                                            
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (isShortcut) {
+                                                                        removeShortcutFromDesktop(m.id);
+                                                                    } else {
+                                                                        addShortcutToDesktop(m.id);
+                                                                    }
+                                                                }}
+                                                                className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 shrink-0 ${
+                                                                    isShortcut 
+                                                                        ? 'bg-rose-500/15 text-rose-500 hover:bg-rose-500/25 border border-rose-500/10' 
+                                                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                                                                }`}
+                                                                title={isShortcut ? "Remover atalho da área de trabalho" : "Adicionar atalho à área de trabalho"}
+                                                            >
+                                                                {isShortcut ? (
+                                                                    <>
+                                                                        <Check size={10} />
+                                                                        <span>Remover</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Plus size={10} />
+                                                                        <span>Atalho</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
                                                         </div>
-                                                        <span className="text-[10px] font-medium text-center line-clamp-2 w-full leading-tight opacity-90 group-hover:opacity-100 font-sans">
-                                                            {m.label}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
+                                                    );
+                                                })
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Recommended / sugeridos section */}
@@ -16981,7 +18369,7 @@ const AppLayout = () => {
                             <span className="hidden sm:inline">MÓDULO: </span>{getUserModule(user)}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-auto overflow-x-auto no-scrollbar pb-1">
+                    <div className="flex flex-wrap items-center gap-2 ml-auto justify-end">
                         <OsThemeToggle />
                         <AnimBgToggle />
                         <ThemeToggle />
@@ -17188,6 +18576,23 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
         };
     }, [onComplete, saasSettings]);
 
+    if (themeBg === 'macos_tahoe') {
+        return (
+            <div className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-[#05050a] transition-opacity duration-1000 overflow-hidden">
+                <div className="flex flex-col items-center justify-center">
+                    <span className="text-white text-8xl font-sans font-light mb-10 drop-shadow-[0_0_20px_rgba(255,255,255,0.45)] select-none select-none"></span>
+                    <div className="w-48 h-[3.5px] bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                            className="h-full bg-white transition-all ease-out"
+                            style={{ width: `${progress}%`, transitionDuration: '0.4s' }}
+                        />
+                    </div>
+                    <span className="text-[9px] font-sans font-black tracking-[0.25em] uppercase text-white/30 mt-4">macOS 26 Tahoe</span>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-cover bg-center transition-opacity duration-1000 overflow-hidden"
              style={{ backgroundColor: themeBg === 'default' ? '#0f172a' : 'transparent' }}>
@@ -17229,13 +18634,49 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     {userModule && (
                         <motion.div 
                             initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ duration: 0.6, delay: 1.8, type: "spring", bounce: 0.4 }}
-                            className="mt-6 px-8 py-3 bg-indigo-600/30 border border-indigo-400/50 rounded-2xl backdrop-blur-md shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-105 transition-transform" 
+                            animate={{ 
+                                opacity: 1, 
+                                y: 0, 
+                                scale: 1,
+                                backgroundPosition: ["0% 50%", "200% 50%"],
+                                boxShadow: [
+                                    "0 0 15px rgba(99, 102, 241, 0.25)",
+                                    "0 0 35px rgba(99, 102, 241, 0.55)",
+                                    "0 0 15px rgba(99, 102, 241, 0.25)"
+                                ]
+                            }}
+                            transition={{ 
+                                opacity: { duration: 0.6, delay: 1.8 },
+                                y: { duration: 0.6, delay: 1.8, type: "spring", bounce: 0.4 },
+                                scale: { duration: 0.6, delay: 1.8, type: "spring", bounce: 0.4 },
+                                backgroundPosition: { repeat: Infinity, duration: 4, ease: "linear" },
+                                boxShadow: { repeat: Infinity, duration: 3, ease: "easeInOut" }
+                            }}
+                            className="relative mt-6 px-8 py-3.5 bg-gradient-to-r from-indigo-600/30 via-purple-600/40 to-indigo-600/30 bg-[length:200%_auto] border border-indigo-400/60 rounded-2xl backdrop-blur-lg hover:scale-105 transition-transform overflow-hidden group shadow-[0_0_25px_rgba(99,102,241,0.3)]" 
                         >
-                            <span className="text-lg md:text-xl font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
-                                <LayoutDashboard size={24} className="text-indigo-300" />
-                                MÓDULO: <span className="text-indigo-300">{userModule}</span>
+                            {/* Inner moving laser sheen line across the container */}
+                            <motion.div 
+                                animate={{ left: ["-100%", "200%"] }}
+                                transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut", repeatDelay: 1 }}
+                                className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
+                            />
+                            
+                            <span className="relative z-10 text-lg md:text-xl font-black text-white uppercase tracking-[0.22em] flex items-center justify-center gap-3">
+                                <LayoutDashboard size={22} className="text-indigo-300 animate-pulse shrink-0" />
+                                <span className="bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent font-medium">MÓDULO:</span>
+                                <motion.span 
+                                    animate={{ 
+                                        textShadow: [
+                                            "0 0 5px rgba(165, 180, 252, 0.4)",
+                                            "0 0 15px rgba(165, 180, 252, 0.85)",
+                                            "0 0 5px rgba(165, 180, 252, 0.4)"
+                                        ]
+                                    }}
+                                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                                    className="bg-gradient-to-r from-indigo-300 via-sky-300 to-purple-300 bg-clip-text text-transparent font-black drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+                                >
+                                    {userModule}
+                                </motion.span>
                             </span>
                         </motion.div>
                     )}

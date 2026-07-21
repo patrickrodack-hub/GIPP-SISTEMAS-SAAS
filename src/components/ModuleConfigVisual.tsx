@@ -148,6 +148,7 @@ const ModuleConfigVisual = () => {
                     <div className="lg:col-span-5 flex flex-col space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {[
                             { id: 'default', name: 'GIPP Padrão (Moderno)', label: 'Default', desc: 'Interface moderna com cantos arredondados, gradientes e estética minimalista.' },
+                            { id: 'macos_tahoe', name: 'macOS 26 Tahoe (Elegante) ', label: 'macOS', desc: 'Tema exuberante com barra superior translúcida, dock flutuante com zoom, Launchpad e cantos super-arredondados.' },
                             { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
                             { id: 'winxp', name: 'Windows XP (Luna)', label: 'WinXP', desc: 'Retrô vibrante dos anos 2005, com cabeçalhos azuis e botões verdes.' },
                             { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
@@ -198,6 +199,7 @@ const ModuleConfigVisual = () => {
                         <div 
                           className={`w-full h-[330px] rounded-[1.5rem] overflow-hidden relative flex flex-col p-4 shadow-inner border border-slate-200/60 transition-all duration-300 ${
                             previewTheme === 'default' ? 'bg-[#0f172a]' :
+                            previewTheme === 'macos_tahoe' ? 'bg-[#0b0c16]' :
                             previewTheme === 'win11' ? 'bg-gradient-to-tr from-[#9ec2e6] to-[#d6e5f5]' :
                             previewTheme === 'winxp' ? 'bg-[#0050e6]' : /* Bliss classic blue */
                             previewTheme === 'win95' ? 'bg-[#008080]' : /* classic teal */
@@ -215,6 +217,7 @@ const ModuleConfigVisual = () => {
                             {/* Janela simulada */}
                             <div 
                               className={`w-full max-w-md mx-auto mt-6 relative flex flex-col transition-all duration-300 z-10 ${
+                                previewTheme === 'macos_tahoe' ? 'bg-[#16171e]/95 rounded-[1.2rem] border border-white/10 p-1.5 shadow-2xl text-slate-100' :
                                 previewTheme === 'win95' ? 'bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#808080] border-b-[#808080] outline-1 outline-black p-0.5' :
                                 previewTheme === 'winxp' ? 'bg-[#d4d0c8] rounded-t-lg border-2 border-[#0054e3] p-0.5' :
                                 previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
@@ -232,6 +235,7 @@ const ModuleConfigVisual = () => {
                                 {/* Barra de título simulada */}
                                 <div 
                                   className={`flex items-center justify-between px-2 py-1 select-none ${
+                                    previewTheme === 'macos_tahoe' ? 'bg-[#1e2029] rounded-t-xl p-2 border-b border-white/5 text-white font-bold flex-row-reverse' :
                                     previewTheme === 'win95' ? 'bg-[#000080] text-white font-bold' :
                                     previewTheme === 'winxp' ? 'bg-gradient-to-r from-[#0054e3] to-[#278df1] text-white font-bold rounded-t-md' :
                                     previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
@@ -247,7 +251,13 @@ const ModuleConfigVisual = () => {
                                     </span>
                                     {/* Botões de controle simulados */}
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {previewTheme === 'win95' ? (
+                                        {previewTheme === 'macos_tahoe' ? (
+                                            <div className="flex gap-1.5">
+                                                <span className="w-2.5 h-2.5 bg-rose-500 rounded-full flex items-center justify-center border border-rose-600/30"></span>
+                                                <span className="w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-amber-600/30"></span>
+                                                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full flex items-center justify-center border border-emerald-600/30"></span>
+                                            </div>
+                                        ) : previewTheme === 'win95' ? (
                                             <div className="flex gap-0.5">
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">_</span>
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">▢</span>
@@ -277,6 +287,7 @@ const ModuleConfigVisual = () => {
 
                                 {/* Conteúdo simulado */}
                                 <div className={`p-4 mt-1 flex flex-col space-y-3.5 ${
+                                    previewTheme === 'macos_tahoe' ? 'bg-[#16171e] text-slate-100' :
                                     previewTheme === 'msdos' ? 'bg-black text-green-500 font-mono' :
                                     previewTheme === 'premium_black' ? 'bg-[#050505] text-slate-100' :
                                     previewTheme === 'futuristic' ? 'bg-[#03001e] text-slate-100' :
@@ -290,6 +301,7 @@ const ModuleConfigVisual = () => {
                                     <div className="flex flex-col space-y-1">
                                         <span className="text-[10px] font-bold opacity-85">Nome do Membro:</span>
                                         <div className={`p-1.5 text-[10px] truncate ${
+                                            previewTheme === 'macos_tahoe' ? 'border border-white/10 bg-white/5 text-white rounded-lg' :
                                             previewTheme === 'win95' ? 'bg-white border-t-1.5 border-l-1.5 border-t-[#404040] border-l-[#404040] border-r-1.5 border-b-1.5 border-r-white border-b-white text-black' :
                                             previewTheme === 'winxp' ? 'bg-white border border-blue-600 text-black rounded' :
                                             previewTheme === 'msdos' ? 'border-b-2 border-cyan-400 bg-black text-cyan-400 font-mono font-bold' :
@@ -305,6 +317,7 @@ const ModuleConfigVisual = () => {
                                     {/* Botões simulados */}
                                     <div className="flex gap-2">
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
+                                            previewTheme === 'macos_tahoe' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-400/20 text-white rounded-lg text-center shadow-md' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
                                             previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded shadow-xs' :
                                             previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
@@ -316,6 +329,7 @@ const ModuleConfigVisual = () => {
                                             Gravar Registro
                                         </div>
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
+                                            previewTheme === 'macos_tahoe' ? 'bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
                                             previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded' :
                                             previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
