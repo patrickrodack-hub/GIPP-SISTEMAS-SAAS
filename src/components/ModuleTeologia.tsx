@@ -1301,7 +1301,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.setTextColor(200, 200, 200);
-            doc.text("SISTEMA GIPP V8.9.0 • CADERNO OFICIAL DE ANOTAÇÕES E ESTUDOS TEOLÓGICOS (CGADB)", 40, 55);
+            doc.text("SISTEMA GIPP v9.0.0 • CADERNO OFICIAL DE ANOTAÇÕES E ESTUDOS TEOLÓGICOS (CGADB)", 40, 55);
             
             let y = 120;
             

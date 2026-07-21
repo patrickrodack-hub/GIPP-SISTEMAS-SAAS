@@ -1729,7 +1729,7 @@ const SendIconComp = ({ size }: { size: number }) => <Send size={size} />;
 
 export const GALLERY_WALLPAPERS = [
   { name: 'Sem Papel de Parede', value: null, thumb: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=10&w=200&auto=format&fit=crop' },
-  { name: 'macOS 26 Tahoe (Oficial)', value: 'https://images.unsplash.com/photo-1618005198143-e5283b519a7f?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1618005198143-e5283b519a7f?q=40&w=300&auto=format&fit=crop' },
+  { name: 'macOS 26 Tahoe (Oficial)', value: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=40&w=300&auto=format&fit=crop' },
   { name: 'Cristal Líquido (Suave)', value: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=40&w=300&auto=format&fit=crop' },
   { name: 'Aurora Digital (Sleek)', value: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=40&w=300&auto=format&fit=crop' },
   { name: 'Gradiente de Seda (Calmo)', value: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1400&auto=format&fit=crop', thumb: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=40&w=300&auto=format&fit=crop' },

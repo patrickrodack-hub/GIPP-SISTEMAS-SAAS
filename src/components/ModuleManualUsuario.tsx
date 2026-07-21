@@ -1225,7 +1225,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                   <span className="w-3 h-3 rounded-full bg-amber-500 block" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500 block" />
                 </div>
-                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v4</span>
+                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v9.0.0</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1788,7 +1788,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 8.9.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral de ministérios específicos.
+            O GIPP Versão 9.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral de ministérios específicos.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

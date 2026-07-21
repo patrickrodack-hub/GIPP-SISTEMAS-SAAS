@@ -56,6 +56,8 @@ const ModuleConfigVisual = () => {
     const [saving, setSaving] = useState(false);
     const [previewTheme, setPreviewTheme] = useState(osTheme || 'default');
 
+    const [isDragging, setIsDragging] = useState(false);
+
     // Sincroniza estados caso d_igreja mude externamente
     useEffect(() => {
         if (configData.papel_parede !== undefined) {
@@ -90,20 +92,63 @@ const ModuleConfigVisual = () => {
         }
     };
 
+    const handleResetWallpaper = async () => {
+        setSelectedWall(null);
+        await handleSaveConfig(null, selectedAnim, opacityFilter);
+        addToast("Imagem de fundo redefinida! O tema agora usa o padrão oficial.", "success");
+    };
+
     const handleFileUpload = (e) => {
-        const file = e.target.files[0];
+        const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 800 * 1024) { 
-                alert("Para melhor performance, escolha imagens de até 800KB.");
-                return; 
-            }
             const reader = new FileReader();
             reader.onloadend = async () => {
-                const base64 = reader.result as string;
-                setSelectedWall(base64);
-                handleSaveConfig(base64, selectedAnim, opacityFilter);
+                const rawBase64 = reader.result as string;
+                try {
+                    // Comprime para garantir melhor performance e respeitar limites de cota do Firestore
+                    const compressedBase64 = await resizeImageAndCompress(rawBase64, 1200, 900, 0.7);
+                    setSelectedWall(compressedBase64);
+                    handleSaveConfig(compressedBase64, selectedAnim, opacityFilter);
+                    addToast("Imagem de fundo personalizada carregada com sucesso!", "success");
+                } catch (err) {
+                    console.error("Erro ao processar imagem:", err);
+                    addToast("Erro ao processar imagem. Tente novamente.", "error");
+                }
             };
             reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = async (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const rawBase64 = reader.result as string;
+                try {
+                    const compressedBase64 = await resizeImageAndCompress(rawBase64, 1200, 900, 0.7);
+                    setSelectedWall(compressedBase64);
+                    handleSaveConfig(compressedBase64, selectedAnim, opacityFilter);
+                    addToast("Imagem de fundo personalizada arrastada com sucesso!", "success");
+                } catch (err) {
+                    console.error("Erro ao processar imagem arrastada:", err);
+                    addToast("Erro ao processar imagem arrastada.", "error");
+                }
+            };
+            reader.readAsDataURL(file);
+        } else {
+            addToast("Por favor, arraste e solte apenas arquivos de imagem.", "error");
         }
     };
 
@@ -414,6 +459,19 @@ const ModuleConfigVisual = () => {
                                     <span className="text-xs font-black bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-100 font-mono w-12 text-center">{opacityFilter}%</span>
                                 </div>
                             </div>
+
+                            {/* Botão de Redefinir Imagem de Fundo */}
+                            {selectedWall !== null && (
+                                <div className="flex justify-start">
+                                    <button
+                                        type="button"
+                                        onClick={handleResetWallpaper}
+                                        className="px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 hover:text-rose-800 rounded-2xl font-black text-xs transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95"
+                                    >
+                                        <RotateCcw size={14} /> Redefinir Imagem de Fundo (Restaurar Padrão)
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -451,12 +509,25 @@ const ModuleConfigVisual = () => {
                     <div className="pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <span className="text-xs font-black text-slate-700 block mb-2">Upload de Imagem Própria</span>
-                            <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50/10 cursor-pointer transition-all text-center">
-                                <Upload className="text-indigo-500 mb-2" size={24}/>
-                                <span className="text-xs font-black text-slate-700">Escolher arquivo JPG/PNG</span>
-                                <span className="text-[10px] text-slate-400 mt-1">Máximo 800 KB recomendado</span>
-                                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden"/>
-                            </label>
+                            <div 
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-2xl cursor-pointer transition-all text-center min-h-[120px] ${
+                                    isDragging 
+                                        ? 'border-indigo-600 bg-indigo-50/40 scale-102 shadow-md' 
+                                        : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/10'
+                                }`}
+                            >
+                                <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                                    <Upload className={`mb-2 transition-transform ${isDragging ? 'text-indigo-600 scale-110 animate-bounce' : 'text-indigo-500'}`} size={24}/>
+                                    <span className="text-xs font-black text-slate-700">
+                                        {isDragging ? 'Solte a imagem aqui!' : 'Arraste uma imagem ou clique para selecionar'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 mt-1">PNG, JPG, JPEG (Otimização automática ativada)</span>
+                                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden"/>
+                                </label>
+                            </div>
                         </div>
 
                         <div>

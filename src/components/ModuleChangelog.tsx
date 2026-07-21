@@ -47,11 +47,25 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-                        {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.9.0 */}
-            <div className="relative pl-8 border-l-2 border-amber-500 animate-entrance"> 
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 9.0.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-500 animate-entrance"> 
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v9.0.0 - Novo Tema macOS Tahoe, Drag and Drop & Opacidade de Imagem</h3>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Novo Papel de Parede macOS Tahoe:</strong> Atualizamos a imagem padrão do tema macOS 26 Tahoe para um visual abstrato de raios mais condizente com a identidade do sistema.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Slider de Opacidade:</strong> Adicionamos um controle deslizante no módulo de configuração visual que permite aos usuários ajustarem a opacidade da película de escurecimento sobre a imagem de fundo.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Upload com Drag & Drop:</strong> Aprimoramos o seletor de upload de papéis de parede para suportar o recurso de arrastar e soltar (drag and drop) com dicas visuais e compressão automática nativa (redução inteligente abaixo de 800KB).</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Redefinição de Fundo:</strong> Novo botão exclusivo para remover papéis de parede customizados, restaurando a imagem de fundo oficial nativa e atrelada ao tema selecionado instantaneamente.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Atualização Consolidada de Versões:</strong> Nova identidade sistêmica de versão 9.0.0 aplicada sincronamente nos cadernos oficiais, manuais do usuário, dossiês de auditoria, registros de software, painéis globais e módulos de versão.</li>
+                </ul>
+            </div>
+
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 8.9.0 */}
+            <div className="relative pl-8 border-l-2 border-amber-500"> 
                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-amber-950 font-[Outfit]">v8.9.0 - Módulo Interativo Gamificado & Score System</h3>
-                <p className="text-xs text-amber-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <p className="text-xs text-amber-600 font-black uppercase mb-3 tracking-wider">Julho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Módulo Interativo:</strong> Implementação completa de novos minigames no Portal do Membro ("Tetris" e "Show do Cristão"). Inclui painel direcional flutuante arrastável (drag and drop) nativo do React, suportando dispositivos móveis e desktop.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Gamificação Teológica:</strong> Show do Cristão estruturado nos 24 capítulos da Declaração de Fé (CPAD/CGADB) para avaliação do conhecimento com exibição de placares instantâneos.</li>
