@@ -76,3 +76,11 @@ tbody tr:nth-child(odd) {
 }
 
 
+
+/* FortuneSheet Tailwind CSS fix */
+.fortune-sheet-container * {
+  box-sizing: content-box !important;
+}
+.fortune-sheet-container {
+  box-sizing: border-box !important;
+}

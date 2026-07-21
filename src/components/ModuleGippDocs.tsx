@@ -1,0 +1,450 @@
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { 
+    Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
+    List, ListOrdered, Undo, Redo, Printer, FileDown, FileUp, Save, Image as ImageIcon,
+    Type, PaintBucket, Minus, Plus, Link, Highlighter, Scissors, Copy, Clipboard,
+    ChevronDown, FileText, Download, FolderOpen, FileCheck, Maximize, Minimize, Settings, PanelRightClose, FileBox
+} from 'lucide-react';
+import { ChurchContext } from '../App';
+
+export default function ModuleGippDocs() {
+    const editorRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileName, setFileName] = useState('Documento sem título');
+    const [zoom, setZoom] = useState(100);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [showMargins, setShowMargins] = useState(false);
+    const [margins, setMargins] = useState({ top: 20, bottom: 20, left: 24, right: 24 }); // em mm
+
+    const { addToast, osTheme } = useContext(ChurchContext);
+
+    const getFullscreenClasses = () => {
+        if (!isFullscreen) return 'h-full min-h-[600px] rounded-2xl relative z-10';
+        
+        if (osTheme === 'linux') return 'fixed left-0 right-0 bottom-16 top-8 z-[100] rounded-none';
+        if (osTheme === 'win11') return 'fixed left-0 right-0 top-0 bottom-12 z-[100] rounded-none';
+        if (osTheme === 'macos_tahoe') return 'fixed left-0 right-0 bottom-0 top-6 z-[100] rounded-none';
+        
+        return 'fixed inset-0 z-[100] rounded-none';
+    };
+
+    const formatDoc = (cmd: string, value: string | undefined = undefined) => {
+        if (value) {
+            document.execCommand(cmd, false, value);
+        } else {
+            document.execCommand(cmd);
+        }
+        editorRef.current?.focus();
+    };
+
+    const handleSaveFile = () => {
+        if (!editorRef.current) return;
+        const content = editorRef.current.innerHTML;
+        const blob = new Blob([content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName}.gdoc`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addToast("Documento salvo no computador com sucesso!", "success");
+    };
+
+    const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (editorRef.current && event.target?.result) {
+                editorRef.current.innerHTML = event.target.result as string;
+                setFileName(file.name.replace('.gdoc', '').replace('.html', ''));
+                addToast("Documento aberto com sucesso!", "success");
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const triggerFileOpen = () => {
+        fileInputRef.current?.click();
+    };
+
+    const exportToDocx = async () => {
+        if (!editorRef.current) return;
+        
+        try {
+            const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
+            
+            const parseNode = (node: ChildNode): any => {
+                if (node.nodeName === 'P' || node.nodeName === 'DIV' || node.nodeName === 'H1' || node.nodeName === 'H2' || node.nodeName === 'H3' || node.nodeName === 'H4' || node.nodeName === 'H5' || node.nodeName === 'H6' || node.nodeName === 'LI') {
+                    const textRuns: any[] = [];
+                    
+                    const extractText = (currNode: ChildNode, isBold = false, isItalic = false, isUnderline = false) => {
+                        if (currNode.nodeType === Node.TEXT_NODE) {
+                            if (currNode.textContent && currNode.textContent.trim()) {
+                                textRuns.push(new TextRun({
+                                    text: currNode.textContent,
+                                    bold: isBold,
+                                    italics: isItalic,
+                                    underline: isUnderline ? {} : undefined,
+                                }));
+                            }
+                        } else {
+                            const nodeName = currNode.nodeName.toLowerCase();
+                            const newBold = isBold || nodeName === 'b' || nodeName === 'strong';
+                            const newItalic = isItalic || nodeName === 'i' || nodeName === 'em';
+                            const newUnderline = isUnderline || nodeName === 'u';
+                            
+                            currNode.childNodes.forEach(child => extractText(child, newBold, newItalic, newUnderline));
+                        }
+                    };
+                    
+                    extractText(node);
+                    
+                    let heading = undefined;
+                    if (node.nodeName === 'H1') heading = HeadingLevel.HEADING_1;
+                    if (node.nodeName === 'H2') heading = HeadingLevel.HEADING_2;
+                    if (node.nodeName === 'H3') heading = HeadingLevel.HEADING_3;
+                    if (node.nodeName === 'H4') heading = HeadingLevel.HEADING_4;
+                    if (node.nodeName === 'H5') heading = HeadingLevel.HEADING_5;
+                    if (node.nodeName === 'H6') heading = HeadingLevel.HEADING_6;
+                    
+                    let alignment: any = AlignmentType.LEFT;
+                    const style = (node as HTMLElement).style;
+                    if (style?.textAlign === 'center') alignment = AlignmentType.CENTER;
+                    if (style?.textAlign === 'right') alignment = AlignmentType.RIGHT;
+                    if (style?.textAlign === 'justify') alignment = AlignmentType.JUSTIFIED;
+
+                    if (textRuns.length > 0) {
+                        return new Paragraph({
+                            children: textRuns,
+                            heading: heading,
+                            alignment: alignment,
+                        });
+                    }
+                }
+                return null;
+            };
+
+            const paragraphs: any[] = [];
+            editorRef.current.childNodes.forEach(child => {
+                const p = parseNode(child);
+                if (p) paragraphs.push(p);
+            });
+
+            const mmToTwips = (mm: number) => Math.round(mm * 56.7);
+
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            margin: {
+                                top: mmToTwips(margins.top),
+                                right: mmToTwips(margins.right),
+                                bottom: mmToTwips(margins.bottom),
+                                left: mmToTwips(margins.left),
+                            },
+                        },
+                    },
+                    children: paragraphs.length > 0 ? paragraphs : [new Paragraph("Documento vazio")],
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${fileName}.docx`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            addToast("Documento exportado para DOCX com sucesso!", "success");
+        } catch (error) {
+            console.error("Erro ao exportar DOCX:", error);
+            addToast("Erro ao exportar documento para DOCX.", "error");
+        }
+    };
+
+    const insertVariable = (variable: string) => {
+        if (!variable) return;
+        formatDoc('insertText', variable);
+    };
+
+    const handlePrint = () => {
+        if (!editorRef.current) return;
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>${fileName}</title>
+                        <style>
+                            @page {
+                                margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
+                            }
+                            body { font-family: Arial, sans-serif; }
+                            table { border-collapse: collapse; width: 100%; }
+                            table, th, td { border: 1px solid black; }
+                            th, td { padding: 8px; text-align: left; }
+                        </style>
+                    </head>
+                    <body>
+                        ${editorRef.current.innerHTML}
+                        <script>
+                            window.onload = () => { window.print(); window.close(); }
+                        </script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+    };
+
+    const handleZoomIn = () => setZoom(z => Math.min(200, z + 10));
+    const handleZoomOut = () => setZoom(z => Math.max(50, z - 10));
+
+    return (
+        <div className={`flex flex-col bg-[#f8f9fa] overflow-hidden shadow-2xl border border-slate-200 animate-entrance font-sans ${getFullscreenClasses()}`}>
+            {/* Top Bar (Docs style) */}
+            <div className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0">
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3 shrink-0 shadow-sm">
+                    <FileText className="text-white" size={24} />
+                </div>
+                <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex items-center">
+                        <input 
+                            type="text" 
+                            value={fileName}
+                            onChange={(e) => setFileName(e.target.value)}
+                            className="font-medium text-slate-800 text-lg px-2 py-0.5 border border-transparent hover:border-slate-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none w-auto max-w-[300px] truncate bg-transparent transition-all"
+                        />
+                        <div className="flex ml-4 space-x-1 text-slate-500">
+                            <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors tooltip-trigger" title="Estrela"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button>
+                            <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors tooltip-trigger" title="Mover para pasta"><FolderOpen size={18} /></button>
+                            <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors tooltip-trigger" title="Status do documento"><FileCheck size={18} /></button>
+                        </div>
+                    </div>
+                    {/* Menus */}
+                    <div className="flex space-x-1 mt-0.5 text-[13px] text-slate-600">
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={triggerFileOpen}>Arquivo</button>
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => formatDoc('undo')}>Editar</button>
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => setZoom(100)}>Ver</button>
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors">Inserir</button>
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors">Formatar</button>
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => setShowMargins(!showMargins)}>Margens</button>
+                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={exportToDocx}>Exportar DOCX</button>
+                    </div>
+                </div>
+                <div className="flex items-center space-x-3 shrink-0 ml-4">
+                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600" title="Tela Cheia">
+                        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                    </button>
+                    <button onClick={exportToDocx} className="flex items-center gap-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 rounded-full font-medium text-sm transition-colors" title="Exportar para formato Word (.docx)">
+                        <FileBox size={18} /> .DOCX
+                    </button>
+                    <button onClick={handleSaveFile} className="flex items-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-full font-medium text-sm transition-colors">
+                        <Save size={18} /> .GDOC
+                    </button>
+                    <button onClick={triggerFileOpen} className="flex items-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 rounded-full font-medium text-sm transition-colors">
+                        <FolderOpen size={18} />
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleOpenFile} accept=".gdoc,.html,.txt" className="hidden" />
+                </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="flex items-center flex-wrap gap-1 px-4 py-2 bg-[#edf2fa] border-b border-slate-200 shrink-0 text-slate-700 text-sm overflow-x-auto">
+                <button onClick={() => formatDoc('undo')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Undo size={18} /></button>
+                <button onClick={() => formatDoc('redo')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Redo size={18} /></button>
+                <button onClick={handlePrint} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Printer size={18} /></button>
+                
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                
+                <div className="flex items-center bg-white border border-slate-300 rounded px-1 h-7">
+                    <button onClick={handleZoomOut} className="p-1 hover:bg-slate-100 rounded"><Minus size={14} /></button>
+                    <span className="px-2 text-xs font-medium w-12 text-center">{zoom}%</span>
+                    <button onClick={handleZoomIn} className="p-1 hover:bg-slate-100 rounded"><Plus size={14} /></button>
+                </div>
+                
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                
+                <select 
+                    onChange={(e) => formatDoc('formatBlock', e.target.value)}
+                    className="h-7 border border-transparent hover:border-slate-300 bg-transparent rounded px-1 outline-none text-sm font-medium w-28 truncate"
+                >
+                    <option value="P">Texto Normal</option>
+                    <option value="H1">Título 1</option>
+                    <option value="H2">Título 2</option>
+                    <option value="H3">Título 3</option>
+                    <option value="H4">Título 4</option>
+                    <option value="H5">Título 5</option>
+                    <option value="H6">Título 6</option>
+                </select>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+
+                <select 
+                    onChange={(e) => formatDoc('fontName', e.target.value)}
+                    className="h-7 border border-transparent hover:border-slate-300 bg-transparent rounded px-1 outline-none text-sm w-32 truncate"
+                >
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Inter">Inter</option>
+                    <option value="Outfit">Outfit</option>
+                </select>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+
+                <select 
+                    onChange={(e) => {
+                        insertVariable(e.target.value);
+                        e.target.value = '';
+                    }}
+                    className="h-7 border border-transparent hover:border-slate-300 bg-transparent rounded px-1 outline-none text-sm w-32 truncate text-blue-700 font-medium"
+                >
+                    <option value="">{'{'} Variáveis {'}'}</option>
+                    <option value="{NOME_MEMBRO}">{'{'}NOME_MEMBRO{'}'}</option>
+                    <option value="{NOME_IGREJA}">{'{'}NOME_IGREJA{'}'}</option>
+                    <option value="{NOME_PASTOR}">{'{'}NOME_PASTOR{'}'}</option>
+                    <option value="{DATA_ATUAL}">{'{'}DATA_ATUAL{'}'}</option>
+                    <option value="{CPF_MEMBRO}">{'{'}CPF_MEMBRO{'}'}</option>
+                    <option value="{CARGO_MEMBRO}">{'{'}CARGO_MEMBRO{'}'}</option>
+                </select>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                
+                <div className="flex items-center">
+                    <button onClick={() => formatDoc('bold')} className="p-1.5 hover:bg-slate-200 rounded transition-colors font-bold"><Bold size={18} /></button>
+                    <button onClick={() => formatDoc('italic')} className="p-1.5 hover:bg-slate-200 rounded transition-colors italic"><Italic size={18} /></button>
+                    <button onClick={() => formatDoc('underline')} className="p-1.5 hover:bg-slate-200 rounded transition-colors underline"><Underline size={18} /></button>
+                    <button onClick={() => formatDoc('strikeThrough')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Strikethrough size={18} /></button>
+                </div>
+                
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                
+                <div className="flex items-center gap-1 relative group">
+                    <Type size={18} className="text-slate-700 p-0.5" />
+                    <input type="color" className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent" onChange={(e) => formatDoc('foreColor', e.target.value)} title="Cor do texto" />
+                </div>
+                
+                <div className="flex items-center gap-1 relative group ml-1">
+                    <Highlighter size={18} className="text-slate-700 p-0.5" />
+                    <input type="color" className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent" onChange={(e) => formatDoc('hiliteColor', e.target.value)} title="Cor de destaque" />
+                </div>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+
+                <div className="flex items-center">
+                    <button onClick={() => formatDoc('justifyLeft')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignLeft size={18} /></button>
+                    <button onClick={() => formatDoc('justifyCenter')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignCenter size={18} /></button>
+                    <button onClick={() => formatDoc('justifyRight')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignRight size={18} /></button>
+                    <button onClick={() => formatDoc('justifyFull')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignJustify size={18} /></button>
+                </div>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+
+                <div className="flex items-center">
+                    <button onClick={() => formatDoc('insertUnorderedList')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><List size={18} /></button>
+                    <button onClick={() => formatDoc('insertOrderedList')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><ListOrdered size={18} /></button>
+                </div>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+
+                <button onClick={() => {
+                    const url = prompt('Insira a URL da imagem:');
+                    if (url) formatDoc('insertImage', url);
+                }} className="p-1.5 hover:bg-slate-200 rounded transition-colors" title="Inserir Imagem"><ImageIcon size={18} /></button>
+                <button onClick={() => {
+                    const url = prompt('Insira a URL do link:');
+                    if (url) formatDoc('createLink', url);
+                }} className="p-1.5 hover:bg-slate-200 rounded transition-colors" title="Inserir Link"><Link size={18} /></button>
+
+                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+
+                <button onClick={() => formatDoc('removeFormat')} className="p-1.5 hover:bg-slate-200 rounded transition-colors text-xs font-bold" title="Limpar formatação">Tx</button>
+
+            </div>
+
+            {/* Ruler area (Decorative to look like Word/Docs) */}
+            <div className="h-6 bg-slate-100 border-b border-slate-200 shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="h-full bg-white relative w-full max-w-[850px] shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+                    {/* Ruler tick marks - simulated */}
+                    <div className="absolute inset-0 flex" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 49px, #cbd5e1 49px, #cbd5e1 50px)' }}>
+                        <div className="w-16 h-full bg-slate-200 shrink-0"></div>
+                        <div className="flex-1"></div>
+                        <div className="w-16 h-full bg-slate-200 shrink-0"></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Workspace Editor */}
+            <div className="flex-1 min-h-0 overflow-auto bg-[#f8f9fa] flex justify-center py-8 relative custom-scrollbar">
+                <div 
+                    className="bg-white shadow-md border border-slate-200 outline-none w-full max-w-[850px] min-h-[1100px] mb-16 relative"
+                    style={{ 
+                        transform: `scale(${zoom / 100})`, 
+                        transformOrigin: 'top center', 
+                        transition: 'transform 0.2s ease',
+                        paddingTop: `${margins.top}mm`,
+                        paddingBottom: `${margins.bottom}mm`,
+                        paddingLeft: `${margins.left}mm`,
+                        paddingRight: `${margins.right}mm`
+                    }}
+                >
+                    <div 
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="outline-none min-h-full font-serif text-[11pt] leading-normal"
+                        style={{ fontFamily: 'Arial, sans-serif' }}
+                        onPaste={(e) => {
+                            // Opcional: tratar paste para limpar estilos pesados, mas vamos deixar default por enquanto
+                        }}
+                        dangerouslySetInnerHTML={{ __html: `<h1>Bem-vindo ao GIPP DOCs</h1><p>Este é o seu editor de texto oficial do sistema GIPP. Funciona com as mesmas bases do <strong>Google Docs</strong> e <strong>Microsoft Word</strong>.</p><p><br/></p><ul><li>Edite textos livremente, insira imagens, listas e links.</li><li>Salve o documento no seu computador com a extensão nativa <code>.gdoc</code>.</li><li>Abra arquivos <code>.gdoc</code> ou <code>.html</code> diretamente do seu disco local para continuar editando.</li></ul><p><br/></p><p><em>Use a barra de ferramentas acima para estilizar este documento!</em></p>` }}
+                    />
+                </div>
+
+                {/* Margins Sidebar */}
+                <div className={`absolute top-0 right-0 bottom-0 w-64 bg-white border-l border-slate-200 shadow-xl transition-transform duration-300 transform ${showMargins ? 'translate-x-0' : 'translate-x-full'} z-40`}>
+                    <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2"><Settings size={18} /> Margens (mm)</h3>
+                        <button onClick={() => setShowMargins(false)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><PanelRightClose size={18} /></button>
+                    </div>
+                    <div className="p-4 space-y-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Superior (Top)</label>
+                            <input type="number" value={margins.top} onChange={(e) => setMargins({...margins, top: Number(e.target.value)})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Inferior (Bottom)</label>
+                            <input type="number" value={margins.bottom} onChange={(e) => setMargins({...margins, bottom: Number(e.target.value)})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Esquerda (Left)</label>
+                            <input type="number" value={margins.left} onChange={(e) => setMargins({...margins, left: Number(e.target.value)})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Direita (Right)</label>
+                            <input type="number" value={margins.right} onChange={(e) => setMargins({...margins, right: Number(e.target.value)})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                        </div>
+                        <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">
+                            As margens afetam a visualização do editor, impressão e exportação para PDF/DOCX.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {/* Status Bar */}
+            <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-500 font-medium">
+                <div>GIPP DOCs Engine v1.0</div>
+                <div className="flex items-center gap-4">
+                    <span>{fileName}</span>
+                    <span>Modo de Edição</span>
+                </div>
+            </div>
+        </div>
+    );
+}

@@ -64,6 +64,8 @@ import ModuleEBD from './components/ModuleEBD';
 import ModuleGestaoCursos from './components/ModuleGestaoCursos';
 import ModuleTeologia from './components/ModuleTeologia';
 import ModuleRedeSocial from './components/ModuleRedeSocial';
+import ModuleGippDocs from './components/ModuleGippDocs';
+import ModuleGippPlanilhas from './components/ModuleGippPlanilhas';
 import ModuleConfiguracoesGerais from './components/ModuleConfiguracoesGerais';
 import { DiagnosticsDashboard } from './components/DiagnosticsDashboard';
 import ModuleConfiguracoesSistemas, { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
@@ -10106,6 +10108,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         secretaria_integrada: 'group-hover:text-blue-500',
         secretaria_certificados: 'group-hover:text-amber-500',
         carteirinha_studio: 'group-hover:text-pink-500',
+        docs_editor: 'group-hover:text-blue-500',
         credencial_lote: 'group-hover:text-purple-500',
         secretaria_ebd: 'group-hover:text-emerald-600',
         salinha_kids: 'group-hover:text-rose-450',
@@ -10247,6 +10250,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         <MenuGroup label="Estúdio Canva" />
                         {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
+                        {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={FileText} label="GIPP DOCs" />}
+                        {hasPermission('access_midia') && checkPlan('sheets_editor') && <MenuItem id="sheets_editor" icon={FileSpreadsheet} label="GIPP Planilhas" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
                     </div>
                 )}
@@ -16450,6 +16455,8 @@ const AppLayout = () => {
         { id: 'relatorios', icon: FileText, label: "Relatórios PDF", color: 'text-slate-600', bg: 'bg-slate-600/10' },
         { id: 'carteirinha_studio', icon: IdCard, label: "Estúdio Carteirinhas", color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'rede_social', icon: ImagePlus, label: "Estúdio de Artes", color: 'text-rose-500', bg: 'bg-rose-500/10' },
+        { id: 'docs_editor', icon: FileText, label: "GIPP DOCs", color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { id: 'sheets_editor', icon: FileSpreadsheet, label: "GIPP Planilhas", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         { id: 'credencial_lote', icon: Badge, label: "Credencial em Lote", color: 'text-violet-500', bg: 'bg-violet-500/10' },
         { id: 'assistente_ai', icon: Sparkles, label: "Pastoral IA", color: 'text-purple-500', bg: 'bg-purple-500/10' },
         { id: 'config_sistema', icon: Settings, label: "Configurações Gerais", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
@@ -16476,9 +16483,9 @@ const AppLayout = () => {
         const plano = db.igreja?.plano || 'avancado';
 
         const defaultPlanos: Record<string, string[]> = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -16526,6 +16533,8 @@ const AppLayout = () => {
             'curso_teologia': 'access_teologia',
             'relatorios': 'access_sec_relatorios',
             'carteirinha_studio': 'access_sec_certificados',
+            'docs_editor': 'access_midia',
+            'sheets_editor': 'access_midia',
             'rede_social': 'access_midia',
             'credencial_lote': 'access_sec_certificados',
             'assistente_ai': 'access_ia',
@@ -16874,6 +16883,8 @@ const AppLayout = () => {
         'curso_teologia': { component: ModuleTeologia, access: 'access_teologia' },
         'missoes_painel': { component: ModuleMissoes, access: 'access_missoes' },
         'rede_social': { component: ModuleRedeSocial, access: 'access_midia' },
+        'docs_editor': { component: ModuleGippDocs, access: 'access_midia' },
+        'sheets_editor': { component: ModuleGippPlanilhas, access: 'access_midia' },
         'relatorios': { component: ModuleRelatorios, access: 'access_sec_relatorios' },
         'assistente_ai': { component: ModuleAssistenteAI, access: 'access_ia' },
         'dp_contabilidade': { component: ModuleDPContabilidade, access: 'access_fin_saidas' },
