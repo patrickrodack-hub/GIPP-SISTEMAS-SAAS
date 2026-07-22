@@ -38,6 +38,7 @@ import {
 } from 'firebase/auth';
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
+import { GippDocsIcon, GippSheetsIcon } from './components/GippOfficeIcons';
 
 // --- MODULARIZED IMPORTS ---
 import { Win11PropertiesModal } from './components/Win11PropertiesModal';
@@ -10250,8 +10251,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         <MenuGroup label="GIPP Escritório" />
                         {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
-                        {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={FileText} label="GIPP DOCs" />}
-                        {hasPermission('access_midia') && checkPlan('sheets_editor') && <MenuItem id="sheets_editor" icon={FileSpreadsheet} label="GIPP Planilhas" />}
+                        {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={GippDocsIcon} label="GIPP DOCs" />}
+                        {hasPermission('access_midia') && checkPlan('sheets_editor') && <MenuItem id="sheets_editor" icon={GippSheetsIcon} label="GIPP Planilhas" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
                     </div>
                 )}
@@ -16455,8 +16456,8 @@ const AppLayout = () => {
         { id: 'relatorios', icon: FileText, label: "Relatórios PDF", color: 'text-slate-600', bg: 'bg-slate-600/10' },
         { id: 'carteirinha_studio', icon: IdCard, label: "Estúdio Carteirinhas", color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'rede_social', icon: ImagePlus, label: "Estúdio de Artes", color: 'text-rose-500', bg: 'bg-rose-500/10' },
-        { id: 'docs_editor', icon: FileText, label: "GIPP DOCs", color: 'text-blue-500', bg: 'bg-blue-500/10' },
-        { id: 'sheets_editor', icon: FileSpreadsheet, label: "GIPP Planilhas", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'docs_editor', icon: GippDocsIcon, label: "GIPP DOCs", color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { id: 'sheets_editor', icon: GippSheetsIcon, label: "GIPP Planilhas", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         { id: 'credencial_lote', icon: Badge, label: "Credencial em Lote", color: 'text-violet-500', bg: 'bg-violet-500/10' },
         { id: 'assistente_ai', icon: Sparkles, label: "Pastoral IA", color: 'text-purple-500', bg: 'bg-purple-500/10' },
         { id: 'config_sistema', icon: Settings, label: "Configurações Gerais", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useContext, useEffect } from "react";
 import { Workbook, WorkbookInstance } from "@fortune-sheet/react";
 import "@fortune-sheet/react/dist/index.css";
+import { GippSheetsIcon } from "./GippOfficeIcons";
 import {
   Maximize,
   Minimize,
@@ -359,6 +360,38 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         { r: 2, c: 3, v: { v: "Ev. Marcos Pedro" } },
         { r: 2, c: 4, v: { v: "Ministério Shalom" } },
         { r: 2, c: 5, v: { v: "Equipe Boas-Vindas A" } },
+      ];
+    } else if (type === 'ebd_frequencia') {
+      setFileName('Chamada_e_Frequencia_EBD');
+      newCelldata = [
+        { r: 0, c: 0, v: { v: "RELATÓRIO DE FREQUÊNCIA E OFERTAS - EBD", bg: "#1e3a8a", fc: "#ffffff", bl: 1 } },
+        { r: 1, c: 0, v: { v: "Matrícula", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 1, v: { v: "Nome do Aluno", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 2, v: { v: "Classe", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 3, v: { v: "Presença", bg: "#dcfce7", bl: 1 } },
+        { r: 1, c: 4, v: { v: "Bíblia/Revista", bg: "#e0f2fe", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Oferta (R$)", bg: "#fef3c7", bl: 1 } },
+        { r: 2, c: 0, v: { v: "EBD-001" } },
+        { r: 2, c: 1, v: { v: "Carlos Eduardo Silva" } },
+        { r: 2, c: 2, v: { v: "Jovens & Adultos" } },
+        { r: 2, c: 3, v: { v: "SIM" } },
+        { r: 2, c: 4, v: { v: "SIM" } },
+        { r: 2, c: 5, v: { v: 10.00, m: "R$ 10,00" } },
+      ];
+    } else if (type === 'patrimonio') {
+      setFileName('Inventario_de_Patrimonio_Igreja');
+      newCelldata = [
+        { r: 0, c: 0, v: { v: "INVENTÁRIO E TOMBAMENTO DE PATRIMÔNIO", bg: "#0f766e", fc: "#ffffff", bl: 1 } },
+        { r: 1, c: 0, v: { v: "Cód. Tombamento", bg: "#ccfbf1", bl: 1 } },
+        { r: 1, c: 1, v: { v: "Descrição do Bem", bg: "#ccfbf1", bl: 1 } },
+        { r: 1, c: 2, v: { v: "Setor / Local", bg: "#ccfbf1", bl: 1 } },
+        { r: 1, c: 3, v: { v: "Estado de Conservação", bg: "#ccfbf1", bl: 1 } },
+        { r: 1, c: 4, v: { v: "Valor Estimado (R$)", bg: "#ccfbf1", bl: 1 } },
+        { r: 2, c: 0, v: { v: "PAT-2026-001" } },
+        { r: 2, c: 1, v: { v: "Mesa de Som Digital 32 Canais" } },
+        { r: 2, c: 2, v: { v: "Nave do Templo Principal" } },
+        { r: 2, c: 3, v: { v: "Excelente" } },
+        { r: 2, c: 4, v: { v: 14500.00, m: "R$ 14.500,00" } },
       ];
     }
 
@@ -774,8 +807,8 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
   if (isMinimized) {
     return (
       <div className="fixed bottom-4 right-4 z-[200] bg-white/95 backdrop-blur border border-slate-300 shadow-2xl rounded-2xl p-3 flex items-center gap-3 animate-bounce-short font-sans">
-        <div className="w-9 h-9 bg-emerald-600 text-white rounded-xl flex items-center justify-center font-bold shadow-md">
-          <FileSpreadsheet size={20} />
+        <div className="w-9 h-9 bg-emerald-600 text-white rounded-xl flex items-center justify-center font-bold shadow-md p-1">
+          <GippSheetsIcon size={22} />
         </div>
         <div>
           <div className="font-bold text-xs text-slate-800 truncate max-w-[200px]">{fileName}</div>
@@ -822,8 +855,8 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0 flex-wrap gap-2 select-none cursor-move"
         onMouseDown={handleDragMouseDown}
       >
-        <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center mr-1 shrink-0 shadow-sm">
-          <FileSpreadsheet size={24} className="text-white" />
+        <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center mr-1 shrink-0 shadow-sm p-1.5">
+          <GippSheetsIcon size={26} />
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
           <input
@@ -914,6 +947,8 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             <option value="fluxo_caixa">💰 Relatório de Fluxo de Caixa</option>
             <option value="dizimos">📜 Controle de Dízimos e Ofertas</option>
             <option value="escala">📅 Escala de Cultos e Louvor</option>
+            <option value="ebd_frequencia">📚 Chamada e Frequência EBD</option>
+            <option value="patrimonio">🏷️ Inventário de Patrimônio</option>
           </select>
 
           <button

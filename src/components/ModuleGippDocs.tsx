@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UploadCloud, FileSpreadsheet as FileSpreadsheetIcon, FileText as FileTextIcon } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 import SpreadsheetEditor from './ModuleGippPlanilhas';
+import { GippDocsIcon, GippSheetsIcon } from './GippOfficeIcons';
 
 import { 
     Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
@@ -296,6 +297,152 @@ function TextEditor({ initialFile }: TextEditorProps) {
 
     const triggerFileOpen = () => {
         fileInputRef.current?.click();
+    };
+
+    const loadDocTemplate = (type: string) => {
+        let html = '';
+        if (type === 'carta_recomendacao') {
+            setFileName('Carta_de_Recomendacao_Membro');
+            html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+                    <div style="text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 25px;">
+                        <h2 style="color: #1e3a8a; margin: 0; font-size: 22px; text-transform: uppercase;">ASSEMBLEIA DE DEUS - MINISTÉRIO LOCAL</h2>
+                        <p style="margin: 5px 0 0; font-size: 13px; color: #475569;">Secretaria Geral &bull; Carta de Recomendação Eclesiástica</p>
+                    </div>
+                    <p style="text-align: right; font-size: 13px; color: #64748b; margin-bottom: 30px;">
+                        Data: ${new Date().toLocaleDateString('pt-BR')}
+                    </p>
+                    <p style="font-size: 15px;"><strong>À AMADA IGREJA EM:</strong> _____________________________________</p>
+                    <p style="font-size: 15px;"><strong>AOS CUIDADOS DO PASTOR:</strong> _________________________________</p>
+                    <br/>
+                    <p style="font-size: 15px; text-align: justify; text-indent: 30px;">
+                        Saudações no Senhor Jesus Cristo!
+                    </p>
+                    <p style="font-size: 15px; text-align: justify; text-indent: 30px;">
+                        Pela presente, recomendamos a vocês o(a) nosso(a) amado(a) irmão(ã) <strong>[NOME DO MEMBRO]</strong>, portador(a) do Rol de Membro nº <strong>[000]</strong>, o(a) qual se encontra em plena comunhão com esta igreja, cumprindo pontualmente com seus deveres cristãos e morais.
+                    </p>
+                    <p style="font-size: 15px; text-align: justify; text-indent: 30px;">
+                        Solicitamos que o(a) recebam no Senhor como convém aos santos e lhe prestem o auxílio de que necessitar no desempenho de suas atividades espirituais.
+                    </p>
+                    <br/><br/>
+                    <div style="margin-top: 60px; text-align: center;">
+                        <p style="margin: 0;">____________________________________________________</p>
+                        <p style="margin: 5px 0 0; font-weight: bold; color: #1e3a8a;">PASTOR PRESIDENTE / SECRETÁRIO</p>
+                        <p style="margin: 0; font-size: 12px; color: #64748b;">Assembleia de Deus &bull; Registro Geral</p>
+                    </div>
+                </div>
+            `;
+        } else if (type === 'oficio_pastoral') {
+            setFileName('Oficio_Pastoral_Oficial');
+            html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+                    <div style="text-align: center; border-bottom: 2px solid #065f46; padding-bottom: 15px; margin-bottom: 25px;">
+                        <h2 style="color: #065f46; margin: 0; font-size: 20px; text-transform: uppercase;">IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS</h2>
+                        <p style="margin: 5px 0 0; font-size: 12px; color: #475569;">Gabinete da Presidência &bull; Ofício nº 001/${new Date().getFullYear()}</p>
+                    </div>
+                    <p style="text-align: right; font-size: 13px; color: #64748b;">Cidade/UF, ${new Date().toLocaleDateString('pt-BR')}</p>
+                    <br/>
+                    <p style="font-size: 14px;"><strong>Ao(À) Ilmo(a). Sr(a).:</strong> [Nome do Destinatário]</p>
+                    <p style="font-size: 14px;"><strong>Cargo/Instituição:</strong> [Órgão / Empresa / Prefeitura]</p>
+                    <p style="font-size: 14px;"><strong>Assunto:</strong> Solicitação de Espaço / Apoio Institucional</p>
+                    <br/>
+                    <p style="font-size: 14px; text-align: justify;">Prezado(a) Senhor(a),</p>
+                    <p style="font-size: 14px; text-align: justify; text-indent: 30px;">
+                        Vimos por meio deste, respeitosamente, cumprimentá-lo(a) e solicitar a Vossa Senhoria autorização/colaboração para a realização do evento evangelístico e social denominado <strong>"[NOME DO EVENTO]"</strong>, que ocorrerá no dia <strong>[DATA]</strong>, das <strong>[HORÁRIO]</strong>, no local <strong>[ENDEREÇO/LOCAL]</strong>.
+                    </p>
+                    <p style="font-size: 14px; text-align: justify; text-indent: 30px;">
+                        Certos de contarmos com a vossa valiosa atenção e apoio a esta causa de relevante valor social e comunitário, renovamos nossos protestos de elevada estima e consideração.
+                    </p>
+                    <br/><br/>
+                    <div style="margin-top: 50px; text-align: center;">
+                        <p style="margin: 0;">____________________________________________________</p>
+                        <p style="margin: 5px 0 0; font-weight: bold; color: #065f46;">PASTOR PRESIDENTE / DIRETORIA</p>
+                    </div>
+                </div>
+            `;
+        } else if (type === 'ata_reuniao') {
+            setFileName('Ata_Reuniao_Diretoria');
+            html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+                    <h2 style="text-align: center; color: #334155; text-transform: uppercase; margin-bottom: 20px;">ATA DE REUNIÃO DE DIRETORIA E CONSELHO</h2>
+                    <p style="font-size: 14px; text-align: justify; text-indent: 30px;">
+                        Aos <strong>${new Date().getDate()}</strong> dias do mês de <strong>${new Date().toLocaleString('pt-BR', { month: 'long' })}</strong> do ano de <strong>${new Date().getFullYear()}</strong>, às <strong>19h30min</strong>, na sede social da Igreja, reuniu-se a Diretoria Executiva sob a presidência do Pastor <strong>[NOME DO PASTOR]</strong>, para deliberar sobre a seguinte Ordem do Dia:
+                    </p>
+                    <ol style="font-size: 14px; margin-left: 20px;">
+                        <li>Aprovação do Balancete Financeiro do Trimestre;</li>
+                        <li>Planejamento do Congresso Anual de Missões;</li>
+                        <li>Manutenção e Obras na Nave do Templo Principal.</li>
+                    </ol>
+                    <p style="font-size: 14px; text-align: justify; text-indent: 30px;">
+                        Após as orações iniciais e leitura bíblica devocional, o Presidente abriu a sessão concedendo a palavra ao Tesoureiro, que apresentou o relatório de receitas e despesas. Submetido a voto, o balancete foi aprovado por unanimidade. Nada mais havendo a tratar, encerrou-se a reunião com a oração final.
+                    </p>
+                    <br/>
+                    <div style="margin-top: 40px; display: flex; justify-content: space-around; text-align: center;">
+                        <div>
+                            <p style="margin:0;">_______________________________</p>
+                            <p style="margin:5px 0 0; font-size:12px; font-weight:bold;">1º Secretário</p>
+                        </div>
+                        <div>
+                            <p style="margin:0;">_______________________________</p>
+                            <p style="margin:5px 0 0; font-size:12px; font-weight:bold;">Pastor Presidente</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (type === 'certificado_batismo') {
+            setFileName('Certificado_Apresentacao_Batismo');
+            html = `
+                <div style="font-family: Georgia, serif; padding: 30px; border: 8px double #1e3a8a; text-align: center; background-color: #fcfcfd;">
+                    <h1 style="color: #1e3a8a; margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px;">CERTIFICADO DE BATISMO NAS ÁGUAS</h1>
+                    <p style="font-style: italic; color: #64748b; margin-top: 5px;">"Quem crer e for batizado será salvo" - Marcos 16:16</p>
+                    <br/><br/>
+                    <p style="font-size: 18px; line-height: 1.8;">
+                        Certificamos para os devidos fins eclesiais que o(a) irmão(ã)
+                    </p>
+                    <h2 style="color: #065f46; font-size: 26px; border-bottom: 2px solid #065f46; display: inline-block; padding: 0 30px 5px; margin: 10px 0;">
+                        [NOME DO BATIZANDO]
+                    </h2>
+                    <p style="font-size: 16px; line-height: 1.8;">
+                        desceu às águas batismais em profissão pública de sua fé no Senhor Jesus Cristo, no dia <strong>${new Date().toLocaleDateString('pt-BR')}</strong>, tornando-se membro da Igreja Evangélica Assembleia de Deus.
+                    </p>
+                    <br/><br/>
+                    <div style="margin-top: 40px; display: flex; justify-content: space-around;">
+                        <div>
+                            <p style="margin:0;">________________________________________</p>
+                            <p style="margin:5px 0 0; font-weight:bold; color: #1e3a8a;">PASTOR MINISTRANTE</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (type === 'regimento_interno') {
+            setFileName('Regimento_Interno_Departamento');
+            html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+                    <h2 style="text-align: center; color: #1e3a8a; text-transform: uppercase;">REGIMENTO INTERNO - DEPARTAMENTO DE MOCIDADE / EBD</h2>
+                    <h4 style="text-align: center; color: #64748b; margin-top: -10px;">Diretrizes e Normas de Conduta Operacional</h4>
+                    <br/>
+                    <p style="font-size: 14px;"><strong>CAPÍTULO I - DOS OBJETIVOS</strong></p>
+                    <p style="font-size: 13px; text-align: justify; text-indent: 20px;">
+                        Art. 1º - O presente regimento visa disciplinar as atividades espirituais, musicais, pedagógicas e administrativas do departamento no âmbito desta congregação.
+                    </p>
+                    <p style="font-size: 14px;"><strong>CAPÍTULO II - DOS DEVERES DOS INTEGRANTES</strong></p>
+                    <ul style="font-size: 13px;">
+                        <li>Pontualidade nos ensaios e escala de cultos;</li>
+                        <li>Zelo pelos instrumentos musicais, uniformes e material didático;</li>
+                        <li>Testemunho cristão condizente com a Declaração de Fé da CGADB.</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        if (html) {
+            setEditorHtml(html);
+            setEditorKey(k => k + 1);
+            if (editorRef.current) {
+                editorRef.current.innerHTML = html;
+            }
+            addToast("Modelo eclesiástico carregado com sucesso!", "success");
+        }
     };
 
     const exportToDocx = async () => {
@@ -599,8 +746,8 @@ function TextEditor({ initialFile }: TextEditorProps) {
     if (isMinimized) {
         return (
             <div className="fixed bottom-4 right-4 z-[200] bg-white/95 backdrop-blur border border-slate-300 shadow-2xl rounded-2xl p-3 flex items-center gap-3 animate-bounce-short font-sans">
-                <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold shadow-md">
-                    <FileText size={20} />
+                <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold shadow-md p-1">
+                    <GippDocsIcon size={22} />
                 </div>
                 <div>
                     <div className="font-bold text-xs text-slate-800 truncate max-w-[200px]">{fileName}</div>
@@ -647,8 +794,8 @@ function TextEditor({ initialFile }: TextEditorProps) {
                 className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0 select-none cursor-move"
                 onMouseDown={handleDragMouseDown}
             >
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3 shrink-0 shadow-sm">
-                    <FileText className="text-white" size={24} />
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3 shrink-0 shadow-sm p-1.5">
+                    <GippDocsIcon size={26} />
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
                     <div className="flex items-center">
@@ -676,6 +823,22 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     </div>
                 </div>
                 <div className="flex items-center space-x-2 shrink-0 ml-4">
+                    <select 
+                        onChange={(e) => {
+                            if (e.target.value) {
+                                loadDocTemplate(e.target.value);
+                                e.target.value = '';
+                            }
+                        }}
+                        className="h-8 border border-blue-400 bg-blue-50 text-blue-900 font-bold rounded-full px-3 outline-none text-xs hover:bg-blue-100 transition-all cursor-pointer shadow-sm"
+                    >
+                        <option value="">📄 Modelos de Documentos...</option>
+                        <option value="carta_recomendacao">✉️ Carta de Recomendação</option>
+                        <option value="oficio_pastoral">📜 Ofício Pastoral Oficial</option>
+                        <option value="ata_reuniao">📝 Ata de Reunião de Diretoria</option>
+                        <option value="certificado_batismo">🕊️ Certificado de Batismo / Apresentação</option>
+                        <option value="regimento_interno">📖 Regimento Interno de Departamento</option>
+                    </select>
                     <button onClick={exportToDocx} className="flex items-center gap-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3.5 py-1.5 rounded-full font-medium text-xs transition-colors" title="Exportar para formato Word (.docx)">
                         <FileBox size={16} /> .DOCX
                     </button>
@@ -1084,9 +1247,9 @@ export default function ModuleGippDocs() {
                     onDragLeave={handleDragLeave}
                 >
                     <div className={`w-full max-w-2xl border-4 border-dashed rounded-3xl p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-white'}`}>
-                        <div className="flex gap-4 mb-6 text-slate-400">
-                            <FileTextIcon size={64} className={isDragging ? 'text-blue-500 animate-bounce' : ''} />
-                            <FileSpreadsheetIcon size={64} className={isDragging ? 'text-emerald-500 animate-bounce delay-75' : ''} />
+                        <div className="flex gap-4 mb-6">
+                            <GippDocsIcon size={64} className={isDragging ? 'animate-bounce' : ''} />
+                            <GippSheetsIcon size={64} className={isDragging ? 'animate-bounce delay-75' : ''} />
                         </div>
                         <h2 className="text-2xl font-bold text-slate-700 mb-2">Arraste e solte seus arquivos aqui</h2>
                         <p className="text-slate-500 mb-8 max-w-md">
