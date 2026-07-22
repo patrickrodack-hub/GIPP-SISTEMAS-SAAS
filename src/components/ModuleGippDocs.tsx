@@ -371,6 +371,136 @@ function TextEditor({ initialFile }: TextEditorProps) {
         formatDoc('insertText', variable);
     };
 
+    const applyDocumentTemplate = (templateType: string) => {
+        if (!editorRef.current) return;
+        let html = '';
+        if (templateType === 'declaracao') {
+            setFileName('Declaração de Membresia');
+            html = `
+                <div style="text-align: center; font-family: Arial, sans-serif; padding: 10px;">
+                    <h2 style="color: #1e3a8a; margin-bottom: 4px; font-size: 22px;">IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS</h2>
+                    <p style="font-size: 13px; color: #475569; margin-top: 0; font-weight: bold;">{NOME_IGREJA}</p>
+                    <div style="height: 2px; background: linear-gradient(to right, #2563eb, #3b82f6); margin: 20px 0;"></div>
+                    <h3 style="letter-spacing: 2px; text-transform: uppercase; color: #0f172a; margin-top: 25px; font-size: 18px;">DECLARAÇÃO DE MEMBRESIA E COMUNHÃO</h3>
+                </div>
+                <br/>
+                <p style="font-size: 15px; line-height: 1.8; text-align: justify; text-indent: 40px;">
+                    Declaramos para os devidos fins que o(a) irmão(ã) <strong>{NOME_MEMBRO}</strong>, inscrito(a) sob o CPF nº <strong>{CPF_MEMBRO}</strong>, reside nesta cidade e é membro em plena comunhão com esta igreja local, desempenhando o cargo de <strong>{CARGO_MEMBRO}</strong>, nada havendo que desabone sua conduta cristã, moral e ético-religiosa.
+                </p>
+                <p style="font-size: 15px; line-height: 1.8; text-align: justify; text-indent: 40px;">
+                    Por ser verdade, firmamos a presente declaração sob a graça do Nosso Senhor Jesus Cristo.
+                </p>
+                <br/><br/>
+                <p style="text-align: right; font-size: 14px;">Emitido em: <strong>{DATA_ATUAL}</strong></p>
+                <br/><br/><br/>
+                <div style="text-align: center;">
+                    <p style="border-top: 1px solid #94a3b8; width: 280px; margin: 0 auto; padding-top: 8px; font-weight: bold; color: #1e293b;">{NOME_PASTOR}</p>
+                    <p style="font-size: 13px; color: #64748b; margin-top: 2px;">Pastor Presidente</p>
+                </div>
+            `;
+        } else if (templateType === 'recomendacao') {
+            setFileName('Carta de Recomendação');
+            html = `
+                <div style="text-align: center; font-family: Arial, sans-serif;">
+                    <h2 style="color: #065f46; margin-bottom: 2px; font-size: 22px;">CARTA DE RECOMENDAÇÃO PASTORAL</h2>
+                    <p style="font-size: 13px; color: #047857; font-weight: bold;">{NOME_IGREJA}</p>
+                    <div style="height: 2px; background: #10b981; margin: 15px 0;"></div>
+                </div>
+                <br/>
+                <p style="text-align: justify; line-height: 1.8; font-size: 15px;">
+                    À amada e respeitável Igreja de Nosso Senhor Jesus Cristo,
+                </p>
+                <p style="text-indent: 35px; text-align: justify; line-height: 1.8; font-size: 15px;">
+                    Saudações no Senhor! Recomendamos-vos no Senhor nosso(a) amado(a) irmão(ã) <strong>{NOME_MEMBRO}</strong>, que se ausenta temporariamente deste aprisco pastoral. O(A) mesmo(a) é pessoa de conduta ilibada, fiel dízimista, e comungante da sã doutrina ministrada por esta igreja.
+                </p>
+                <br/><br/>
+                <p style="text-align: right; font-size: 14px;">Data: <strong>{DATA_ATUAL}</strong></p>
+                <br/><br/><br/>
+                <div style="text-align: center;">
+                    <p style="border-top: 1px solid #059669; width: 280px; margin: 0 auto; padding-top: 8px; font-weight: bold;">{NOME_PASTOR}</p>
+                    <p style="font-size: 13px; color: #047857;">Pastor Presidente</p>
+                </div>
+            `;
+        } else if (templateType === 'ata') {
+            setFileName('Ata de Reunião');
+            html = `
+                <div style="font-family: Arial, sans-serif;">
+                    <h2 style="text-align: center; color: #1e293b; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">ATA DA REUNIÃO DA DIRETORIA EXECUTIVA</h2>
+                    <br/>
+                    <p style="text-align: justify; line-height: 1.8; text-indent: 30px;">
+                        Aos vinte dias do mês corrente, às dezenove horas, na sede da <strong>{NOME_IGREJA}</strong>, sob a presidência do Pastor <strong>{NOME_PASTOR}</strong>, reuniram-se os membros da diretoria executiva para deliberar sobre a seguinte ordem do dia:
+                    </p>
+                    <ol style="line-height: 1.8; font-size: 14px; margin-left: 20px;">
+                        <li>Aprovação do balancete financeiro e relatórios da tesouraria;</li>
+                        <li>Planejamento das festividades do próximo semestre e Escola Bíblica de Férias;</li>
+                        <li>Manutenção predial das instalações e aquisição de equipamentos de som.</li>
+                    </ol>
+                    <p style="text-align: justify; line-height: 1.8; text-indent: 30px;">
+                        Nada mais havendo a tratar, a reunião foi encerrada com oração e a presente ata foi lavrada para posterior assinatura dos presentes.
+                    </p>
+                    <br/><br/>
+                    <p style="text-align: right;">{DATA_ATUAL}</p>
+                </div>
+            `;
+        } else if (templateType === 'oficio') {
+            setFileName('Ofício Pastoral');
+            html = `
+                <div style="font-family: Arial, sans-serif;">
+                    <div style="text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+                        <h2 style="color: #1e3a8a; margin: 0; font-size: 20px;">{NOME_IGREJA}</h2>
+                        <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;">Gabinete da Presidência - Ofício Nº _____/2026</p>
+                    </div>
+                    <br/>
+                    <p style="text-align: right; font-size: 14px;">Data: <strong>{DATA_ATUAL}</strong></p>
+                    <br/>
+                    <p style="font-weight: bold; font-size: 14px; color: #0f172a;">Aos Cuidados de: _____________________________________</p>
+                    <p style="font-size: 14px; color: #475569;">Assunto: Solicitação / Convocação Oficial</p>
+                    <br/>
+                    <p style="text-align: justify; line-height: 1.8; text-indent: 30px;">
+                        Vimos por meio deste apresentar nossas cordiais saudações no Senhor Jesus e solicitar vossa preciosa colaboração no tocante a ____________________________________________________________________.
+                    </p>
+                    <br/><br/><br/>
+                    <div style="text-align: center;">
+                        <p style="border-top: 1px solid #94a3b8; width: 280px; margin: 0 auto; padding-top: 8px; font-weight: bold;">{NOME_PASTOR}</p>
+                        <p style="font-size: 13px; color: #64748b;">Pastor Presidente</p>
+                    </div>
+                </div>
+            `;
+        }
+        if (html) {
+            editorRef.current.innerHTML = html;
+            setEditorHtml(html);
+            addToast("Modelo de documento carregado com sucesso!", "success");
+        }
+    };
+
+    const insertTable = (rows: number = 3, cols: number = 3) => {
+        let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">';
+        for (let r = 0; r < rows; r++) {
+            tableHtml += '<tr>';
+            for (let c = 0; c < cols; c++) {
+                if (r === 0) {
+                    tableHtml += `<th style="border: 1px solid #cbd5e1; background: #2563eb; color: white; padding: 10px; text-align: left;">Cabeçalho ${c+1}</th>`;
+                } else {
+                    tableHtml += `<td style="border: 1px solid #cbd5e1; padding: 8px;">Item ${r},${c+1}</td>`;
+                }
+            }
+            tableHtml += '</tr>';
+        }
+        tableHtml += '</table><p><br/></p>';
+        formatDoc('insertHTML', tableHtml);
+    };
+
+    const insertCallout = () => {
+        const calloutHtml = `
+            <div style="border-left: 4px solid #2563eb; background-color: #eff6ff; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 15px 0; font-size: 14px; color: #1e40af;">
+                <strong>💡 Nota Pastoral / Destaque:</strong> Insira aqui uma observação importante ou versículo bíblico relevante para o documento.
+            </div>
+            <p><br/></p>
+        `;
+        formatDoc('insertHTML', calloutHtml);
+    };
+
     const handlePrint = () => {
         if (!editorRef.current) return;
         const printWindow = window.open('', '_blank');
@@ -383,10 +513,13 @@ function TextEditor({ initialFile }: TextEditorProps) {
                             @page {
                                 margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
                             }
-                            body { font-family: Arial, sans-serif; }
+                            body { font-family: Arial, sans-serif; padding: 10px; }
                             table { border-collapse: collapse; width: 100%; }
-                            table, th, td { border: 1px solid black; }
+                            table, th, td { border: 1px solid #94a3b8; }
                             th, td { padding: 8px; text-align: left; }
+                            @media print {
+                                button { display: none; }
+                            }
                         </style>
                     </head>
                     <body>
@@ -522,58 +655,75 @@ function TextEditor({ initialFile }: TextEditorProps) {
                 </div>
             </div>
 
-            {/* Toolbar */}
-            <div className="flex items-center flex-wrap gap-1 px-4 py-2 bg-[#edf2fa] border-b border-slate-200 shrink-0 text-slate-700 text-sm overflow-x-auto">
-                <button onClick={() => formatDoc('undo')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Undo size={18} /></button>
-                <button onClick={() => formatDoc('redo')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Redo size={18} /></button>
-                <button onClick={handlePrint} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Printer size={18} /></button>
-                
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
-                
-                <div className="flex items-center bg-white border border-slate-300 rounded px-1 h-7">
-                    <button onClick={handleZoomOut} className="p-1 hover:bg-slate-100 rounded"><Minus size={14} /></button>
-                    <span className="px-2 text-xs font-medium w-12 text-center">{zoom}%</span>
-                    <button onClick={handleZoomIn} className="p-1 hover:bg-slate-100 rounded"><Plus size={14} /></button>
+            {/* Enhanced Colorful Toolbar */}
+            <div className="flex items-center flex-wrap gap-1.5 px-3 py-2 bg-[#f1f5f9] border-b border-slate-200 shrink-0 text-slate-700 text-sm overflow-x-auto">
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                    <button onClick={() => formatDoc('undo')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Desfazer (Ctrl+Z)"><Undo size={16} /></button>
+                    <button onClick={() => formatDoc('redo')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Refazer (Ctrl+Y)"><Redo size={16} /></button>
+                    <button onClick={handlePrint} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded transition-colors font-semibold flex items-center gap-1" title="Imprimir Documento">
+                        <Printer size={16} />
+                    </button>
                 </div>
                 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
+                
+                {/* Templates Selector */}
+                <select 
+                    onChange={(e) => {
+                        if (e.target.value) {
+                            applyDocumentTemplate(e.target.value);
+                            e.target.value = '';
+                        }
+                    }}
+                    className="h-8 border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold rounded-lg px-2 outline-none text-xs hover:bg-emerald-100 transition-all cursor-pointer shadow-sm"
+                >
+                    <option value="">📄 Modelos de Documento...</option>
+                    <option value="declaracao">📋 Declaração de Membresia</option>
+                    <option value="recomendacao">✉️ Carta de Recomendação</option>
+                    <option value="ata">📑 Ata de Reunião</option>
+                    <option value="oficio">🏛️ Ofício Pastoral</option>
+                </select>
+
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
+                
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg px-1 h-8 shadow-sm">
+                    <button onClick={handleZoomOut} className="p-1 hover:bg-slate-100 rounded text-slate-600"><Minus size={14} /></button>
+                    <span className="px-1.5 text-xs font-semibold w-11 text-center text-slate-700">{zoom}%</span>
+                    <button onClick={handleZoomIn} className="p-1 hover:bg-slate-100 rounded text-slate-600"><Plus size={14} /></button>
+                </div>
+                
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
                 
                 <select 
                     onChange={(e) => formatDoc('formatBlock', e.target.value)}
-                    className="h-7 border border-transparent hover:border-slate-300 bg-transparent rounded px-1 outline-none text-sm font-medium w-28 truncate"
+                    className="h-8 border border-slate-200 bg-white rounded-lg px-2 outline-none text-xs font-medium w-28 truncate shadow-sm focus:border-blue-500"
                 >
                     <option value="P">Texto Normal</option>
                     <option value="H1">Título 1</option>
                     <option value="H2">Título 2</option>
                     <option value="H3">Título 3</option>
                     <option value="H4">Título 4</option>
-                    <option value="H5">Título 5</option>
-                    <option value="H6">Título 6</option>
                 </select>
-
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
 
                 <select 
                     onChange={(e) => formatDoc('fontName', e.target.value)}
-                    className="h-7 border border-transparent hover:border-slate-300 bg-transparent rounded px-1 outline-none text-sm w-32 truncate"
+                    className="h-8 border border-slate-200 bg-white rounded-lg px-2 outline-none text-xs w-28 truncate shadow-sm focus:border-blue-500"
                 >
                     <option value="Arial">Arial</option>
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Courier New">Courier New</option>
                     <option value="Georgia">Georgia</option>
                     <option value="Verdana">Verdana</option>
-                    <option value="Inter">Inter</option>
-                    <option value="Outfit">Outfit</option>
                 </select>
 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
 
                 <select 
                     onChange={(e) => {
                         insertVariable(e.target.value);
                         e.target.value = '';
                     }}
-                    className="h-7 border border-transparent hover:border-slate-300 bg-transparent rounded px-1 outline-none text-sm w-32 truncate text-blue-700 font-medium"
+                    className="h-8 border border-indigo-300 bg-indigo-50 text-indigo-700 rounded-lg px-2 outline-none text-xs font-bold w-32 truncate shadow-sm cursor-pointer"
                 >
                     <option value="">{'{'} Variáveis {'}'}</option>
                     <option value="{NOME_MEMBRO}">{'{'}NOME_MEMBRO{'}'}</option>
@@ -584,58 +734,70 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     <option value="{CARGO_MEMBRO}">{'{'}CARGO_MEMBRO{'}'}</option>
                 </select>
 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
                 
-                <div className="flex items-center">
-                    <button onClick={() => formatDoc('bold')} className="p-1.5 hover:bg-slate-200 rounded transition-colors font-bold"><Bold size={18} /></button>
-                    <button onClick={() => formatDoc('italic')} className="p-1.5 hover:bg-slate-200 rounded transition-colors italic"><Italic size={18} /></button>
-                    <button onClick={() => formatDoc('underline')} className="p-1.5 hover:bg-slate-200 rounded transition-colors underline"><Underline size={18} /></button>
-                    <button onClick={() => formatDoc('strikeThrough')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><Strikethrough size={18} /></button>
-                </div>
-                
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
-                
-                <div className="flex items-center gap-1 relative group">
-                    <Type size={18} className="text-slate-700 p-0.5" />
-                    <input type="color" className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent" onChange={(e) => formatDoc('foreColor', e.target.value)} title="Cor do texto" />
+                {/* Estilos de Texto */}
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                    <button onClick={() => formatDoc('bold')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors font-bold text-slate-700" title="Negrito"><Bold size={16} /></button>
+                    <button onClick={() => formatDoc('italic')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors italic text-slate-700" title="Itálico"><Italic size={16} /></button>
+                    <button onClick={() => formatDoc('underline')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors underline text-slate-700" title="Sublinhado"><Underline size={16} /></button>
+                    <button onClick={() => formatDoc('strikeThrough')} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors text-slate-700" title="Tachado"><Strikethrough size={16} /></button>
                 </div>
                 
-                <div className="flex items-center gap-1 relative group ml-1">
-                    <Highlighter size={18} className="text-slate-700 p-0.5" />
-                    <input type="color" className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent" onChange={(e) => formatDoc('hiliteColor', e.target.value)} title="Cor de destaque" />
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
+                
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg px-1.5 h-8 gap-1 shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Cores</span>
+                    <div className="flex items-center gap-1 relative" title="Cor do Texto">
+                        <Type size={14} className="text-blue-600" />
+                        <input type="color" className="w-4 h-4 p-0 border-none rounded cursor-pointer bg-transparent" onChange={(e) => formatDoc('foreColor', e.target.value)} />
+                    </div>
+                    <div className="flex items-center gap-1 relative" title="Marca-Texto / Destaque">
+                        <Highlighter size={14} className="text-amber-500" />
+                        <input type="color" className="w-4 h-4 p-0 border-none rounded cursor-pointer bg-transparent" onChange={(e) => formatDoc('hiliteColor', e.target.value)} />
+                    </div>
                 </div>
 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
 
-                <div className="flex items-center">
-                    <button onClick={() => formatDoc('justifyLeft')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignLeft size={18} /></button>
-                    <button onClick={() => formatDoc('justifyCenter')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignCenter size={18} /></button>
-                    <button onClick={() => formatDoc('justifyRight')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignRight size={18} /></button>
-                    <button onClick={() => formatDoc('justifyFull')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><AlignJustify size={18} /></button>
+                {/* Alinhamentos */}
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                    <button onClick={() => formatDoc('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Alinhar à Esquerda"><AlignLeft size={16} /></button>
+                    <button onClick={() => formatDoc('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Centralizar"><AlignCenter size={16} /></button>
+                    <button onClick={() => formatDoc('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Alinhar à Direita"><AlignRight size={16} /></button>
+                    <button onClick={() => formatDoc('justifyFull')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Justificar"><AlignJustify size={16} /></button>
                 </div>
 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
 
-                <div className="flex items-center">
-                    <button onClick={() => formatDoc('insertUnorderedList')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><List size={18} /></button>
-                    <button onClick={() => formatDoc('insertOrderedList')} className="p-1.5 hover:bg-slate-200 rounded transition-colors"><ListOrdered size={18} /></button>
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                    <button onClick={() => formatDoc('insertUnorderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Lista"><List size={16} /></button>
+                    <button onClick={() => formatDoc('insertOrderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Lista Numerada"><ListOrdered size={16} /></button>
                 </div>
 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
 
-                <button onClick={() => {
-                    const url = prompt('Insira a URL da imagem:');
-                    if (url) formatDoc('insertImage', url);
-                }} className="p-1.5 hover:bg-slate-200 rounded transition-colors" title="Inserir Imagem"><ImageIcon size={18} /></button>
-                <button onClick={() => {
-                    const url = prompt('Insira a URL do link:');
-                    if (url) formatDoc('createLink', url);
-                }} className="p-1.5 hover:bg-slate-200 rounded transition-colors" title="Inserir Link"><Link size={18} /></button>
+                {/* Elementos Especiais */}
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm gap-0.5">
+                    <button onClick={() => insertTable(3, 3)} className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Tabela 3x3">
+                        <span className="text-[11px]">▦ Tabela</span>
+                    </button>
+                    <button onClick={insertCallout} className="px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Caixa de Destaque">
+                        <span className="text-[11px]">💡 Nota</span>
+                    </button>
+                    <button onClick={() => {
+                        const url = prompt('Insira a URL da imagem:');
+                        if (url) formatDoc('insertImage', url);
+                    }} className="p-1.5 hover:bg-slate-100 text-slate-600 rounded transition-colors" title="Inserir Imagem"><ImageIcon size={16} /></button>
+                    <button onClick={() => {
+                        const url = prompt('Insira a URL do link:');
+                        if (url) formatDoc('createLink', url);
+                    }} className="p-1.5 hover:bg-slate-100 text-slate-600 rounded transition-colors" title="Inserir Link"><Link size={16} /></button>
+                </div>
 
-                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
 
-                <button onClick={() => formatDoc('removeFormat')} className="p-1.5 hover:bg-slate-200 rounded transition-colors text-xs font-bold" title="Limpar formatação">Tx</button>
-
+                <button onClick={() => formatDoc('removeFormat')} className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-colors" title="Limpar formatação">Limpar Tx</button>
             </div>
 
             {/* Ruler area (Decorative to look like Word/Docs) */}

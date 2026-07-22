@@ -13,6 +13,7 @@ import {
   Minus,
   Plus,
   FileCheck,
+  Printer,
   X
 } from "lucide-react";
 import { ChurchContext } from "../App";
@@ -248,6 +249,162 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
     }
   };
 
+  const loadSheetTemplate = (type: string) => {
+    let newCelldata: any[] = [];
+    if (type === 'fluxo_caixa') {
+      setFileName('Relatório de Fluxo de Caixa');
+      newCelldata = [
+        { r: 0, c: 0, v: { v: "RELATÓRIO DE FLUXO DE CAIXA - TESOURARIA", bg: "#1e3a8a", fc: "#ffffff", bl: 1, ht: 1 } },
+        { r: 1, c: 0, v: { v: "Data", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 1, v: { v: "Descrição do Lançamento", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 2, v: { v: "Categoria", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 3, v: { v: "Entradas (R$)", bg: "#dcfce7", fc: "#166534", bl: 1 } },
+        { r: 1, c: 4, v: { v: "Saídas (R$)", bg: "#fee2e2", fc: "#991b1b", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Saldo (R$)", bg: "#e0f2fe", fc: "#075985", bl: 1 } },
+        { r: 2, c: 0, v: { v: "01/07/2026" } },
+        { r: 2, c: 1, v: { v: "Dízimos e Ofertas do Culto de Domingo" } },
+        { r: 2, c: 2, v: { v: "Entradas Ordinárias" } },
+        { r: 2, c: 3, v: { v: 4500.00, m: "R$ 4.500,00" } },
+        { r: 2, c: 4, v: { v: 0.00, m: "R$ 0,00" } },
+        { r: 2, c: 5, v: { f: "=D3-E3", v: 4500.00 } },
+        { r: 3, c: 0, v: { v: "05/07/2026" } },
+        { r: 3, c: 1, v: { v: "Pagamento Conta de Energia Eletrica" } },
+        { r: 3, c: 2, v: { v: "Despesas Fixas" } },
+        { r: 3, c: 3, v: { v: 0.00, m: "R$ 0,00" } },
+        { r: 3, c: 4, v: { v: 850.00, m: "R$ 850,00" } },
+        { r: 3, c: 5, v: { f: "=F3-E4", v: 3650.00 } },
+        { r: 4, c: 0, v: { v: "TOTAL", bl: 1, bg: "#f1f5f9" } },
+        { r: 4, c: 1, v: { v: "BALANÇO TOTAL MENSAL", bl: 1, bg: "#f1f5f9" } },
+        { r: 4, c: 2, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 4, c: 3, v: { f: "=SUM(D3:D4)", bl: 1, bg: "#dcfce7", fc: "#166534" } },
+        { r: 4, c: 4, v: { f: "=SUM(E3:E4)", bl: 1, bg: "#fee2e2", fc: "#991b1b" } },
+        { r: 4, c: 5, v: { f: "=D5-E5", bl: 1, bg: "#e0f2fe", fc: "#075985" } },
+      ];
+    } else if (type === 'dizimos') {
+      setFileName('Controle de Dízimos e Ofertas');
+      newCelldata = [
+        { r: 0, c: 0, v: { v: "CONTROLE DE DÍZIMOS E OFERTAS", bg: "#065f46", fc: "#ffffff", bl: 1, ht: 1 } },
+        { r: 1, c: 0, v: { v: "Rol", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 1, v: { v: "Nome do Membro", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 2, v: { v: "CPF / Identificação", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 3, v: { v: "Dízimo (R$)", bg: "#dcfce7", bl: 1 } },
+        { r: 1, c: 4, v: { v: "Oferta (R$)", bg: "#fef3c7", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Total Geral (R$)", bg: "#e0f2fe", bl: 1 } },
+        { r: 2, c: 0, v: { v: "001" } },
+        { r: 2, c: 1, v: { v: "João da Silva Santos" } },
+        { r: 2, c: 2, v: { v: "123.456.789-00" } },
+        { r: 2, c: 3, v: { v: 350.00 } },
+        { r: 2, c: 4, v: { v: 50.00 } },
+        { r: 2, c: 5, v: { f: "=SUM(D3:E3)", v: 400.00 } },
+        { r: 3, c: 0, v: { v: "SOMA", bl: 1, bg: "#f1f5f9" } },
+        { r: 3, c: 1, v: { v: "TOTAL ARRECADADO", bl: 1, bg: "#f1f5f9" } },
+        { r: 3, c: 2, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 3, c: 3, v: { f: "=SUM(D3:D3)", bl: 1 } },
+        { r: 3, c: 4, v: { f: "=SUM(E3:E3)", bl: 1 } },
+        { r: 3, c: 5, v: { f: "=SUM(F3:F3)", bl: 1 } },
+      ];
+    } else if (type === 'escala') {
+      setFileName('Escala de Cultos e Louvor');
+      newCelldata = [
+        { r: 0, c: 0, v: { v: "ESCALA MENSAL DE CULTOS E MINISTÉRIO DE LOUVOR", bg: "#6b21a8", fc: "#ffffff", bl: 1 } },
+        { r: 1, c: 0, v: { v: "Data", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 1, v: { v: "Dia / Culto", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 2, v: { v: "Dirigente", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 3, v: { v: "Pregrador / Mensagem", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 4, v: { v: "Grupo de Louvor", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Recepção / Apoio", bg: "#f3e8ff", bl: 1 } },
+        { r: 2, c: 0, v: { v: "02/08/2026" } },
+        { r: 2, c: 1, v: { v: "Domingo - Família" } },
+        { r: 2, c: 2, v: { v: "Pr. Presidente" } },
+        { r: 2, c: 3, v: { v: "Ev. Marcos Pedro" } },
+        { r: 2, c: 4, v: { v: "Ministério Shalom" } },
+        { r: 2, c: 5, v: { v: "Equipe Boas-Vindas A" } },
+      ];
+    }
+
+    if (newCelldata.length > 0) {
+      setSheetData([{
+        name: "Página 1",
+        id: "1",
+        status: 1,
+        celldata: newCelldata
+      }]);
+      setSheetKey(k => k + 1);
+      addToast("Modelo de planilha carregado com sucesso!", "success");
+    }
+  };
+
+  const handlePrintSheet = () => {
+    if (!workbookRef.current) return;
+    try {
+      const sheets = workbookRef.current.getAllSheets();
+      const currentSheet = sheets[0];
+      if (!currentSheet || !currentSheet.celldata) {
+        addToast("Sem dados para imprimir na planilha.", "warning");
+        return;
+      }
+
+      const matrix: string[][] = [];
+      let maxR = 0;
+      let maxC = 0;
+
+      currentSheet.celldata.forEach((cell: any) => {
+        const r = cell.r;
+        const c = cell.c;
+        if (r > maxR) maxR = r;
+        if (c > maxC) maxC = c;
+        if (!matrix[r]) matrix[r] = [];
+        const val = cell.v ? (cell.v.m !== undefined ? cell.v.m : (cell.v.v !== undefined ? cell.v.v : '')) : '';
+        matrix[r][c] = String(val);
+      });
+
+      let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px;">`;
+      for (let r = 0; r <= Math.min(maxR, 100); r++) {
+        tableHtml += `<tr>`;
+        for (let c = 0; c <= Math.min(maxC, 20); c++) {
+          const val = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
+          const isHeader = r === 0;
+          const bgStyle = isHeader ? 'background-color: #f1f5f9; font-weight: bold;' : '';
+          tableHtml += `<td style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; ${bgStyle}">${val}</td>`;
+        }
+        tableHtml += `</tr>`;
+      }
+      tableHtml += `</table>`;
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>${fileName} - Relatório de Impressão</title>
+              <style>
+                @page { margin: 15mm; size: ${orientation}; }
+                body { font-family: Arial, sans-serif; padding: 10px; }
+                .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+                .header h2 { margin: 0; color: #1e3a8a; }
+                .header p { margin: 4px 0 0 0; color: #64748b; font-size: 12px; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h2>IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS</h2>
+                <p>Relatório de Planilha: <strong>${fileName}</strong> - Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
+              </div>
+              ${tableHtml}
+              <script>
+                window.onload = () => { window.print(); window.close(); }
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    } catch (err) {
+      console.error("Erro ao imprimir planilha:", err);
+      addToast("Erro ao gerar visualização de impressão.", "error");
+    }
+  };
+
   const handleExportXLSX = () => {
     if (!workbookRef.current) return;
     try {
@@ -308,6 +465,22 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
     }
   };
 
+  const parseRgbColor = (colorObj: any): string | null => {
+    if (!colorObj) return null;
+    if (typeof colorObj === 'string') {
+      let c = colorObj.trim();
+      if (c.startsWith('#')) return c;
+      if (c.length === 8) return '#' + c.substring(2);
+      if (c.length === 6) return '#' + c;
+    }
+    if (colorObj.rgb) {
+      let rgb = String(colorObj.rgb).trim();
+      if (rgb.length === 8) return '#' + rgb.substring(2);
+      if (rgb.length === 6) return '#' + rgb;
+    }
+    return null;
+  };
+
   const processFile = (file: File) => {
     const ext = file.name.split('.').pop()?.toLowerCase();
     
@@ -316,26 +489,161 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { 
+            type: 'array', 
+            cellStyles: true, 
+            cellFormula: true, 
+            cellDates: true, 
+            cellNF: true 
+          });
           const sheets: any[] = [];
           
           workbook.SheetNames.forEach((sheetName, index) => {
             const worksheet = workbook.Sheets[sheetName];
-            const jsonSheet: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            if (!worksheet) return;
+
             const celldata: any[] = [];
-            jsonSheet.forEach((row, r) => {
-              row.forEach((val, c) => {
-                if (val !== undefined && val !== null && val !== '') {
-                  celldata.push({ r, c, v: { v: val, m: String(val) } });
+            const mergeConfig: Record<string, { r: number; c: number; rs: number; cs: number }> = {};
+            const columnlen: Record<number, number> = {};
+            const rowlen: Record<number, number> = {};
+
+            // Parse merged cells (!merges)
+            if (worksheet['!merges'] && Array.isArray(worksheet['!merges'])) {
+              worksheet['!merges'].forEach((m: any) => {
+                if (m && m.s && m.e) {
+                  const key = `${m.s.r}_${m.s.c}`;
+                  mergeConfig[key] = {
+                    r: m.s.r,
+                    c: m.s.c,
+                    rs: m.e.r - m.s.r + 1,
+                    cs: m.e.c - m.s.c + 1,
+                  };
                 }
               });
+            }
+
+            // Parse column widths (!cols)
+            if (worksheet['!cols'] && Array.isArray(worksheet['!cols'])) {
+              worksheet['!cols'].forEach((col: any, idx: number) => {
+                if (col) {
+                  const px = col.wpx || (col.width ? Math.round(col.width * 8) : null);
+                  if (px) columnlen[idx] = px;
+                }
+              });
+            }
+
+            // Parse row heights (!rows)
+            if (worksheet['!rows'] && Array.isArray(worksheet['!rows'])) {
+              worksheet['!rows'].forEach((row: any, idx: number) => {
+                if (row) {
+                  const px = row.hpx || (row.hpt ? Math.round(row.hpt * 1.33) : null);
+                  if (px) rowlen[idx] = px;
+                }
+              });
+            }
+
+            let maxR = 25;
+            let maxC = 15;
+
+            Object.keys(worksheet).forEach((key) => {
+              if (key.startsWith('!')) return;
+              try {
+                const coords = XLSX.utils.decode_cell(key);
+                const r = coords.r;
+                const c = coords.c;
+                if (r > maxR) maxR = r;
+                if (c > maxC) maxC = c;
+
+                const cell = worksheet[key];
+                if (!cell) return;
+
+                const cellObj: any = {};
+
+                // Formula
+                if (cell.f) {
+                  const rawFormula = String(cell.f).trim();
+                  cellObj.f = rawFormula.startsWith('=') ? rawFormula : '=' + rawFormula;
+                }
+
+                // Value
+                if (cell.v !== undefined && cell.v !== null) {
+                  if (cell.t === 'd' && cell.v instanceof Date) {
+                    cellObj.v = cell.v.toLocaleDateString('pt-BR');
+                  } else if (cell.t === 'n') {
+                    cellObj.v = Number(cell.v);
+                  } else {
+                    cellObj.v = cell.v;
+                  }
+                }
+
+                // Formatted text display
+                if (cell.w !== undefined) {
+                  cellObj.m = String(cell.w);
+                } else if (cellObj.v !== undefined) {
+                  cellObj.m = String(cellObj.v);
+                }
+
+                // Number Format
+                if (cell.z) {
+                  cellObj.ct = { fa: cell.z, t: cell.t === 'n' ? 'n' : 'g' };
+                }
+
+                // Cell Styles (Background, Font color, Bold, Italic, Alignments)
+                if (cell.s) {
+                  const style = cell.s;
+
+                  if (style.fill) {
+                    const bgHex = parseRgbColor(style.fill.fgColor || style.fill.bgColor);
+                    if (bgHex) cellObj.bg = bgHex;
+                  }
+
+                  if (style.font) {
+                    const font = style.font;
+                    const fcHex = parseRgbColor(font.color);
+                    if (fcHex) cellObj.fc = fcHex;
+                    if (font.bold) cellObj.bl = 1;
+                    if (font.italic) cellObj.it = 1;
+                    if (font.strike) cellObj.cl = 1;
+                    if (font.underline) cellObj.un = 1;
+                    if (font.sz) cellObj.fs = font.sz;
+                    if (font.name) cellObj.ff = font.name;
+                  }
+
+                  if (style.alignment) {
+                    const align = style.alignment;
+                    if (align.horizontal === 'left') cellObj.ht = 1;
+                    else if (align.horizontal === 'center') cellObj.ht = 0;
+                    else if (align.horizontal === 'right') cellObj.ht = 2;
+
+                    if (align.vertical === 'top') cellObj.vt = 1;
+                    else if (align.vertical === 'center' || align.vertical === 'middle') cellObj.vt = 0;
+                    else if (align.vertical === 'bottom') cellObj.vt = 2;
+
+                    if (align.wrapText) cellObj.tb = 2;
+                  }
+                }
+
+                if (Object.keys(cellObj).length > 0) {
+                  celldata.push({ r, c, v: cellObj });
+                }
+              } catch (err) {
+                console.warn("Cell decode error:", err);
+              }
             });
-            
+
+            const config: any = {};
+            if (Object.keys(mergeConfig).length > 0) config.merge = mergeConfig;
+            if (Object.keys(columnlen).length > 0) config.columnlen = columnlen;
+            if (Object.keys(rowlen).length > 0) config.rowlen = rowlen;
+
             sheets.push({
               name: sheetName,
+              id: (index + 1).toString(),
+              status: index === 0 ? 1 : 0,
               celldata,
-              row: Math.max(jsonSheet.length, 30),
-              column: Math.max((jsonSheet[0] || []).length, 20),
+              config,
+              row: Math.max(maxR + 10, 35),
+              column: Math.max(maxC + 5, 25),
               order: index.toString(),
             });
           });
@@ -344,7 +652,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             setSheetData(sheets);
             setSheetKey(k => k + 1);
             setFileName(file.name.replace(/\.[^/.]+$/, ""));
-            addToast("Planilha do Excel carregada com sucesso!", "success");
+            addToast("Planilha do Excel importada com fórmulas e formatações!", "success");
           } else {
              addToast("A planilha está vazia.", "warning");
           }
@@ -522,8 +830,31 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
           </button>
 
           <button
+            onClick={handlePrintSheet}
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm"
+            title="Imprimir Planilha com Cabeçalho Oficial"
+          >
+            <Printer size={16} /> Imprimir
+          </button>
+
+          <select 
+            onChange={(e) => {
+              if (e.target.value) {
+                loadSheetTemplate(e.target.value);
+                e.target.value = '';
+              }
+            }}
+            className="h-8 border border-emerald-400 bg-emerald-50 text-emerald-800 font-bold rounded-lg px-2 outline-none text-xs hover:bg-emerald-100 transition-all cursor-pointer shadow-sm"
+          >
+            <option value="">📊 Modelos de Planilha...</option>
+            <option value="fluxo_caixa">💰 Relatório de Fluxo de Caixa</option>
+            <option value="dizimos">📜 Controle de Dízimos e Ofertas</option>
+            <option value="escala">📅 Escala de Cultos e Louvor</option>
+          </select>
+
+          <button
             onClick={handleExportXLSX}
-            className="flex items-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-3.5 py-1.5 rounded-full font-medium text-xs transition-colors"
+            className="flex items-center gap-1.5 bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm"
             title="Exportar para Excel (.xlsx)"
           >
             <Download size={16} /> .XLSX
@@ -531,7 +862,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
 
           <button
             onClick={handleSaveFile}
-            className="flex items-center gap-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3.5 py-1.5 rounded-full font-medium text-xs transition-colors"
+            className="flex items-center gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm"
             title="Salvar Planilha GIPP (.gplan)"
           >
             <Save size={16} /> .GPLAN
