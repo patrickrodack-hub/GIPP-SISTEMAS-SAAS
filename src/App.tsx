@@ -10247,7 +10247,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
                 {(hasPermission('access_sec_certificados') || hasPermission('access_midia') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
                     <div>
-                        <MenuGroup label="Estúdio Canva" />
+                        <MenuGroup label="GIPP Escritório" />
                         {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                         {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={FileText} label="GIPP DOCs" />}

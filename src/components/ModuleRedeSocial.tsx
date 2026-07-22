@@ -731,7 +731,7 @@ const ModuleRedeSocial = () => {
                 <Save size={16}/>
               </button>
             </div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Estúdio Canva GIPP Premium Mode</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">GIPP Escritório Premium Mode</p>
           </div>
         </div>
 
