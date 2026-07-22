@@ -42,7 +42,27 @@ function TextEditor({ initialFile }: TextEditorProps) {
     const [isMinimized, setIsMinimized] = useState(false);
     const [showMargins, setShowMargins] = useState(false);
     const [margins, setMargins] = useState({ top: 20, bottom: 20, left: 24, right: 24 }); // em mm
+    const [pageOrientation, setPageOrientation] = useState<'portrait' | 'landscape'>('portrait');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [docStats, setDocStats] = useState({ words: 0, chars: 0, paragraphs: 0, readingTime: 0 });
     const [editorKey, setEditorKey] = useState(0);
+
+    const updateDocumentStats = useCallback(() => {
+        if (!editorRef.current) return;
+        const text = editorRef.current.innerText || '';
+        const cleanText = text.trim();
+        const chars = cleanText.length;
+        const words = cleanText ? cleanText.split(/\s+/).filter(Boolean).length : 0;
+        const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0).length || (cleanText ? 1 : 0);
+        const readingTime = Math.ceil(words / 200); // 200 PPM
+        setDocStats(prev => {
+            if (prev.words === words && prev.chars === chars && prev.paragraphs === paragraphs && prev.readingTime === readingTime) {
+                return prev;
+            }
+            return { words, chars, paragraphs, readingTime };
+        });
+    }, []);
+
     const DOCS_STORAGE_KEY = 'gippDocsWindowState';
 
     const [windowState, setWindowState] = useState<WindowState>(() => 
@@ -161,6 +181,13 @@ function TextEditor({ initialFile }: TextEditorProps) {
     const [editorHtml, setEditorHtml] = useState<string>(
         `<h1>Bem-vindo ao GIPP DOCs</h1><p>Este é o seu editor de texto oficial do sistema GIPP. Funciona com as mesmas bases do <strong>Google Docs</strong> e <strong>Microsoft Word</strong>.</p><p><br/></p><ul><li>Edite textos livremente, insira imagens, listas e links.</li><li>Salve o documento no seu computador com a extensão nativa <code>.gdoc</code>.</li><li>Abra arquivos <code>.gdoc</code> ou <code>.html</code> diretamente do seu disco local para continuar editando.</li></ul><p><br/></p><p><em>Use a barra de ferramentas acima para estilizar este documento!</em>`
     );
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            updateDocumentStats();
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [editorHtml, updateDocumentStats]);
 
     const { addToast, osTheme, setView, globalOpenFile, setGlobalOpenFile } = useContext(ChurchContext);
 
@@ -501,6 +528,38 @@ function TextEditor({ initialFile }: TextEditorProps) {
         formatDoc('insertHTML', calloutHtml);
     };
 
+    const insertOfficialHeader = () => {
+        const headerHtml = `
+            <div style="text-align: center; border-bottom: 3px double #1e3a8a; padding-bottom: 12px; margin-bottom: 20px; font-family: Arial, sans-serif;">
+                <div style="font-size: 11px; font-weight: bold; color: #1e3a8a; letter-spacing: 1.5px; text-transform: uppercase;">Ministério do Belém / Convenção Geral CGADB</div>
+                <h1 style="color: #1e3a8a; margin: 4px 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px;">IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS</h1>
+                <p style="font-size: 13px; font-weight: bold; color: #334155; margin: 2px 0;">{NOME_IGREJA}</p>
+                <p style="font-size: 11px; color: #64748b; margin: 0;">CNPJ: 00.000.000/0001-00 • Sede Administrativa Central</p>
+            </div>
+            <p><br/></p>
+        `;
+        formatDoc('insertHTML', headerHtml);
+    };
+
+    const insertSignatureBlock = () => {
+        const signatureHtml = `
+            <br/><br/>
+            <div style="display: flex; justify-content: space-around; text-align: center; margin-top: 30px; font-family: Arial, sans-serif;">
+                <div style="width: 250px;">
+                    <p style="border-top: 1.5px solid #334155; padding-top: 6px; font-weight: bold; font-size: 13px; color: #0f172a; margin-bottom: 2px;">{NOME_PASTOR}</p>
+                    <p style="font-size: 11px; color: #64748b; margin: 0;">Pastor Presidente</p>
+                    <p style="font-size: 10px; color: #94a3b8; margin-top: 2px;">CGADB / CONFRADESP</p>
+                </div>
+                <div style="width: 250px;">
+                    <p style="border-top: 1.5px solid #334155; padding-top: 6px; font-weight: bold; font-size: 13px; color: #0f172a; margin-bottom: 2px;">1º Secretário Executivo</p>
+                    <p style="font-size: 11px; color: #64748b; margin: 0;">Secretaria Geral de Membresia</p>
+                </div>
+            </div>
+            <p><br/></p>
+        `;
+        formatDoc('insertHTML', signatureHtml);
+    };
+
     const handlePrint = () => {
         if (!editorRef.current) return;
         const printWindow = window.open('', '_blank');
@@ -779,10 +838,16 @@ function TextEditor({ initialFile }: TextEditorProps) {
 
                 {/* Elementos Especiais */}
                 <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm gap-0.5">
+                    <button onClick={insertOfficialHeader} className="px-2 py-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Timbre Oficial da Igreja">
+                        <span className="text-[11px]">🏛️ Timbre</span>
+                    </button>
+                    <button onClick={insertSignatureBlock} className="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Bloco de Assinaturas Pastoral">
+                        <span className="text-[11px]">✍️ Assinatura</span>
+                    </button>
                     <button onClick={() => insertTable(3, 3)} className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Tabela 3x3">
                         <span className="text-[11px]">▦ Tabela</span>
                     </button>
-                    <button onClick={insertCallout} className="px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Caixa de Destaque">
+                    <button onClick={insertCallout} className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-xs font-bold transition-colors flex items-center gap-1" title="Inserir Caixa de Destaque">
                         <span className="text-[11px]">💡 Nota</span>
                     </button>
                     <button onClick={() => {
@@ -797,12 +862,16 @@ function TextEditor({ initialFile }: TextEditorProps) {
 
                 <div className="w-px h-5 bg-slate-300 mx-0.5"></div>
 
+                <button onClick={() => setPageOrientation(o => o === 'portrait' ? 'landscape' : 'portrait')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-1" title="Alternar Orientação (Retrato / Paisagem)">
+                    <span>{pageOrientation === 'portrait' ? '📄 Retrato' : '🖼️ Paisagem'}</span>
+                </button>
+
                 <button onClick={() => formatDoc('removeFormat')} className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-colors" title="Limpar formatação">Limpar Tx</button>
             </div>
 
             {/* Ruler area (Decorative to look like Word/Docs) */}
             <div className="h-6 bg-slate-100 border-b border-slate-200 shrink-0 flex items-center justify-center overflow-hidden">
-                <div className="h-full bg-white relative w-full max-w-[850px] shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+                <div className={`h-full bg-white relative w-full ${pageOrientation === 'portrait' ? 'max-w-[850px]' : 'max-w-[1100px]'} shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all duration-300`}>
                     {/* Ruler tick marks - simulated */}
                     <div className="absolute inset-0 flex" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 49px, #cbd5e1 49px, #cbd5e1 50px)' }}>
                         <div className="w-16 h-full bg-slate-200 shrink-0"></div>
@@ -815,11 +884,11 @@ function TextEditor({ initialFile }: TextEditorProps) {
             {/* Workspace Editor */}
             <div className="flex-1 min-h-0 overflow-auto bg-[#f8f9fa] flex justify-center py-8 relative custom-scrollbar">
                 <div 
-                    className="bg-white shadow-md border border-slate-200 outline-none w-full max-w-[850px] min-h-[1100px] mb-16 relative"
+                    className={`bg-white shadow-md border border-slate-200 outline-none w-full ${pageOrientation === 'portrait' ? 'max-w-[850px] min-h-[1100px]' : 'max-w-[1100px] min-h-[800px]'} mb-16 relative transition-all duration-300`}
                     style={{ 
                         transform: `scale(${zoom / 100})`, 
                         transformOrigin: 'top center', 
-                        transition: 'transform 0.2s ease',
+                        transition: 'transform 0.2s ease, max-width 0.3s ease, min-height 0.3s ease',
                         paddingTop: `${margins.top}mm`,
                         paddingBottom: `${margins.bottom}mm`,
                         paddingLeft: `${margins.left}mm`,
@@ -831,6 +900,8 @@ function TextEditor({ initialFile }: TextEditorProps) {
                         ref={editorRef}
                         contentEditable
                         suppressContentEditableWarning
+                        onInput={updateDocumentStats}
+                        onKeyUp={updateDocumentStats}
                         className="outline-none min-h-full font-serif text-[11pt] leading-normal"
                         style={{ fontFamily: 'Arial, sans-serif' }}
                         dangerouslySetInnerHTML={{ __html: editorHtml }}
@@ -908,11 +979,19 @@ function TextEditor({ initialFile }: TextEditorProps) {
             </div>
             
             {/* Status Bar */}
-            <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-500 font-medium relative">
-                <div>GIPP DOCs Engine v1.0</div>
-                <div className="flex items-center gap-4 mr-4">
-                    <span>{fileName}</span>
-                    <span>Modo de Edição</span>
+            <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-600 font-medium relative select-none">
+                <div className="flex items-center gap-3">
+                    <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded text-[11px]">GIPP DOCs v1.0</span>
+                    <span className="hidden sm:inline border-l border-slate-300 pl-3">
+                        📝 <strong>{docStats.words}</strong> palavras &nbsp;|&nbsp; <strong>{docStats.chars}</strong> caracteres &nbsp;|&nbsp; <strong>{docStats.paragraphs}</strong> parágrafos
+                    </span>
+                    <span className="hidden md:inline border-l border-slate-300 pl-3 text-slate-500">
+                        ⏱️ ~{docStats.readingTime} min de leitura
+                    </span>
+                </div>
+                <div className="flex items-center gap-4 mr-6">
+                    <span className="truncate max-w-[150px] font-semibold text-slate-700">{fileName}</span>
+                    <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-[10px] font-bold">Edição Ativa</span>
                 </div>
 
                 {!isFullscreen && (

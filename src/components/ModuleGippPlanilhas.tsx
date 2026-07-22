@@ -198,6 +198,9 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
   const workbookRef = useRef<WorkbookInstance>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [showFormulaModal, setShowFormulaModal] = useState(false);
+  const [selectedFormulaCategory, setSelectedFormulaCategory] = useState<'all' | 'fin' | 'stats' | 'logic'>('all');
+
   const [sheetData, setSheetData] = useState<any[]>([
     {
       name: "Página 1",
@@ -206,6 +209,43 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
       celldata: [],
     },
   ]);
+
+  const applyThemeToSheet = (theme: 'azul' | 'verde' | 'purpura' | 'cinza') => {
+    let headerBg = "#1e3a8a";
+    let headerFc = "#ffffff";
+    let zebraBg = "#f0f9ff";
+
+    if (theme === 'verde') {
+      headerBg = "#065f46";
+      zebraBg = "#ecfdf5";
+    } else if (theme === 'purpura') {
+      headerBg = "#581c87";
+      zebraBg = "#faf5ff";
+    } else if (theme === 'cinza') {
+      headerBg = "#334155";
+      zebraBg = "#f8fafc";
+    }
+
+    setSheetData(prev => {
+      return prev.map((sheet, index) => {
+        if (index === 0 || sheet.status === 1) {
+          const newCellData = [...(sheet.celldata || [])];
+          // Style first row cells as header
+          newCellData.forEach(cell => {
+            if (cell.r === 0) {
+              cell.v = { ...cell.v, bg: headerBg, fc: headerFc, bl: 1, ht: 1 };
+            } else if (cell.r % 2 === 1) {
+              cell.v = { ...cell.v, bg: zebraBg };
+            }
+          });
+          return { ...sheet, celldata: newCellData };
+        }
+        return sheet;
+      });
+    });
+    setSheetKey(k => k + 1);
+    addToast(`Estilo de tabela '${theme.toUpperCase()}' aplicado à planilha!`, "success");
+  };
 
   // Trigger window resize to force FortuneSheet canvas recalculation
   useEffect(() => {
@@ -837,6 +877,30 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             <Printer size={16} /> Imprimir
           </button>
 
+          <button
+            onClick={() => setShowFormulaModal(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm"
+            title="Guia de Fórmulas e Funções da Planilha"
+          >
+            <span className="font-serif italic font-bold">fx</span> Fórmulas
+          </button>
+
+          <select 
+            onChange={(e) => {
+              if (e.target.value) {
+                applyThemeToSheet(e.target.value as any);
+                e.target.value = '';
+              }
+            }}
+            className="h-8 border border-indigo-300 bg-indigo-50 text-indigo-900 font-bold rounded-lg px-2 outline-none text-xs hover:bg-indigo-100 transition-all cursor-pointer shadow-sm"
+          >
+            <option value="">🎨 Estilos de Tabela...</option>
+            <option value="azul">🔷 Azul Executivo</option>
+            <option value="verde">🟢 Verde Esmeralda</option>
+            <option value="purpura">🟣 Púrpura Imperial</option>
+            <option value="cinza">🩶 Cinza Corporativo</option>
+          </select>
+
           <select 
             onChange={(e) => {
               if (e.target.value) {
@@ -1105,17 +1169,174 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         </div>
       </div>
 
+      {/* Modal de Guia de Fórmulas */}
+      {showFormulaModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-entrance flex flex-col max-h-[85vh]">
+            <div className="p-4 bg-indigo-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-base">
+                <span className="font-serif italic text-xl text-indigo-300">fx</span> Guia de Fórmulas e Funções
+              </div>
+              <button 
+                onClick={() => setShowFormulaModal(false)}
+                className="p-1 hover:bg-indigo-800 rounded text-slate-300 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-100 bg-indigo-50/50 flex gap-2">
+              <button 
+                onClick={() => setSelectedFormulaCategory('all')} 
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${selectedFormulaCategory === 'all' ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+              >
+                Todas (8)
+              </button>
+              <button 
+                onClick={() => setSelectedFormulaCategory('fin')} 
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${selectedFormulaCategory === 'fin' ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+              >
+                💰 Financeiro
+              </button>
+              <button 
+                onClick={() => setSelectedFormulaCategory('stats')} 
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${selectedFormulaCategory === 'stats' ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+              >
+                📊 Estatísticas
+              </button>
+              <button 
+                onClick={() => setSelectedFormulaCategory('logic')} 
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${selectedFormulaCategory === 'logic' ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+              >
+                ⚡ Lógica e Busca
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto space-y-3 flex-1 custom-scrollbar text-xs">
+              {(selectedFormulaCategory === 'all' || selectedFormulaCategory === 'fin') && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 transition-colors">
+                  <div className="flex items-center justify-between font-mono font-bold text-indigo-700 text-sm mb-1">
+                    <span>=SUM(intervalo) ou =SOMA(intervalo)</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('=SUM(B2:B10)');
+                        addToast("Fórmula =SUM(B2:B10) copiada!", "success");
+                      }}
+                      className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                  <p className="text-slate-600 mb-1">Soma todos os números nas células do intervalo especificado.</p>
+                  <div className="bg-white p-1.5 rounded border border-slate-200 font-mono text-[11px] text-slate-500">Exemplo: =SUM(D2:D20) — calcula o total de dízimos ou saídas.</div>
+                </div>
+              )}
+
+              {(selectedFormulaCategory === 'all' || selectedFormulaCategory === 'fin') && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 transition-colors">
+                  <div className="flex items-center justify-between font-mono font-bold text-indigo-700 text-sm mb-1">
+                    <span>=AVERAGE(intervalo) ou =MÉDIA(intervalo)</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('=AVERAGE(B2:B12)');
+                        addToast("Fórmula =AVERAGE(B2:B12) copiada!", "success");
+                      }}
+                      className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                  <p className="text-slate-600 mb-1">Calcula a média aritmética dos valores do intervalo.</p>
+                  <div className="bg-white p-1.5 rounded border border-slate-200 font-mono text-[11px] text-slate-500">Exemplo: =AVERAGE(C2:C13) — calcula a arrecadação média mensal.</div>
+                </div>
+              )}
+
+              {(selectedFormulaCategory === 'all' || selectedFormulaCategory === 'stats') && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 transition-colors">
+                  <div className="flex items-center justify-between font-mono font-bold text-indigo-700 text-sm mb-1">
+                    <span>=COUNTIF(intervalo, critério)</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('=COUNTIF(C2:C50, "Ativo")');
+                        addToast('Fórmula =COUNTIF(C2:C50, "Ativo") copiada!', "success");
+                      }}
+                      className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                  <p className="text-slate-600 mb-1">Conta quantas células atendem a uma determinada condição.</p>
+                  <div className="bg-white p-1.5 rounded border border-slate-200 font-mono text-[11px] text-slate-500">Exemplo: =COUNTIF(D2:D100, "Membro Ativo") — totaliza membros ativos.</div>
+                </div>
+              )}
+
+              {(selectedFormulaCategory === 'all' || selectedFormulaCategory === 'logic') && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 transition-colors">
+                  <div className="flex items-center justify-between font-mono font-bold text-indigo-700 text-sm mb-1">
+                    <span>=IF(teste, valor_verdadeiro, valor_falso)</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('=IF(D5>0, "Superávit", "Déficit")');
+                        addToast('Fórmula =IF(...) copiada!', "success");
+                      }}
+                      className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                  <p className="text-slate-600 mb-1">Avalia uma condição lógica e retorna o valor correspondente.</p>
+                  <div className="bg-white p-1.5 rounded border border-slate-200 font-mono text-[11px] text-slate-500">Exemplo: =IF(E10&gt;=0, "Positivo", "Atenção") — balanço financeiro.</div>
+                </div>
+              )}
+
+              {(selectedFormulaCategory === 'all' || selectedFormulaCategory === 'logic') && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 transition-colors">
+                  <div className="flex items-center justify-between font-mono font-bold text-indigo-700 text-sm mb-1">
+                    <span>=VLOOKUP(valor, matriz, col_idx, [exato])</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('=VLOOKUP(A2, Membros!A:E, 2, FALSE)');
+                        addToast("Fórmula =VLOOKUP(...) copiada!", "success");
+                      }}
+                      className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                  <p className="text-slate-600 mb-1">Procura um valor na primeira coluna de uma tabela e retorna o valor de outra coluna.</p>
+                  <div className="bg-white p-1.5 rounded border border-slate-200 font-mono text-[11px] text-slate-500">Exemplo: =VLOOKUP(Rol_001, Membros!A:D, 2, FALSE) — busca o nome do dízimista.</div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-slate-100 border-t border-slate-200 text-right">
+              <button 
+                onClick={() => setShowFormulaModal(false)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-1.5 rounded-lg text-xs shadow-md transition-colors"
+              >
+                Entendi / Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status Bar */}
-      <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-500 font-medium relative">
-        <div>GIPP Planilhas Engine v1.0</div>
-        <div className="flex items-center gap-4 mr-4">
-          <span>{fileName}</span>
+      <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-600 font-medium relative select-none">
+        <div className="flex items-center gap-3">
+          <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded text-[11px]">GIPP Planilhas v1.0</span>
+          <span className="hidden sm:inline border-l border-slate-300 pl-3">
+            📊 Modo Células Livres • Fórmulas Excel Habilitadas
+          </span>
+        </div>
+        <div className="flex items-center gap-4 mr-6">
+          <span className="truncate max-w-[160px] font-semibold text-slate-700">{fileName}</span>
           {lastSavedTime ? (
-            <span className="text-emerald-600 font-medium flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full">
-              <FileCheck size={12} /> Guardado ({lastSavedTime.toLocaleTimeString()})
+            <span className="text-emerald-700 font-bold flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded text-[10px]">
+              <FileCheck size={12} /> Salvo ({lastSavedTime.toLocaleTimeString()})
             </span>
           ) : (
-            <span>Salvo localmente</span>
+            <span className="text-slate-500">Salvo localmente</span>
           )}
         </div>
 
