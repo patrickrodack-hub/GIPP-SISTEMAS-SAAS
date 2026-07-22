@@ -15,7 +15,20 @@ import {
   Plus,
   FileCheck,
   Printer,
-  X
+  X,
+  Paintbrush,
+  Type,
+  DollarSign,
+  Percent,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Grid,
+  Sparkles,
+  Palette,
+  Check,
+  Calendar,
+  Hash
 } from "lucide-react";
 import { ChurchContext } from "../App";
 import * as XLSX from "xlsx";
@@ -201,6 +214,214 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
 
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [selectedFormulaCategory, setSelectedFormulaCategory] = useState<'all' | 'fin' | 'stats' | 'logic'>('all');
+
+  // Cell Formatting State
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const [formatTab, setFormatTab] = useState<'number' | 'font' | 'align' | 'border'>('number');
+  const [rangeInput, setRangeInput] = useState('A1:D10');
+  const [numberFormat, setNumberFormat] = useState<'general' | 'currency_brl' | 'currency_usd' | 'percent' | 'decimal' | 'date' | 'text'>('currency_brl');
+  const [decimals, setDecimals] = useState<number>(2);
+  const [fontFamily, setFontFamily] = useState<string>('Arial');
+  const [fontSize, setFontSize] = useState<number>(11);
+  const [isBold, setIsBold] = useState<boolean>(false);
+  const [isItalic, setIsItalic] = useState<boolean>(false);
+  const [isUnderline, setIsUnderline] = useState<boolean>(false);
+  const [isStrike, setIsStrike] = useState<boolean>(false);
+  const [fontColor, setFontColor] = useState<string>('#1e293b');
+  const [bgColor, setBgColor] = useState<string>('');
+  const [horizontalAlign, setHorizontalAlign] = useState<number>(1); // 1: Left, 0: Center, 2: Right
+  const [verticalAlign, setVerticalAlign] = useState<number>(0); // 0: Center, 1: Top, 2: Bottom
+  const [borderType, setBorderType] = useState<string>('border-all');
+  const [borderColor, setBorderColor] = useState<string>('#334155');
+  const [borderStyle, setBorderStyle] = useState<string>('1');
+
+  function colToIdx(colStr: string): number {
+    let col = 0;
+    const str = colStr.toUpperCase().trim();
+    for (let i = 0; i < str.length; i++) {
+      col = col * 26 + (str.charCodeAt(i) - 64);
+    }
+    return Math.max(0, col - 1);
+  }
+
+  function idxToCol(idx: number): string {
+    let colStr = "";
+    let temp = idx + 1;
+    while (temp > 0) {
+      let rem = (temp - 1) % 26;
+      colStr = String.fromCharCode(65 + rem) + colStr;
+      temp = Math.floor((temp - 1) / 26);
+    }
+    return colStr;
+  }
+
+  function parseRangeString(rangeStr: string): { startRow: number; endRow: number; startCol: number; endCol: number } {
+    const cleanStr = rangeStr.trim().toUpperCase().replace(/\s+/g, '');
+    if (!cleanStr) return { startRow: 0, endRow: 0, startCol: 0, endCol: 0 };
+
+    const parts = cleanStr.split(':');
+    const parseCell = (cellStr: string) => {
+      const match = cellStr.match(/^([A-Z]+)(\d+)$/);
+      if (!match) return { row: 0, col: 0 };
+      const col = colToIdx(match[1]);
+      const row = Math.max(0, parseInt(match[2], 10) - 1);
+      return { row, col };
+    };
+
+    const c1 = parseCell(parts[0]);
+    const c2 = parts[1] ? parseCell(parts[1]) : c1;
+
+    return {
+      startRow: Math.min(c1.row, c2.row),
+      endRow: Math.max(c1.row, c2.row),
+      startCol: Math.min(c1.col, c2.col),
+      endCol: Math.max(c1.col, c2.col)
+    };
+  }
+
+  const handleApplyCellFormatting = (options?: {
+    overrideNumberFormat?: string;
+    overrideBg?: string;
+    overrideFc?: string;
+    overrideBold?: boolean;
+    overrideBorderType?: string;
+  }) => {
+    const { startRow, endRow, startCol, endCol } = parseRangeString(rangeInput);
+    const activeNumFmt = options?.overrideNumberFormat || numberFormat;
+    const activeBg = options?.overrideBg !== undefined ? options.overrideBg : bgColor;
+    const activeFc = options?.overrideFc !== undefined ? options.overrideFc : fontColor;
+    const activeBold = options?.overrideBold !== undefined ? options.overrideBold : isBold;
+    const activeBorderType = options?.overrideBorderType !== undefined ? options.overrideBorderType : borderType;
+
+    setSheetData(prev => {
+      return prev.map((sheet, index) => {
+        if (sheet.status === 1 || index === 0) {
+          const celldataMap = new Map<string, any>();
+          
+          // Populate current cell map
+          (sheet.celldata || []).forEach((cell: any) => {
+            celldataMap.set(`${cell.r}_${cell.c}`, { ...cell.v });
+          });
+
+          for (let r = startRow; r <= endRow; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+              const key = `${r}_${c}`;
+              const existingV = celldataMap.get(key) || {};
+              const newV = { ...existingV };
+
+              // Font & style
+              if (fontFamily) newV.ff = fontFamily;
+              if (fontSize) newV.fs = fontSize;
+              newV.bl = activeBold ? 1 : 0;
+              newV.it = isItalic ? 1 : 0;
+              newV.un = isUnderline ? 1 : 0;
+              newV.cl = isStrike ? 1 : 0;
+              if (activeFc) newV.fc = activeFc;
+              if (activeBg) newV.bg = activeBg;
+              else if (options?.overrideBg === "") delete newV.bg;
+
+              // Alignment
+              newV.ht = horizontalAlign;
+              newV.vt = verticalAlign;
+
+              // Number formatting
+              if (activeNumFmt === 'currency_brl') {
+                let val = newV.v;
+                let num = typeof val === 'number' ? val : parseFloat(String(val || "0").replace(/[^0-9.-]+/g, "")) || 0;
+                newV.v = num;
+                newV.m = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+                newV.ct = { fa: "R$ #,##0.00", t: "n" };
+              } else if (activeNumFmt === 'currency_usd') {
+                let val = newV.v;
+                let num = typeof val === 'number' ? val : parseFloat(String(val || "0").replace(/[^0-9.-]+/g, "")) || 0;
+                newV.v = num;
+                newV.m = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+                newV.ct = { fa: "$ #,##0.00", t: "n" };
+              } else if (activeNumFmt === 'percent') {
+                let val = newV.v;
+                let num = typeof val === 'number' ? val : parseFloat(String(val || "0").replace(/[^0-9.-]+/g, "")) || 0;
+                newV.v = num;
+                newV.m = `${(num * (Math.abs(num) <= 1 ? 100 : 1)).toFixed(decimals)}%`;
+                newV.ct = { fa: "0.00%", t: "n" };
+              } else if (activeNumFmt === 'decimal') {
+                let val = newV.v;
+                let num = typeof val === 'number' ? val : parseFloat(String(val || "0").replace(/[^0-9.-]+/g, "")) || 0;
+                newV.v = num;
+                newV.m = num.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+                newV.ct = { fa: decimals === 0 ? "#,##0" : "#,##0." + "0".repeat(decimals), t: "n" };
+              } else if (activeNumFmt === 'date') {
+                newV.ct = { fa: "yyyy-mm-dd", t: "d" };
+              } else if (activeNumFmt === 'text') {
+                newV.m = String(newV.v !== undefined ? newV.v : "");
+                newV.ct = { fa: "@", t: "s" };
+              } else if (activeNumFmt === 'general') {
+                delete newV.m;
+                delete newV.ct;
+              }
+
+              celldataMap.set(key, newV);
+            }
+          }
+
+          const newCelldata: any[] = [];
+          celldataMap.forEach((v, key) => {
+            const [r, c] = key.split('_').map(Number);
+            newCelldata.push({ r, c, v });
+          });
+
+          // Manage borders
+          let newBorderInfo = [...(sheet.borderInfo || [])];
+          if (activeBorderType && activeBorderType !== 'none') {
+            newBorderInfo.push({
+              rangeType: "range",
+              borderType: activeBorderType,
+              style: borderStyle,
+              color: borderColor,
+              range: [{ row: [startRow, endRow], column: [startCol, endCol] }]
+            });
+          } else if (activeBorderType === 'none') {
+            newBorderInfo = newBorderInfo.filter(b => {
+              if (b.range && b.range[0]) {
+                const r = b.range[0].row;
+                const c = b.range[0].column;
+                return !(r[0] >= startRow && r[1] <= endRow && c[0] >= startCol && c[1] <= endCol);
+              }
+              return true;
+            });
+          }
+
+          return {
+            ...sheet,
+            celldata: newCelldata,
+            borderInfo: newBorderInfo
+          };
+        }
+        return sheet;
+      });
+    });
+
+    setSheetKey(k => k + 1);
+    addToast(`Formatação aplicada ao intervalo ${rangeInput.toUpperCase()}!`, "success");
+    setShowFormatModal(false);
+  };
+
+  const handleOpenFormatModal = () => {
+    try {
+      if (workbookRef.current) {
+        const selection = (workbookRef.current as any).getSelection?.();
+        if (selection && selection.length > 0 && selection[0].row && selection[0].column) {
+          const r1 = selection[0].row[0];
+          const r2 = selection[0].row[1];
+          const c1 = selection[0].column[0];
+          const c2 = selection[0].column[1];
+          setRangeInput(`${idxToCol(c1)}${r1 + 1}:${idxToCol(c2)}${r2 + 1}`);
+        }
+      }
+    } catch (e) {
+      console.log("No active selection detected");
+    }
+    setShowFormatModal(true);
+  };
 
   const [sheetData, setSheetData] = useState<any[]>([
     {
@@ -918,6 +1139,14 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             <span className="font-serif italic font-bold">fx</span> Fórmulas
           </button>
 
+          <button
+            onClick={handleOpenFormatModal}
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm"
+            title="Formatar Células: Fontes, Números, Moedas, Percentual e Bordas (Excel)"
+          >
+            <Paintbrush size={16} /> Formatar Células
+          </button>
+
           <select 
             onChange={(e) => {
               if (e.target.value) {
@@ -1039,6 +1268,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
                 ref={workbookRef}
                 data={sheetData}
                 lang="en"
+                currency="R$"
                 showToolbar={true}
                 showSheetTabs={true}
                 showFormulaBar={true}
@@ -1067,6 +1297,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
                   ref={workbookRef}
                   data={sheetData}
                   lang="en"
+                  currency="R$"
                   showToolbar={true}
                   showSheetTabs={true}
                   showFormulaBar={true}
@@ -1356,7 +1587,536 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         </div>
       )}
 
-      {/* Status Bar */}
+      {/* Modal de Formatação de Células (Excel Style) */}
+      {showFormatModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden animate-entrance flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-4 bg-emerald-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-emerald-700 rounded-xl shadow-xs">
+                  <Paintbrush size={22} className="text-emerald-200" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-base leading-tight">Formatar Células & Bordas</h3>
+                  <p className="text-xs text-emerald-200 font-medium">Estilos de números, fontes, moedas e bordas estilo Excel</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowFormatModal(false)}
+                className="p-1.5 hover:bg-emerald-700 rounded-lg text-emerald-200 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Range Input & Presets Bar */}
+            <div className="bg-slate-100 p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <label className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1">
+                  <Grid size={14} className="text-emerald-700" /> Células / Intervalo:
+                </label>
+                <input 
+                  type="text" 
+                  value={rangeInput}
+                  onChange={(e) => setRangeInput(e.target.value)}
+                  placeholder="Ex: A1:D10 ou B2"
+                  className="bg-white border border-slate-300 font-mono font-bold text-emerald-800 px-3 py-1 rounded-lg w-28 text-center outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 shadow-2xs uppercase"
+                />
+                <span className="text-[10px] text-slate-500 font-medium">(Ex: A1, B2:E10)</span>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+                <span className="font-bold text-slate-500 text-[10px] uppercase mr-1">Atalhos:</span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyCellFormatting({ overrideBg: '#1e3a8a', overrideFc: '#ffffff', overrideBold: true })}
+                  className="bg-blue-900 text-white font-bold px-2 py-1 rounded hover:bg-blue-950 text-[10px] transition-all shadow-2xs"
+                  title="Aplicar Cabeçalho Azul"
+                >
+                  🔷 Azul
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyCellFormatting({ overrideBg: '#065f46', overrideFc: '#ffffff', overrideBold: true })}
+                  className="bg-emerald-800 text-white font-bold px-2 py-1 rounded hover:bg-emerald-900 text-[10px] transition-all shadow-2xs"
+                  title="Aplicar Cabeçalho Verde"
+                >
+                  🟢 Verde
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyCellFormatting({ overrideNumberFormat: 'currency_brl', overrideBg: '#dcfce7', overrideFc: '#166534', overrideBold: true })}
+                  className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2 py-1 rounded hover:bg-emerald-200 text-[10px] transition-all shadow-2xs"
+                  title="Aplicar Destaque de Moeda R$"
+                >
+                  💵 Moeda R$
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyCellFormatting({ overrideBg: '#f1f5f9', overrideFc: '#0f172a', overrideBold: true })}
+                  className="bg-slate-200 text-slate-800 font-bold px-2 py-1 rounded hover:bg-slate-300 text-[10px] transition-all shadow-2xs"
+                  title="Aplicar Estilo Totalizacao"
+                >
+                  📊 Total
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Tabs Header */}
+            <div className="flex border-b border-slate-200 bg-slate-50/80 px-4 pt-2 gap-2 text-xs font-bold">
+              <button 
+                onClick={() => setFormatTab('number')} 
+                className={`py-2.5 px-4 rounded-t-xl transition-all border-t border-x flex items-center gap-1.5 ${formatTab === 'number' ? 'bg-white border-slate-200 text-emerald-700 shadow-2xs font-extrabold border-b-transparent -mb-px' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}
+              >
+                <DollarSign size={15} /> Número & Moeda
+              </button>
+              <button 
+                onClick={() => setFormatTab('font')} 
+                className={`py-2.5 px-4 rounded-t-xl transition-all border-t border-x flex items-center gap-1.5 ${formatTab === 'font' ? 'bg-white border-slate-200 text-emerald-700 shadow-2xs font-extrabold border-b-transparent -mb-px' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}
+              >
+                <Type size={15} /> Fonte & Cores
+              </button>
+              <button 
+                onClick={() => setFormatTab('align')} 
+                className={`py-2.5 px-4 rounded-t-xl transition-all border-t border-x flex items-center gap-1.5 ${formatTab === 'align' ? 'bg-white border-slate-200 text-emerald-700 shadow-2xs font-extrabold border-b-transparent -mb-px' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}
+              >
+                <AlignCenter size={15} /> Alinhamento
+              </button>
+              <button 
+                onClick={() => setFormatTab('border')} 
+                className={`py-2.5 px-4 rounded-t-xl transition-all border-t border-x flex items-center gap-1.5 ${formatTab === 'border' ? 'bg-white border-slate-200 text-emerald-700 shadow-2xs font-extrabold border-b-transparent -mb-px' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}
+              >
+                <Grid size={15} /> Bordas da Célula
+              </button>
+            </div>
+
+            {/* Modal Body / Tab Contents */}
+            <div className="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-4 text-xs">
+
+              {/* TAB 1: NÚMERO E MOEDA */}
+              {formatTab === 'number' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* Select Category */}
+                    <div className="space-y-2">
+                      <label className="block font-bold text-slate-700 uppercase tracking-wide text-[11px]">Categoria do Formato:</label>
+                      <div className="space-y-1.5">
+                        {[
+                          { id: 'currency_brl', label: 'Moeda Real (R$ 1.250,50)', icon: '💵', desc: 'Formatação contábil padrão do Brasil com símbolo R$' },
+                          { id: 'currency_usd', label: 'Moeda Dólar ($ 1,250.50)', icon: '💲', desc: 'Formatação financeira em dólares americanos' },
+                          { id: 'percent', label: 'Porcentagem (15,00%)', icon: '📊', desc: 'Multiplica por 100 e exibe com o símbolo %' },
+                          { id: 'decimal', label: 'Número Decimal (1.250,50)', icon: '🔢', desc: 'Exibe valores numéricos com casas decimais configuráveis' },
+                          { id: 'date', label: 'Data (DD/MM/AAAA)', icon: '📅', desc: 'Formatação para datas e calendários' },
+                          { id: 'text', label: 'Texto Puro', icon: '📝', desc: 'Trata o conteúdo estritamente como texto sem cálculos' },
+                          { id: 'general', label: 'Geral (Sem Formato)', icon: '⚙️', desc: 'Remover formatação específica da célula' },
+                        ].map((fmt) => (
+                          <div 
+                            key={fmt.id}
+                            onClick={() => setNumberFormat(fmt.id as any)}
+                            className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2.5 ${numberFormat === fmt.id ? 'bg-emerald-50/90 border-emerald-500 ring-1 ring-emerald-400' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+                          >
+                            <span className="text-lg">{fmt.icon}</span>
+                            <div className="flex-1">
+                              <div className="font-bold text-slate-800 text-xs flex items-center justify-between">
+                                <span>{fmt.label}</span>
+                                {numberFormat === fmt.id && <Check size={14} className="text-emerald-600" />}
+                              </div>
+                              <p className="text-[10px] text-slate-500 mt-0.5">{fmt.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Options & Live Preview */}
+                    <div className="space-y-4">
+                      {(numberFormat === 'decimal' || numberFormat === 'percent' || numberFormat === 'currency_brl' || numberFormat === 'currency_usd') && (
+                        <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+                          <label className="block font-bold text-slate-700 text-xs">Casas Decimais:</label>
+                          <div className="flex items-center gap-2">
+                            {[0, 1, 2, 3, 4].map((d) => (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => setDecimals(d)}
+                                className={`px-3 py-1 rounded-lg font-bold text-xs transition-all ${decimals === d ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100'}`}
+                              >
+                                {d}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Live Preview Box */}
+                      <div className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-4 rounded-2xl shadow-md space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block">Exemplo de Exibição / Prévia</span>
+                        <div className="bg-white/10 p-3 rounded-xl border border-white/20 font-mono font-bold text-lg text-emerald-200 text-center tracking-wide">
+                          {numberFormat === 'currency_brl' && "R$ 1.250,50"}
+                          {numberFormat === 'currency_usd' && "$ 1,250.50"}
+                          {numberFormat === 'percent' && `${(0.155 * 100).toFixed(decimals)}%`}
+                          {numberFormat === 'decimal' && (1250.5).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
+                          {numberFormat === 'date' && "2026-07-22"}
+                          {numberFormat === 'text' && "Texto de Exemplo"}
+                          {numberFormat === 'general' && "1250.5"}
+                        </div>
+                        <p className="text-[11px] text-slate-300 text-center font-medium">
+                          Este formato será aplicado às células no intervalo selecionado ({rangeInput.toUpperCase()}).
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: FONTE E CORES */}
+              {formatTab === 'font' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* Font Selector */}
+                    <div className="space-y-3 bg-slate-50 p-3.5 border border-slate-200 rounded-xl">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Família da Fonte:</label>
+                        <select 
+                          value={fontFamily}
+                          onChange={(e) => setFontFamily(e.target.value)}
+                          className="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800 bg-white outline-none focus:border-emerald-600"
+                        >
+                          <option value="Arial">Arial (Padrão)</option>
+                          <option value="Calibri">Calibri</option>
+                          <option value="Times New Roman">Times New Roman</option>
+                          <option value="Georgia">Georgia</option>
+                          <option value="Courier New">Courier New (Monospaced)</option>
+                          <option value="Verdana">Verdana</option>
+                          <option value="Trebuchet MS">Trebuchet MS</option>
+                          <option value="Consolas">Consolas</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Tamanho da Fonte (px):</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36].map((sz) => (
+                            <button
+                              key={sz}
+                              type="button"
+                              onClick={() => setFontSize(sz)}
+                              className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all ${fontSize === sz ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                            >
+                              {sz}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Font Style Toggles */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Estilos de Texto:</label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsBold(!isBold)}
+                            className={`flex-1 py-1.5 font-black text-sm rounded-lg border transition-all ${isBold ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                          >
+                            N (Negrito)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsItalic(!isItalic)}
+                            className={`flex-1 py-1.5 italic font-bold text-sm rounded-lg border transition-all ${isItalic ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                          >
+                            I (Itálico)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsUnderline(!isUnderline)}
+                            className={`flex-1 py-1.5 underline font-bold text-sm rounded-lg border transition-all ${isUnderline ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                          >
+                            S (Sublinhado)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsStrike(!isStrike)}
+                            className={`flex-1 py-1.5 line-through font-bold text-sm rounded-lg border transition-all ${isStrike ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                          >
+                            T (Tachado)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Colors & Fill */}
+                    <div className="space-y-3 bg-slate-50 p-3.5 border border-slate-200 rounded-xl">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Cor do Texto (Fonte):</label>
+                        <div className="flex items-center gap-2 mb-2">
+                          <input 
+                            type="color" 
+                            value={fontColor} 
+                            onChange={(e) => setFontColor(e.target.value)}
+                            className="w-9 h-9 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white" 
+                          />
+                          <span className="font-mono font-bold text-xs uppercase text-slate-700">{fontColor}</span>
+                        </div>
+                        {/* Quick Palette Text */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {['#000000', '#ffffff', '#1e3a8a', '#065f46', '#991b1b', '#6b21a8', '#334155', '#2563eb'].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setFontColor(c)}
+                              style={{ backgroundColor: c }}
+                              className={`w-6 h-6 rounded-md border ${fontColor === c ? 'ring-2 ring-emerald-500 scale-110' : 'border-slate-300'}`}
+                              title={c}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-200 pt-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block font-bold text-slate-700">Cor de Fundo (Preenchimento):</label>
+                          <button
+                            type="button"
+                            onClick={() => setBgColor('')}
+                            className="text-[10px] font-bold text-rose-600 hover:underline"
+                          >
+                            Remover Fundo
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <input 
+                            type="color" 
+                            value={bgColor || '#ffffff'} 
+                            onChange={(e) => setBgColor(e.target.value)}
+                            className="w-9 h-9 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white" 
+                          />
+                          <span className="font-mono font-bold text-xs uppercase text-slate-700">{bgColor || 'Transparente'}</span>
+                        </div>
+                        {/* Quick Palette Background */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {['#ffffff', '#f1f5f9', '#dcfce7', '#e0f2fe', '#fee2e2', '#fef3c7', '#f3e8ff', '#1e3a8a', '#065f46'].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setBgColor(c)}
+                              style={{ backgroundColor: c }}
+                              className={`w-6 h-6 rounded-md border ${bgColor === c ? 'ring-2 ring-emerald-500 scale-110' : 'border-slate-300'}`}
+                              title={c}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: ALINHAMENTO */}
+              {formatTab === 'align' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* Horizontal Alignment */}
+                    <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl space-y-3">
+                      <label className="block font-bold text-slate-700 text-xs">Alinhamento Horizontal:</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setHorizontalAlign(1)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 font-bold transition-all ${horizontalAlign === 1 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <AlignLeft size={20} />
+                          <span className="text-[11px]">Esquerda</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setHorizontalAlign(0)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 font-bold transition-all ${horizontalAlign === 0 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <AlignCenter size={20} />
+                          <span className="text-[11px]">Centro</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setHorizontalAlign(2)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 font-bold transition-all ${horizontalAlign === 2 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <AlignRight size={20} />
+                          <span className="text-[11px]">Direita</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Vertical Alignment */}
+                    <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl space-y-3">
+                      <label className="block font-bold text-slate-700 text-xs">Alinhamento Vertical:</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setVerticalAlign(1)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 font-bold transition-all ${verticalAlign === 1 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <span className="text-base font-bold">⬆️</span>
+                          <span className="text-[11px]">Superior</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVerticalAlign(0)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 font-bold transition-all ${verticalAlign === 0 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <span className="text-base font-bold">↕️</span>
+                          <span className="text-[11px]">Centro</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVerticalAlign(2)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 font-bold transition-all ${verticalAlign === 2 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+                        >
+                          <span className="text-base font-bold">⬇️</span>
+                          <span className="text-[11px]">Inferior</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: BORDAS DA CÉLULA */}
+              {formatTab === 'border' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* Border Options */}
+                    <div className="space-y-2">
+                      <label className="block font-bold text-slate-700 uppercase tracking-wide text-[11px]">Tipo de Borda:</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'border-all', label: 'Todas as Bordas', icon: '🔳', desc: 'Grades internas e externas' },
+                          { id: 'border-outside', label: 'Contorno Externo', icon: '🔲', desc: 'Borda apenas ao redor da seleção' },
+                          { id: 'border-top', label: 'Borda Superior', icon: '⬆️', desc: 'Borda apenas na parte superior' },
+                          { id: 'border-bottom', label: 'Borda Inferior', icon: '⬇️', desc: 'Borda apenas na parte inferior' },
+                          { id: 'border-double-bottom', label: 'Dupla Inferior', icon: '⏹️', desc: 'Linha dupla para totais contábeis' },
+                          { id: 'none', label: 'Sem Bordas', icon: '🚫', desc: 'Remover bordas da seleção' },
+                        ].map((b) => (
+                          <div 
+                            key={b.id}
+                            onClick={() => setBorderType(b.id)}
+                            className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${borderType === b.id ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-400' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                          >
+                            <span className="text-lg">{b.icon}</span>
+                            <div className="flex-1">
+                              <div className="font-bold text-slate-800 text-xs flex items-center justify-between">
+                                <span>{b.label}</span>
+                                {borderType === b.id && <Check size={14} className="text-emerald-600" />}
+                              </div>
+                              <p className="text-[9px] text-slate-500 leading-tight mt-0.5">{b.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Border Line Style & Colors */}
+                    <div className="space-y-3 bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Cor da Linha da Borda:</label>
+                        <div className="flex items-center gap-2 mb-2">
+                          <input 
+                            type="color" 
+                            value={borderColor} 
+                            onChange={(e) => setBorderColor(e.target.value)}
+                            className="w-9 h-9 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white" 
+                          />
+                          <span className="font-mono font-bold text-xs uppercase text-slate-700">{borderColor}</span>
+                        </div>
+                        {/* Quick Border Colors */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {['#000000', '#1e3a8a', '#065f46', '#991b1b', '#64748b', '#cbd5e1', '#2563eb'].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setBorderColor(c)}
+                              style={{ backgroundColor: c }}
+                              className={`w-6 h-6 rounded-md border ${borderColor === c ? 'ring-2 ring-emerald-500 scale-110' : 'border-slate-300'}`}
+                              title={c}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-200 pt-3">
+                        <label className="block font-bold text-slate-700 mb-1">Espessura / Estilo do Traço:</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBorderStyle('1')}
+                            className={`p-2 rounded-lg border font-bold text-xs text-center transition-all ${borderStyle === '1' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-300 text-slate-700'}`}
+                          >
+                            Fina (1px)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBorderStyle('2')}
+                            className={`p-2 rounded-lg border font-bold text-xs text-center transition-all ${borderStyle === '2' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-300 text-slate-700'}`}
+                          >
+                            Média (2px)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBorderStyle('3')}
+                            className={`p-2 rounded-lg border font-bold text-xs text-center transition-all ${borderStyle === '3' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-300 text-slate-700'}`}
+                          >
+                            Grossa (3px)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
+              <div className="text-xs text-slate-500 font-medium">
+                Aplicação no intervalo: <strong className="text-emerald-800 font-mono font-bold uppercase">{rangeInput}</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setShowFormatModal(false)}
+                  className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handleApplyCellFormatting()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <Check size={16} /> Aplicar Formatação
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
       <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-600 font-medium relative select-none">
         <div className="flex items-center gap-3">
           <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded text-[11px]">GIPP Planilhas v1.0</span>

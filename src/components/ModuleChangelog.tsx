@@ -47,11 +47,24 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 9.0.0 */}
-            <div className="relative pl-8 border-l-2 border-indigo-500 animate-entrance"> 
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 9.5.0 */}
+            <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance"> 
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v9.5.0 - Ícones Oficiais do GIPP Office, Modelos Eclesiásticos & Atualização Geral</h3>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Ícones Oficiais GIPP DOCs & Planilhas:</strong> Renovação completa da identidade visual dos aplicativos de escritório com ícones customizados inspirados no Google Docs (documento azul dobrado com linhas de texto) e Google Sheets (grade verde de planilha), aplicados nos menus, barras superiores e lançadores do sistema.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Modelos de Documentos no GIPP DOCs:</strong> Adicionado seletor com modelos eclesiásticos prontos para carregamento instantâneo (Carta de Recomendação, Ofício Pastoral Oficial, Ata de Reunião de Diretoria, Certificado de Batismo/Apresentação e Regimento Interno de Departamento).</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Modelos de Planilhas no GIPP Planilhas:</strong> Integração de modelos de planilhas eclesiásticas pré-formatadas com estilos e fórmulas (Chamada e Frequência da EBD, Inventário de Patrimônio, Relatório de Fluxo de Caixa, Controle de Dízimos/Ofertas e Escala de Cultos).</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Atualização Geral de Versão e Documentação:</strong> Elevação da versão do ecossistema para GIPP v9.5.0 Ultimate Platinum v14 em todos os menus, tela de boot inicial, tela de login, manuais do usuário, dossiê de licença de software e e-books.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO DA VERSÃO 9.0.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-500 opacity-90"> 
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
                 <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v9.0.0 - Novo Tema macOS Tahoe, Drag and Drop & Opacidade de Imagem</h3>
-                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Julho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Novo Papel de Parede macOS Tahoe:</strong> Atualizamos a imagem padrão do tema macOS 26 Tahoe para um visual abstrato de raios mais condizente com a identidade do sistema.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">GIPP DOCs:</strong> Novo editor de texto avançado no módulo GIPP Escritório, com estilo Google Docs e Word, suporte a formatação rica, salvamento local de arquivos .gdoc e leitura de documentos no computador.</li>

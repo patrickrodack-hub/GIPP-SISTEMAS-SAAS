@@ -6,7 +6,7 @@ import {
   AlertTriangle, Lightbulb, Phone, Mail, FileText, FileBarChart, Award, 
   Sparkles, Layers, Cpu, CheckSquare, RefreshCw, Printer, Trash2, Heart,
   Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database,
-  Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2
+  Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2, Table
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -1225,7 +1225,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                   <span className="w-3 h-3 rounded-full bg-amber-500 block" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500 block" />
                 </div>
-                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v9.0.0</span>
+                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v9.5.0</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1788,8 +1788,37 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 9.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral de ministérios específicos.
+            O GIPP Versão 9.5.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral.
           </p>
+
+          <div className="bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200/80 rounded-2xl p-4 space-y-3 text-slate-900 shadow-xs">
+            <div className="flex items-center gap-2 border-b border-blue-200/60 pb-2">
+              <span className="p-1.5 bg-blue-600 text-white rounded-lg shadow-xs"><FileText size={18} /></span>
+              <span className="p-1.5 bg-emerald-600 text-white rounded-lg shadow-xs"><Table size={18} /></span>
+              <h4 className="text-xs font-black uppercase tracking-wide text-blue-950">Suíte GIPP Escritório: GIPP DOCs & GIPP Planilhas</h4>
+            </div>
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">
+              O GIPP Escritório oferece ferramentas de produção de documentos e planilhas integradas diretamente no ambiente do sistema, sem necessidade de softwares externos.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div className="bg-white/90 p-3 rounded-xl border border-blue-100 shadow-2xs">
+                <span className="text-[11px] font-black text-blue-900 flex items-center gap-1.5 mb-1">
+                  <FileText size={14} className="text-blue-600" /> GIPP DOCs (Processador de Texto)
+                </span>
+                <p className="text-[10px] text-slate-600 leading-normal">
+                  Editor rico em formato Google Docs com salvamento de arquivos .gdoc, exportação para .docx e suporte a modelos predefinidos: Cartas de Recomendação, Ofícios Pastorais, Atas de Reunião, Certificados de Batismo e Regimentos Internos.
+                </p>
+              </div>
+              <div className="bg-white/90 p-3 rounded-xl border border-emerald-100 shadow-2xs">
+                <span className="text-[11px] font-black text-emerald-900 flex items-center gap-1.5 mb-1">
+                  <Table size={14} className="text-emerald-600" /> GIPP Planilhas (Planilhas Eletrônicas)
+                </span>
+                <p className="text-[10px] text-slate-600 leading-normal">
+                  Editor de planilhas estilo Google Sheets/Excel com suporte a fórmulas, múltiplas abas, exportação para .xlsx e modelos eclesiásticos inclusos: Chamada EBD, Inventário de Patrimônio, Fluxo de Caixa, Dízimos/Ofertas e Escala de Louvor.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">

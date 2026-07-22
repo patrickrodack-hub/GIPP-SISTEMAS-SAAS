@@ -336,7 +336,7 @@ export default function ModuleRegistroSoftware() {
                                         </h3>
                                         
                                         <p className="text-xs text-justify text-slate-700 leading-relaxed max-w-[650px] mx-auto font-medium">
-                                            DECLARAMOS, em conformidade com as regras civis, comerciais e de propriedade industrial vigentes no Brasil, que o software aplicativo de gestão integrativa denominado <strong className="text-indigo-950 uppercase font-black">GIPP — Gestão Integrada Pastoral e Patrimonial v9.0.0</strong>, licenciado em favor da organization eclesiástica <strong className="text-slate-950 uppercase font-black">{igrejaData.nome}</strong>, inscrita no CNPJ sob o número <strong className="text-slate-950 font-mono font-black">{igrejaData.cnpj}</strong>, constitui propriedade intelectual devidamente registrada no Instituto Nacional da Propriedade Industrial (INPI) e amparada pelas Leis Federais de Direito Autoral e Software, garantindo plena legitimidade em suas operações administrativas, contábeis e fiscais correspondentes.
+                                            DECLARAMOS, em conformidade com as regras civis, comerciais e de propriedade industrial vigentes no Brasil, que o software aplicativo de gestão integrativa denominado <strong className="text-indigo-950 uppercase font-black">GIPP — Gestão Integrada Pastoral e Patrimonial v9.5.0</strong>, licenciado em favor da organization eclesiástica <strong className="text-slate-950 uppercase font-black">{igrejaData.nome}</strong>, inscrita no CNPJ sob o número <strong className="text-slate-950 font-mono font-black">{igrejaData.cnpj}</strong>, constitui propriedade intelectual devidamente registrada no Instituto Nacional da Propriedade Industrial (INPI) e amparada pelas Leis Federais de Direito Autoral e Software, garantindo plena legitimidade em suas operações administrativas, contábeis e fiscais correspondentes.
                                         </p>
                                     </div>
 
@@ -393,7 +393,7 @@ export default function ModuleRegistroSoftware() {
                                             </div>
                                             <div className="flex-1 text-center min-w-[180px]">
                                                 <div className="w-full h-px bg-slate-300 mb-1 max-w-[200px] mx-auto" />
-                                                <span className="block text-xs uppercase font-black text-slate-800">SISTEMA GIPP v9.0.0</span>
+                                                <span className="block text-xs uppercase font-black text-slate-800">SISTEMA GIPP v9.5.0</span>
                                                 <span className="block text-[7px] text-slate-400 font-black uppercase tracking-widest">Inscrição de Registro INPI e Comercial</span>
                                             </div>
                                         </div>

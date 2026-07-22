@@ -12,6 +12,32 @@ export interface SaaSModuleDivulgation {
 
 export const SAAS_MODULES_LIST: SaaSModuleDivulgation[] = [
   {
+    id: 'gipp_docs',
+    nome: 'GIPP DOCs (Processador de Documentos)',
+    iconName: 'FileText',
+    categoria: 'Gestão & Secretaria',
+    descricaoCurta: 'Processador de texto rico completo estilo Google Docs / Word com suporte a modelos eclesiásticos predefinidos, exportação .docx e salvamento .gdoc.',
+    principaisDestaques: [
+      'Editor visual rico com barra de ferramentas avançada e suporte a formatação .docx',
+      'Biblioteca com modelos oficiais: Cartas de Recomendação, Ofícios Pastorais, Atas e Regimentos',
+      'Leitura e carregamento direto de arquivos do computador com salvamento de atalhos locais',
+      'Integração total com o timbre e dados da congregação mestre'
+    ]
+  },
+  {
+    id: 'gipp_planilhas',
+    nome: 'GIPP Planilhas (Planilhas Eletrônicas)',
+    iconName: 'Table',
+    categoria: 'Financeiro & Contábil',
+    descricaoCurta: 'Editor de planilhas eletrônicas de alta performance estilo Google Sheets / Excel, com suporte a fórmulas, múltiplas abas e modelos prontos.',
+    principaisDestaques: [
+      'Grade interativa de células com barra de fórmulas e suporte a funções financeiras e matemáticas',
+      'Modelos prontos de planilhas: Chamada EBD, Inventário de Patrimônio, Fluxo de Caixa e Escalas',
+      'Exportação nativa para .xlsx e salvamento de arquivos locais no formato .gplan',
+      'Cálculos automatizados e formatação de moedas e percentuais'
+    ]
+  },
+  {
     id: 'secretaria',
     nome: 'Secretaria Integrada',
     iconName: 'Users',
