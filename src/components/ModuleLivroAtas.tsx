@@ -131,7 +131,7 @@ const INITIAL_REGISTROS_SEED = [
 ];
 
 export default function ModuleLivroAtas() {
-  const { db, dbFirestore, appId, addToast, user, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
+  const { db, dbFirestore, appId, addToast, user, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog, callGeminiAI } = useContext(ChurchContext);
 
   // States
   const [rawLivros, setLivros] = useState<any[]>([]);
@@ -434,7 +434,7 @@ export default function ModuleLivroAtas() {
       playMenuSound();
 
       // Dynamically load callGeminiAI from context if available
-      const { callGeminiAI: contextCallGemini } = await import('../App');
+      const contextCallGemini = callGeminiAI;
 
       const styleGuide = draftStyle === 'notarial' 
         ? "Estilo Notarial solene (prosa corrida legal, por extenso, sem abreviaturas, numerais descritos também em palavras, linguagem exegética formal e arcaísmo jurídico/eclesiástico sutil)."

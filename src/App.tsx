@@ -18801,6 +18801,7 @@ export default function App() {
       const saved = localStorage.getItem('gipp-animbg-enabled');
       return saved !== 'false';
   });
+  const [globalOpenFile, setGlobalOpenFile] = useState<{ file: File, type: 'docs' | 'sheets' } | null>(null);
   const [isMobileDevice, setIsMobileDevice] = useState(() => {
       if (typeof navigator !== 'undefined') {
           return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -21309,7 +21310,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission };
+  const ctxValues = { db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission, globalOpenFile, setGlobalOpenFile };
 
   // --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
   const MobilePushCompatibilityCheck = () => {

@@ -10,7 +10,7 @@ import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
 
 export default function ModuleTeologia() {
-    const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
+    const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog, callGeminiAI } = useContext(ChurchContext);
     const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
     const [activeLesson, setActiveLesson] = useState<number | null>(null);
     const [quizActive, setQuizActive] = useState<boolean>(false);
@@ -401,7 +401,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 4. Respeite com precisão absoluta as regras doutrinárias CGADB explicadas no AGENTS.md e forneça textos maduros, elegantes e de altíssimo nível científico.`;
 
         try {
-            const { callGeminiAI } = await import('../App');
+            
             const resultText = await callGeminiAI(prompt);
             
             let cleanJSON = resultText.trim();

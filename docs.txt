@@ -1,172 +1,32 @@
-import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { UploadCloud, FileSpreadsheet as FileSpreadsheetIcon, FileText as FileTextIcon } from 'lucide-react';
-import SpreadsheetEditor from './ModuleGippPlanilhas';
-
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { 
     Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify,
     List, ListOrdered, Undo, Redo, Printer, FileDown, FileUp, Save, Image as ImageIcon,
     Type, PaintBucket, Minus, Plus, Link, Highlighter, Scissors, Copy, Clipboard,
-    ChevronDown, FileText, Download, FolderOpen, FileCheck, Maximize, Minimize, Settings, PanelRightClose, FileBox, X
+    ChevronDown, FileText, Download, FolderOpen, FileCheck, Maximize, Minimize, Settings, PanelRightClose, FileBox
 } from 'lucide-react';
 import { ChurchContext } from '../App';
-import { 
-    getStoredWindowState, 
-    saveWindowState, 
-    validateAndCenterPosition, 
-    getNextZIndex, 
-    WindowState 
-} from '../utils/windowManager';
 
-
-export const validateFile = (file: File) => {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    const whitelist = ['xlsx', 'xls', 'docx', 'doc', 'gdoc', 'gplan', 'txt', 'html', 'json', 'csv', 'rtf'];
-    if (!whitelist.includes(ext || '')) {
-        throw new Error(`O tipo de arquivo .${ext} não é suportado.`);
-    }
-    return ext;
-};
-
-interface TextEditorProps {
-    initialFile?: File | null;
-}
-
-function TextEditor({ initialFile }: TextEditorProps) {
+export default function ModuleGippDocs() {
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('Documento sem título');
     const [zoom, setZoom] = useState(100);
     const [isSaving, setIsSaving] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [isMinimized, setIsMinimized] = useState(false);
     const [showMargins, setShowMargins] = useState(false);
     const [margins, setMargins] = useState({ top: 20, bottom: 20, left: 24, right: 24 }); // em mm
-    const [editorKey, setEditorKey] = useState(0);
-    const DOCS_STORAGE_KEY = 'gippDocsWindowState';
-
-    const [windowState, setWindowState] = useState<WindowState>(() => 
-        getStoredWindowState(DOCS_STORAGE_KEY, '100%', '100%')
-    );
-    const [zIndex, setZIndex] = useState<number>(() => getNextZIndex());
-
-    const windowPosition = { x: windowState.x, y: windowState.y };
-    const windowSize = { width: windowState.width, height: windowState.height };
-
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const handleWindowFocus = useCallback(() => {
-        setZIndex(getNextZIndex());
-    }, []);
-
-    // Ensure window position remains visible when browser resizes
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowState(prev => {
-                const validated = validateAndCenterPosition(prev);
-                if (validated.x !== prev.x || validated.y !== prev.y) {
-                    saveWindowState(DOCS_STORAGE_KEY, validated);
-                }
-                return validated;
-            });
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const updateWindowSizePreset = (width: string | number, height: string | number) => {
-        setWindowState(prev => {
-            const updated = { ...prev, width, height };
-            saveWindowState(DOCS_STORAGE_KEY, updated);
-            return updated;
-        });
-    };
-
-    const handleDragMouseDown = (e: React.MouseEvent) => {
-        handleWindowFocus();
-        if (isFullscreen) return;
-        
-        // Prevent dragging if clicking on interactive elements
-        if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('.ql-toolbar')) {
-            return;
-        }
-
-        e.preventDefault();
-        const startX = e.clientX - windowState.x;
-        const startY = e.clientY - windowState.y;
-
-        const onMouseMove = (moveEvent: MouseEvent) => {
-            setWindowState(prev => ({
-                ...prev,
-                x: moveEvent.clientX - startX,
-                y: moveEvent.clientY - startY
-            }));
-        };
-
-        const onMouseUp = () => {
-            window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onMouseUp);
-            setWindowState(prev => {
-                saveWindowState(DOCS_STORAGE_KEY, prev);
-                return prev;
-            });
-        };
-
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
-    };
-
-    const handleCenterWindow = () => {
-        setWindowState(prev => {
-            const updated = { ...prev, x: 0, y: 0 };
-            saveWindowState(DOCS_STORAGE_KEY, updated);
-            return updated;
-        });
-    };
-
-    const handleResizeMouseDown = (e: React.MouseEvent) => {
-        handleWindowFocus();
-        e.preventDefault();
-        if (isFullscreen) return;
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const startWidth = containerRef.current ? containerRef.current.offsetWidth : 800;
-        const startHeight = containerRef.current ? containerRef.current.offsetHeight : 600;
-
-        const onMouseMove = (moveEvent: MouseEvent) => {
-            const deltaX = moveEvent.clientX - startX;
-            const deltaY = moveEvent.clientY - startY;
-            const newWidth = Math.max(400, Math.min(window.innerWidth - 32, startWidth + deltaX));
-            const newHeight = Math.max(300, Math.min(window.innerHeight - 60, startHeight + deltaY));
-            setWindowState(prev => ({
-                ...prev,
-                width: newWidth,
-                height: newHeight
-            }));
-        };
-
-        const onMouseUp = () => {
-            window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onMouseUp);
-            setWindowState(prev => {
-                saveWindowState(DOCS_STORAGE_KEY, prev);
-                return prev;
-            });
-        };
-
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
-    };
-    const [editorHtml, setEditorHtml] = useState<string>(
-        `<h1>Bem-vindo ao GIPP DOCs</h1><p>Este é o seu editor de texto oficial do sistema GIPP. Funciona com as mesmas bases do <strong>Google Docs</strong> e <strong>Microsoft Word</strong>.</p><p><br/></p><ul><li>Edite textos livremente, insira imagens, listas e links.</li><li>Salve o documento no seu computador com a extensão nativa <code>.gdoc</code>.</li><li>Abra arquivos <code>.gdoc</code> ou <code>.html</code> diretamente do seu disco local para continuar editando.</li></ul><p><br/></p><p><em>Use a barra de ferramentas acima para estilizar este documento!</em>`
-    );
 
     const { addToast, osTheme, setView, globalOpenFile, setGlobalOpenFile } = useContext(ChurchContext);
 
     const getFullscreenClasses = () => {
-        if (!isFullscreen) return 'max-h-full min-h-[400px] rounded-2xl relative z-10';
-        return 'fixed inset-0 z-[9999] rounded-none w-screen h-screen bg-[#f8f9fa]';
+        if (!isFullscreen) return 'h-full min-h-[600px] rounded-2xl relative z-10';
+        
+        if (osTheme === 'linux') return 'fixed left-0 right-0 bottom-16 top-8 z-[100] rounded-none';
+        if (osTheme === 'win11') return 'fixed left-0 right-0 top-0 bottom-12 z-[100] rounded-none';
+        if (osTheme === 'macos_tahoe') return 'fixed left-0 right-0 bottom-20 top-6 z-[100] rounded-none';
+        
+        return 'fixed inset-0 z-[100] rounded-none';
     };
 
     const formatDoc = (cmd: string, value: string | undefined = undefined) => {
@@ -194,62 +54,40 @@ function TextEditor({ initialFile }: TextEditorProps) {
     const processFile = async (file: File) => {
         const ext = file.name.split('.').pop()?.toLowerCase();
         
-        if (ext === 'doc') {
-            addToast("O formato .doc antigo não é suportado. Por favor, salve como .docx e tente novamente.", "error");
-            return;
-        }
-
-        if (ext === 'docx') {
+        if (ext === 'docx' || ext === 'doc') {
             try {
-                addToast("Abrindo documento do Word...", "info");
                 const mammoth = await import('mammoth');
                 const arrayBuffer = await file.arrayBuffer();
                 const result = await mammoth.convertToHtml({ arrayBuffer });
-                const html = result.value || '<p></p>';
-                setFileName(file.name.replace(/\.[^/.]+$/, ""));
-                setEditorHtml(html);
-                setEditorKey(k => k + 1);
                 if (editorRef.current) {
-                    editorRef.current.innerHTML = html;
+                    editorRef.current.innerHTML = result.value;
+                    setFileName(file.name.replace(/\.[^/.]+$/, ""));
+                    addToast("Documento do Word aberto com sucesso!", "success");
                 }
-                addToast("Documento do Word aberto com sucesso!", "success");
-            } catch (error: any) {
+            } catch (error) {
                 console.error("Erro ao ler DOCX:", error);
-                addToast(error.message || "Erro ao abrir arquivo do Word.", "error");
+                addToast("Erro ao abrir arquivo do Word.", "error");
             }
         } else {
             const reader = new FileReader();
             reader.onload = (event) => {
-                const html = (event.target?.result as string) || '';
-                setFileName(file.name.replace(/\.[^/.]+$/, ""));
-                setEditorHtml(html);
-                setEditorKey(k => k + 1);
-                if (editorRef.current) {
-                    editorRef.current.innerHTML = html;
+                if (editorRef.current && event.target?.result) {
+                    editorRef.current.innerHTML = event.target.result as string;
+                    setFileName(file.name.replace(/\.[^/.]+$/, ""));
+                    addToast("Documento aberto com sucesso!", "success");
                 }
-                addToast("Documento aberto com sucesso!", "success");
             };
             reader.readAsText(file);
         }
     };
 
-    const lastProcessedFileRef = useRef<File | null>(null);
-
     useEffect(() => {
-        if (initialFile && initialFile !== lastProcessedFileRef.current) {
-            lastProcessedFileRef.current = initialFile;
-            processFile(initialFile);
-        }
-    }, [initialFile]);
-
-    useEffect(() => {
-        if (globalOpenFile && globalOpenFile.type === 'docs' && globalOpenFile.file !== lastProcessedFileRef.current) {
+        if (globalOpenFile && globalOpenFile.type === 'docs') {
             const file = globalOpenFile.file;
-            lastProcessedFileRef.current = file;
             setGlobalOpenFile(null);
             processFile(file);
         }
-    }, [globalOpenFile, setGlobalOpenFile]);
+    }, [globalOpenFile]);
 
     const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -259,7 +97,7 @@ function TextEditor({ initialFile }: TextEditorProps) {
         
         if (['xlsx', 'xls', 'csv', 'gplan', 'json'].includes(ext || '')) {
             setGlobalOpenFile({ file, type: 'sheets' });
-            
+            setView('sheets_editor');
         } else {
             processFile(file);
         }
@@ -404,57 +242,10 @@ function TextEditor({ initialFile }: TextEditorProps) {
     const handleZoomIn = () => setZoom(z => Math.min(200, z + 10));
     const handleZoomOut = () => setZoom(z => Math.max(50, z - 10));
 
-    if (isMinimized) {
-        return (
-            <div className="fixed bottom-4 right-4 z-[200] bg-white/95 backdrop-blur border border-slate-300 shadow-2xl rounded-2xl p-3 flex items-center gap-3 animate-bounce-short font-sans">
-                <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold shadow-md">
-                    <FileText size={20} />
-                </div>
-                <div>
-                    <div className="font-bold text-xs text-slate-800 truncate max-w-[200px]">{fileName}</div>
-                    <div className="text-[10px] text-slate-500 font-medium">Documento Minimizado</div>
-                </div>
-                <button 
-                    onClick={() => setIsMinimized(false)} 
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
-                >
-                    Restaurar
-                </button>
-                <button 
-                    onClick={() => setView('dashboard')} 
-                    className="p-1 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
-                    title="Fechar"
-                >
-                    <X size={16} />
-                </button>
-            </div>
-        );
-    }
-
     return (
-        <div 
-            ref={containerRef}
-            onMouseDown={handleWindowFocus}
-            onClick={handleWindowFocus}
-            style={
-                !isFullscreen
-                    ? {
-                            width: typeof windowSize.width === 'number' ? `${windowSize.width}px` : windowSize.width,
-                            height: typeof windowSize.height === 'number' ? `${windowSize.height}px` : windowSize.height,
-                            maxHeight: '100%',
-                            maxWidth: '100%',
-                            transform: `translate(${windowPosition.x}px, ${windowPosition.y}px)`,
-                            zIndex: zIndex,
-                        }
-                    : { zIndex: 9999 }
-            }
-            className={`flex flex-col bg-[#f8f9fa] overflow-hidden shadow-2xl border border-slate-200 animate-entrance font-sans mx-auto relative ${getFullscreenClasses()}`}
-        >
+        <div className={`flex flex-col bg-[#f8f9fa] overflow-hidden shadow-2xl border border-slate-200 animate-entrance font-sans ${getFullscreenClasses()}`}>
             {/* Top Bar (Docs style) */}
-            <div 
-                className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0 select-none cursor-move"
-                onMouseDown={handleDragMouseDown}
-            >
+            <div className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0">
                 <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3 shrink-0 shadow-sm">
                     <FileText className="text-white" size={24} />
                 </div>
@@ -483,42 +274,20 @@ function TextEditor({ initialFile }: TextEditorProps) {
                         <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={exportToDocx}>Exportar DOCX</button>
                     </div>
                 </div>
-                <div className="flex items-center space-x-2 shrink-0 ml-4">
-                    <button onClick={exportToDocx} className="flex items-center gap-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3.5 py-1.5 rounded-full font-medium text-xs transition-colors" title="Exportar para formato Word (.docx)">
-                        <FileBox size={16} /> .DOCX
+                <div className="flex items-center space-x-3 shrink-0 ml-4">
+                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600" title="Tela Cheia">
+                        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
                     </button>
-                    <button onClick={handleSaveFile} className="flex items-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-3.5 py-1.5 rounded-full font-medium text-xs transition-colors">
-                        <Save size={16} /> .GDOC
+                    <button onClick={exportToDocx} className="flex items-center gap-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 rounded-full font-medium text-sm transition-colors" title="Exportar para formato Word (.docx)">
+                        <FileBox size={18} /> .DOCX
                     </button>
-                    <button onClick={triggerFileOpen} className="flex items-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-3.5 py-1.5 rounded-full font-medium text-xs transition-colors" title="Abrir Arquivo">
-                        <FolderOpen size={16} />
+                    <button onClick={handleSaveFile} className="flex items-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-full font-medium text-sm transition-colors">
+                        <Save size={18} /> .GDOC
+                    </button>
+                    <button onClick={triggerFileOpen} className="flex items-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 rounded-full font-medium text-sm transition-colors">
+                        <FolderOpen size={18} />
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleOpenFile} accept=".gdoc,.html,.txt,.docx,.doc,.rtf,.gplan,.json,.xlsx,.xls,.csv" className="hidden" />
-
-                    {/* Window Controls (Minimizar, Maximizar, Fechar) */}
-                    <div className="flex items-center gap-1 pl-2 border-l border-slate-200 ml-1">
-                        <button 
-                            onClick={() => setIsMinimized(true)} 
-                            className="p-1.5 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors" 
-                            title="Minimizar Janela"
-                        >
-                            <Minus size={16} />
-                        </button>
-                        <button 
-                            onClick={() => setIsFullscreen(!isFullscreen)} 
-                            className="p-1.5 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors" 
-                            title={isFullscreen ? "Restaurar Janela" : "Maximizar Janela"}
-                        >
-                            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-                        </button>
-                        <button 
-                            onClick={() => setView('dashboard')} 
-                            className="p-1.5 hover:bg-rose-100 text-rose-700 rounded-lg transition-colors" 
-                            title="Fechar Editor"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -665,13 +434,15 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     }}
                 >
                     <div 
-                        key={editorKey}
                         ref={editorRef}
                         contentEditable
                         suppressContentEditableWarning
                         className="outline-none min-h-full font-serif text-[11pt] leading-normal"
                         style={{ fontFamily: 'Arial, sans-serif' }}
-                        dangerouslySetInnerHTML={{ __html: editorHtml }}
+                        onPaste={(e) => {
+                            // Opcional: tratar paste para limpar estilos pesados, mas vamos deixar default por enquanto
+                        }}
+                        dangerouslySetInnerHTML={{ __html: `<h1>Bem-vindo ao GIPP DOCs</h1><p>Este é o seu editor de texto oficial do sistema GIPP. Funciona com as mesmas bases do <strong>Google Docs</strong> e <strong>Microsoft Word</strong>.</p><p><br/></p><ul><li>Edite textos livremente, insira imagens, listas e links.</li><li>Salve o documento no seu computador com a extensão nativa <code>.gdoc</code>.</li><li>Abra arquivos <code>.gdoc</code> ou <code>.html</code> diretamente do seu disco local para continuar editando.</li></ul><p><br/></p><p><em>Use a barra de ferramentas acima para estilizar este documento!</em></p>` }}
                     />
                 </div>
 
@@ -698,46 +469,6 @@ function TextEditor({ initialFile }: TextEditorProps) {
                             <label className="block text-xs font-semibold text-slate-600 mb-1">Direita (Right)</label>
                             <input type="number" value={margins.right} onChange={(e) => setMargins({...margins, right: Number(e.target.value)})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                         </div>
-
-                        <div className="pt-3 border-t border-slate-100">
-                            <label className="block text-xs font-bold text-slate-700 mb-1.5">Janela & Posição</label>
-                            
-                            <button 
-                                onClick={handleCenterWindow}
-                                className="w-full mb-2 py-1.5 px-2 rounded border border-slate-200 text-center text-[11px] font-medium transition-colors text-slate-600 hover:bg-slate-50 flex justify-center items-center gap-1.5"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m8 17 4 4 4-4"></path></svg>
-                                Centralizar Janela
-                            </button>
-
-                            <div className="grid grid-cols-2 gap-1.5">
-                                <button 
-                                    onClick={() => updateWindowSizePreset('100%', '100%')} 
-                                    className={`py-1 px-2 rounded border text-center text-[11px] font-medium transition-colors ${windowSize.width === '100%' ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                                >
-                                    100% Total
-                                </button>
-                                <button 
-                                    onClick={() => updateWindowSizePreset('90%', '85%')} 
-                                    className={`py-1 px-2 rounded border text-center text-[11px] font-medium transition-colors ${windowSize.width === '90%' ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                                >
-                                    90% Largo
-                                </button>
-                                <button 
-                                    onClick={() => updateWindowSizePreset('80%', '75%')} 
-                                    className={`py-1 px-2 rounded border text-center text-[11px] font-medium transition-colors ${windowSize.width === '80%' ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                                >
-                                    80% Médio
-                                </button>
-                                <button 
-                                    onClick={() => updateWindowSizePreset('70%', '65%')} 
-                                    className={`py-1 px-2 rounded border text-center text-[11px] font-medium transition-colors ${windowSize.width === '70%' ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                                >
-                                    70% Compacto
-                                </button>
-                            </div>
-                        </div>
-
                         <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">
                             As margens afetam a visualização do editor, impressão e exportação para PDF/DOCX.
                         </div>
@@ -746,155 +477,13 @@ function TextEditor({ initialFile }: TextEditorProps) {
             </div>
             
             {/* Status Bar */}
-            <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-500 font-medium relative">
+            <div className="h-8 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center px-4 justify-between text-xs text-slate-500 font-medium">
                 <div>GIPP DOCs Engine v1.0</div>
-                <div className="flex items-center gap-4 mr-4">
+                <div className="flex items-center gap-4">
                     <span>{fileName}</span>
                     <span>Modo de Edição</span>
                 </div>
-
-                {!isFullscreen && (
-                    <div 
-                        onMouseDown={handleResizeMouseDown}
-                        title="Clique e arraste para redimensionar a janela livremente"
-                        className="absolute bottom-0 right-0 z-50 w-6 h-6 cursor-se-resize flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-tl transition-colors group select-none border-t border-l border-slate-300 bg-slate-200/80"
-                    >
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70 group-hover:opacity-100">
-                            <path d="M8 2L2 8M8 5L5 8M8 8L8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                    </div>
-                )}
             </div>
         </div>
-    );
-}
-
-
-
-export default function ModuleGippDocs() {
-    const { addToast, globalOpenFile, setGlobalOpenFile, osTheme } = useContext(ChurchContext);
-    const [currentView, setCurrentView] = useState<'dropzone' | 'text' | 'spreadsheet'>('text');
-    const [loadedFile, setLoadedFile] = useState<File | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
-
-    useEffect(() => {
-        if (globalOpenFile) {
-            if (globalOpenFile.type === 'docs') {
-                setLoadedFile(globalOpenFile.file);
-                setCurrentView('text');
-            } else if (globalOpenFile.type === 'sheets') {
-                setLoadedFile(globalOpenFile.file);
-                setCurrentView('spreadsheet');
-            }
-        }
-    }, [globalOpenFile]);
-
-    const handleFile = useCallback((file: File) => {
-        try {
-            const ext = validateFile(file);
-            setLoadedFile(file);
-            
-            if (['xlsx', 'xls', 'csv', 'gplan', 'json'].includes(ext || '')) {
-                setGlobalOpenFile({ file, type: 'sheets' });
-                setCurrentView('spreadsheet');
-            } else {
-                setGlobalOpenFile({ file, type: 'docs' });
-                setCurrentView('text');
-            }
-        } catch (error: any) {
-            addToast(error.message, "error");
-        }
-    }, [addToast, setGlobalOpenFile]);
-
-    const handleDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0]);
-        }
-    }, [handleFile]);
-
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(true);
-    }, []);
-
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-    }, []);
-
-    const getFullscreenClasses = () => {
-        return 'h-full min-h-[600px] rounded-2xl relative z-10';
-    };
-
-    return (
-        <AnimatePresence mode="wait">
-            {currentView === 'dropzone' && (
-                <motion.div 
-                    key="dropzone"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4 }}
-                    className={`flex flex-col bg-[#f8f9fa] overflow-hidden shadow-2xl border border-slate-200 animate-entrance font-sans items-center justify-center p-8 ${getFullscreenClasses()}`}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                >
-                    <div className={`w-full max-w-2xl border-4 border-dashed rounded-3xl p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-white'}`}>
-                        <div className="flex gap-4 mb-6 text-slate-400">
-                            <FileTextIcon size={64} className={isDragging ? 'text-blue-500 animate-bounce' : ''} />
-                            <FileSpreadsheetIcon size={64} className={isDragging ? 'text-emerald-500 animate-bounce delay-75' : ''} />
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-700 mb-2">Arraste e solte seus arquivos aqui</h2>
-                        <p className="text-slate-500 mb-8 max-w-md">
-                            GIPP Docs suporta arquivos Word (.docx, .doc) e planilhas Excel (.xlsx, .xls). O editor correto será carregado automaticamente.
-                        </p>
-                        
-                        <label className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-600/30 transition-all hover:scale-105 cursor-pointer flex items-center gap-2">
-                            <UploadCloud size={20} />
-                            Procurar Arquivo
-                            <input 
-                                type="file" 
-                                className="hidden" 
-                                accept=".docx,.doc,.xlsx,.xls,.csv,.gdoc,.gplan,.txt,.html,.json,.rtf"
-                                onChange={(e) => {
-                                    if (e.target.files && e.target.files.length > 0) {
-                                        handleFile(e.target.files[0]);
-                                    }
-                                }}
-                            />
-                        </label>
-                    </div>
-                </motion.div>
-            )}
-            
-            {currentView === 'text' && (
-                <motion.div 
-                    key="text"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="w-full h-full flex items-center justify-center relative"
-                >
-                    <TextEditor initialFile={loadedFile} />
-                </motion.div>
-            )}
-
-            {currentView === 'spreadsheet' && (
-                <motion.div 
-                    key="spreadsheet"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="w-full h-full flex items-center justify-center relative"
-                >
-                    <SpreadsheetEditor initialFile={loadedFile} />
-                </motion.div>
-            )}
-        </AnimatePresence>
     );
 }
