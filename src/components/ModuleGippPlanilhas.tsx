@@ -1,4 +1,5 @@
 import React, { useRef, useState, useContext, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Workbook, WorkbookInstance } from "@fortune-sheet/react";
 import "@fortune-sheet/react/dist/index.css";
 import { GippSheetsIcon } from "./GippOfficeIcons";
@@ -14,6 +15,7 @@ import {
   Minus,
   Plus,
   FileCheck,
+  FileText,
   Printer,
   X,
   Paintbrush,
@@ -56,6 +58,37 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
   const [showMargins, setShowMargins] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
   const [activeMenu, setActiveMenu] = useState<'arquivo' | 'editar' | 'exibir' | 'inserir' | 'formatar' | 'modelos' | null>(null);
+
+  // Microsoft Excel Style Initial Splash Screen State
+  const [showSplashScreen, setShowSplashScreen] = useState(true);
+  const [splashProgress, setSplashProgress] = useState(0);
+  const [splashMessageIndex, setSplashMessageIndex] = useState(0);
+
+  const splashMessages = [
+    "Iniciando o GIPP Planilhas Excel Professional...",
+    "Carregando fórmulas contábeis, dízimos e tesouraria...",
+    "Preparando células, gráficos e formatação de moeda BRL...",
+    "Planilha pronta!"
+  ];
+
+  useEffect(() => {
+    if (!showSplashScreen) return;
+    const interval = setInterval(() => {
+      setSplashProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => setShowSplashScreen(false), 300);
+          return 100;
+        }
+        const next = prev + 15;
+        if (next > 25 && next <= 50) setSplashMessageIndex(1);
+        if (next > 50 && next <= 85) setSplashMessageIndex(2);
+        if (next > 85) setSplashMessageIndex(3);
+        return next;
+      });
+    }, 120);
+    return () => clearInterval(interval);
+  }, [showSplashScreen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1181,14 +1214,6 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
                   print-color-adjust: exact !important;
                   color-adjust: exact !important;
                 }
-                .header { 
-                  text-align: center; 
-                  margin-bottom: 20px; 
-                  border-bottom: 2px solid #2563eb; 
-                  padding-bottom: 10px; 
-                }
-                .header h2 { margin: 0; color: #1e3a8a; font-size: 18pt; font-weight: bold; }
-                .header p { margin: 4px 0 0 0; color: #64748b; font-size: 10pt; }
                 .gipp-planilhas-print { page-break-inside: avoid; break-inside: avoid; }
                 .gipp-planilhas-print table { border-collapse: collapse !important; width: 100%; }
                 .gipp-planilhas-print table td, .gipp-planilhas-print table th { border: 1px solid black !important; padding: 4px !important; }
@@ -1197,10 +1222,6 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
               </style>
             </head>
             <body class="gipp-planilhas-print">
-              <div class="header">
-                <h2>IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS</h2>
-                <p>Relatório de Planilha: <strong>${fileName}</strong> - Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
-              </div>
               ${tableHtml}
               <script>
                 window.onload = () => { window.print(); window.close(); }
@@ -1694,15 +1715,74 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
       }
       className={`flex flex-col bg-[#f8f9fa] overflow-hidden shadow-2xl border border-slate-200 animate-entrance font-sans mx-auto relative ${getFullscreenClasses()}`}
     >
+      {/* Microsoft Excel Style Initial Splash Screen Overlay */}
+      <AnimatePresence>
+        {showSplashScreen && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 z-[10000] bg-gradient-to-br from-[#107c41] via-[#0b5c30] to-[#06331a] text-white flex flex-col items-center justify-between p-8 rounded-2xl shadow-2xl select-none"
+          >
+            <div className="w-full flex justify-between items-center text-xs opacity-75 font-mono">
+              <span>GIPP OFFICE 2026</span>
+              <span>EXCEL PROFISSIONAL</span>
+            </div>
+
+            <div className="flex flex-col items-center text-center my-auto max-w-md">
+              <motion.div 
+                initial={{ scale: 0.8, rotate: -5 }}
+                animate={{ scale: [0.9, 1.05, 1], rotate: [ -5, 2, 0 ] }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 flex items-center justify-center p-4 mb-6 shadow-2xl relative group cursor-pointer"
+                onClick={() => setShowSplashScreen(false)}
+              >
+                <div className="absolute inset-0 rounded-3xl bg-emerald-400/20 blur-xl animate-pulse"></div>
+                <GippSheetsIcon size={56} className="relative z-10 text-white drop-shadow-md" />
+              </motion.div>
+
+              <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-white font-sans drop-shadow">
+                GIPP Planilhas
+              </h1>
+              <p className="text-emerald-100 text-sm font-medium mb-8">
+                Sistema de Planilhas & Tesouraria Eclesiástica
+              </p>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-black/30 h-2 rounded-full overflow-hidden border border-white/10 mb-3 shadow-inner">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-emerald-300 via-white to-emerald-200 rounded-full"
+                  style={{ width: `${splashProgress}%` }}
+                  transition={{ duration: 0.15 }}
+                />
+              </div>
+
+              <div className="text-xs text-emerald-200 font-medium h-5 flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping"></span>
+                {splashMessages[splashMessageIndex]}
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowSplashScreen(false)}
+              className="text-[11px] text-emerald-200/80 hover:text-white underline underline-offset-4 transition-colors font-medium cursor-pointer"
+            >
+              Clique para iniciar imediatamente ➔
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header Toolbar (Google Sheets Style aligned with GIPP Docs) */}
       <div 
-        className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0 flex-wrap gap-2 select-none cursor-move"
+        className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 shrink-0 select-none cursor-move"
         onMouseDown={handleDragMouseDown}
       >
-        <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center mr-1 shrink-0 shadow-sm p-1.5">
-          <GippSheetsIcon size={26} />
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center mr-1 shrink-0 shadow-sm p-1.5">
+            <GippSheetsIcon size={26} />
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
           <input
             type="text"
             value={fileName}
@@ -1750,6 +1830,9 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
                     <button onClick={() => { handlePrintSheet(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
                       <span className="flex items-center gap-2.5"><Printer size={15} className="text-slate-600" /> Imprimir Planilha...</span>
                       <span className="text-[10px] text-slate-400 font-mono">Ctrl+P</span>
+                    </button>
+                    <button onClick={() => { handlePrintSheet(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><FileText size={15} className="text-red-600" /> Gerar PDF (Motor GIPP)</span>
                     </button>
                     <button onClick={() => { setShowMargins(true); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
                       <span className="flex items-center gap-2.5"><Settings size={15} className="text-slate-600" /> Configurar Tela & Dimensões</span>
@@ -1930,18 +2013,46 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Zoom & Window Toolbar Section */}
-        <div className="flex items-center space-x-2 shrink-0">
-          <div className="flex items-center bg-slate-100 border border-slate-300 rounded px-1 h-8">
-            <button onClick={handleZoomOut} className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Diminuir Zoom">
-              <Minus size={14} />
-            </button>
-            <span className="px-2 text-xs font-semibold w-12 text-center text-slate-700">{zoom}%</span>
-            <button onClick={handleZoomIn} className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Aumentar Zoom">
-              <Plus size={14} />
-            </button>
-          </div>
+      {/* Window Action Controls (Minimizar, Maximizar, Fechar) */}
+        <div className="flex items-center gap-1 pl-3 border-l border-slate-200 ml-2 shrink-0">
+          <button 
+            onClick={() => setIsMinimized(true)} 
+            className="p-2 hover:bg-slate-200 text-slate-700 rounded-lg transition-all flex items-center justify-center" 
+            title="Minimizar Janela (GIPP Planilhas)"
+          >
+            <Minus size={18} className="stroke-[2.5]" />
+          </button>
+          <button 
+            onClick={() => setIsFullscreen(!isFullscreen)} 
+            className="p-2 hover:bg-emerald-100 text-emerald-800 rounded-lg transition-all flex items-center justify-center" 
+            title={isFullscreen ? "Restaurar Tamanho Normal" : "Maximizar Janela (Tela Cheia)"}
+          >
+            {isFullscreen ? <Minimize size={18} className="stroke-[2.5]" /> : <Maximize size={18} className="stroke-[2.5]" />}
+          </button>
+          <button 
+            onClick={() => setView('dashboard')} 
+            className="p-2 hover:bg-rose-600 hover:text-white text-rose-700 rounded-lg transition-all flex items-center justify-center" 
+            title="Fechar Editor (Voltar ao Painel)"
+          >
+            <X size={18} className="stroke-[2.5]" />
+          </button>
+        </div>
+      </div>
+
+      {/* Enhanced Colorful Toolbar */}
+      <div className="flex items-center flex-wrap gap-2 px-3 py-2 bg-[#f1f5f9] border-b border-slate-200 shrink-0 text-slate-700 text-sm overflow-x-auto">
+        {/* Zoom Section */}
+        <div className="flex items-center bg-white border border-slate-200 rounded px-1 h-8 shadow-sm">
+          <button onClick={handleZoomOut} className="p-1 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Diminuir Zoom">
+            <Minus size={14} />
+          </button>
+          <span className="px-2 text-xs font-semibold w-12 text-center text-slate-700">{zoom}%</span>
+          <button onClick={handleZoomIn} className="p-1 hover:bg-slate-100 rounded text-slate-600 transition-colors" title="Aumentar Zoom">
+            <Plus size={14} />
+          </button>
+        </div>
 
           <button
             onClick={() => setShowMargins(!showMargins)}
@@ -1954,9 +2065,17 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
           <button
             onClick={handlePrintSheet}
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm"
-            title="Imprimir Planilha com Cabeçalho Oficial"
+            title="Imprimir Planilha"
           >
             <Printer size={16} /> Imprimir
+          </button>
+
+          <button
+            onClick={handlePrintSheet}
+            className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm"
+            title="Gerar PDF (Motor GIPP)"
+          >
+            <FileText size={16} /> Gerar PDF
           </button>
 
           <button
@@ -2038,33 +2157,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             accept=".gplan,.json,.xlsx,.xls,.csv,.docx,.doc,.rtf,.gdoc,.html,.txt"
             className="hidden"
           />
-
-          {/* Window Action Controls (Minimizar, Maximizar, Fechar) */}
-          <div className="flex items-center gap-1 pl-2 border-l border-slate-200 ml-1">
-            <button 
-              onClick={() => setIsMinimized(true)} 
-              className="p-1.5 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors" 
-              title="Minimizar Janela"
-            >
-              <Minus size={16} />
-            </button>
-            <button 
-              onClick={() => setIsFullscreen(!isFullscreen)} 
-              className="p-1.5 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors" 
-              title={isFullscreen ? "Restaurar Janela" : "Maximizar Janela"}
-            >
-              {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-            </button>
-            <button 
-              onClick={() => setView('dashboard')} 
-              className="p-1.5 hover:bg-rose-100 text-rose-700 rounded-lg transition-colors" 
-              title="Fechar Editor"
-            >
-              <X size={16} />
-            </button>
-          </div>
         </div>
-      </div>
 
       {/* Formula Suggestion Bar */}
       {formulaSuggestion && (

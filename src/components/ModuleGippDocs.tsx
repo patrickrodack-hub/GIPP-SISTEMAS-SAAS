@@ -51,6 +51,37 @@ function TextEditor({ initialFile }: TextEditorProps) {
     const [pageCount, setPageCount] = useState(1);
     const [activeMenu, setActiveMenu] = useState<'arquivo' | 'editar' | 'exibir' | 'inserir' | 'formatar' | 'modelos' | null>(null);
 
+    // Microsoft Word Style Initial Splash Screen State
+    const [showSplashScreen, setShowSplashScreen] = useState(true);
+    const [splashProgress, setSplashProgress] = useState(0);
+    const [splashMessageIndex, setSplashMessageIndex] = useState(0);
+
+    const splashMessages = [
+        "Iniciando o GIPP Docs Word Professional...",
+        "Carregando modelos de cartas, ofícios e atas (CGADB / CPAD)...",
+        "Preparando réguas, margens e formatação de texto...",
+        "Documento pronto!"
+    ];
+
+    useEffect(() => {
+        if (!showSplashScreen) return;
+        const interval = setInterval(() => {
+            setSplashProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => setShowSplashScreen(false), 300);
+                    return 100;
+                }
+                const next = prev + 15;
+                if (next > 25 && next <= 50) setSplashMessageIndex(1);
+                if (next > 50 && next <= 85) setSplashMessageIndex(2);
+                if (next > 85) setSplashMessageIndex(3);
+                return next;
+            });
+        }, 120);
+        return () => clearInterval(interval);
+    }, [showSplashScreen]);
+
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if ((e.target as HTMLElement).closest('.gipp-docs-menu-container')) return;
@@ -820,6 +851,64 @@ function TextEditor({ initialFile }: TextEditorProps) {
             }
             className={`flex flex-col bg-[#f8f9fa] overflow-hidden shadow-2xl border border-slate-200 animate-entrance font-sans mx-auto relative ${getFullscreenClasses()}`}
         >
+            {/* Microsoft Word Style Initial Splash Screen Overlay */}
+            <AnimatePresence>
+                {showSplashScreen && (
+                    <motion.div
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.4 }}
+                        className="absolute inset-0 z-[10000] bg-gradient-to-br from-[#185abd] via-[#103f8a] to-[#0a2858] text-white flex flex-col items-center justify-between p-8 rounded-2xl shadow-2xl select-none"
+                    >
+                        <div className="w-full flex justify-between items-center text-xs opacity-75 font-mono">
+                            <span>GIPP OFFICE 2026</span>
+                            <span>WORD PROFISSIONAL</span>
+                        </div>
+
+                        <div className="flex flex-col items-center text-center my-auto max-w-md">
+                            <motion.div 
+                                initial={{ scale: 0.8, rotate: -5 }}
+                                animate={{ scale: [0.9, 1.05, 1], rotate: [ -5, 2, 0 ] }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 flex items-center justify-center p-4 mb-6 shadow-2xl relative group cursor-pointer"
+                                onClick={() => setShowSplashScreen(false)}
+                            >
+                                <div className="absolute inset-0 rounded-3xl bg-blue-400/20 blur-xl animate-pulse"></div>
+                                <GippDocsIcon size={56} className="relative z-10 text-white drop-shadow-md" />
+                            </motion.div>
+
+                            <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-white font-sans drop-shadow">
+                                GIPP Docs
+                            </h1>
+                            <p className="text-blue-100 text-sm font-medium mb-8">
+                                Processador de Documentos Pastorais & Atas Oficiais
+                            </p>
+
+                            {/* Progress Bar */}
+                            <div className="w-full bg-black/30 h-2 rounded-full overflow-hidden border border-white/10 mb-3 shadow-inner">
+                                <motion.div 
+                                    className="h-full bg-gradient-to-r from-blue-300 via-white to-blue-200 rounded-full"
+                                    style={{ width: `${splashProgress}%` }}
+                                    transition={{ duration: 0.15 }}
+                                />
+                            </div>
+
+                            <div className="text-xs text-blue-200 font-medium h-5 flex items-center justify-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-300 animate-ping"></span>
+                                {splashMessages[splashMessageIndex]}
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setShowSplashScreen(false)}
+                            className="text-[11px] text-blue-200/80 hover:text-white underline underline-offset-4 transition-colors font-medium cursor-pointer"
+                        >
+                            Clique para iniciar imediatamente ➔
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Top Bar (Docs style) */}
             <div 
                 className="flex items-center px-4 py-2 bg-white border-b border-slate-200 shrink-0 select-none cursor-move"
@@ -1159,27 +1248,27 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     <input type="file" ref={fileInputRef} onChange={handleOpenFile} accept=".gdoc,.html,.txt,.docx,.doc,.rtf,.gplan,.json,.xlsx,.xls,.csv" className="hidden" />
 
                     {/* Window Controls (Minimizar, Maximizar, Fechar) */}
-                    <div className="flex items-center gap-1 pl-2 border-l border-slate-200 ml-1">
+                    <div className="flex items-center gap-1 pl-3 border-l border-slate-200 ml-2 shrink-0">
                         <button 
                             onClick={() => setIsMinimized(true)} 
-                            className="p-1.5 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors" 
-                            title="Minimizar Janela"
+                            className="p-2 hover:bg-slate-200 text-slate-700 rounded-lg transition-all flex items-center justify-center" 
+                            title="Minimizar Janela (GIPP Docs)"
                         >
-                            <Minus size={16} />
+                            <Minus size={18} className="stroke-[2.5]" />
                         </button>
                         <button 
                             onClick={() => setIsFullscreen(!isFullscreen)} 
-                            className="p-1.5 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors" 
-                            title={isFullscreen ? "Restaurar Janela" : "Maximizar Janela"}
+                            className="p-2 hover:bg-blue-100 text-blue-800 rounded-lg transition-all flex items-center justify-center" 
+                            title={isFullscreen ? "Restaurar Tamanho Normal" : "Maximizar Janela (Tela Cheia)"}
                         >
-                            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+                            {isFullscreen ? <Minimize size={18} className="stroke-[2.5]" /> : <Maximize size={18} className="stroke-[2.5]" />}
                         </button>
                         <button 
                             onClick={() => setView('dashboard')} 
-                            className="p-1.5 hover:bg-rose-100 text-rose-700 rounded-lg transition-colors" 
-                            title="Fechar Editor"
+                            className="p-2 hover:bg-rose-600 hover:text-white text-rose-700 rounded-lg transition-all flex items-center justify-center" 
+                            title="Fechar Editor (Voltar ao Painel)"
                         >
-                            <X size={16} />
+                            <X size={18} className="stroke-[2.5]" />
                         </button>
                     </div>
                 </div>
