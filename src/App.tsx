@@ -45,56 +45,59 @@ import { Win11PropertiesModal } from './components/Win11PropertiesModal';
 import { InteractiveWindow } from './components/InteractiveWindow';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
-import ModuleEmailAdmin from './components/ModuleEmailAdmin';
-import ModuleEmailMember from './components/ModuleEmailMember';
-import ModuleMarketingSocial from './components/ModuleMarketingSocial';
-import ModuleChangelog from './components/ModuleChangelog';
-import ModuleIgreja from './components/ModuleIgreja';
-import ModuleDesenvolvedor from './components/ModuleDesenvolvedor';
-import ModuleAssistenteAI, { FloatingChatWidget } from './components/ModuleAssistenteAI';
-import ModuleDevSuporte from './components/ModuleDevSuporte';
-import ModuleBiblia from './components/ModuleBiblia';
-import ModuleMembros from './components/ModuleMembros';
-import ModuleUsuarios from './components/ModuleUsuarios';
-import ModuleSalinhaKids from './components/ModuleSalinhaKids';
-import PortalFrequencia from './components/PortalFrequencia';
-import ModuleFinanceiro from './components/ModuleFinanceiro';
-import ModuleSecretariaIntegrada from './components/ModuleSecretariaIntegrada';
-import ModuleCertificados from './components/ModuleCertificados';
-import ModuleEBD from './components/ModuleEBD';
-import ModuleGestaoCursos from './components/ModuleGestaoCursos';
-import ModuleTeologia from './components/ModuleTeologia';
-import ModuleRedeSocial from './components/ModuleRedeSocial';
-import ModuleGippDocs from './components/ModuleGippDocs';
-import ModuleGippPlanilhas from './components/ModuleGippPlanilhas';
-import ModuleConfiguracoesGerais from './components/ModuleConfiguracoesGerais';
-import { DiagnosticsDashboard } from './components/DiagnosticsDashboard';
-import ModuleConfiguracoesSistemas, { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
-import ModuleConfigVisual from './components/ModuleConfigVisual';
-import ModuleBackup from './components/ModuleBackup';
-import ModuleUtilitarios from './components/ModuleUtilitarios';
-import ModuleConciliacaoBancaria from './components/ModuleConciliacaoBancaria';
-import ModulePortalPastor from './components/ModulePortalPastor';
-import ModulePortalTesoureiro from './components/ModulePortalTesoureiro';
+import { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
+
+const ModuleEmailAdmin = lazy(() => import('./components/ModuleEmailAdmin'));
+const ModuleEmailMember = lazy(() => import('./components/ModuleEmailMember'));
+const ModuleMarketingSocial = lazy(() => import('./components/ModuleMarketingSocial'));
+const ModuleChangelog = lazy(() => import('./components/ModuleChangelog'));
+const ModuleIgreja = lazy(() => import('./components/ModuleIgreja'));
+const ModuleDesenvolvedor = lazy(() => import('./components/ModuleDesenvolvedor'));
+const ModuleAssistenteAI = lazy(() => import('./components/ModuleAssistenteAI'));
+const FloatingChatWidget = lazy(() => import('./components/ModuleAssistenteAI').then(m => ({ default: m.FloatingChatWidget })));
+const ModuleDevSuporte = lazy(() => import('./components/ModuleDevSuporte'));
+const ModuleBiblia = lazy(() => import('./components/ModuleBiblia'));
+const ModuleMembros = lazy(() => import('./components/ModuleMembros'));
+const ModuleUsuarios = lazy(() => import('./components/ModuleUsuarios'));
+const ModuleSalinhaKids = lazy(() => import('./components/ModuleSalinhaKids'));
+const PortalFrequencia = lazy(() => import('./components/PortalFrequencia'));
+const ModuleFinanceiro = lazy(() => import('./components/ModuleFinanceiro'));
+const ModuleSecretariaIntegrada = lazy(() => import('./components/ModuleSecretariaIntegrada'));
+const ModuleCertificados = lazy(() => import('./components/ModuleCertificados'));
+const ModuleEBD = lazy(() => import('./components/ModuleEBD'));
+const ModuleGestaoCursos = lazy(() => import('./components/ModuleGestaoCursos'));
+const ModuleTeologia = lazy(() => import('./components/ModuleTeologia'));
+const ModuleRedeSocial = lazy(() => import('./components/ModuleRedeSocial'));
+const ModuleGippDocs = lazy(() => import('./components/ModuleGippDocs'));
+const ModuleGippPlanilhas = lazy(() => import('./components/ModuleGippPlanilhas'));
+const ModuleConfiguracoesGerais = lazy(() => import('./components/ModuleConfiguracoesGerais'));
+const DiagnosticsDashboard = lazy(() => import('./components/DiagnosticsDashboard').then(m => ({ default: m.DiagnosticsDashboard })));
+const ModuleConfiguracoesSistemas = lazy(() => import('./components/ModuleConfiguracoesSistemas'));
+const ModuleConfigVisual = lazy(() => import('./components/ModuleConfigVisual'));
+const ModuleBackup = lazy(() => import('./components/ModuleBackup'));
+const ModuleUtilitarios = lazy(() => import('./components/ModuleUtilitarios'));
+const ModuleConciliacaoBancaria = lazy(() => import('./components/ModuleConciliacaoBancaria'));
+const ModulePortalPastor = lazy(() => import('./components/ModulePortalPastor'));
+const ModulePortalTesoureiro = lazy(() => import('./components/ModulePortalTesoureiro'));
 const ModuleSobre = lazy(() => import('./components/ModuleSobre'));
 const ModuleRelatorios = lazy(() => import('./components/ModuleRelatorios'));
-import ModuleMinisterios from './components/ModuleMinisterios';
-import ModuleFamilia from './components/ModuleFamilia';
+const ModuleMinisterios = lazy(() => import('./components/ModuleMinisterios'));
+const ModuleFamilia = lazy(() => import('./components/ModuleFamilia'));
 const ModuleMissoes = lazy(() => import('./components/ModuleMissoes'));
 const ModuleCarnes = lazy(() => import('./components/ModuleCarnes'));
 const ModuleLixeira = lazy(() => import('./components/ModuleLixeira'));
-import ModuleAcessosPortal from './components/ModuleAcessosPortal';
-import ModuleCredencial from './components/ModuleCredencial';
-import ModuleCarteirinha from './components/ModuleCarteirinha';
+const ModuleAcessosPortal = lazy(() => import('./components/ModuleAcessosPortal'));
+const ModuleCredencial = lazy(() => import('./components/ModuleCredencial'));
+const ModuleCarteirinha = lazy(() => import('./components/ModuleCarteirinha'));
 const ModuleDPContabilidade = lazy(() => import('./components/ModuleDPContabilidade'));
-import ModuleAuditoria from './components/ModuleAuditoria';
-import ModuleVisitantes from './components/ModuleVisitantes';
-import ModulePatrimonio from './components/ModulePatrimonio';
-import ModuleFrotas from './components/ModuleFrotas';
-import ModuleCelulas from './components/ModuleCelulas';
-import ModuleBoletim from './components/ModuleBoletim';
-import ModuleLivroAtas from './components/ModuleLivroAtas';
-import ModuleInterativo from './components/ModuleInterativo';
+const ModuleAuditoria = lazy(() => import('./components/ModuleAuditoria'));
+const ModuleVisitantes = lazy(() => import('./components/ModuleVisitantes'));
+const ModulePatrimonio = lazy(() => import('./components/ModulePatrimonio'));
+const ModuleFrotas = lazy(() => import('./components/ModuleFrotas'));
+const ModuleCelulas = lazy(() => import('./components/ModuleCelulas'));
+const ModuleBoletim = lazy(() => import('./components/ModuleBoletim'));
+const ModuleLivroAtas = lazy(() => import('./components/ModuleLivroAtas'));
+const ModuleInterativo = lazy(() => import('./components/ModuleInterativo'));
 const ModuleManualUsuario = lazy(() => import('./components/ModuleManualUsuario'));
 const ModuleAmparoLegal = lazy(() => import('./components/ModuleAmparoLegal'));
 const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSoftware'));
@@ -4711,7 +4714,8 @@ export const PageBoundaryIndicators = ({ marginType, targetHeight, contentRef }:
     useEffect(() => {
         const updateHeight = () => {
             if (contentRef.current) {
-                setTotalHeight(contentRef.current.scrollHeight);
+                const h = contentRef.current.scrollHeight;
+                setTotalHeight(prev => (prev === h ? prev : h));
             }
         };
 
@@ -4719,15 +4723,24 @@ export const PageBoundaryIndicators = ({ marginType, targetHeight, contentRef }:
         
         window.addEventListener('resize', updateHeight);
         
-        const observer = new MutationObserver(updateHeight);
-        if (contentRef.current) {
+        let observer: MutationObserver | null = null;
+        if (typeof MutationObserver !== 'undefined' && contentRef.current) {
+            observer = new MutationObserver((mutations) => {
+                const isOverlayOnly = mutations.every(m => {
+                    const el = m.target as HTMLElement;
+                    return el && (el.classList?.contains('page-boundary-overlay') || el.closest?.('.page-boundary-overlay'));
+                });
+                if (!isOverlayOnly) {
+                    updateHeight();
+                }
+            });
             observer.observe(contentRef.current, { childList: true, subtree: true, attributes: true });
         }
 
         return () => {
             clearTimeout(timer);
             window.removeEventListener('resize', updateHeight);
-            observer.disconnect();
+            if (observer) observer.disconnect();
         };
     }, [contentRef, targetHeight, marginType]);
 
@@ -21311,7 +21324,7 @@ export default function App() {
     }
   };
 
-  const ctxValues = { db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission, globalOpenFile, setGlobalOpenFile };
+  const ctxValues = useMemo(() => ({ db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission, globalOpenFile, setGlobalOpenFile }), [db, user, view, showHelpHub, sidebarOpen, dismissedAnnouncement, modalOpen, modalType, formData, printMode, printData, toasts, editingItem, authUser, theme, isOnline, osTheme, animBgEnabled, printPalette, printMarginType, printOrientation, printContentScale, notifications, clearedNotifications, fcmToken, fcmStatus, fcmPermission, globalOpenFile]);
 
   // --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
   const MobilePushCompatibilityCheck = () => {

@@ -55,6 +55,16 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
   const [showMargins, setShowMargins] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
+  const [activeMenu, setActiveMenu] = useState<'arquivo' | 'editar' | 'exibir' | 'inserir' | 'formatar' | 'modelos' | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.gipp-planilhas-menu-container')) return;
+      setActiveMenu(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const PLANILHAS_STORAGE_KEY = 'gippPlanilhasWindowState';
 
@@ -390,11 +400,17 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             });
           }
 
-          return {
+          const updatedSheet = {
             ...sheet,
             celldata: newCelldata,
-            borderInfo: newBorderInfo
+            borderInfo: newBorderInfo,
+            config: {
+              ...(sheet.config || {}),
+              borderInfo: newBorderInfo
+            }
           };
+          delete updatedSheet.data;
+          return updatedSheet;
         }
         return sheet;
       });
@@ -403,6 +419,202 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
     setSheetKey(k => k + 1);
     addToast(`Formatação aplicada ao intervalo ${rangeInput.toUpperCase()}!`, "success");
     setShowFormatModal(false);
+  };
+
+  const borderStyleToCss = (style: string | number | undefined, color: string | undefined): string => {
+    if (style === "none" || style === "0") return "none";
+    const s = String(style || "1");
+    const col = color || "#cbd5e1";
+    switch (s) {
+      case "1":
+      case "thin":
+        return `1px solid ${col}`;
+      case "2":
+      case "medium":
+        return `2px solid ${col}`;
+      case "3":
+      case "dashed":
+        return `1px dashed ${col}`;
+      case "4":
+      case "dotted":
+        return `1px dotted ${col}`;
+      case "5":
+      case "thick":
+        return `3px solid ${col}`;
+      case "6":
+      case "double":
+        return `3px double ${col}`;
+      case "7":
+      case "hair":
+        return `1px solid ${col}`;
+      case "8":
+      case "mediumDashed":
+        return `2px dashed ${col}`;
+      case "9":
+      case "dashDot":
+        return `1px dashed ${col}`;
+      case "10":
+      case "mediumDashDot":
+        return `2px dashed ${col}`;
+      case "11":
+      case "dashDotDot":
+        return `1px dotted ${col}`;
+      case "12":
+      case "mediumDashDotDot":
+        return `2px dotted ${col}`;
+      case "13":
+      case "slantDashDot":
+        return `2px dashed ${col}`;
+      default:
+        return `1px solid ${col}`;
+    }
+  };
+
+  const borderStyleToXLSX = (style: string | number | undefined): string => {
+    if (!style || style === "none" || style === "0") return "thin";
+    const s = String(style);
+    switch (s) {
+      case "1": return "thin";
+      case "2": return "medium";
+      case "3": return "dashed";
+      case "4": return "dotted";
+      case "5": return "thick";
+      case "6": return "double";
+      case "7": return "hair";
+      case "8": return "mediumDashed";
+      case "9": return "dashDot";
+      case "10": return "mediumDashDot";
+      case "11": return "dashDotDot";
+      case "12": return "mediumDashDotDot";
+      case "13": return "slantDashDot";
+      default: return typeof style === 'string' && style ? style : "thin";
+    }
+  };
+
+  const formatHexForXLSX = (color: string | undefined): string => {
+    if (!color) return "FF000000";
+    let hex = String(color).replace("#", "");
+    if (hex.length === 6) return "FF" + hex.toUpperCase();
+    if (hex.length === 8) return hex.toUpperCase();
+    return "FF000000";
+  };
+
+  const buildCellBordersMap = (sheet: any) => {
+    const bordersMap = new Map<string, { top?: { style: string; color: string } | null; right?: { style: string; color: string } | null; bottom?: { style: string; color: string } | null; left?: { style: string; color: string } | null }>();
+
+    const getCellBorder = (r: number, c: number) => {
+      const key = `${r}_${c}`;
+      if (!bordersMap.has(key)) {
+        bordersMap.set(key, {});
+      }
+      return bordersMap.get(key)!;
+    };
+
+    const borderList: any[] = [];
+    if (Array.isArray(sheet.config?.borderInfo)) {
+      borderList.push(...sheet.config.borderInfo);
+    }
+    if (Array.isArray(sheet.borderInfo)) {
+      borderList.push(...sheet.borderInfo);
+    }
+
+    borderList.forEach((b: any) => {
+      if (!b) return;
+
+      if (b.rangeType === "range" && Array.isArray(b.range)) {
+        b.range.forEach((rObj: any) => {
+          if (!rObj || !Array.isArray(rObj.row) || !Array.isArray(rObj.column)) return;
+          const r1 = rObj.row[0];
+          const r2 = rObj.row[1];
+          const c1 = rObj.column[0];
+          const c2 = rObj.column[1];
+          if (r1 === undefined || r2 === undefined || c1 === undefined || c2 === undefined) return;
+
+          const borderType = b.borderType;
+          const style = String(b.style || "1");
+          const color = b.color || "#000000";
+          const borderObj = { style, color };
+
+          for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) {
+              const cellBorder = getCellBorder(r, c);
+
+              if (borderType === "border-all") {
+                cellBorder.top = { ...borderObj };
+                cellBorder.bottom = { ...borderObj };
+                cellBorder.left = { ...borderObj };
+                cellBorder.right = { ...borderObj };
+              } else if (borderType === "border-top") {
+                if (r === r1) cellBorder.top = { ...borderObj };
+              } else if (borderType === "border-bottom") {
+                if (r === r2) cellBorder.bottom = { ...borderObj };
+              } else if (borderType === "border-left") {
+                if (c === c1) cellBorder.left = { ...borderObj };
+              } else if (borderType === "border-right") {
+                if (c === c2) cellBorder.right = { ...borderObj };
+              } else if (borderType === "border-outside") {
+                if (r === r1) cellBorder.top = { ...borderObj };
+                if (r === r2) cellBorder.bottom = { ...borderObj };
+                if (c === c1) cellBorder.left = { ...borderObj };
+                if (c === c2) cellBorder.right = { ...borderObj };
+              } else if (borderType === "border-inside") {
+                if (r > r1) cellBorder.top = { ...borderObj };
+                if (r < r2) cellBorder.bottom = { ...borderObj };
+                if (c > c1) cellBorder.left = { ...borderObj };
+                if (c < c2) cellBorder.right = { ...borderObj };
+              } else if (borderType === "border-horizontal") {
+                if (r > r1) cellBorder.top = { ...borderObj };
+                if (r < r2) cellBorder.bottom = { ...borderObj };
+              } else if (borderType === "border-vertical") {
+                if (c > c1) cellBorder.left = { ...borderObj };
+                if (c < c2) cellBorder.right = { ...borderObj };
+              } else if (borderType === "border-none") {
+                cellBorder.top = null;
+                cellBorder.bottom = null;
+                cellBorder.left = null;
+                cellBorder.right = null;
+              }
+            }
+          }
+        });
+      } else if (b.rangeType === "cellSlice" || b.value || typeof b.row_index === 'number') {
+        const row = b.value?.row_index ?? b.row_index;
+        const col = b.value?.col_index ?? b.col_index;
+        if (typeof row === "number" && typeof col === "number") {
+          const cellBorder = getCellBorder(row, col);
+          const l = b.value?.l || b.l;
+          const r = b.value?.r || b.r;
+          const t = b.value?.t || b.t;
+          const bSide = b.value?.b || b.b;
+          if (l) cellBorder.left = { style: String(l.style || 1), color: l.color || "#000000" };
+          if (r) cellBorder.right = { style: String(r.style || 1), color: r.color || "#000000" };
+          if (t) cellBorder.top = { style: String(t.style || 1), color: t.color || "#000000" };
+          if (bSide) cellBorder.bottom = { style: String(bSide.style || 1), color: bSide.color || "#000000" };
+        }
+      }
+    });
+
+    // Also check individual cells for inline borders
+    const cells = getSheetCells(sheet);
+    cells.forEach(({ r, c, v }) => {
+      if (v) {
+        const bd = v.bd || v.border;
+        const l = bd?.l || v.l;
+        const rightSide = bd?.r || v.r;
+        const t = bd?.t || v.t;
+        const bSide = bd?.b || v.b;
+
+        if (l || rightSide || t || bSide) {
+          const cellBorder = getCellBorder(r, c);
+          if (l) cellBorder.left = { style: String(l.style || 1), color: l.color || "#000000" };
+          if (rightSide) cellBorder.right = { style: String(rightSide.style || 1), color: rightSide.color || "#000000" };
+          if (t) cellBorder.top = { style: String(t.style || 1), color: t.color || "#000000" };
+          if (bSide) cellBorder.bottom = { style: String(bSide.style || 1), color: bSide.color || "#000000" };
+        }
+      }
+    });
+
+    return bordersMap;
   };
 
   const handleOpenFormatModal = () => {
@@ -460,7 +672,9 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
               cell.v = { ...cell.v, bg: zebraBg };
             }
           });
-          return { ...sheet, celldata: newCellData };
+          const updatedSheet = { ...sheet, celldata: newCellData };
+          delete updatedSheet.data;
+          return updatedSheet;
         }
         return sheet;
       });
@@ -487,12 +701,89 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
     return () => clearInterval(interval);
   }, [sheetData]);
 
+  // Formula Normalizer: Converts Portuguese formula names (SOMA, SE, PROCV, etc.) to standard English Excel functions
+  const normalizeFormula = (f: string): string => {
+    if (!f || typeof f !== 'string') return f;
+    let formula = f.trim();
+    if (!formula.startsWith('=')) return formula;
+
+    return formula
+      .replace(/^=\s*SOMA\b/gi, '=SUM')
+      .replace(/^=\s*MÉDIA\b/gi, '=AVERAGE')
+      .replace(/^=\s*MEDIA\b/gi, '=AVERAGE')
+      .replace(/^=\s*CONT\.SE\b/gi, '=COUNTIF')
+      .replace(/^=\s*CONTAR\.SE\b/gi, '=COUNTIF')
+      .replace(/^=\s*SE\b/gi, '=IF')
+      .replace(/^=\s*PROCV\b/gi, '=VLOOKUP')
+      .replace(/^=\s*MÁXIMO\b/gi, '=MAX')
+      .replace(/^=\s*MAXIMO\b/gi, '=MAX')
+      .replace(/^=\s*MÍNIMO\b/gi, '=MIN')
+      .replace(/^=\s*MINIMO\b/gi, '=MIN')
+      .replace(/^=\s*HOJE\b/gi, '=TODAY')
+      .replace(/^=\s*AGORA\b/gi, '=NOW');
+  };
+
+  const getSheetCells = (sheet: any): { r: number; c: number; v: any }[] => {
+    // If sheet.data exists and is populated, it is the live 2D grid matrix
+    if (Array.isArray(sheet.data) && sheet.data.length > 0) {
+      const result: { r: number; c: number; v: any }[] = [];
+      sheet.data.forEach((row: any[], r: number) => {
+        if (Array.isArray(row)) {
+          row.forEach((cell: any, c: number) => {
+            if (cell && typeof cell === 'object') {
+              const hasV = cell.v !== undefined && cell.v !== null && cell.v !== "";
+              const hasM = cell.m !== undefined && cell.m !== null && cell.m !== "";
+              const hasF = cell.f !== undefined && cell.f !== null && cell.f !== "";
+              const hasStyle = Boolean(
+                cell.bg || cell.fc || cell.bl || cell.it || cell.fs || cell.ff || 
+                cell.ht !== undefined || cell.vt !== undefined || cell.un || cell.cl || cell.tb || cell.ct
+              );
+              if (hasV || hasM || hasF || hasStyle) {
+                const copyCell = { ...cell };
+                if (copyCell.f) {
+                  copyCell.f = normalizeFormula(copyCell.f);
+                }
+                result.push({ r, c, v: copyCell });
+              }
+            }
+          });
+        }
+      });
+      return result;
+    }
+
+    // Fallback to sparse celldata array if sheet.data is not yet rendered
+    if (Array.isArray(sheet.celldata)) {
+      return sheet.celldata
+        .filter((item: any) => item && typeof item.r === 'number' && typeof item.c === 'number' && item.v)
+        .map((item: any) => {
+          if (item.v && item.v.f) {
+            return {
+              ...item,
+              v: { ...item.v, f: normalizeFormula(item.v.f) }
+            };
+          }
+          return item;
+        });
+    }
+
+    return [];
+  };
+
   const handleSaveFile = () => {
     if (!workbookRef.current) return;
 
     try {
       const data = workbookRef.current.getAllSheets();
-      const jsonString = JSON.stringify(data);
+      const updatedSheets = data.map((sheet: any) => {
+        const celldata = getSheetCells(sheet);
+        return {
+          ...sheet,
+          celldata,
+          config: sheet.config || {},
+        };
+      });
+      const jsonString = JSON.stringify(updatedSheets);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
 
@@ -514,73 +805,127 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
   const loadSheetTemplate = (type: string) => {
     let newCelldata: any[] = [];
     if (type === 'fluxo_caixa') {
-      setFileName('Relatório de Fluxo de Caixa');
+      setFileName('Relatório_de_Fluxo_de_Caixa');
       newCelldata = [
-        { r: 0, c: 0, v: { v: "RELATÓRIO DE FLUXO DE CAIXA - TESOURARIA", bg: "#1e3a8a", fc: "#ffffff", bl: 1, ht: 1 } },
+        { r: 0, c: 0, v: { v: "RELATÓRIO DE FLUXO DE CAIXA - TESOURARIA IGREJA", bg: "#1e3a8a", fc: "#ffffff", bl: 1, ht: 1 } },
         { r: 1, c: 0, v: { v: "Data", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 1, v: { v: "Descrição do Lançamento", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 2, v: { v: "Categoria", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 3, v: { v: "Entradas (R$)", bg: "#dcfce7", fc: "#166534", bl: 1 } },
         { r: 1, c: 4, v: { v: "Saídas (R$)", bg: "#fee2e2", fc: "#991b1b", bl: 1 } },
-        { r: 1, c: 5, v: { v: "Saldo (R$)", bg: "#e0f2fe", fc: "#075985", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Saldo Acumulado (R$)", bg: "#e0f2fe", fc: "#075985", bl: 1 } },
         { r: 2, c: 0, v: { v: "01/07/2026" } },
-        { r: 2, c: 1, v: { v: "Dízimos e Ofertas do Culto de Domingo" } },
-        { r: 2, c: 2, v: { v: "Entradas Ordinárias" } },
-        { r: 2, c: 3, v: { v: 4500.00, m: "R$ 4.500,00" } },
-        { r: 2, c: 4, v: { v: 0.00, m: "R$ 0,00" } },
-        { r: 2, c: 5, v: { f: "=D3-E3", v: 4500.00 } },
+        { r: 2, c: 1, v: { v: "Saldo Inicial do Mês Anterior" } },
+        { r: 2, c: 2, v: { v: "Balanço" } },
+        { r: 2, c: 3, v: { v: 12500.00, m: "R$ 12.500,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 2, c: 4, v: { v: 0.00, m: "R$ 0,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 2, c: 5, v: { f: "=D3-E3", v: 12500.00, m: "R$ 12.500,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
         { r: 3, c: 0, v: { v: "05/07/2026" } },
-        { r: 3, c: 1, v: { v: "Pagamento Conta de Energia Eletrica" } },
-        { r: 3, c: 2, v: { v: "Despesas Fixas" } },
-        { r: 3, c: 3, v: { v: 0.00, m: "R$ 0,00" } },
-        { r: 3, c: 4, v: { v: 850.00, m: "R$ 850,00" } },
-        { r: 3, c: 5, v: { f: "=F3-E4", v: 3650.00 } },
-        { r: 4, c: 0, v: { v: "TOTAL", bl: 1, bg: "#f1f5f9" } },
-        { r: 4, c: 1, v: { v: "BALANÇO TOTAL MENSAL", bl: 1, bg: "#f1f5f9" } },
-        { r: 4, c: 2, v: { v: "-", bg: "#f1f5f9" } },
-        { r: 4, c: 3, v: { f: "=SUM(D3:D4)", bl: 1, bg: "#dcfce7", fc: "#166534" } },
-        { r: 4, c: 4, v: { f: "=SUM(E3:E4)", bl: 1, bg: "#fee2e2", fc: "#991b1b" } },
-        { r: 4, c: 5, v: { f: "=D5-E5", bl: 1, bg: "#e0f2fe", fc: "#075985" } },
+        { r: 3, c: 1, v: { v: "Dízimos e Ofertas Culto de Domingo" } },
+        { r: 3, c: 2, v: { v: "Arrecadação" } },
+        { r: 3, c: 3, v: { v: 4850.00, m: "R$ 4.850,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 3, c: 4, v: { v: 0.00, m: "R$ 0,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 3, c: 5, v: { f: "=F3+D4-E4", v: 17350.00, m: "R$ 17.350,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 4, c: 0, v: { v: "08/07/2026" } },
+        { r: 4, c: 1, v: { v: "Pagamento Conta Luz e Água Templo" } },
+        { r: 4, c: 2, v: { v: "Utilidades" } },
+        { r: 4, c: 3, v: { v: 0.00, m: "R$ 0,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 4, c: 4, v: { v: 920.00, m: "R$ 920,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 4, c: 5, v: { f: "=F4+D5-E5", v: 16430.00, m: "R$ 16.430,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 5, c: 0, v: { v: "12/07/2026" } },
+        { r: 5, c: 1, v: { v: "Ofertas Espaciais de Missões Nacionais" } },
+        { r: 5, c: 2, v: { v: "Missões" } },
+        { r: 5, c: 3, v: { v: 1400.00, m: "R$ 1.400,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 5, c: 4, v: { v: 0.00, m: "R$ 0,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 5, c: 5, v: { f: "=F5+D6-E6", v: 17830.00, m: "R$ 17.830,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 6, c: 0, v: { v: "15/07/2026" } },
+        { r: 6, c: 1, v: { v: "Manutenção e Revisão Mesa de Som" } },
+        { r: 6, c: 2, v: { v: "Equipamentos" } },
+        { r: 6, c: 3, v: { v: 0.00, m: "R$ 0,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 6, c: 4, v: { v: 650.00, m: "R$ 650,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 6, c: 5, v: { f: "=F6+D7-E7", v: 17180.00, m: "R$ 17.180,00", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 7, c: 0, v: { v: "TOTAL", bl: 1, bg: "#f1f5f9" } },
+        { r: 7, c: 1, v: { v: "RESUMO BALANÇO DO MÊS", bl: 1, bg: "#f1f5f9" } },
+        { r: 7, c: 2, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 7, c: 3, v: { f: "=SUM(D3:D7)", bl: 1, bg: "#dcfce7", fc: "#166534", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 7, c: 4, v: { f: "=SUM(E3:E7)", bl: 1, bg: "#fee2e2", fc: "#991b1b", ct: { fa: "R$ #,##0.00", t: "n" } } },
+        { r: 7, c: 5, v: { f: "=D8-E8", bl: 1, bg: "#e0f2fe", fc: "#075985", ct: { fa: "R$ #,##0.00", t: "n" } } },
       ];
     } else if (type === 'dizimos') {
-      setFileName('Controle de Dízimos e Ofertas');
+      setFileName('Controle_de_Dizimos_e_Ofertas');
       newCelldata = [
-        { r: 0, c: 0, v: { v: "CONTROLE DE DÍZIMOS E OFERTAS", bg: "#065f46", fc: "#ffffff", bl: 1, ht: 1 } },
+        { r: 0, c: 0, v: { v: "CONTROLE MENSAL DE DÍZIMOS E OFERTAS", bg: "#065f46", fc: "#ffffff", bl: 1, ht: 1 } },
         { r: 1, c: 0, v: { v: "Rol", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 1, v: { v: "Nome do Membro", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 2, v: { v: "CPF / Identificação", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 3, v: { v: "Dízimo (R$)", bg: "#dcfce7", bl: 1 } },
         { r: 1, c: 4, v: { v: "Oferta (R$)", bg: "#fef3c7", bl: 1 } },
-        { r: 1, c: 5, v: { v: "Total Geral (R$)", bg: "#e0f2fe", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Total Contribuído (R$)", bg: "#e0f2fe", bl: 1 } },
         { r: 2, c: 0, v: { v: "001" } },
         { r: 2, c: 1, v: { v: "João da Silva Santos" } },
         { r: 2, c: 2, v: { v: "123.456.789-00" } },
-        { r: 2, c: 3, v: { v: 350.00 } },
-        { r: 2, c: 4, v: { v: 50.00 } },
-        { r: 2, c: 5, v: { f: "=SUM(D3:E3)", v: 400.00 } },
-        { r: 3, c: 0, v: { v: "SOMA", bl: 1, bg: "#f1f5f9" } },
-        { r: 3, c: 1, v: { v: "TOTAL ARRECADADO", bl: 1, bg: "#f1f5f9" } },
-        { r: 3, c: 2, v: { v: "-", bg: "#f1f5f9" } },
-        { r: 3, c: 3, v: { f: "=SUM(D3:D3)", bl: 1 } },
-        { r: 3, c: 4, v: { f: "=SUM(E3:E3)", bl: 1 } },
-        { r: 3, c: 5, v: { f: "=SUM(F3:F3)", bl: 1 } },
+        { r: 2, c: 3, v: { v: 450.00, m: "R$ 450,00" } },
+        { r: 2, c: 4, v: { v: 50.00, m: "R$ 50,00" } },
+        { r: 2, c: 5, v: { f: "=SUM(D3:E3)", v: 500.00, m: "R$ 500,00" } },
+        { r: 3, c: 0, v: { v: "002" } },
+        { r: 3, c: 1, v: { v: "Maria Oliveira Costa" } },
+        { r: 3, c: 2, v: { v: "234.567.890-11" } },
+        { r: 3, c: 3, v: { v: 600.00, m: "R$ 600,00" } },
+        { r: 3, c: 4, v: { v: 100.00, m: "R$ 100,00" } },
+        { r: 3, c: 5, v: { f: "=SUM(D4:E4)", v: 700.00, m: "R$ 700,00" } },
+        { r: 4, c: 0, v: { v: "003" } },
+        { r: 4, c: 1, v: { v: "Pedro Henrique Lima" } },
+        { r: 4, c: 2, v: { v: "345.678.901-22" } },
+        { r: 4, c: 3, v: { v: 300.00, m: "R$ 300,00" } },
+        { r: 4, c: 4, v: { v: 30.00, m: "R$ 30,00" } },
+        { r: 4, c: 5, v: { f: "=SUM(D5:E5)", v: 330.00, m: "R$ 330,00" } },
+        { r: 5, c: 0, v: { v: "004" } },
+        { r: 5, c: 1, v: { v: "Ana Clara Fernandes" } },
+        { r: 5, c: 2, v: { v: "456.789.012-33" } },
+        { r: 5, c: 3, v: { v: 850.00, m: "R$ 850,00" } },
+        { r: 5, c: 4, v: { v: 150.00, m: "R$ 150,00" } },
+        { r: 5, c: 5, v: { f: "=SUM(D6:E6)", v: 1000.00, m: "R$ 1.000,00" } },
+        { r: 6, c: 0, v: { v: "TOTAL", bl: 1, bg: "#f1f5f9" } },
+        { r: 6, c: 1, v: { v: "TOTAL ARRECADADO NO MÊS", bl: 1, bg: "#f1f5f9" } },
+        { r: 6, c: 2, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 6, c: 3, v: { f: "=SUM(D3:D6)", bl: 1, bg: "#dcfce7", fc: "#166534" } },
+        { r: 6, c: 4, v: { f: "=SUM(E3:E6)", bl: 1, bg: "#fef3c7", fc: "#854d0e" } },
+        { r: 6, c: 5, v: { f: "=SUM(F3:F6)", bl: 1, bg: "#e0f2fe", fc: "#075985" } },
       ];
     } else if (type === 'escala') {
-      setFileName('Escala de Cultos e Louvor');
+      setFileName('Escala_de_Cultos_e_Louvor');
       newCelldata = [
         { r: 0, c: 0, v: { v: "ESCALA MENSAL DE CULTOS E MINISTÉRIO DE LOUVOR", bg: "#6b21a8", fc: "#ffffff", bl: 1 } },
         { r: 1, c: 0, v: { v: "Data", bg: "#f3e8ff", bl: 1 } },
-        { r: 1, c: 1, v: { v: "Dia / Culto", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 1, v: { v: "Culto / Ocasião", bg: "#f3e8ff", bl: 1 } },
         { r: 1, c: 2, v: { v: "Dirigente", bg: "#f3e8ff", bl: 1 } },
-        { r: 1, c: 3, v: { v: "Pregrador / Mensagem", bg: "#f3e8ff", bl: 1 } },
-        { r: 1, c: 4, v: { v: "Grupo de Louvor", bg: "#f3e8ff", bl: 1 } },
-        { r: 1, c: 5, v: { v: "Recepção / Apoio", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 3, v: { v: "Pregador / Mensagem", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 4, v: { v: "Ministério de Louvor", bg: "#f3e8ff", bl: 1 } },
+        { r: 1, c: 5, v: { v: "Apoio / Portaria", bg: "#f3e8ff", bl: 1 } },
         { r: 2, c: 0, v: { v: "02/08/2026" } },
-        { r: 2, c: 1, v: { v: "Domingo - Família" } },
+        { r: 2, c: 1, v: { v: "Domingo de Santa Ceia" } },
         { r: 2, c: 2, v: { v: "Pr. Presidente" } },
-        { r: 2, c: 3, v: { v: "Ev. Marcos Pedro" } },
-        { r: 2, c: 4, v: { v: "Ministério Shalom" } },
+        { r: 2, c: 3, v: { v: "Pr. Convidado Especial" } },
+        { r: 2, c: 4, v: { v: "Coral Harpa de Davi" } },
         { r: 2, c: 5, v: { v: "Equipe Boas-Vindas A" } },
+        { r: 3, c: 0, v: { v: "05/08/2026" } },
+        { r: 3, c: 1, v: { v: "Quarta-Feira Doutrina" } },
+        { r: 3, c: 2, v: { v: "Ev. Marcos Pedro" } },
+        { r: 3, c: 3, v: { v: "Ev. Marcos Pedro" } },
+        { r: 3, c: 4, v: { v: "Grupo Filhos da Promessa" } },
+        { r: 3, c: 5, v: { v: "Equipe Boas-Vindas B" } },
+        { r: 4, c: 0, v: { v: "08/08/2026" } },
+        { r: 4, c: 1, v: { v: "Sábado Jovem UMADEB" } },
+        { r: 4, c: 2, v: { v: "Pb. Lucas Gabriel" } },
+        { r: 4, c: 3, v: { v: "Dc. Samuel Costa" } },
+        { r: 4, c: 4, v: { v: "Banda Ministério Jovem" } },
+        { r: 4, c: 5, v: { v: "Equipe Boas-Vindas A" } },
+        { r: 5, c: 0, v: { v: "09/08/2026" } },
+        { r: 5, c: 1, v: { v: "Domingo das Famílias" } },
+        { r: 5, c: 2, v: { v: "Pr. Presidente" } },
+        { r: 5, c: 3, v: { v: "Mss. Carmen Lucia" } },
+        { r: 5, c: 4, v: { v: "Grupo de Varões" } },
+        { r: 5, c: 5, v: { v: "Equipe Boas-Vindas B" } },
       ];
     } else if (type === 'ebd_frequencia') {
       setFileName('Chamada_e_Frequencia_EBD');
@@ -588,7 +933,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         { r: 0, c: 0, v: { v: "RELATÓRIO DE FREQUÊNCIA E OFERTAS - EBD", bg: "#1e3a8a", fc: "#ffffff", bl: 1 } },
         { r: 1, c: 0, v: { v: "Matrícula", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 1, v: { v: "Nome do Aluno", bg: "#e2e8f0", bl: 1 } },
-        { r: 1, c: 2, v: { v: "Classe", bg: "#e2e8f0", bl: 1 } },
+        { r: 1, c: 2, v: { v: "Classe EBD", bg: "#e2e8f0", bl: 1 } },
         { r: 1, c: 3, v: { v: "Presença", bg: "#dcfce7", bl: 1 } },
         { r: 1, c: 4, v: { v: "Bíblia/Revista", bg: "#e0f2fe", bl: 1 } },
         { r: 1, c: 5, v: { v: "Oferta (R$)", bg: "#fef3c7", bl: 1 } },
@@ -598,6 +943,30 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         { r: 2, c: 3, v: { v: "SIM" } },
         { r: 2, c: 4, v: { v: "SIM" } },
         { r: 2, c: 5, v: { v: 10.00, m: "R$ 10,00" } },
+        { r: 3, c: 0, v: { v: "EBD-002" } },
+        { r: 3, c: 1, v: { v: "Beatriz Souza Mendes" } },
+        { r: 3, c: 2, v: { v: "Senhoras" } },
+        { r: 3, c: 3, v: { v: "SIM" } },
+        { r: 3, c: 4, v: { v: "SIM" } },
+        { r: 3, c: 5, v: { v: 15.00, m: "R$ 15,00" } },
+        { r: 4, c: 0, v: { v: "EBD-003" } },
+        { r: 4, c: 1, v: { v: "Daniel Rodrigues Lima" } },
+        { r: 4, c: 2, v: { v: "Adolescentes" } },
+        { r: 4, c: 3, v: { v: "SIM" } },
+        { r: 4, c: 4, v: { v: "NÃO" } },
+        { r: 4, c: 5, v: { v: 5.00, m: "R$ 5,00" } },
+        { r: 5, c: 0, v: { v: "EBD-004" } },
+        { r: 5, c: 1, v: { v: "Fernanda Martins Rocha" } },
+        { r: 5, c: 2, v: { v: "Crianças" } },
+        { r: 5, c: 3, v: { v: "SIM" } },
+        { r: 5, c: 4, v: { v: "SIM" } },
+        { r: 5, c: 5, v: { v: 5.00, m: "R$ 5,00" } },
+        { r: 6, c: 0, v: { v: "TOTAL", bl: 1, bg: "#f1f5f9" } },
+        { r: 6, c: 1, v: { v: "RESUMO GERAL DA EBD", bl: 1, bg: "#f1f5f9" } },
+        { r: 6, c: 2, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 6, c: 3, v: { f: '=COUNTIF(D3:D6, "SIM")', bl: 1, bg: "#dcfce7", fc: "#166534" } },
+        { r: 6, c: 4, v: { f: '=COUNTIF(E3:E6, "SIM")', bl: 1, bg: "#e0f2fe", fc: "#075985" } },
+        { r: 6, c: 5, v: { f: "=SUM(F3:F6)", bl: 1, bg: "#fef3c7", fc: "#854d0e" } },
       ];
     } else if (type === 'patrimonio') {
       setFileName('Inventario_de_Patrimonio_Igreja');
@@ -605,14 +974,34 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
         { r: 0, c: 0, v: { v: "INVENTÁRIO E TOMBAMENTO DE PATRIMÔNIO", bg: "#0f766e", fc: "#ffffff", bl: 1 } },
         { r: 1, c: 0, v: { v: "Cód. Tombamento", bg: "#ccfbf1", bl: 1 } },
         { r: 1, c: 1, v: { v: "Descrição do Bem", bg: "#ccfbf1", bl: 1 } },
-        { r: 1, c: 2, v: { v: "Setor / Local", bg: "#ccfbf1", bl: 1 } },
+        { r: 1, c: 2, v: { v: "Setor / Sala", bg: "#ccfbf1", bl: 1 } },
         { r: 1, c: 3, v: { v: "Estado de Conservação", bg: "#ccfbf1", bl: 1 } },
         { r: 1, c: 4, v: { v: "Valor Estimado (R$)", bg: "#ccfbf1", bl: 1 } },
         { r: 2, c: 0, v: { v: "PAT-2026-001" } },
         { r: 2, c: 1, v: { v: "Mesa de Som Digital 32 Canais" } },
-        { r: 2, c: 2, v: { v: "Nave do Templo Principal" } },
+        { r: 2, c: 2, v: { v: "Templo Principal" } },
         { r: 2, c: 3, v: { v: "Excelente" } },
         { r: 2, c: 4, v: { v: 14500.00, m: "R$ 14.500,00" } },
+        { r: 3, c: 0, v: { v: "PAT-2026-002" } },
+        { r: 3, c: 1, v: { v: "Ar Condicionado Split 60.000 BTUs" } },
+        { r: 3, c: 2, v: { v: "Templo Principal" } },
+        { r: 3, c: 3, v: { v: "Ótimo" } },
+        { r: 3, c: 4, v: { v: 8900.00, m: "R$ 8.900,00" } },
+        { r: 4, c: 0, v: { v: "PAT-2026-003" } },
+        { r: 4, c: 1, v: { v: "Projetor Multimídia 5000 Lumens" } },
+        { r: 4, c: 2, v: { v: "Galeria Superior" } },
+        { r: 4, c: 3, v: { v: "Bom" } },
+        { r: 4, c: 4, v: { v: 3800.00, m: "R$ 3.800,00" } },
+        { r: 5, c: 0, v: { v: "PAT-2026-004" } },
+        { r: 5, c: 1, v: { v: "Piano de Cauda Elétrico Yamaha" } },
+        { r: 5, c: 2, v: { v: "Altar de Louvor" } },
+        { r: 5, c: 3, v: { v: "Excelente" } },
+        { r: 5, c: 4, v: { v: 12000.00, m: "R$ 12.000,00" } },
+        { r: 6, c: 0, v: { v: "TOTAL", bl: 1, bg: "#f1f5f9" } },
+        { r: 6, c: 1, v: { v: "AVALIAÇÃO TOTAL PATRIMÔNIO", bl: 1, bg: "#f1f5f9" } },
+        { r: 6, c: 2, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 6, c: 3, v: { v: "-", bg: "#f1f5f9" } },
+        { r: 6, c: 4, v: { f: "=SUM(E3:E6)", bl: 1, bg: "#ccfbf1", fc: "#0f766e" } },
       ];
     }
 
@@ -633,37 +1022,145 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
     try {
       const sheets = workbookRef.current.getAllSheets();
       const currentSheet = sheets[0];
-      if (!currentSheet || !currentSheet.celldata) {
+      if (!currentSheet) {
         addToast("Sem dados para imprimir na planilha.", "warning");
         return;
       }
 
-      const matrix: string[][] = [];
+      const cells = getSheetCells(currentSheet);
+      if (cells.length === 0) {
+        addToast("A planilha está vazia. Adicione dados antes de imprimir.", "warning");
+        return;
+      }
+
+      const config = currentSheet.config || {};
+      const mergeConfig = config.merge || {};
+      const columnlen = config.columnlen || {};
+      const rowlen = config.rowlen || {};
+
+      const cellMap = new Map<string, any>();
       let maxR = 0;
       let maxC = 0;
 
-      currentSheet.celldata.forEach((cell: any) => {
+      cells.forEach((cell: any) => {
         const r = cell.r;
         const c = cell.c;
         if (r > maxR) maxR = r;
         if (c > maxC) maxC = c;
-        if (!matrix[r]) matrix[r] = [];
-        const val = cell.v ? (cell.v.m !== undefined ? cell.v.m : (cell.v.v !== undefined ? cell.v.v : '')) : '';
-        matrix[r][c] = String(val);
+        cellMap.set(`${r}_${c}`, cell.v);
       });
 
-      let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px;">`;
-      for (let r = 0; r <= Math.min(maxR, 100); r++) {
-        tableHtml += `<tr>`;
-        for (let c = 0; c <= Math.min(maxC, 20); c++) {
-          const val = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-          const isHeader = r === 0;
-          const bgStyle = isHeader ? 'background-color: #f1f5f9; font-weight: bold;' : '';
-          tableHtml += `<td style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; ${bgStyle}">${val}</td>`;
+      // Include merged ranges in maxR and maxC
+      const mergeOriginsMap = new Map<string, { rs: number; cs: number }>();
+      const coveredCellsSet = new Set<string>();
+
+      Object.values(mergeConfig).forEach((m: any) => {
+        if (m && typeof m.r === 'number' && typeof m.c === 'number') {
+          const rs = m.rs || 1;
+          const cs = m.cs || 1;
+          const endR = m.r + rs - 1;
+          const endC = m.c + cs - 1;
+          if (endR > maxR) maxR = endR;
+          if (endC > maxC) maxC = endC;
+
+          mergeOriginsMap.set(`${m.r}_${m.c}`, { rs, cs });
+          for (let r = m.r; r <= endR; r++) {
+            for (let c = m.c; c <= endC; c++) {
+              if (r !== m.r || c !== m.c) {
+                coveredCellsSet.add(`${r}_${c}`);
+              }
+            }
+          }
+        }
+      });
+
+      const bordersMap = buildCellBordersMap(currentSheet);
+
+      let colGroupHtml = '<colgroup>';
+      for (let c = 0; c <= maxC; c++) {
+        const w = columnlen[c] || 100;
+        colGroupHtml += `<col style="width: ${w}px;" />`;
+      }
+      colGroupHtml += '</colgroup>';
+
+      let tableHtml = `<table style="border-collapse: collapse; width: 100%; table-layout: fixed; font-family: Arial, sans-serif; font-size: 11pt;">${colGroupHtml}<tbody>`;
+
+      for (let r = 0; r <= maxR; r++) {
+        const h = rowlen[r] || 26;
+        tableHtml += `<tr style="height: ${h}px;">`;
+
+        for (let c = 0; c <= maxC; c++) {
+          const key = `${r}_${c}`;
+          if (coveredCellsSet.has(key)) {
+            continue; // Skip covered cell in merged span
+          }
+
+          const merge = mergeOriginsMap.get(key);
+          const spanAttrs = merge ? `rowspan="${merge.rs}" colspan="${merge.cs}"` : '';
+          const endR = merge ? r + merge.rs - 1 : r;
+          const endC = merge ? c + merge.cs - 1 : c;
+
+          const cellObj = cellMap.get(key);
+          let cellText = '';
+          if (cellObj) {
+            if (cellObj.m !== undefined && cellObj.m !== null) cellText = String(cellObj.m);
+            else if (cellObj.v !== undefined && cellObj.v !== null) cellText = String(cellObj.v);
+            else if (cellObj.f) cellText = String(cellObj.f);
+          }
+
+          const topB = bordersMap.get(key)?.top;
+          const leftB = bordersMap.get(key)?.left;
+          const bottomB = bordersMap.get(`${endR}_${c}`)?.bottom || bordersMap.get(key)?.bottom;
+          const rightB = bordersMap.get(`${r}_${endC}`)?.right || bordersMap.get(key)?.right;
+
+          const topCss = topB !== undefined ? borderStyleToCss(topB?.style, topB?.color) : '1px solid #cbd5e1';
+          const bottomCss = bottomB !== undefined ? borderStyleToCss(bottomB?.style, bottomB?.color) : '1px solid #cbd5e1';
+          const leftCss = leftB !== undefined ? borderStyleToCss(leftB?.style, leftB?.color) : '1px solid #cbd5e1';
+          const rightCss = rightB !== undefined ? borderStyleToCss(rightB?.style, rightB?.color) : '1px solid #cbd5e1';
+
+          const styleRules: string[] = [
+            `border-top: ${topCss}`,
+            `border-bottom: ${bottomCss}`,
+            `border-left: ${leftCss}`,
+            `border-right: ${rightCss}`,
+            'padding: 4px 8px',
+            'box-sizing: border-box',
+            'overflow: hidden'
+          ];
+
+          if (cellObj) {
+            if (cellObj.bg) styleRules.push(`background-color: ${cellObj.bg}`);
+            if (cellObj.fc) styleRules.push(`color: ${cellObj.fc}`);
+            if (cellObj.bl == 1) styleRules.push('font-weight: bold');
+            if (cellObj.it == 1) styleRules.push('font-style: italic');
+            if (cellObj.fs) styleRules.push(`font-size: ${cellObj.fs}pt`);
+            if (cellObj.ff) styleRules.push(`font-family: ${String(cellObj.ff)}`);
+
+            if (cellObj.ht === 0 || cellObj.ht === "0") styleRules.push('text-align: center');
+            else if (cellObj.ht === 2 || cellObj.ht === "2") styleRules.push('text-align: right');
+            else if (cellObj.ht === 1 || cellObj.ht === "1") styleRules.push('text-align: left');
+
+            if (cellObj.vt === 0 || cellObj.vt === "0") styleRules.push('vertical-align: middle');
+            else if (cellObj.vt === 1 || cellObj.vt === "1") styleRules.push('vertical-align: top');
+            else if (cellObj.vt === 2 || cellObj.vt === "2") styleRules.push('vertical-align: bottom');
+
+            const decs: string[] = [];
+            if (cellObj.un == 1) decs.push('underline');
+            if (cellObj.cl == 1) decs.push('line-through');
+            if (decs.length > 0) styleRules.push(`text-decoration: ${decs.join(' ')}`);
+
+            if (cellObj.tb === 2 || cellObj.tb === "2") {
+              styleRules.push('white-space: pre-wrap', 'word-break: break-word');
+            } else {
+              styleRules.push('white-space: nowrap');
+            }
+          }
+
+          tableHtml += `<td ${spanAttrs} style="${styleRules.join('; ')}">${cellText || '&nbsp;'}</td>`;
         }
         tableHtml += `</tr>`;
       }
-      tableHtml += `</table>`;
+      tableHtml += `</tbody></table>`;
 
       const printWindow = window.open('', '_blank');
       if (printWindow) {
@@ -672,14 +1169,34 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             <head>
               <title>${fileName} - Relatório de Impressão</title>
               <style>
-                @page { margin: 15mm; size: ${orientation}; }
-                body { font-family: Arial, sans-serif; padding: 10px; }
-                .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-                .header h2 { margin: 0; color: #1e3a8a; }
-                .header p { margin: 4px 0 0 0; color: #64748b; font-size: 12px; }
+                @page { 
+                  margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm; 
+                  size: ${pageSize === 'full' ? 'A4' : pageSize} ${orientation}; 
+                }
+                body { 
+                  margin: 0;
+                  padding: 10px;
+                  font-family: Arial, sans-serif; 
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                  color-adjust: exact !important;
+                }
+                .header { 
+                  text-align: center; 
+                  margin-bottom: 20px; 
+                  border-bottom: 2px solid #2563eb; 
+                  padding-bottom: 10px; 
+                }
+                .header h2 { margin: 0; color: #1e3a8a; font-size: 18pt; font-weight: bold; }
+                .header p { margin: 4px 0 0 0; color: #64748b; font-size: 10pt; }
+                .gipp-planilhas-print { page-break-inside: avoid; break-inside: avoid; }
+                .gipp-planilhas-print table { border-collapse: collapse !important; width: 100%; }
+                .gipp-planilhas-print table td, .gipp-planilhas-print table th { border: 1px solid black !important; padding: 4px !important; }
+                table { page-break-inside: auto; }
+                tr { page-break-inside: avoid; break-inside: avoid; page-break-after: auto; }
               </style>
             </head>
-            <body>
+            <body class="gipp-planilhas-print">
               <div class="header">
                 <h2>IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS</h2>
                 <p>Relatório de Planilha: <strong>${fileName}</strong> - Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
@@ -706,34 +1223,104 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
       const wb = XLSX.utils.book_new();
       data.forEach((sheet) => {
         const wsData: any[][] = [];
-        if (sheet.celldata) {
-          sheet.celldata.forEach((cell: any) => {
-            const r = cell.r;
-            const c = cell.c;
-            const v = cell.v;
-            if (!wsData[r]) wsData[r] = [];
-            let cellValue: any = { t: "s", v: "" };
-            if (v) {
-              if (v.f) {
-                cellValue = {
-                  t: "n",
-                  f: v.f.startsWith("=") ? v.f.substring(1) : v.f,
-                };
-                if (v.v !== undefined) {
-                  cellValue.v = v.v;
-                }
-              } else if (v.v !== undefined && v.v !== null) {
-                const num = Number(v.v);
-                if (!isNaN(num) && v.v !== "") {
-                  cellValue = { t: "n", v: num };
-                } else {
-                  cellValue = { t: "s", v: String(v.m || v.v) };
-                }
+        const cells = getSheetCells(sheet);
+        const bordersMap = buildCellBordersMap(sheet);
+
+        cells.forEach((cell: any) => {
+          const r = cell.r;
+          const c = cell.c;
+          const v = cell.v;
+          if (!wsData[r]) wsData[r] = [];
+          let cellValue: any = { t: "s", v: "" };
+          if (v) {
+            if (v.f) {
+              const cleanFormula = normalizeFormula(String(v.f));
+              const formulaStr = cleanFormula.startsWith("=") ? cleanFormula.substring(1) : cleanFormula;
+              cellValue = { f: formulaStr };
+              if (v.v !== undefined && v.v !== null) {
+                cellValue.v = v.v;
+                if (typeof v.v === 'number') cellValue.t = "n";
+                else if (typeof v.v === 'boolean') cellValue.t = "b";
+                else cellValue.t = "s";
               }
+            } else if (v.v !== undefined && v.v !== null) {
+              const num = Number(v.v);
+              if (!isNaN(num) && String(v.v).trim() !== "") {
+                cellValue = { t: "n", v: num };
+              } else {
+                cellValue = { t: "s", v: String(v.m !== undefined ? v.m : v.v) };
+              }
+            } else if (v.m !== undefined) {
+              cellValue = { t: "s", v: String(v.m) };
             }
-            wsData[r][c] = cellValue;
-          });
-        }
+
+            const styleObj: any = {};
+            if (v.bg) {
+              let hex = String(v.bg).replace("#", "");
+              if (hex.length === 6) hex = "FF" + hex;
+              styleObj.fill = { fgColor: { rgb: hex } };
+            }
+
+            const fontObj: any = {};
+            if (v.fc) {
+              let hex = String(v.fc).replace("#", "");
+              if (hex.length === 6) hex = "FF" + hex;
+              fontObj.color = { rgb: hex };
+            }
+            if (v.bl == 1) fontObj.bold = true;
+            if (v.it == 1) fontObj.italic = true;
+            if (v.cl == 1) fontObj.strike = true;
+            if (v.un == 1) fontObj.underline = true;
+            if (v.fs) fontObj.sz = v.fs;
+            if (v.ff) fontObj.name = String(v.ff);
+            if (Object.keys(fontObj).length > 0) styleObj.font = fontObj;
+
+            const alignObj: any = {};
+            if (v.ht === 0 || v.ht === "0") alignObj.horizontal = "center";
+            else if (v.ht === 1 || v.ht === "1") alignObj.horizontal = "left";
+            else if (v.ht === 2 || v.ht === "2") alignObj.horizontal = "right";
+
+            if (v.vt === 0 || v.vt === "0") alignObj.vertical = "center";
+            else if (v.vt === 1 || v.vt === "1") alignObj.vertical = "top";
+            else if (v.vt === 2 || v.vt === "2") alignObj.vertical = "bottom";
+
+            if (v.tb === 2 || v.tb === "2") alignObj.wrapText = true;
+
+            if (Object.keys(alignObj).length > 0) styleObj.alignment = alignObj;
+
+            if (Object.keys(styleObj).length > 0) {
+              cellValue.s = styleObj;
+            }
+          }
+          wsData[r][c] = cellValue;
+        });
+
+        // Apply borders from bordersMap to wsData
+        bordersMap.forEach((borderInfo, key) => {
+          const [r, c] = key.split('_').map(Number);
+          if (!wsData[r]) wsData[r] = [];
+          if (!wsData[r][c]) wsData[r][c] = { t: "z", s: {} };
+          if (!wsData[r][c].s) wsData[r][c].s = {};
+
+          const borderObjXLSX: any = {};
+          if (borderInfo.top && borderInfo.top.style !== "none") {
+            borderObjXLSX.top = { style: borderStyleToXLSX(borderInfo.top.style), color: { rgb: formatHexForXLSX(borderInfo.top.color) } };
+          }
+          if (borderInfo.bottom && borderInfo.bottom.style !== "none") {
+            borderObjXLSX.bottom = { style: borderStyleToXLSX(borderInfo.bottom.style), color: { rgb: formatHexForXLSX(borderInfo.bottom.color) } };
+          }
+          if (borderInfo.left && borderInfo.left.style !== "none") {
+            borderObjXLSX.left = { style: borderStyleToXLSX(borderInfo.left.style), color: { rgb: formatHexForXLSX(borderInfo.left.color) } };
+          }
+          if (borderInfo.right && borderInfo.right.style !== "none") {
+            borderObjXLSX.right = { style: borderStyleToXLSX(borderInfo.right.style), color: { rgb: formatHexForXLSX(borderInfo.right.color) } };
+          }
+
+          if (Object.keys(borderObjXLSX).length > 0) {
+            wsData[r][c].s.border = borderObjXLSX;
+          }
+        });
+
         for (let i = 0; i < wsData.length; i++) {
           if (!wsData[i]) wsData[i] = [];
           for (let j = 0; j < wsData[i].length; j++) {
@@ -743,6 +1330,42 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
           }
         }
         const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        ws["!views"] = [{ showGridLines: true }];
+
+        if (sheet.config?.merge) {
+          const merges: XLSX.Range[] = [];
+          Object.values(sheet.config.merge).forEach((m: any) => {
+            if (m && typeof m.r === "number" && typeof m.c === "number") {
+              merges.push({
+                s: { r: m.r, c: m.c },
+                e: { r: m.r + (m.rs || 1) - 1, c: m.c + (m.cs || 1) - 1 },
+              });
+            }
+          });
+          if (merges.length > 0) ws["!merges"] = merges;
+        }
+
+        if (sheet.config?.columnlen) {
+          const cols: any[] = [];
+          Object.keys(sheet.config.columnlen).forEach((colIdx) => {
+            const c = Number(colIdx);
+            const px = sheet.config.columnlen[colIdx];
+            cols[c] = { wpx: px };
+          });
+          if (cols.length > 0) ws["!cols"] = cols;
+        }
+
+        if (sheet.config?.rowlen) {
+          const rows: any[] = [];
+          Object.keys(sheet.config.rowlen).forEach((rowIdx) => {
+            const r = Number(rowIdx);
+            const px = sheet.config.rowlen[rowIdx];
+            rows[r] = { hpx: px };
+          });
+          if (rows.length > 0) ws["!rows"] = rows;
+        }
+
         ws["!margins"] = {
           left: margins.left / 25.4,
           right: margins.right / 25.4,
@@ -855,7 +1478,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
 
                 // Formula
                 if (cell.f) {
-                  const rawFormula = String(cell.f).trim();
+                  const rawFormula = normalizeFormula(String(cell.f).trim());
                   cellObj.f = rawFormula.startsWith('=') ? rawFormula : '=' + rawFormula;
                 }
 
@@ -1087,19 +1710,224 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
             className="font-medium text-slate-800 text-lg bg-transparent border-transparent hover:border-slate-300 focus:border-emerald-500 focus:bg-white border rounded px-2 py-0.5 outline-none transition-colors w-full max-w-md truncate"
             placeholder="Nome da planilha"
           />
-          <div className="flex items-center space-x-1 mt-0.5 text-xs text-slate-600">
-            <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={triggerFileOpen}>
-              Arquivo
-            </button>
-            <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => setZoom(100)}>
-              Ver
-            </button>
-            <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => setShowMargins(!showMargins)}>
-              Dimensões
-            </button>
-            <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={handleExportXLSX}>
-              Exportar XLSX
-            </button>
+          <div className="flex items-center space-x-1 mt-0.5 text-[13px] text-slate-700 gipp-planilhas-menu-container relative z-[100]">
+            {/* ARQUIVO */}
+            <div className="relative">
+              <button 
+                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'arquivo' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                onClick={() => setActiveMenu(activeMenu === 'arquivo' ? null : 'arquivo')}
+                onMouseEnter={() => activeMenu && setActiveMenu('arquivo')}
+              >
+                Arquivo
+              </button>
+              {activeMenu === 'arquivo' && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="py-1">
+                    <button onClick={() => { 
+                      setSheetData([{ name: "Página 1", id: "1", status: 1, celldata: [] }]); 
+                      setFileName('Planilha sem título'); 
+                      setSheetKey(k => k + 1); 
+                      setActiveMenu(null); 
+                    }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><FileSpreadsheet size={15} className="text-emerald-600" /> Nova Planilha</span>
+                      <span className="text-[10px] text-slate-400 font-mono">Ctrl+N</span>
+                    </button>
+                    <button onClick={() => { triggerFileOpen(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><FolderOpen size={15} className="text-amber-600" /> Abrir Arquivo...</span>
+                      <span className="text-[10px] text-slate-400 font-mono">Ctrl+O</span>
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { handleSaveFile(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Save size={15} className="text-emerald-600" /> Salvar (.GPLAN)</span>
+                      <span className="text-[10px] text-slate-400 font-mono">Ctrl+S</span>
+                    </button>
+                    <button onClick={() => { handleExportXLSX(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Download size={15} className="text-blue-600" /> Exportar para Excel (.XLSX)</span>
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { handlePrintSheet(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Printer size={15} className="text-slate-600" /> Imprimir Planilha...</span>
+                      <span className="text-[10px] text-slate-400 font-mono">Ctrl+P</span>
+                    </button>
+                    <button onClick={() => { setShowMargins(true); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Settings size={15} className="text-slate-600" /> Configurar Tela & Dimensões</span>
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { setView('dashboard'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-rose-50 hover:text-rose-700 flex items-center justify-between transition-colors text-rose-600 font-medium">
+                      <span className="flex items-center gap-2.5"><X size={15} /> Fechar / Sair</span>
+                      <span className="text-[10px] text-rose-400 font-mono">Alt+F4</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* EDITAR */}
+            <div className="relative">
+              <button 
+                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'editar' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                onClick={() => setActiveMenu(activeMenu === 'editar' ? null : 'editar')}
+                onMouseEnter={() => activeMenu && setActiveMenu('editar')}
+              >
+                Editar
+              </button>
+              {activeMenu === 'editar' && (
+                <div className="absolute top-full left-0 mt-1 w-60 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="py-1">
+                    <button onClick={() => { handleOpenFormatModal(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <Paintbrush size={15} className="text-emerald-600" /> Formatar Células Selecionadas...
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <div className="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Temas de Tabela</div>
+                    <button onClick={() => { applyThemeToSheet('azul'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                      <span className="w-3 h-3 rounded-full bg-blue-700 inline-block"></span> Estilo Azul Executivo
+                    </button>
+                    <button onClick={() => { applyThemeToSheet('verde'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors">
+                      <span className="w-3 h-3 rounded-full bg-emerald-700 inline-block"></span> Estilo Verde Esmeralda
+                    </button>
+                    <button onClick={() => { applyThemeToSheet('purpura'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2.5 transition-colors">
+                      <span className="w-3 h-3 rounded-full bg-purple-700 inline-block"></span> Estilo Púrpura Imperial
+                    </button>
+                    <button onClick={() => { applyThemeToSheet('cinza'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-slate-100 hover:text-slate-800 flex items-center gap-2.5 transition-colors">
+                      <span className="w-3 h-3 rounded-full bg-slate-700 inline-block"></span> Estilo Cinza Corporativo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* EXIBIR */}
+            <div className="relative">
+              <button 
+                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'exibir' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                onClick={() => setActiveMenu(activeMenu === 'exibir' ? null : 'exibir')}
+                onMouseEnter={() => activeMenu && setActiveMenu('exibir')}
+              >
+                Exibir
+              </button>
+              {activeMenu === 'exibir' && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="py-1">
+                    <button onClick={() => { handleZoomIn(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Plus size={15} /> Aumentar Zoom</span>
+                      <span className="text-[10px] text-slate-400 font-mono">+10%</span>
+                    </button>
+                    <button onClick={() => { handleZoomOut(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Minus size={15} /> Diminuir Zoom</span>
+                      <span className="text-[10px] text-slate-400 font-mono">-10%</span>
+                    </button>
+                    <button onClick={() => { setZoom(100); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Maximize size={15} /> Resetar Zoom (100%)</span>
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { setShowMargins(!showMargins); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Settings size={15} /> Dimensões da Tela ({showMargins ? 'Visível' : 'Oculto'})</span>
+                    </button>
+                    <button onClick={() => { setIsFullscreen(!isFullscreen); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-between transition-colors">
+                      <span className="flex items-center gap-2.5"><Maximize size={15} /> {isFullscreen ? 'Sair da Tela Cheia' : 'Modo Tela Cheia'}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">F11</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* INSERIR / FÓRMULAS */}
+            <div className="relative">
+              <button 
+                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'inserir' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                onClick={() => setActiveMenu(activeMenu === 'inserir' ? null : 'inserir')}
+                onMouseEnter={() => activeMenu && setActiveMenu('inserir')}
+              >
+                Fórmulas
+              </button>
+              {activeMenu === 'inserir' && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="py-1">
+                    <button onClick={() => { setShowFormulaModal(true); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-indigo-50 hover:text-indigo-800 flex items-center gap-2.5 transition-colors font-medium">
+                      <span className="font-serif italic font-bold text-indigo-600">fx</span> Guia de Fórmulas & Funções (SOMA, SE, PROCV...)
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { handleOpenFormatModal(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors">
+                      <Paintbrush size={15} className="text-emerald-600" /> Formatar Números, Moedas e Porcentagem
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* FORMATAR */}
+            <div className="relative">
+              <button 
+                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'formatar' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                onClick={() => setActiveMenu(activeMenu === 'formatar' ? null : 'formatar')}
+                onMouseEnter={() => activeMenu && setActiveMenu('formatar')}
+              >
+                Formatar
+              </button>
+              {activeMenu === 'formatar' && (
+                <div className="absolute top-full left-0 mt-1 w-60 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="py-1">
+                    <button onClick={() => { handleOpenFormatModal(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <Paintbrush size={15} className="text-emerald-600" /> Formatar Células (Fonte, Borda, Alinhamento)
+                    </button>
+                  </div>
+                  <div className="py-1">
+                    <div className="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estilos de Tabela</div>
+                    <button onClick={() => { applyThemeToSheet('azul'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                      <span>🔷 Azul Executivo</span>
+                    </button>
+                    <button onClick={() => { applyThemeToSheet('verde'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors">
+                      <span>🟢 Verde Esmeralda</span>
+                    </button>
+                    <button onClick={() => { applyThemeToSheet('purpura'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2.5 transition-colors">
+                      <span>🟣 Púrpura Imperial</span>
+                    </button>
+                    <button onClick={() => { applyThemeToSheet('cinza'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-slate-100 hover:text-slate-800 flex items-center gap-2.5 transition-colors">
+                      <span>🩶 Cinza Corporativo</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* MODELOS */}
+            <div className="relative">
+              <button 
+                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'modelos' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                onClick={() => setActiveMenu(activeMenu === 'modelos' ? null : 'modelos')}
+                onMouseEnter={() => activeMenu && setActiveMenu('modelos')}
+              >
+                Modelos
+              </button>
+              {activeMenu === 'modelos' && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="py-1">
+                    <button onClick={() => { loadSheetTemplate('fluxo_caixa'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <span>💰 Relatório de Fluxo de Caixa</span>
+                    </button>
+                    <button onClick={() => { loadSheetTemplate('dizimos'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <span>📜 Controle de Dízimos e Ofertas</span>
+                    </button>
+                    <button onClick={() => { loadSheetTemplate('escala'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <span>📅 Escala de Cultos e Louvor</span>
+                    </button>
+                    <button onClick={() => { loadSheetTemplate('ebd_frequencia'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <span>📚 Chamada e Frequência EBD</span>
+                    </button>
+                    <button onClick={() => { loadSheetTemplate('patrimonio'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition-colors font-medium">
+                      <span>🏷️ Inventário de Patrimônio</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1272,6 +2100,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
                 showToolbar={true}
                 showSheetTabs={true}
                 showFormulaBar={true}
+                onChange={(data) => setSheetData(data)}
               />
             </div>
           </div>
@@ -1301,6 +2130,7 @@ export default function ModuleGippPlanilhas({ initialFile }: ModuleGippPlanilhas
                   showToolbar={true}
                   showSheetTabs={true}
                   showFormulaBar={true}
+                  onChange={(data) => setSheetData(data)}
                 />
               </div>
             </div>

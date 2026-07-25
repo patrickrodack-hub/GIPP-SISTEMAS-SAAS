@@ -716,7 +716,14 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
       const recorded = dayPres.find((p: any) => p.crianca_id === k.id);
       presMap[k.id] = recorded ? recorded.status === 'presente' : false;
     });
-    setTempPresences(presMap);
+    setTempPresences(prev => {
+      const keys = Object.keys(presMap);
+      const prevKeys = Object.keys(prev);
+      if (keys.length === prevKeys.length && keys.every(k => prev[k] === presMap[k])) {
+        return prev;
+      }
+      return presMap;
+    });
   }, [attendanceDate, kidsList, presencesList]);
 
   // Bulk save attendance list

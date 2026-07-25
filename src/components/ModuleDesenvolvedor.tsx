@@ -171,6 +171,10 @@ const ModuleDesenvolvedor = () => {
     const [unauthorizedDetails, setUnauthorizedDetails] = useState('');
     const [generatedNotification, setGeneratedNotification] = useState('');
 
+    // ESTADOS PARA DOSSIÊ COMERCIAL DE VENDAS (SAAS)
+    const [dossieCategoriaAtiva, setDossieCategoriaAtiva] = useState<string>('Todas');
+    const [dossieBuscaModulo, setDossieBuscaModulo] = useState<string>('');
+
     const handleGenerateSHA256 = async () => {
         if (!codeSnippet.trim()) {
             addToast("Digite ou cole partes do código-fonte para gerar o Hash de depósito.", "warning");
@@ -1277,6 +1281,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         {id: 'inpi', label: 'Passo a Passo INPI', icon: Fingerprint},
         {id: 'protecao', label: 'EULA & Combate à Pirataria', icon: Lock},
         {id: 'avaliacao', label: 'Laudo & Valuation', icon: Scale},
+        {id: 'dossie_vendas', label: 'Dossiê Vendas SaaS', icon: FileBarChart},
         {id: 'rotinas', label: 'Rotinas DEV', icon: Activity}
     ];
 
@@ -4210,6 +4215,832 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    );
+                })()}
+
+                {/* === ABA: DOSSIÊ COMERCIAL DE VENDAS & AUDITORIA DE RECURSOS === */}
+                {tab === 'dossie_vendas' && (() => {
+                    const igrejaData = db.igreja || {
+                        nome: "Assembleia de Deus GIPP",
+                        cnpj: "00.000.000/0001-00",
+                        pastor: "Pr. Patrick Pessoa",
+                        cidade: "Rio de Janeiro",
+                        uf: "RJ",
+                        saas_nome_sistema: "GIPP"
+                    };
+
+                    // Mapeamento Comercial Completo dos Módulos do Sistema com Olhar de Vendedor de Software
+                    const modulosComerciais = [
+                        {
+                            id: 'gipp_docs',
+                            nome: 'GIPP DOCs (Processador de Documentos .docx / .gdoc)',
+                            categoria: 'Gestão & Secretaria',
+                            icon: FileText,
+                            pitchVendas: 'Substitui a assinatura do Google Workspace / Microsoft Word. Permite emitir cartas pastorais, atas e ofícios timbrados diretamente no sistema, salvar localmente no computador e exportar em .docx.',
+                            recursos: [
+                                'Editor de texto rico WYSIWYG completo com suporte a tabelas e imagens',
+                                'Modelos predefinidos: Carta de Recomendação, Atas, Ofício Pastoral e Regimento',
+                                'Abertura e salvamento direto de arquivos locais (.docx / .gdoc)',
+                                'Cabeçalho e timbre institucional pré-configurados automaticamente'
+                            ],
+                            economiEstimada: 'R$ 60,00 / mês'
+                        },
+                        {
+                            id: 'gipp_planilhas',
+                            nome: 'GIPP Planilhas (Planilhas Eletrônicas .xlsx / .gplan)',
+                            categoria: 'Financeiro & Contábil',
+                            icon: FileSpreadsheet,
+                            pitchVendas: 'Elimina planilhas soltas de Excel. Permite criar relatórios de dízimos, chamadas da EBD e inventários patrimoniais com barra de fórmulas e formatação automática em Moeda Real (R$).',
+                            recursos: [
+                                'Grade de células de alta performance com barra de fórmulas e funções matemáticas',
+                                'Formatação instantânea em Moeda Real (R$), Dólar ($) e Porcentagem (%)',
+                                'Abertura de arquivos .xlsx e salvamento local no formato .gplan',
+                                'Múltiplas abas e modelos prontos para finanças e departamento pessoal'
+                            ],
+                            economiEstimada: 'R$ 70,00 / mês'
+                        },
+                        {
+                            id: 'secretaria',
+                            nome: 'Secretaria Eclesiástica & Prontuário de Membros',
+                            categoria: 'Gestão & Secretaria',
+                            icon: Users,
+                            pitchVendas: 'Controle central de todos os membros, agregados e ovelhas da congregação. Histórico completo de batismos, transferências, casamentos e admissões com prontuário individual.',
+                            recursos: [
+                                'Cadastro completo com foto, dados familiares e histórico espiritual',
+                                'Emissão em 1 clique de Cartas de Mudança, Transferência e Certificados',
+                                'Gestão de Congregações, Filiais, Sede e Departamentos',
+                                'Relatório gerencial de crescimento de rol de membros e batismos'
+                            ],
+                            economiEstimada: 'R$ 150,00 / mês'
+                        },
+                        {
+                            id: 'estudio_carteirinhas',
+                            nome: 'Estúdio de Carteirinhas Digitais & Impressas',
+                            categoria: 'Gestão & Secretaria',
+                            icon: IdCard,
+                            pitchVendas: 'Gera e imprime credenciais em PVC ou papel foto em lote com foto, QR Code de validação de autenticidade contra falsificação e envio direto por WhatsApp para o membro.',
+                            recursos: [
+                                'Estúdio visual de edição de fundo, modelo e cargos institucionais',
+                                'Geração em lote com ajuste de fotos e margem para impressoras térmicas/PVC',
+                                'QR Code dinâmico para checagem em convenções (CGADB) e eventos',
+                                'Envio do Cartão Digital em PDF/Imagem para o celular do membro'
+                            ],
+                            economiEstimada: 'R$ 200,00 / mês'
+                        },
+                        {
+                            id: 'financeiro',
+                            nome: 'Gestão Financeira Completa (Livro Caixa & DRE)',
+                            categoria: 'Financeiro & Contábil',
+                            icon: DollarSign,
+                            pitchVendas: 'Transparência e rigor no controle de dízimos, ofertas, despesas fixas e variáveis. Emite o Livro Caixa oficial assinado, DRE Eclesiástico e Balancetes para prestação de contas.',
+                            recursos: [
+                                'Fluxo de Caixa diário unificado por filial, departamento ou centro de custo',
+                                'Anexação de cupons fiscais e comprovantes bancários por foto/PDF',
+                                'Geração automática de DRE (Demonstração do Resultado do Exercício)',
+                                'Gráficos interativos de entrada vs saída e saúde financeira'
+                            ],
+                            economiEstimada: 'R$ 250,00 / mês'
+                        },
+                        {
+                            id: 'dda_boletos',
+                            nome: 'DDA, Boletos Bancários & PIX Automático (Asaas)',
+                            categoria: 'Financeiro & Contábil',
+                            icon: QrCode,
+                            pitchVendas: 'Permite receber dízimos e ofertas por PIX com QR Code dinâmico e baixa automática imediata no caixa, além de gerar carnês de campanha de construção para os membros.',
+                            recursos: [
+                                'PIX estático e dinâmico com reconciliação em tempo real',
+                                'Emissão de boletos bancários registrados para carnes e ofertas de construção',
+                                'Conciliação de extratos bancários sem erros manuais',
+                                'Redução drástica do inadimplemento de contribuições mensais'
+                            ],
+                            economiEstimada: 'R$ 180,00 / mês'
+                        },
+                        {
+                            id: 'contabilidade_dp',
+                            nome: 'Contabilidade Eclesiástica & Departamento Pessoal (Prebendas)',
+                            categoria: 'Financeiro & Contábil',
+                            icon: Scale,
+                            pitchVendas: 'Segurança jurídica e tributária total. Emite recibos de prebenda pastoral, folha de pagamento, cálculo de INSS/IRRF retenção e balanço patrimonial alinhado ao Fisco.',
+                            recursos: [
+                                'Geração de recibos formais de prebenda e sustentamento pastoral',
+                                'Cálculo de obrigações tributárias e retenções patronais',
+                                'Exportação de balancetes contábeis para o contador da igreja',
+                                'Histórico de encargos sociais e arquivo de recibos assinados'
+                            ],
+                            economiEstimada: 'R$ 300,00 / mês'
+                        },
+                        {
+                            id: 'portal_tesoureiro',
+                            nome: 'Portal do Tesoureiro Express',
+                            categoria: 'Financeiro & Contábil',
+                            icon: Wallet,
+                            pitchVendas: 'Agilidade extrema no final dos cultos. Permite ao tesoureiro lançar dízimos de dezenas de membros em poucos minutos e imprimir recibos na impressora térmica.',
+                            recursos: [
+                                'Lançamento sequencial por número de rol ou nome do membro',
+                                'Impressão térmica de comprovantes instantâneos no balcão',
+                                'Fechamento de envelope de culto com conferência de cédulas',
+                                'Modo offline-first caso a internet oscile na tesouraria'
+                            ],
+                            economiEstimada: '2 horas poupadas por culto'
+                        },
+                        {
+                            id: 'ebd_escola',
+                            nome: 'Escola Bíblica Dominical (EBD) Digital',
+                            categoria: 'Ensino & Família',
+                            icon: GraduationCap,
+                            pitchVendas: 'Controle total da EBD: turmas por faixa etária, cadastro de alunos e professores, chamada rápida por QR Code no celular e gráficos de frequência e ofertas.',
+                            recursos: [
+                                'Chamada inteligente por QR Code do aluno ou lista ágil no celular do professor',
+                                'Controle de revistas vendidas, ofertas de classe e pontualidade',
+                                'Geração do boletim e relatórios trimestrais de assiduidade',
+                                'Geração automática de certificados de frequência de alunos'
+                            ],
+                            economiEstimada: 'R$ 120,00 / mês'
+                        },
+                        {
+                            id: 'teologia_ead',
+                            nome: 'Universidade Teológica EAD (CGADB / CPAD)',
+                            categoria: 'Ensino & Família',
+                            icon: BookOpen,
+                            pitchVendas: 'Plataforma EAD completa para cursos de Teologia (Básico, Médio e Avançado) fundamentada nos 24 Capítulos da Declaração de Fé das Assembleias de Deus (CGADB/CPAD).',
+                            recursos: [
+                                'Matriz curricular oficial com apostilas, aulas e notas de aula',
+                                'Questionários e Provas teológicas com correção automática e gabarito',
+                                'Emissão de Certificado Teológico com selo e histórico escolar',
+                                'Área do aluno intuitiva para estudo autônomo e formação de obreiros'
+                            ],
+                            economiEstimada: 'R$ 450,00 / mês'
+                        },
+                        {
+                            id: 'assistente_ai',
+                            nome: 'Assistente Pastoral Gemini AI (Inteligência Artificial)',
+                            categoria: 'Liderança & IA Pastoral',
+                            icon: Sparkles,
+                            pitchVendas: 'Assistente pastoral inteligente alimentado pela API do Google Gemini. Gera esboços de sermões exegéticos, roteiros de estudos de células e exegese bíblica em segundos.',
+                            recursos: [
+                                'Geração de sermões exegéticos por livro, capítulo ou tema pastoral',
+                                'Elaboração de estudos para Células e reuniões de liderança',
+                                'Sugestões de aconselhamento fundamentadas na hermenêutica bíblica',
+                                'Geração de quizzes de EBD e resumos teológicos'
+                            ],
+                            economiEstimada: 'R$ 120,00 / mês'
+                        },
+                        {
+                            id: 'estudio_midia',
+                            nome: 'Estúdio GIPP Mídia & Encartes',
+                            categoria: 'Liderança & IA Pastoral',
+                            icon: Image,
+                            pitchVendas: 'Criação de artes para cultos, banners para Instagram e avisos de reuniões. Ferramenta de design simplificada diretamente dentro do sistema sem depender do Canva.',
+                            recursos: [
+                                'Modelos prontos de Banners para Culto de Jovens, Ensino e Aniversários',
+                                'Geração automática de artes com foto do preletor e horário do culto',
+                                'Exportação em alta definição (PNG/JPG) para redes sociais',
+                                'Biblioteca de elementos visuais cristãos e paletas eclesiásticas'
+                            ],
+                            economiEstimada: 'R$ 100,00 / mês'
+                        },
+                        {
+                            id: 'portal_pastor',
+                            nome: 'Portal do Pastor (Painel Mobile Executivo)',
+                            categoria: 'Liderança & IA Pastoral',
+                            icon: UserCheck,
+                            pitchVendas: 'O Pastor Presidente acompanha a igreja inteira na palma da mão pelo celular: gráficos de dízimos do mês, aniversariantes do dia, solicitações de visita e frequência dos cultos.',
+                            recursos: [
+                                'Dashboard financeiro e de rol de membros simplificado para smartphone',
+                                'Lista de aniversariantes com botão direto para felicitação via WhatsApp',
+                                'Central de pedidos de oração, visitação pastoral e atendimento',
+                                'Aprovações e autorizações de despesas em tempo real'
+                            ],
+                            economiEstimada: 'Decisões ágeis na palma da mão'
+                        },
+                        {
+                            id: 'gipp_kids',
+                            nome: 'GIPP Kids & Check-In Infantil',
+                            categoria: 'Ensino & Família',
+                            icon: Baby,
+                            pitchVendas: 'Segurança absoluta para os pais durante os cultos. Imprime etiqueta térmica com QR Code para a criança e para o responsável, garantindo devolução segura.',
+                            recursos: [
+                                'Check-In ultrarrápido com impressão de etiqueta de lapela',
+                                'Alerta de alergias, necessidades especiais e dados dos pais',
+                                'QR Code exclusivo de segurança para retirada da criança',
+                                'Chamar os pais no painel do culto via mensagem discreta'
+                            ],
+                            economiEstimada: 'R$ 150,00 / mês'
+                        },
+                        {
+                            id: 'consolidacao_discipulado',
+                            nome: 'Consolidação de Novos Convertidos & Funil Pastoral',
+                            categoria: 'Liderança & IA Pastoral',
+                            icon: HeartHandshake,
+                            pitchVendas: 'Impede o vazamento pela "porta dos fundos". Acompanha cada novo decidido desde a oração no altar até o batismo em águas com tarefas e ligações agendadas.',
+                            recursos: [
+                                'Funil visual de novos convertidos (Atendidos -> Visitados -> Batizados)',
+                                'Atribuição automática de consolidador e discipulador por bairro',
+                                'Sugestões de tarefas pastoral pela IA com base no perfil',
+                                'Relatório de taxa de retenção e conversão de visitantes'
+                            ],
+                            economiEstimada: 'Retenção 40% maior de ovelhas'
+                        },
+                        {
+                            id: 'livraria_cantina',
+                            nome: 'Livraria & Cantina (PDV e Estoque)',
+                            categoria: 'Financeiro & Contábil',
+                            icon: Package,
+                            pitchVendas: 'Ponto de Venda (PDV) fácil para a venda de bíblias, livros, salgados e refrigerantes nos cultos e congressos. Controla o estoque e fecha o caixa com lucro apurado.',
+                            recursos: [
+                                'Frente de caixa rápida com leitor de código de barras',
+                                'Controle automático de estoque de livros, artigos e insumos',
+                                'Relatório de produtos mais vendidos e margem de lucro',
+                                'Integração de pagamentos em dinheiro, PIX ou cartão'
+                            ],
+                            economiEstimada: 'R$ 100,00 / mês'
+                        },
+                        {
+                            id: 'patrimonio_frota',
+                            nome: 'Patrimônio & Gestão de Frotas',
+                            categoria: 'Segurança & Infraestrutura',
+                            icon: Building2,
+                            pitchVendas: 'Controle de bens móveis e imóveis da igreja (som, instrumentos, cadeiras, ar-condicionado) e agendamento dos veículos e ônibus da congregação.',
+                            recursos: [
+                                'Tombamento com etiqueta de código de barras e cálculo de depreciação',
+                                'Localização de bens por sala, departamento ou congregação filial',
+                                'Controle de quilometragem, combustível e manutenção de ônibus e vans',
+                                'Relatório oficial de inventário patrimonial para fiscalização'
+                            ],
+                            economiEstimada: 'Zero extravios de bens'
+                        },
+                        {
+                            id: 'louvor_musica',
+                            nome: 'Música, Louvor & Escala de Cultos',
+                            categoria: 'Liderança & IA Pastoral',
+                            icon: Music,
+                            pitchVendas: 'Organiza a equipe de louvor e instrumentistas: escalas de cultos, repertório de hinos, cifras integradas e agendamento de ensaios com lembrete no WhatsApp.',
+                            recursos: [
+                                'Gestão de repertório com links de cifras e áudios de ensaio',
+                                'Escala de músicos e cantores por culto com notificação',
+                                'Troca de horários entre integrantes direto na plataforma',
+                                'Histórico de hinos tocados para evitar repetições'
+                            ],
+                            economiEstimada: 'Execução de culto harmoniosa'
+                        },
+                        {
+                            id: 'missoes',
+                            nome: 'Gestão de Missões & Agências Mantenedoras',
+                            categoria: 'Liderança & IA Pastoral',
+                            icon: Globe,
+                            pitchVendas: 'Acompanhamento do campo missionário: cadastro de missionários enviados, relatórios trimestrais do campo, carnês de mantenedores e prestação de contas.',
+                            recursos: [
+                                'Prontuário de missionários no Brasil e no exterior',
+                                'Controle de contribuições específicas para a oferta de missões',
+                                'Mural de cartas e notícias do campo para a congregação',
+                                'Envio de recursos e controle de transferência internacional'
+                            ],
+                            economiEstimada: 'Prestação de contas missionária'
+                        },
+                        {
+                            id: 'livro_atas',
+                            nome: 'Livro de Atas & Documentos Oficiais',
+                            categoria: 'Gestão & Secretaria',
+                            icon: FileSignature,
+                            pitchVendas: 'Digitalização e arquivamento perene de atas de assembleias ordinárias, extraordinárias e reuniões de obreiros com suporte a assinatura eletrônica.',
+                            recursos: [
+                                'Digitação estruturada com numeração perene e fecho regimental',
+                                'Assinatura digital e carimbo de validação criptográfica',
+                                'Busca inteligente de atas por ano, assunto ou diretoria',
+                                'Exportação do Livro de Atas encadernado em PDF'
+                            ],
+                            economiEstimada: 'Preservação de memória regimental'
+                        },
+                        {
+                            id: 'dual_sync_offline',
+                            nome: 'Arquitetura Dual-Sync (Modo Offline-First via IndexedDB)',
+                            categoria: 'Segurança & Infraestrutura',
+                            icon: Cloud,
+                            pitchVendas: 'Diferencial imbatível! O sistema funciona perfeitamente MESMO SE A INTERNET CAIR durante o culto na tesouraria ou na secretaria. Salva no computador e sincroniza na nuvem depois.',
+                            recursos: [
+                                'Persistência local no navegador/computador usando IndexedDB',
+                                'Sincronização assíncrona com Google Cloud / Firebase Firestore',
+                                'Garantia de zero perda de dados durante oscilações de sinal',
+                                'Abertura ultrarrápida do sistema sem travamentos'
+                            ],
+                            economiEstimada: 'Diferencial competitivo exclusivo'
+                        },
+                        {
+                            id: 'painel_saas_master',
+                            nome: 'Painel Master SaaS (Gestão de Licenças & Dispositivos)',
+                            categoria: 'Segurança & Infraestrutura',
+                            icon: ShieldCheck,
+                            pitchVendas: 'O revendedor ou administrador do sistema tem total controle sobre as igrejas clientes: gerenciamento de planos, cobranças, controle de aparelhos autorizados e log de auditoria.',
+                            recursos: [
+                                'Isolamento absoluto de dados entre congregações (Tenant Isolation)',
+                                'Controle remoto de computadores e celulares autorizados a acessar',
+                                'Simulador de receita recorrente (MRR) e faturamento',
+                                'Backup completo do banco de dados em formato JSON em 1 clique'
+                            ],
+                            economiEstimada: 'Escalabilidade de negócios SaaS'
+                        }
+                    ];
+
+                    const categoriasDisponiveis = [
+                        'Todas',
+                        'Gestão & Secretaria',
+                        'Financeiro & Contábil',
+                        'Ensino & Família',
+                        'Liderança & IA Pastoral',
+                        'Segurança & Infraestrutura'
+                    ];
+
+                    const modulosFiltrados = modulosComerciais.filter(m => {
+                        const matchCat = dossieCategoriaAtiva === 'Todas' || m.categoria === dossieCategoriaAtiva;
+                        const matchSearch = dossieBuscaModulo === '' || 
+                            m.nome.toLowerCase().includes(dossieBuscaModulo.toLowerCase()) || 
+                            m.pitchVendas.toLowerCase().includes(dossieBuscaModulo.toLowerCase()) ||
+                            m.recursos.some(r => r.toLowerCase().includes(dossieBuscaModulo.toLowerCase()));
+                        return matchCat && matchSearch;
+                    });
+
+                    // Copiar script de vendas para WhatsApp
+                    const handleCopySalesScript = () => {
+                        const script = `🚀 *APRESENTAÇÃO COMERCIAL - SISTEMA GIPP SAAS v9.5*
+
+Olá, Pr. ${igrejaData.pastor || 'Presidente'}! Tudo bem?
+
+Apresento o *GIPP (Gestão Integrada Pastoral e Patrimonial)*, o ERP mais completo do Brasil desenvolvido sob medida para a rotina das Assembleias de Deus e Igrejas Evangélicas.
+
+💡 *POR QUE O GIPP É A MELHOR ESCOLHA PARA A SUA IGREJA?*
+
+1️⃣ *TUDO EM UM ÚNICO LUGAR:* Substitui assinaturas separadas de programa de membros, emissor de boletos, planilhas, EAD teológico e programa de carteirinhas.
+2️⃣ *NÃO TRAVA SE A INTERNET CAIR:* Tecnologia *Dual-Sync Offline-First*. A tesouraria e secretaria continuam trabalhando normalmente mesmo sem sinal de internet.
+3️⃣ *CONFORMIDADE DOUTRINÁRIA & FISCAL:* Cursos Teológicos EAD alinhados à Declaração de Fé da CGADB/CPAD + Recibos Fiscais de Prebenda e Balancete Oficial.
+4️⃣ *INTELIGÊNCIA ARTIFICIAL PASTORAL:* Assistente Google Gemini AI para auxílio em sermões exegéticos, esboços e pesquisas teológicas.
+5️⃣ *SEGURANÇA KIDS:* Impressão de pulseiras com QR Code para proteção das crianças nos cultos.
+
+📊 *ECONOMIA ESTIMADA:*
+Sua igreja economiza mais de *R$ 800,00/mês* ao cancelar sistemas picados e utilizar a plataforma unificada GIPP.
+
+Agende uma demonstração gratuita agora mesmo!
+🌐 ${localStorage.getItem('divulgaUrlSistema') || 'https://gipp.com.br'}
+📱 Contato: ${localStorage.getItem('divulgaWhatsappContato') || '(11) 98765-4321'}`;
+
+                        copyToClipboard(script);
+                        addToast("Script Comercial de Vendas copiado com sucesso! Cole no WhatsApp.", "success");
+                    };
+
+                    // Gerar PDF do Dossiê Comercial de Vendas
+                    const handleExportSalesPDF = () => {
+                        const pdf = new jsPDF('p', 'mm', 'a4');
+                        
+                        // Border Outer
+                        pdf.setDrawColor(15, 23, 42);
+                        pdf.setLineWidth(1);
+                        pdf.rect(5, 5, 200, 287);
+                        
+                        pdf.setDrawColor(226, 232, 240);
+                        pdf.setLineWidth(0.2);
+                        pdf.rect(7, 7, 196, 283);
+
+                        // Header Header Banner
+                        pdf.setFillColor(15, 23, 42); // slate-900
+                        pdf.rect(7, 7, 196, 30, 'F');
+
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(13);
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.text("DOSSIÊ COMERCIAL DE VENDAS & AUDITORIA DE RECURSOS SAAS", 105, 17, { align: 'center' });
+                        
+                        pdf.setFontSize(9);
+                        pdf.setTextColor(52, 211, 153); // emerald-400
+                        pdf.text("SISTEMA GIPP v9.5 • MAPEAMENTO COMPLETO DE MÓDULOS E PROPOSTA DE VALOR", 105, 24, { align: 'center' });
+                        
+                        let y = 45;
+
+                        // Executive Summary Box
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(10);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.text("1. VISÃO GERAL EXECUTIVA DE VENDAS & ARGUMENTAÇÃO COMERCIAL", 15, y);
+                        y += 6;
+
+                        pdf.setFont("helvetica", "normal");
+                        pdf.setFontSize(8.5);
+                        pdf.setTextColor(51, 65, 85);
+
+                        const pitchText = pdf.splitTextToSize(
+                            "O Sistema GIPP consiste em um ecossistema ERP SaaS eclesiástico unificado de alta performance. Desenvolvido para resolver definitivamente as dores de gestão das igrejas locais e convenções, o GIPP elimina a fragmentação de ferramentas (substituindo softwares de membros, emissor de boletos, Google Workspace, plataformas EAD e geradores de artes por uma única assinatura inteligente).",
+                            172
+                        );
+                        pdf.text(pitchText, 18, y);
+                        y += (pitchText.length * 4) + 6;
+
+                        // Diferenciais Tecnológicos
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(10);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.text("2. PRINCIPAIS DIFERENCIAIS COMPETITIVOS (ARGUMENTOS DE FECHAMENTO)", 15, y);
+                        y += 6;
+
+                        const diferenciais = [
+                            "• Arquitetura Dual-Sync Offline-First: Funciona normalmente na tesouraria/secretaria mesmo se a internet oscilar.",
+                            "• Fidelidade Doutrinária CGADB/CPAD: Conteúdo teológico EAD validado nos 24 Capítulos da Declaração de Fé.",
+                            "• IA Pastoral Integrada: Google Gemini AI embutido para auxílio na confecção de sermões e exegese.",
+                            "• Suíte de Escritório Nativa: GIPP DOCs e GIPP Planilhas integrados com suporte aos formatos .docx e .xlsx.",
+                            "• Segurança Infantil GIPP Kids: Check-In de crianças com impressão de etiqueta térmica e QR Code."
+                        ];
+
+                        diferenciais.forEach(diff => {
+                            pdf.setFont("helvetica", "normal");
+                            pdf.setFontSize(8.5);
+                            pdf.setTextColor(51, 65, 85);
+                            pdf.text(diff, 18, y);
+                            y += 5;
+                        });
+
+                        y += 4;
+
+                        // Tabela do Mapeamento de Módulos (Primeiros 10 no PDF)
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(10);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.text("3. RESUMO DO MAPEAMENTO DE MÓDULOS E IMPACTO FINANCEIRO", 15, y);
+                        y += 6;
+
+                        // Header da Tabela
+                        pdf.setFillColor(241, 245, 249);
+                        pdf.rect(15, y, 172, 7, 'F');
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(8);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.text("Módulo / Funcionalidade", 18, y + 5);
+                        pdf.text("Categoria", 95, y + 5);
+                        pdf.text("Economia Substituída", 145, y + 5);
+                        y += 8;
+
+                        modulosComerciais.slice(0, 12).forEach((mod) => {
+                            pdf.setFont("helvetica", "normal");
+                            pdf.setFontSize(7.5);
+                            pdf.setTextColor(30, 41, 59);
+                            pdf.text(mod.nome.substring(0, 42), 18, y);
+                            pdf.text(mod.categoria, 95, y);
+                            pdf.text(mod.economiEstimada, 145, y);
+                            pdf.setDrawColor(226, 232, 240);
+                            pdf.line(15, y + 1.5, 187, y + 1.5);
+                            y += 5.5;
+                        });
+
+                        y += 6;
+                        // Tabela de Economia Comparativa
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(10);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.text("4. DEMONSTRATIVO DE RETORNO SOBRE O INVESTIMENTO (ROI DA IGREJA)", 15, y);
+                        y += 6;
+
+                        pdf.setFont("helvetica", "normal");
+                        pdf.setFontSize(8.5);
+                        pdf.setTextColor(51, 65, 85);
+                        pdf.text("• Custo mensal somado de softwares contratados separadamente: R$ 1.040,00 / mês", 18, y);
+                        y += 5;
+                        pdf.text("• Assinatura Recomendada do Sistema GIPP SaaS Tudo-em-Um: Apenas R$ 199,00 / mês", 18, y);
+                        y += 5;
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setTextColor(16, 185, 129); // emerald
+                        pdf.text("• ECONOMIA LÍQUIDA PARA A IGREJA: R$ 841,00 / MÊS (MAIS DE 80% DE ECONOMIA DIRETAMENTE NO CAIXA)", 18, y);
+                        y += 12;
+
+                        // Footer
+                        pdf.setFont("helvetica", "normal");
+                        pdf.setFontSize(7.5);
+                        pdf.setTextColor(100, 116, 139);
+                        pdf.text("Relatório oficial de auditagem e vendas gerado pelo Painel SaaS Master do Sistema GIPP.", 15, 270);
+                        pdf.text("Contato Comercial: " + (localStorage.getItem('divulgaEmailSaaS') || 'contato@gipp.com.br') + " • URL: " + (localStorage.getItem('divulgaUrlSistema') || 'https://gipp.com.br'), 15, 274);
+
+                        pdf.save(`DOSSIE_VENDAS_SAAS_GIPP_${Date.now()}.pdf`);
+                        addToast("Dossiê Comercial de Vendas em PDF exportado com sucesso!", "success");
+                    };
+
+                    return (
+                        <div className="space-y-8 animate-fadeIn">
+                            
+                            {/* Top Commercial Banner */}
+                            <div className="bg-slate-900 text-white rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+                                <div className="absolute -right-12 -bottom-12 text-emerald-500/10 pointer-events-none transform scale-150">
+                                    <FileBarChart size={240} />
+                                </div>
+                                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                    <div className="space-y-3">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                                <Sparkles size={12} /> VISÃO DE VENDEDOR DE SOFTWARE
+                                            </span>
+                                            <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                                42 MÓDULOS 100% ATIVOS & AUDITADOS
+                                            </span>
+                                        </div>
+                                        <h3 className="text-3xl font-black uppercase tracking-tight font-[Outfit] text-white">
+                                            Dossiê Comercial & Mapeamento de Recursos
+                                        </h3>
+                                        <p className="text-slate-300 text-xs font-medium max-w-3xl leading-relaxed">
+                                            Análise profunda de todas as funcionalidades do sistema sob a ótica de vendas SaaS, com argumentos de fechamento, diferenciais imbatíveis em relação a concorrentes e calculadores de ROI para apresentação a pastores e diretorias.
+                                        </p>
+                                    </div>
+
+                                    <div className="shrink-0 flex flex-col sm:flex-row gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleCopySalesScript}
+                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-5 py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Copy size={16} /> Copiar Script Comercial
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleExportSalesPDF}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Printer size={16} /> Exportar Dossiê (PDF)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sales Highlights Metric Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                                    <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600 border border-emerald-100">
+                                        <DollarSign size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">MRR Sugerido por Igreja</p>
+                                        <h4 className="text-lg font-black text-slate-800">R$ 149 - R$ 490</h4>
+                                        <p className="text-[10px] text-emerald-600 font-bold">Assinatura Mensal Recorrente</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                                    <div className="p-4 bg-blue-50 rounded-2xl text-blue-600 border border-blue-100">
+                                        <TrendingDown size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Economia para a Igreja</p>
+                                        <h4 className="text-lg font-black text-slate-800">R$ 840,00 / mês</h4>
+                                        <p className="text-[10px] text-blue-600 font-bold">Cancelando Ferramentas Soltas</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                                    <div className="p-4 bg-purple-50 rounded-2xl text-purple-600 border border-purple-100">
+                                        <Cloud size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Diferencial Exclusivo</p>
+                                        <h4 className="text-lg font-black text-slate-800">Dual-Sync Offline</h4>
+                                        <p className="text-[10px] text-purple-600 font-bold">Ininterrupto com ou sem Internet</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                                    <div className="p-4 bg-amber-50 rounded-2xl text-amber-600 border border-amber-100">
+                                        <Award size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Teologia & Doutrina</p>
+                                        <h4 className="text-lg font-black text-slate-800">24 Caps CGADB</h4>
+                                        <p className="text-[10px] text-amber-600 font-bold">100% Fiel à Declaração de Fé</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ROI & Price Comparison Table */}
+                            <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-8 rounded-[2.5rem] border border-slate-800 shadow-xl space-y-6">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full uppercase tracking-widest">
+                                            ARGUMENTO FINANCEIRO DE FECHAMENTO
+                                        </span>
+                                        <h4 className="text-2xl font-black uppercase tracking-tight font-[Outfit] text-white mt-2">
+                                            Calculadora de Economia para a Igreja (ROI)
+                                        </h4>
+                                        <p className="text-slate-300 text-xs font-medium">
+                                            Mostre ao Pastor Presidente o quanto a igreja economiza ao unificar a gestão no GIPP SaaS.
+                                        </p>
+                                    </div>
+                                    <div className="text-right bg-white/10 px-6 py-4 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] text-slate-300 uppercase font-extrabold block">Economia Líquida Anual</span>
+                                        <span className="text-2xl font-black text-emerald-400">R$ 10.092,00 / ano</span>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-white/10 text-slate-400 font-black uppercase tracking-wider text-[11px]">
+                                                <th className="py-3 px-4">Ferramenta Solta Terceirizada</th>
+                                                <th className="py-3 px-4">Custo Médio Separado</th>
+                                                <th className="py-3 px-4">Substituído no GIPP SaaS pelo Módulo</th>
+                                                <th className="py-3 px-4 text-right">Status no GIPP</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 font-medium text-slate-200">
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Google Workspace / Word + Excel</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 130,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">GIPP DOCs + GIPP Planilhas</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Software de Membros Eclesiástico</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 150,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">Secretaria Integrada & Prontuário</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Gateway de Boletos e PIX Terceirizado</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 120,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">DDA & Cobranças via Asaas</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Plataforma EAD Teológica para Cursos</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 350,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">Universidade Teológica EAD (CGADB)</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Inteligência Artificial (ChatGPT Plus)</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 120,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">Assistente Pastoral Google Gemini AI</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Canva Pro / Ferramenta de Design de Artes</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 100,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">Estúdio GIPP Mídia & Banners</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white">Sistema de Segurança Infantil Kids</td>
+                                                <td className="py-3 px-4 text-rose-300 font-bold">R$ 110,00 / mês</td>
+                                                <td className="py-3 px-4 text-emerald-300 font-bold">GIPP Kids & Check-In por QR Code</td>
+                                                <td className="py-3 px-4 text-right"><span className="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-black">INCLUSO</span></td>
+                                            </tr>
+                                            <tr className="bg-white/10 font-extrabold text-sm border-t-2 border-emerald-400">
+                                                <td className="py-4 px-4 text-white">CUSTO TOTAL SEPARADO: R$ 1.090,00/mês</td>
+                                                <td className="py-4 px-4 text-emerald-400" colSpan={2}>PLANO GIPP TUDO-EM-UM: Apenas R$ 199,00/mês</td>
+                                                <td className="py-4 px-4 text-right text-emerald-300">ECONOMIA DE 82%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Search and Category Filter Controls */}
+                            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div>
+                                        <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight font-[Outfit] flex items-center gap-2">
+                                            <Layers className="text-emerald-600" size={20} /> Mapeamento Analítico dos Módulos ({modulosFiltrados.length})
+                                        </h4>
+                                        <p className="text-xs text-slate-500 font-medium">Filtre por categoria ou pesquise o nome da funcionalidade para ver o pitch de vendas correspondente.</p>
+                                    </div>
+
+                                    <div className="relative w-full md:w-80">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                                        <input 
+                                            type="text"
+                                            value={dossieBuscaModulo}
+                                            onChange={(e) => setDossieBuscaModulo(e.target.value)}
+                                            placeholder="Buscar módulo ou funcionalidade..."
+                                            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Category Pills */}
+                                <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                                    {categoriasDisponiveis.map(cat => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => setDossieCategoriaAtiva(cat)}
+                                            className={`px-4 py-2 rounded-2xl font-black text-xs transition-all ${
+                                                dossieCategoriaAtiva === cat 
+                                                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' 
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                                            }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Modules Grid with Sales Pitch */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {modulosFiltrados.map((mod) => {
+                                    const IconComponent = mod.icon;
+                                    return (
+                                        <div 
+                                            key={mod.id}
+                                            className="bg-white p-6 rounded-[2rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 group hover:border-emerald-300"
+                                        >
+                                            <div className="space-y-3">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                                            <IconComponent size={22} />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="font-black text-slate-800 text-sm leading-snug">{mod.nome}</h5>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{mod.categoria}</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
+                                                        {mod.economiEstimada}
+                                                    </span>
+                                                </div>
+
+                                                {/* Pitch de Vendas Box */}
+                                                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60 text-xs text-slate-700 space-y-1">
+                                                    <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider block">💬 Argumento de Venda para o Pastor / Tesoureiro:</span>
+                                                    <p className="font-semibold leading-relaxed text-slate-800">{mod.pitchVendas}</p>
+                                                </div>
+
+                                                {/* Key Highlights Bullet Points */}
+                                                <div className="space-y-1.5 pt-1">
+                                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Recursos de Alto Impacto:</span>
+                                                    <ul className="space-y-1 text-xs text-slate-600 font-medium">
+                                                        {mod.recursos.map((rec, i) => (
+                                                            <li key={i} className="flex items-start gap-1.5">
+                                                                <Check size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                                                                <span>{rec}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                                                <span className="flex items-center gap-1 text-emerald-600">
+                                                    <ShieldCheck size={14} /> 100% Funcional no Sistema
+                                                </span>
+                                                <span className="text-indigo-600 group-hover:underline cursor-pointer" onClick={handleCopySalesScript}>
+                                                    Usar em Proposta →
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Sales Objections & Closing Guide */}
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                                <div>
+                                    <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight font-[Outfit] flex items-center gap-2">
+                                        <MessageSquare className="text-indigo-600" size={20} /> Guia de Quebra de Objeções Reais do Cliente
+                                    </h4>
+                                    <p className="text-xs text-slate-500 font-medium">Como responder às principais dúvidas de pastores e tesoureiros durante o fechamento comercial.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
+                                        <h5 className="font-bold text-xs text-rose-600 flex items-center gap-1.5">
+                                            ❌ Objeção: "Já usamos planilhas de Excel gratuitas para o controle."
+                                        </h5>
+                                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                            <b>Resposta GIPP:</b> "Compreendo, Pastor! O problema do Excel é que uma célula apagada acidentalmente destrói o histórico de dízimos. Além disso, o Excel não emite recibos térmicos no balcão, não faz chamado por QR Code na EBD e não tem Inteligência Artificial Pastoral. No GIPP o senhor tem inclusive um editor estilo Excel com fórmulas, mas com total segurança de banco de dados."
+                                        </p>
+                                    </div>
+
+                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
+                                        <h5 className="font-bold text-xs text-rose-600 flex items-center gap-1.5">
+                                            ❌ Objeção: "A internet da nossa igreja cai direto nos dias de culto."
+                                        </h5>
+                                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                            <b>Resposta GIPP:</b> "Essa é a maior vantagem do GIPP! Ele foi construído com tecnologia <i>Dual-Sync Offline-First</i>. O tesoureiro lança dízimos e o secretário emite carteirinhas mesmo se o cabo de internet for cortado. O sistema grava no computador local e sincroniza na nuvem assim que a internet voltar."
+                                        </p>
+                                    </div>
+
+                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
+                                        <h5 className="font-bold text-xs text-rose-600 flex items-center gap-1.5">
+                                            ❌ Objeção: "A diretoria da nossa igreja é idosa e não entende de tecnologia."
+                                        </h5>
+                                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                            <b>Resposta GIPP:</b> "Pensamos exatamente nisso ao desenhar a interface! Os botões do GIPP são grandes, coloridos e contêm ícones intuitivos. O Portal do Tesoureiro Express permite lançar a oferta digitando apenas o número de rol do membro e o valor. Em 5 minutos qualquer obreiro aprende a mexer."
+                                        </p>
+                                    </div>
+
+                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
+                                        <h5 className="font-bold text-xs text-rose-600 flex items-center gap-1.5">
+                                            ❌ Objeção: "Temos receio quanto à segurança e vazamento de dízimos."
+                                        </h5>
+                                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                            <b>Resposta GIPP:</b> "O GIPP utiliza os servidores do Google Cloud com criptografia SSL idêntica à dos grandes bancos. Além disso, cada igreja possui um ambiente isolado (Tenant Isolation). O pastor tem controle total sobre quem da tesouraria pode visualizar relatórios financeiros."
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     );
                 })()}

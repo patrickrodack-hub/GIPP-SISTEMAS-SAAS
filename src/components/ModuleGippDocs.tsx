@@ -48,6 +48,18 @@ function TextEditor({ initialFile }: TextEditorProps) {
     const [docStats, setDocStats] = useState({ words: 0, chars: 0, paragraphs: 0, readingTime: 0 });
     const [editorKey, setEditorKey] = useState(0);
 
+    const [pageCount, setPageCount] = useState(1);
+    const [activeMenu, setActiveMenu] = useState<'arquivo' | 'editar' | 'exibir' | 'inserir' | 'formatar' | 'modelos' | null>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if ((e.target as HTMLElement).closest('.gipp-docs-menu-container')) return;
+            setActiveMenu(null);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const updateDocumentStats = useCallback(() => {
         if (!editorRef.current) return;
         const text = editorRef.current.innerText || '';
@@ -56,13 +68,19 @@ function TextEditor({ initialFile }: TextEditorProps) {
         const words = cleanText ? cleanText.split(/\s+/).filter(Boolean).length : 0;
         const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0).length || (cleanText ? 1 : 0);
         const readingTime = Math.ceil(words / 200); // 200 PPM
+
+        const scrollH = editorRef.current.scrollHeight || editorRef.current.clientHeight || 1000;
+        const singlePageHeight = pageOrientation === 'portrait' ? 1000 : 700;
+        const pages = Math.max(1, Math.ceil(scrollH / singlePageHeight));
+        setPageCount(prev => (prev === pages ? prev : pages));
+
         setDocStats(prev => {
             if (prev.words === words && prev.chars === chars && prev.paragraphs === paragraphs && prev.readingTime === readingTime) {
                 return prev;
             }
             return { words, chars, paragraphs, readingTime };
         });
-    }, []);
+    }, [pageOrientation]);
 
     const DOCS_STORAGE_KEY = 'gippDocsWindowState';
 
@@ -184,11 +202,20 @@ function TextEditor({ initialFile }: TextEditorProps) {
     );
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        if (editorRef.current) {
+            if (editorRef.current.innerHTML !== editorHtml) {
+                editorRef.current.innerHTML = editorHtml;
+            }
             updateDocumentStats();
-        }, 50);
-        return () => clearTimeout(timer);
-    }, [editorHtml, updateDocumentStats]);
+        }
+    }, [editorKey, editorHtml]);
+
+    const handleEditorInput = () => {
+        if (editorRef.current) {
+            setEditorHtml(editorRef.current.innerHTML);
+        }
+        updateDocumentStats();
+    };
 
     const { addToast, osTheme, setView, globalOpenFile, setGlobalOpenFile } = useContext(ChurchContext);
 
@@ -202,6 +229,10 @@ function TextEditor({ initialFile }: TextEditorProps) {
             document.execCommand(cmd, false, value);
         } else {
             document.execCommand(cmd);
+        }
+        if (editorRef.current) {
+            setEditorHtml(editorRef.current.innerHTML);
+            updateDocumentStats();
         }
         editorRef.current?.focus();
     };
@@ -811,15 +842,292 @@ function TextEditor({ initialFile }: TextEditorProps) {
                             <button className="p-1.5 hover:bg-slate-100 rounded-full transition-colors tooltip-trigger" title="Status do documento"><FileCheck size={18} /></button>
                         </div>
                     </div>
-                    {/* Menus */}
-                    <div className="flex space-x-1 mt-0.5 text-[13px] text-slate-600">
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={triggerFileOpen}>Arquivo</button>
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => formatDoc('undo')}>Editar</button>
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => setZoom(100)}>Ver</button>
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors">Inserir</button>
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors">Formatar</button>
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={() => setShowMargins(!showMargins)}>Margens</button>
-                        <button className="px-2 py-1 hover:bg-slate-100 rounded transition-colors" onClick={exportToDocx}>Exportar DOCX</button>
+                    {/* Menus Dropdown (Estilo Windows/Office) */}
+                    <div className="flex space-x-1 mt-0.5 text-[13px] text-slate-700 gipp-docs-menu-container relative z-[100]">
+                        {/* ARQUIVO */}
+                        <div className="relative">
+                            <button 
+                                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'arquivo' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                                onClick={() => setActiveMenu(activeMenu === 'arquivo' ? null : 'arquivo')}
+                                onMouseEnter={() => activeMenu && setActiveMenu('arquivo')}
+                            >
+                                Arquivo
+                            </button>
+                            {activeMenu === 'arquivo' && (
+                                <div className="absolute top-full left-0 mt-1 w-60 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="py-1">
+                                        <button onClick={() => { setEditorHtml('<p><br/></p>'); setFileName('Novo Documento'); setEditorKey(k => k + 1); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><FileText size={15} className="text-blue-600" /> Novo Documento</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+N</span>
+                                        </button>
+                                        <button onClick={() => { triggerFileOpen(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><FolderOpen size={15} className="text-amber-600" /> Abrir Arquivo...</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+O</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { handleSaveFile(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Save size={15} className="text-emerald-600" /> Salvar (.GDOC)</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+S</span>
+                                        </button>
+                                        <button onClick={() => { exportToDocx(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><FileBox size={15} className="text-indigo-600" /> Exportar para Word (.DOCX)</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { handlePrint(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Printer size={15} className="text-slate-600" /> Imprimir Documento...</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+P</span>
+                                        </button>
+                                        <button onClick={() => { setIsFullscreen(!isFullscreen); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Maximize size={15} className="text-slate-600" /> Visualizar / Tela Cheia</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">F11</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { setView('dashboard'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-rose-50 hover:text-rose-700 flex items-center justify-between transition-colors text-rose-600 font-medium">
+                                            <span className="flex items-center gap-2.5"><X size={15} /> Fechar / Sair</span>
+                                            <span className="text-[10px] text-rose-400 font-mono">Alt+F4</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* EDITAR */}
+                        <div className="relative">
+                            <button 
+                                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'editar' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                                onClick={() => setActiveMenu(activeMenu === 'editar' ? null : 'editar')}
+                                onMouseEnter={() => activeMenu && setActiveMenu('editar')}
+                            >
+                                Editar
+                            </button>
+                            {activeMenu === 'editar' && (
+                                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="py-1">
+                                        <button onClick={() => { formatDoc('undo'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Undo size={15} /> Desfazer</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+Z</span>
+                                        </button>
+                                        <button onClick={() => { formatDoc('redo'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Redo size={15} /> Refazer</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+Y</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { formatDoc('cut'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Scissors size={15} /> Recortar</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+X</span>
+                                        </button>
+                                        <button onClick={() => { formatDoc('copy'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Copy size={15} /> Copiar</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+C</span>
+                                        </button>
+                                        <button onClick={() => { formatDoc('selectAll'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Type size={15} /> Selecionar Tudo</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+A</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { formatDoc('removeFormat'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Highlighter size={15} className="text-amber-600" /> Limpar Formatação</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* EXIBIR / VER */}
+                        <div className="relative">
+                            <button 
+                                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'exibir' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                                onClick={() => setActiveMenu(activeMenu === 'exibir' ? null : 'exibir')}
+                                onMouseEnter={() => activeMenu && setActiveMenu('exibir')}
+                            >
+                                Exibir
+                            </button>
+                            {activeMenu === 'exibir' && (
+                                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="py-1">
+                                        <button onClick={() => { handleZoomIn(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Plus size={15} /> Aumentar Zoom</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">+10%</span>
+                                        </button>
+                                        <button onClick={() => { handleZoomOut(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Minus size={15} /> Diminuir Zoom</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">-10%</span>
+                                        </button>
+                                        <button onClick={() => { setZoom(100); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Maximize size={15} /> Zoom Normal (100%)</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { setPageOrientation(o => o === 'portrait' ? 'landscape' : 'portrait'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><FileText size={15} /> Orientação: {pageOrientation === 'portrait' ? 'Retrato' : 'Paisagem'}</span>
+                                        </button>
+                                        <button onClick={() => { setShowMargins(!showMargins); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Settings size={15} /> Guia de Margens ({showMargins ? 'Ativa' : 'Oculta'})</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { setIsFullscreen(!isFullscreen); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors">
+                                            <span className="flex items-center gap-2.5"><Maximize size={15} /> {isFullscreen ? 'Sair da Tela Cheia' : 'Modo Tela Cheia'}</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">F11</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* INSERIR */}
+                        <div className="relative">
+                            <button 
+                                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'inserir' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                                onClick={() => setActiveMenu(activeMenu === 'inserir' ? null : 'inserir')}
+                                onMouseEnter={() => activeMenu && setActiveMenu('inserir')}
+                            >
+                                Inserir
+                            </button>
+                            {activeMenu === 'inserir' && (
+                                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="py-1">
+                                        <button onClick={() => { insertOfficialHeader(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-amber-50 hover:text-amber-800 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>🏛️ Timbre Oficial da Igreja</span>
+                                        </button>
+                                        <button onClick={() => { insertSignatureBlock(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-indigo-50 hover:text-indigo-800 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>✍️ Bloco de Assinatura Pastoral</span>
+                                        </button>
+                                        <button onClick={() => { insertTable(3, 3); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-800 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>▦ Tabela (3x3)</span>
+                                        </button>
+                                        <button onClick={() => { insertCallout(); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>💡 Caixa de Destaque / Nota</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => {
+                                            const url = prompt('Insira a URL da imagem:');
+                                            if (url) formatDoc('insertImage', url);
+                                            setActiveMenu(null);
+                                        }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <ImageIcon size={15} className="text-slate-600" /> Imagem da Web...
+                                        </button>
+                                        <button onClick={() => {
+                                            const url = prompt('Insira a URL do link:');
+                                            if (url) formatDoc('createLink', url);
+                                            setActiveMenu(null);
+                                        }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <Link size={15} className="text-slate-600" /> Link / Hiperlink...
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <div className="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Variáveis Dinâmicas</div>
+                                        <button onClick={() => { insertVariable('{NOME_MEMBRO}'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between font-mono text-[11px] transition-colors">
+                                            <span>{'{NOME_MEMBRO}'}</span>
+                                        </button>
+                                        <button onClick={() => { insertVariable('{NOME_IGREJA}'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between font-mono text-[11px] transition-colors">
+                                            <span>{'{NOME_IGREJA}'}</span>
+                                        </button>
+                                        <button onClick={() => { insertVariable('{NOME_PASTOR}'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between font-mono text-[11px] transition-colors">
+                                            <span>{'{NOME_PASTOR}'}</span>
+                                        </button>
+                                        <button onClick={() => { insertVariable('{DATA_ATUAL}'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between font-mono text-[11px] transition-colors">
+                                            <span>{'{DATA_ATUAL}'}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* FORMATAR */}
+                        <div className="relative">
+                            <button 
+                                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'formatar' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                                onClick={() => setActiveMenu(activeMenu === 'formatar' ? null : 'formatar')}
+                                onMouseEnter={() => activeMenu && setActiveMenu('formatar')}
+                            >
+                                Formatar
+                            </button>
+                            {activeMenu === 'formatar' && (
+                                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="py-1">
+                                        <button onClick={() => { formatDoc('bold'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors font-bold">
+                                            <span className="flex items-center gap-2.5"><Bold size={15} /> Negrito</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+B</span>
+                                        </button>
+                                        <button onClick={() => { formatDoc('italic'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors italic">
+                                            <span className="flex items-center gap-2.5"><Italic size={15} /> Itálico</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+I</span>
+                                        </button>
+                                        <button onClick={() => { formatDoc('underline'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors underline">
+                                            <span className="flex items-center gap-2.5"><Underline size={15} /> Sublinhado</span>
+                                            <span className="text-[10px] text-slate-400 font-mono">Ctrl+U</span>
+                                        </button>
+                                        <button onClick={() => { formatDoc('strikeThrough'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition-colors line-through">
+                                            <span className="flex items-center gap-2.5"><Strikethrough size={15} /> Tachado</span>
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { formatDoc('justifyLeft'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <AlignLeft size={15} /> Alinhar à Esquerda
+                                        </button>
+                                        <button onClick={() => { formatDoc('justifyCenter'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <AlignCenter size={15} /> Centralizar
+                                        </button>
+                                        <button onClick={() => { formatDoc('justifyRight'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <AlignRight size={15} /> Alinhar à Direita
+                                        </button>
+                                        <button onClick={() => { formatDoc('justifyFull'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <AlignJustify size={15} /> Justificar
+                                        </button>
+                                    </div>
+                                    <div className="py-1">
+                                        <button onClick={() => { formatDoc('insertUnorderedList'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <List size={15} /> Lista com Marcadores
+                                        </button>
+                                        <button onClick={() => { formatDoc('insertOrderedList'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors">
+                                            <ListOrdered size={15} /> Lista Numerada
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* MODELOS */}
+                        <div className="relative">
+                            <button 
+                                className={`px-2.5 py-1 rounded transition-colors ${activeMenu === 'modelos' ? 'bg-slate-200 font-semibold text-slate-900' : 'hover:bg-slate-100'}`}
+                                onClick={() => setActiveMenu(activeMenu === 'modelos' ? null : 'modelos')}
+                                onMouseEnter={() => activeMenu && setActiveMenu('modelos')}
+                            >
+                                Modelos
+                            </button>
+                            {activeMenu === 'modelos' && (
+                                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[200] text-xs font-sans text-slate-700 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="py-1">
+                                        <button onClick={() => { applyDocumentTemplate('declaracao'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>📋 Declaração de Membresia</span>
+                                        </button>
+                                        <button onClick={() => { loadDocTemplate('carta_recomendacao'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>✉️ Carta de Recomendação</span>
+                                        </button>
+                                        <button onClick={() => { loadDocTemplate('oficio_pastoral'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>📜 Ofício Pastoral Oficial</span>
+                                        </button>
+                                        <button onClick={() => { loadDocTemplate('ata_reuniao'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>📝 Ata de Reunião de Diretoria</span>
+                                        </button>
+                                        <button onClick={() => { loadDocTemplate('certificado_batismo'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>🕊️ Certificado de Batismo</span>
+                                        </button>
+                                        <button onClick={() => { loadDocTemplate('regimento_interno'); setActiveMenu(null); }} className="w-full text-left px-3.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors font-medium">
+                                            <span>📖 Regimento Interno</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center space-x-2 shrink-0 ml-4">
@@ -1059,16 +1367,32 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     }}
                 >
                     <div 
-                        key={editorKey}
                         ref={editorRef}
                         contentEditable
                         suppressContentEditableWarning
-                        onInput={updateDocumentStats}
-                        onKeyUp={updateDocumentStats}
-                        className="outline-none min-h-full font-serif text-[11pt] leading-normal"
+                        onInput={handleEditorInput}
+                        onKeyUp={handleEditorInput}
+                        className="outline-none min-h-[1000px] font-serif text-[11pt] leading-normal relative"
                         style={{ fontFamily: 'Arial, sans-serif' }}
-                        dangerouslySetInnerHTML={{ __html: editorHtml }}
                     />
+
+                    {/* Dynamic Page Break Indicators */}
+                    {Array.from({ length: pageCount }).map((_, index) => {
+                        if (index === 0) return null;
+                        const singlePageHeight = pageOrientation === 'portrait' ? 1000 : 700;
+                        const pageTop = index * singlePageHeight;
+                        return (
+                            <div 
+                                key={index}
+                                className="absolute left-0 right-0 border-b-2 border-dashed border-blue-400 bg-blue-50/90 py-1 text-center font-sans text-[10px] font-bold text-blue-700 pointer-events-none select-none z-20 shadow-sm flex items-center justify-between px-6"
+                                style={{ top: `${pageTop}px` }}
+                            >
+                                <span>✂️ Quebra de Página (Margem Superior: {margins.top}mm)</span>
+                                <span className="bg-blue-600 text-white px-3 py-0.5 rounded-full text-[10px]">Página {index + 1} de {pageCount}</span>
+                                <span>Margem Inferior: {margins.bottom}mm ✂️</span>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Margins Sidebar */}
@@ -1146,7 +1470,7 @@ function TextEditor({ initialFile }: TextEditorProps) {
                 <div className="flex items-center gap-3">
                     <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded text-[11px]">GIPP DOCs v1.0</span>
                     <span className="hidden sm:inline border-l border-slate-300 pl-3">
-                        📝 <strong>{docStats.words}</strong> palavras &nbsp;|&nbsp; <strong>{docStats.chars}</strong> caracteres &nbsp;|&nbsp; <strong>{docStats.paragraphs}</strong> parágrafos
+                        📄 <strong>Página 1 de {pageCount}</strong> &nbsp;|&nbsp; 📝 <strong>{docStats.words}</strong> palavras &nbsp;|&nbsp; <strong>{docStats.chars}</strong> caracteres &nbsp;|&nbsp; <strong>{docStats.paragraphs}</strong> parágrafos
                     </span>
                     <span className="hidden md:inline border-l border-slate-300 pl-3 text-slate-500">
                         ⏱️ ~{docStats.readingTime} min de leitura

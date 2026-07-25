@@ -84,3 +84,48 @@ tbody tr:nth-child(odd) {
 .fortune-sheet-container {
   box-sizing: border-box;
 }
+
+/* GIPP Planilhas - Bordas sólidas, padding e regras de quebra de página para impressão / exportação */
+.gipp-planilhas-print {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.gipp-planilhas-print table {
+  border-collapse: collapse !important;
+}
+
+.gipp-planilhas-print table td,
+.gipp-planilhas-print table th {
+  border: 1px solid black !important;
+  padding: 4px !important;
+}
+
+@media print {
+  .gipp-planilhas-print {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .gipp-planilhas-print tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-area table,
+  .print-area table th,
+  .print-area table td,
+  .gipp-planilhas-print table,
+  .gipp-planilhas-print table th,
+  .gipp-planilhas-print table td {
+    border: 1px solid black !important;
+    border-collapse: collapse !important;
+    padding: 4px !important;
+  }
+}
+
+.print-area table td,
+.print-area table th {
+  border: 1px solid black !important;
+}
+
