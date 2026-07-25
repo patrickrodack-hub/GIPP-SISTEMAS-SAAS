@@ -15723,7 +15723,18 @@ const MemberPortalLayout = () => {
                         </div>
                     </header>
 
-                    {renderView()}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={view}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -15 }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            className="w-full"
+                        >
+                            {renderView()}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </main>
 

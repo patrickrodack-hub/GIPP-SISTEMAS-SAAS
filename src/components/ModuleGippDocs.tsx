@@ -72,15 +72,18 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     setTimeout(() => setShowSplashScreen(false), 300);
                     return 100;
                 }
-                const next = prev + 15;
-                if (next > 25 && next <= 50) setSplashMessageIndex(1);
-                if (next > 50 && next <= 85) setSplashMessageIndex(2);
-                if (next > 85) setSplashMessageIndex(3);
-                return next;
+                return prev + 15;
             });
         }, 120);
         return () => clearInterval(interval);
     }, [showSplashScreen]);
+
+    useEffect(() => {
+        if (splashProgress > 85) setSplashMessageIndex(3);
+        else if (splashProgress > 50) setSplashMessageIndex(2);
+        else if (splashProgress > 25) setSplashMessageIndex(1);
+        else setSplashMessageIndex(0);
+    }, [splashProgress]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
