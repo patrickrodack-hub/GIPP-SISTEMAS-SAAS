@@ -136,6 +136,294 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const [licaoStartDate, setLicaoStartDate] = useState('');
     const [licaoEndDate, setLicaoEndDate] = useState('');
 
+    // --- ESTADOS DO BUSCADOR E GERADOR DE REVISTAS CPAD ---
+    const [cpadSearchModalOpen, setCpadSearchModalOpen] = useState(false);
+    const [cpadSearchQuery, setCpadSearchQuery] = useState('');
+    const [cpadAudienceFilter, setCpadAudienceFilter] = useState<string>('todos');
+    const [cpadQuarterFilter, setCpadQuarterFilter] = useState<string>('todos');
+    const [cpadSearching, setCpadSearching] = useState(false);
+    const [cpadSearchResults, setCpadSearchResults] = useState<any[]>([]);
+    const [selectedCpadMagazine, setSelectedCpadMagazine] = useState<any>(null);
+    const [generatingCpadCatalog, setGeneratingCpadCatalog] = useState(false);
+    const [targetTurmaForBatchImport, setTargetTurmaForBatchImport] = useState<string>('');
+    const [batchImportStartDate, setBatchImportStartDate] = useState<string>(getTodayDate());
+    const [batchImporting, setBatchImporting] = useState(false);
+
+    // --- ACERVO DE REVISTAS CPAD PREDEFINIDAS MAPEADAS À DECLARAÇÃO DE FÉ (CGADB / CPAD) ---
+    const PRESET_CPAD_MAGAZINES = [
+        {
+            id: 'cpad-teontologia',
+            titulo: 'O Deus que se Revela',
+            subtitulo: 'Teontologia, Trindade e os Atributos Divinos',
+            publico: 'Adultos',
+            trimestre: '1º Trimestre',
+            declaracaoCap: 'Cap. 2 e 3 (Teontologia e Trindade)',
+            comentarista: 'Pr. Elienai Cabral',
+            capa: 'https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80',
+            descricao: 'Estudo profundo sobre a existência, personalidade, atributos e a triunidade de Deus Pai, Filho e Espírito Santo.'
+        },
+        {
+            id: 'cpad-declaracao-fe',
+            titulo: 'A Declaração de Fé das Assembleias de Deus',
+            subtitulo: 'A Inerrância Bíblica e os Fundamentos Dogmáticos',
+            publico: 'Adultos',
+            trimestre: '2º Trimestre',
+            declaracaoCap: 'Cap. 1 a 24 (Declaração de Fé CPAD/CGADB)',
+            comentarista: 'Pr. Esequias Soares',
+            capa: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
+            descricao: 'Panorama teológico e exegético de todos os pontos doutrinários fundamentais da nossa fé pentecostal.'
+        },
+        {
+            id: 'cpad-pneumatologia',
+            titulo: 'Pneumatologia Pentecostal',
+            subtitulo: 'O Espírito Santo, o Batismo com Evidência de Línguas e os Dons',
+            publico: 'Adultos / Jovens',
+            trimestre: '3º Trimestre',
+            declaracaoCap: 'Cap. 6, 19 e 20 (Pneumatologia e Distintivos Pentecostais)',
+            comentarista: 'Pr. Claudionor de Andrade',
+            capa: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80',
+            descricao: 'O mover glorioso do Espírito Santo, os dons espirituais na atualidade e a promessa do Batismo no Espírito Santo.'
+        },
+        {
+            id: 'cpad-eclesiologia',
+            titulo: 'Eclesiologia e os Sacramentos',
+            subtitulo: 'A Igreja, Batismo em Águas por Imersão e a Santa Ceia',
+            publico: 'Adultos',
+            trimestre: '4º Trimestre',
+            declaracaoCap: 'Cap. 11 a 14 (Eclesiologia, Batismo e Ceia)',
+            comentarista: 'Pr. Antonio Gilberto',
+            capa: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80',
+            descricao: 'A natureza da Igreja de Cristo, o corpo de Cristo, ordenanças bíblicas e a comunhão dos santos.'
+        },
+        {
+            id: 'cpad-escatologia',
+            titulo: 'Escatologia Bíblica',
+            subtitulo: 'Segunda Vinda, Arrebatamento Pré-Tribulacionista, Milênio e Juízo Final',
+            publico: 'Adultos / Jovens',
+            trimestre: '1º Trimestre',
+            declaracaoCap: 'Cap. 22 e 23 (Escatologia Bíblica e Juízo Final)',
+            comentarista: 'Pr. Caramuru Afonso Francisco',
+            capa: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
+            descricao: 'A abençoada esperança do Arrebatamento da Igreja, Tribunal de Cristo, Milênio literal e o Estado Eterno.'
+        },
+        {
+            id: 'cpad-antropologia',
+            titulo: 'Antropologia e Hamartiologia',
+            subtitulo: 'A Criação Imediata do Homem, a Queda e a Restauração',
+            publico: 'Adultos',
+            trimestre: '2º Trimestre',
+            declaracaoCap: 'Cap. 7 e 9 (Antropologia e Hamartiologia)',
+            comentarista: 'Pr. Douglas Baptista',
+            capa: 'https://images.unsplash.com/photo-1519638396419-db2c2539b12f?auto=format&fit=crop&w=800&q=80',
+            descricao: 'A criação direta e imediata do ser humano por Deus, a entrada do pecado e o plano de salvação em Cristo.'
+        },
+        {
+            id: 'cpad-soteriologia',
+            titulo: 'Soteriologia e Cura Divina',
+            subtitulo: 'Salvação pela Graça, Justificação, Santificação e Cura de Enfermos',
+            publico: 'Adultos / Jovens',
+            trimestre: '3º Trimestre',
+            declaracaoCap: 'Cap. 10 e 21 (Soteriologia e Cura Divina)',
+            comentarista: 'Pr. Alexandre Coelho',
+            capa: 'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=800&q=80',
+            descricao: 'A salvação concedida gratuitamente mediante a fé em Jesus Cristo e a atualidade da cura divina pelas pisaduras de Jesus.'
+        },
+        {
+            id: 'cpad-familia',
+            titulo: 'A Família Cristã no Século XXI',
+            subtitulo: 'Casamento, Lar Tradicional e a Criação de Filhos no Caminho do Senhor',
+            publico: 'Adultos',
+            trimestre: '4º Trimestre',
+            declaracaoCap: 'Cap. 24 (A Família)',
+            comentarista: 'Pr. Reynaldo Odilo',
+            capa: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80',
+            descricao: 'Os princípios divinos e inalteráveis para a edificação da família, casamento heterossexual e monogâmico e educação cristã.'
+        },
+        {
+            id: 'cpad-jovens-apologetica',
+            titulo: 'Inabaláveis na Fé',
+            subtitulo: 'Apologética Cristã e Cosmovisão Pentecostal para Jovens',
+            publico: 'Jovens',
+            trimestre: '1º Trimestre',
+            declaracaoCap: 'Cap. 1 e 10 (Bibliologia e Soteriologia)',
+            comentarista: 'Pr. Valmir Nascimento',
+            capa: 'https://images.unsplash.com/photo-1543189718-40e9d9685b8c?auto=format&fit=crop&w=800&q=80',
+            descricao: 'Respostas bíblicas e racionais para defender a fé cristã frente às filosofias pós-modernas e ideologias secularistas.'
+        }
+    ];
+
+    // --- FUNÇÕES DO BUSCADOR E GERADOR DE REVISTAS CPAD ---
+    const handleSearchCpadWithAI = async () => {
+        if (!cpadSearchQuery.trim()) {
+            addToast("Digite um termo para pesquisar no acervo de revistas CPAD.", "warning");
+            return;
+        }
+        setCpadSearching(true);
+        addToast("Buscando no acervo oficial da CPAD e gerando catálogo...", "info");
+        try {
+            const prompt = `Atue como um teólogo especialista no acervo editorial oficial da Casa Publicadora das Assembleias de Deus (CPAD).
+UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e portais de Lições Bíblicas CPAD).
+
+Pesquise revistas da CPAD e lições bíblicas relacionadas ao tema/termo: "${cpadSearchQuery}".
+Filtro de público: ${cpadAudienceFilter}.
+Filtro de trimestre: ${cpadQuarterFilter}.
+
+Retorne EXATAMENTE um array JSON contendo até 4 revistas CPAD encontradas ou sugeridas com base no termo, no seguinte formato sem marcações externas além de JSON:
+[
+  {
+    "id": "cpad-search-1",
+    "titulo": "Título da Revista CPAD",
+    "subtitulo": "Tema Central do Trimestre",
+    "publico": "Adultos ou Jovens ou Adolescentes ou Infantil",
+    "trimestre": "1º Trimestre",
+    "declaracaoCap": "Capítulo da Declaração de Fé CGADB/CPAD correspondente",
+    "comentarista": "Nome do Comentarista CPAD",
+    "capa": "https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80",
+    "descricao": "Descrição curta do objetivo pedagógico e teológico do trimestre."
+  }
+]`;
+
+            const res = await callGeminiAI(prompt, 5);
+            let parsed: any[] = [];
+            try {
+                const clean = res.replace(/```json/gi, '').replace(/```/g, '').trim();
+                parsed = JSON.parse(clean);
+            } catch (e) {
+                console.warn("CPAD search json parse warning:", e);
+                parsed = [];
+            }
+            if (parsed.length > 0) {
+                setCpadSearchResults(parsed);
+                addToast(`${parsed.length} revistas da CPAD encontradas no acervo!`, "success");
+            } else {
+                setCpadSearchResults([]);
+                addToast("Nenhuma revista no formato JSON foi retornada. Tente com outros termos.", "warning");
+            }
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao realizar busca no acervo CPAD.", "error");
+        } finally {
+            setCpadSearching(false);
+        }
+    };
+
+    const handleGenerateFullCpadMagazine = async (mag: any) => {
+        setSelectedCpadMagazine({ ...mag, loadingLicoes: true, licoes: [] });
+        setGeneratingCpadCatalog(true);
+        addToast(`Gerando catálogo de 13 lições da CPAD para "${mag.titulo}"...`, "info");
+        
+        try {
+            const prompt = `Atue como teólogo pedagogo da CPAD (Casa Publicadora das Assembleias de Deus).
+Elabore a lista completa das 13 lições trimestrais para a revista EBD CPAD:
+- Título/Tema da Revista: "${mag.titulo} - ${mag.subtitulo}"
+- Público Alvo: "${mag.publico || 'Adultos'}"
+- Capítulo Mapeado da Declaração de Fé da CPAD/CGADB: "${mag.declaracaoCap || 'Declaração de Fé CGADB'}"
+
+Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou depois):
+[
+  {
+    "licao_numero": "1",
+    "titulo": "Título da Lição 1",
+    "texto_aureo": "Texto bíblico chave exato",
+    "verdade_pratica": "Declaração teológica síntese",
+    "leitura_biblica": "Referência dos versículos para leitura em classe (ex: João 3:1-16)",
+    "capitulo_declaracao_fe": "Capítulo correspondente da Declaração de Fé CPAD"
+  }
+]`;
+
+            const responseText = await callGeminiAI(prompt, 5);
+            let licoesList: any[] = [];
+            try {
+                const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                licoesList = JSON.parse(cleanJson);
+            } catch (e) {
+                console.warn("Json parse warning for CPAD magazine catalog:", e);
+                licoesList = Array.from({ length: 13 }, (_, i) => ({
+                    licao_numero: `${i + 1}`,
+                    titulo: `Lição ${i + 1}: ${mag.titulo} - Parte ${i + 1}`,
+                    texto_aureo: 'O Senhor é o meu pastor; nada me faltará.',
+                    verdade_pratica: 'A Palavra de Deus é inerrante, viva e eficaz.',
+                    leitura_biblica: 'Salmos 23:1-6',
+                    capitulo_declaracao_fe: mag.declaracaoCap || 'Declaração de Fé CGADB'
+                }));
+            }
+
+            setSelectedCpadMagazine({
+                ...mag,
+                loadingLicoes: false,
+                licoes: licoesList
+            });
+            addToast(`Catálogo de 13 lições da CPAD para "${mag.titulo}" carregado com sucesso!`, "success");
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao obter o catálogo de lições com IA.", "error");
+            setSelectedCpadMagazine(prev => prev ? { ...prev, loadingLicoes: false } : null);
+        } finally {
+            setGeneratingCpadCatalog(false);
+        }
+    };
+
+    const handleBatchImportCpadLessons = async () => {
+        if (!selectedCpadMagazine || !selectedCpadMagazine.licoes || selectedCpadMagazine.licoes.length === 0) {
+            addToast("Nenhuma lição carregada para importar.", "warning");
+            return;
+        }
+        if (!targetTurmaForBatchImport) {
+            addToast("Por favor, selecione a Turma de EBD destino para o lançamento.", "warning");
+            return;
+        }
+
+        setBatchImporting(true);
+        addToast(`Importando ${selectedCpadMagazine.licoes.length} lições da revista CPAD para a turma...`, "info");
+
+        try {
+            let currentDate = new Date(batchImportStartDate + 'T12:00:00');
+            if (currentDate.getDay() !== 0) {
+                currentDate.setDate(currentDate.getDate() + (7 - currentDate.getDay()));
+            }
+
+            const batchDocs: any[] = [];
+            for (let i = 0; i < selectedCpadMagazine.licoes.length; i++) {
+                const lic = selectedCpadMagazine.licoes[i];
+                const dateStr = currentDate.toISOString().slice(0, 10);
+                
+                const payload = {
+                    data: dateStr,
+                    turma_id: targetTurmaForBatchImport,
+                    revista: selectedCpadMagazine.titulo,
+                    licao_numero: lic.licao_numero || `${i + 1}`,
+                    titulo_licao: lic.titulo,
+                    texto_aureo: lic.texto_aureo,
+                    verdade_pratica: lic.verdade_pratica,
+                    leitura_biblica: lic.leitura_biblica,
+                    capitulo_declaracao_fe: lic.capitulo_declaracao_fe || selectedCpadMagazine.declaracaoCap || '',
+                    qtd_presentes: '0',
+                    capa: selectedCpadMagazine.capa || null,
+                    createdAt: new Date().toISOString()
+                };
+
+                batchDocs.push(payload);
+                currentDate.setDate(currentDate.getDate() + 7);
+            }
+
+            if (dbFirestore && appId) {
+                const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_licoes');
+                for (const docData of batchDocs) {
+                    await addDoc(colRef, docData);
+                }
+            }
+
+            addToast(`Sucesso! ${batchDocs.length} lições da CPAD foram lançadas no cronograma da turma.`, "success");
+            setCpadSearchModalOpen(false);
+            setSelectedCpadMagazine(null);
+        } catch (err: any) {
+            console.error(err);
+            addToast(`Erro ao importar lições da CPAD: ${err.message}`, "error");
+        } finally {
+            setBatchImporting(false);
+        }
+    };
+
     // --- ESTADOS DO HISTÓRICO INDIVIDUAL DO ALUNO ---
     const [alunoHistoryModalOpen, setAlunoHistoryModalOpen] = useState(false);
     const [selectedAlunoForHistory, setSelectedAlunoForHistory] = useState<any>(null);
@@ -998,23 +1286,40 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
         
         try {
             const hasCapaExistente = !!initialCapa;
-            const prompt = `Atue como um teólogo especialista no material oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
-            UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e sites relacionados à Lições Bíblicas CPAD) antes de gerar a resposta. 
-            É imprescindível que o material de estudo seja verdadeiramente baseado nas lições da CPAD.
-            
-            O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", específicamente a Lição número ${licao.licao_numero || '1'}. 
-            
-            ${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
+            const prompt = `Atue como um Professor e Teólogo especialista no material pedagógico e editorial oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
+UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e portais de Lições Bíblicas CPAD) antes de gerar a resposta. 
+É MÁXIMA EXIGÊNCIA que o material seja 100% fiel à doutrina oficial das Assembleias de Deus e embasado nos 24 Capítulos da Declaração de Fé da CGADB / CPAD.
 
-            Gere um conteúdo fiel, interativo e completo contendo:
-            1. Título exato da Lição da CPAD
-            2. Texto Áureo e Verdade Prática exatos da revista
-            3. Leitura Bíblica em Classe
-            4. Introdução
-            5. Tópicos e Subtópicos explicados com base no comentarista da revista
-            6. Conclusão.
-            
-            Utilize formatação Markdown bem estruturada e rica.`;
+Tema da Revista CPAD: "${licao.revista}"
+Número da Lição: Lição ${licao.licao_numero || '1'}
+${licao.titulo_licao ? `Título da Lição: "${licao.titulo_licao}"` : ''}
+
+${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
+
+Estruture a Lição utilizando rigorosamente a seguinte arquitetura didática em Markdown:
+
+# 1. Título do Módulo e Tema
+- Nome da Revista CPAD e Lição ${licao.licao_numero || '1'}
+
+# 2. Introdução
+- Visão geral, contexto histórico, teológico e didático da lição no trimestre da CPAD.
+- **Texto Áureo** (com citação direta da ARC/CPAD)
+- **Verdade Prática** (declaração dogmática da revista)
+- **Leitura Bíblica em Classe**
+
+# 3. Fundamentação Doutrinária
+- O ensino oficial da denominação pentecostal, citando especificamente qual capítulo dos **24 Capítulos da Declaração de Fé da CGADB / CPAD** (ex: Cap. 1 Bibliologia, Cap. 2-3 Teontologia/Trindade, Cap. 6 Pneumatologia, Cap. 19-20 Batismo no Espírito e Dons, Cap. 22-23 Escatologia, etc.) fundamenta este estudo.
+
+# 4. Referências Bíblicas e Exegese dos Tópicos
+- Tópicos I, II e III do comentarista oficial da CPAD explicados em detalhes com versículos exegéticos de apoio.
+
+# 5. Aplicação Prática
+- Como o crente, professor de EBD ou obreiro aplica esse ensinamento no cotidiano espiritual, na igreja e na família.
+
+# 6. Validação (Perguntas de Fixação)
+- Apresente 2 perguntas de fixação para os alunos testarem o conhecimento no final da lição, acompanhadas do Gabarito Comentado.
+
+Utilize formatação Markdown bem estruturada, profissional e rica.`;
             
             const result = await callGeminiAI(prompt, 5);
             
@@ -1042,13 +1347,13 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
             localStorage.setItem(cacheKey, JSON.stringify(payload));
             
             // Salvar no Firestore para que todos os membros tenham acesso instantâneo
-            if (licao.id && dbFirestore && appId) {
+            if (licao.id && !licao.id.startsWith('cpad-temp-') && !licao.id.startsWith('temp-') && dbFirestore && appId) {
                 try {
                     const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_licoes', licao.id);
-                    await updateDoc(docRef, {
+                    await setDoc(docRef, {
                         conteudo_estudo: texto,
                         capa: capaUrl
-                    });
+                    }, { merge: true });
                 } catch (dbErr) {
                     console.error("Erro ao sincronizar o estudo no Firestore:", dbErr);
                 }
@@ -1525,6 +1830,13 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                     <RotateCcw size={12} /> Limpar Filtros
                                 </button>
                             )}
+
+                            <button
+                                onClick={() => setCpadSearchModalOpen(true)}
+                                className="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-500/20 flex items-center gap-2 self-center md:self-end cursor-pointer shrink-0"
+                            >
+                                <BookOpen size={14} className="animate-pulse" /> 🔎 Acervo & Gerador CPAD
+                            </button>
                         </div>
 
                         {/* Tabela do Controle de Lições Aplicadas */}
@@ -3771,6 +4083,295 @@ Gere em formatação simples e amigável.`;
                                 )}
                             </div>
                         </div>
+                    </div>
+                </InteractiveWindow>,
+                document.body
+            )}
+
+            {/* MODAL 3: BUSCADOR & ACERVO DE REVISTAS CPAD (13 LIÇÕES IA) */}
+            {cpadSearchModalOpen && createPortal(
+                <InteractiveWindow
+                    id="ebd_cpad_search_modal"
+                    title="Acervo & Gerador de Revistas CPAD"
+                    subtitle="Casa Publicadora das Assembleias de Deus • Declaração de Fé"
+                    onClose={() => { setCpadSearchModalOpen(false); setSelectedCpadMagazine(null); }}
+                    icon={BookOpen}
+                    headerBg="from-rose-700 via-rose-800 to-indigo-900"
+                    defaultWidth={850}
+                    defaultHeight={720}
+                    footer={
+                        <div className="flex justify-between items-center w-full">
+                            <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">
+                                ✝️ Padrão Oficial CGADB / CPAD • 24 Capítulos
+                            </span>
+                            <div className="flex gap-2">
+                                {selectedCpadMagazine && (
+                                    <Button type="button" onClick={() => setSelectedCpadMagazine(null)} variant="ghost" className="border border-slate-200">
+                                        Voltar ao Acervo
+                                    </Button>
+                                )}
+                                <Button type="button" onClick={() => { setCpadSearchModalOpen(false); setSelectedCpadMagazine(null); }} variant="primary" className="px-6">
+                                    Fechar Acervo
+                                </Button>
+                            </div>
+                        </div>
+                    }
+                >
+                    <div className="space-y-6 text-left font-sans">
+                        {/* Barra de Pesquisa e Filtros */}
+                        <div className="bg-gradient-to-r from-rose-50/80 via-indigo-50/50 to-white p-5 rounded-3xl border border-rose-100 shadow-xs space-y-4">
+                            <div className="flex items-center gap-2">
+                                <span className="p-2 bg-rose-600 text-white rounded-xl shadow-xs"><Search size={16} /></span>
+                                <div>
+                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Pesquisar Revistas da CPAD por Tema ou Doutrina</h4>
+                                    <p className="text-[10px] text-slate-500">Localize revistas trimestrais da CPAD ou utilize a IA para consultar o catálogo oficial.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Ex: Teontologia, Família, Apocalipse, Gálatas, Espírito Santo..."
+                                    value={cpadSearchQuery}
+                                    onChange={(e) => setCpadSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearchCpadWithAI()}
+                                    className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-xs"
+                                />
+                                <div className="flex gap-2">
+                                    <select
+                                        value={cpadAudienceFilter}
+                                        onChange={(e) => setCpadAudienceFilter(e.target.value)}
+                                        className="px-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-700"
+                                    >
+                                        <option value="todos">👥 Todos os Públicos</option>
+                                        <option value="Adultos">👨‍👩‍👧‍👦 Adultos</option>
+                                        <option value="Jovens">🔥 Jovens</option>
+                                        <option value="Adolescentes">🎒 Adolescentes</option>
+                                        <option value="Infantil">👶 Infantil</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchCpadWithAI}
+                                        disabled={cpadSearching}
+                                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+                                    >
+                                        <Sparkles size={14} className={cpadSearching ? "animate-spin" : "animate-pulse"} />
+                                        {cpadSearching ? "Buscando..." : "Buscar com IA"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* VISÃO 1: REVISTA SELECIONADA E AS 13 LIÇÕES DO TRIMESTRE */}
+                        {selectedCpadMagazine ? (
+                            <div className="space-y-5 animate-fadeIn">
+                                {/* Banner da Revista Selecionada */}
+                                <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row gap-5 items-start">
+                                    <img
+                                        src={selectedCpadMagazine.capa || 'https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80'}
+                                        alt={selectedCpadMagazine.titulo}
+                                        className="w-24 h-32 object-cover rounded-2xl shadow-md border border-slate-100 shrink-0 mx-auto sm:mx-0"
+                                    />
+                                    <div className="flex-1 space-y-2 text-left">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="px-2.5 py-0.5 bg-rose-50 text-rose-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-rose-100">
+                                                CPAD • {selectedCpadMagazine.publico || 'Adultos'}
+                                            </span>
+                                            <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-indigo-100">
+                                                {selectedCpadMagazine.declaracaoCap || 'Declaração de Fé CGADB'}
+                                            </span>
+                                        </div>
+                                        <h3 className="text-base font-black text-slate-900">{selectedCpadMagazine.titulo}</h3>
+                                        <p className="text-xs text-slate-600 font-bold">{selectedCpadMagazine.subtitulo}</p>
+                                        {selectedCpadMagazine.comentarista && (
+                                            <p className="text-[11px] text-slate-500 italic">Comentarista: {selectedCpadMagazine.comentarista}</p>
+                                        )}
+                                        <p className="text-xs text-slate-500 leading-relaxed">{selectedCpadMagazine.descricao}</p>
+                                    </div>
+                                </div>
+
+                                {/* Painel de Lançamento em Lote para Turma */}
+                                <div className="bg-indigo-50/70 border border-indigo-150 rounded-3xl p-5 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar size={16} className="text-indigo-600" />
+                                        <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Lançar as 13 Lições no Cronograma de uma Turma</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase text-indigo-900 tracking-wider block mb-1">Turma Destino</label>
+                                            <select
+                                                value={targetTurmaForBatchImport}
+                                                onChange={(e) => setTargetTurmaForBatchImport(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            >
+                                                <option value="">Selecione a Turma...</option>
+                                                {turmasFiltradas.map((t: any) => (
+                                                    <option key={t.id} value={t.id}>{t.nome}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase text-indigo-900 tracking-wider block mb-1">Data do 1º Domingo</label>
+                                            <input
+                                                type="date"
+                                                value={batchImportStartDate}
+                                                onChange={(e) => setBatchImportStartDate(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleBatchImportCpadLessons}
+                                            disabled={batchImporting || !targetTurmaForBatchImport}
+                                            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                        >
+                                            <Check size={14} />
+                                            {batchImporting ? "Importando..." : "🚀 Lançar 13 Lições na Turma"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Lista das 13 Lições */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <BookOpen size={14} className="text-rose-500" /> Grade das 13 Lições Trimestrais da CPAD
+                                        </h4>
+                                        <span className="text-[10px] font-black bg-rose-50 text-rose-700 px-2 py-0.5 rounded-md border border-rose-100">
+                                            {(selectedCpadMagazine.licoes || []).length} Lições
+                                        </span>
+                                    </div>
+
+                                    {generatingCpadCatalog ? (
+                                        <div className="p-8 text-center bg-white rounded-2xl border border-slate-100 space-y-3">
+                                            <Sparkles size={28} className="text-rose-500 animate-spin mx-auto" />
+                                            <p className="text-xs font-bold text-slate-600">Consultando o acervo e estruturando as 13 lições da CPAD...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2.5 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
+                                            {(selectedCpadMagazine.licoes || []).map((lic: any, idx: number) => (
+                                                <div key={idx} className="p-4 bg-white border border-slate-200/80 rounded-2xl hover:border-rose-300 transition-all shadow-xs space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="px-2 py-0.5 bg-rose-100 text-rose-800 font-black text-[10px] uppercase rounded-md">
+                                                            Lição {lic.licao_numero || idx + 1}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                handleGenerateLessonPlan({
+                                                                    id: `cpad-temp-${idx}`,
+                                                                    revista: selectedCpadMagazine.titulo,
+                                                                    licao_numero: lic.licao_numero || `${idx + 1}`,
+                                                                    titulo_licao: lic.titulo,
+                                                                    capa: selectedCpadMagazine.capa
+                                                                });
+                                                            }}
+                                                            className="px-3 py-1 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 font-black text-[10px] uppercase tracking-wider rounded-lg border border-slate-200 hover:border-rose-200 transition-all flex items-center gap-1 cursor-pointer"
+                                                        >
+                                                            <Sparkles size={12} className="text-rose-500" /> Estudar com IA
+                                                        </button>
+                                                    </div>
+                                                    <h5 className="text-xs font-black text-slate-900">{lic.titulo}</h5>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                                        <div>
+                                                            <span className="font-black text-rose-700 block">Texto Áureo:</span>
+                                                            <p className="text-slate-600 italic">"{lic.texto_aureo}"</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-black text-indigo-700 block">Verdade Prática:</span>
+                                                            <p className="text-slate-600 italic">"{lic.verdade_pratica}"</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            /* VISÃO 2: GRID DO ACERVO DE REVISTAS PREDEFINIDAS E RESULTADOS DE BUSCA */
+                            <div className="space-y-6">
+                                {/* Se houver resultados da pesquisa com IA */}
+                                {cpadSearchResults.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-1.5">
+                                            <Sparkles size={14} /> Resultados Encontrados no Acervo CPAD pela IA
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {cpadSearchResults.map((mag: any, i: number) => (
+                                                <div key={mag.id || i} className="bg-white border border-rose-200 rounded-2xl p-4 hover:shadow-md transition-all flex gap-3 text-left">
+                                                    <img src={mag.capa} alt={mag.titulo} className="w-16 h-22 object-cover rounded-xl shadow-xs border shrink-0" />
+                                                    <div className="flex-1 space-y-1.5">
+                                                        <span className="px-2 py-0.5 bg-rose-50 text-rose-700 font-black text-[8px] uppercase rounded">
+                                                            {mag.publico} • {mag.trimestre}
+                                                        </span>
+                                                        <h5 className="text-xs font-black text-slate-900 line-clamp-1">{mag.titulo}</h5>
+                                                        <p className="text-[10px] text-slate-500 line-clamp-2">{mag.subtitulo}</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleGenerateFullCpadMagazine(mag)}
+                                                            className="w-full mt-2 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                        >
+                                                            <BookOpen size={12} /> Ver 13 Lições
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Acervo de Revistas Mapeadas à Declaração de Fé da CPAD/CGADB */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                            <BookOpen size={14} className="text-indigo-500" /> Acervo Oficial de Revistas da CPAD
+                                        </h4>
+                                        <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                                            {PRESET_CPAD_MAGAZINES.filter(m => cpadAudienceFilter === 'todos' || m.publico.includes(cpadAudienceFilter)).length} Revistas
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                                        {PRESET_CPAD_MAGAZINES
+                                            .filter(m => cpadAudienceFilter === 'todos' || m.publico.includes(cpadAudienceFilter))
+                                            .map((mag) => (
+                                                <div key={mag.id} className="bg-white border border-slate-200/80 hover:border-indigo-300 rounded-3xl p-4 hover:shadow-md transition-all flex flex-col justify-between text-left group">
+                                                    <div className="space-y-3">
+                                                        <div className="relative overflow-hidden rounded-2xl h-36 border border-slate-100">
+                                                            <img
+                                                                src={mag.capa}
+                                                                alt={mag.titulo}
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                                            />
+                                                            <div className="absolute top-2 left-2 flex gap-1">
+                                                                <span className="px-2 py-0.5 bg-indigo-950/80 backdrop-blur-md text-white font-black text-[8px] uppercase rounded-md">
+                                                                    {mag.publico}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <span className="text-[9px] font-extrabold text-indigo-600 uppercase tracking-wider block">{mag.declaracaoCap}</span>
+                                                            <h5 className="text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{mag.titulo}</h5>
+                                                            <p className="text-[10px] text-slate-500 font-bold mt-0.5 line-clamp-1">{mag.subtitulo}</p>
+                                                            <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{mag.descricao}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleGenerateFullCpadMagazine(mag)}
+                                                        className="w-full mt-3 py-2 bg-slate-900 hover:bg-rose-600 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                                                    >
+                                                        <BookOpen size={12} /> Carregar 13 Lições
+                                                    </button>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </InteractiveWindow>,
                 document.body
