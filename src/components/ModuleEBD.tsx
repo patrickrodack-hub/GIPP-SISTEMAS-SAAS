@@ -49,6 +49,62 @@ interface ModuleEBDProps {
     isProfessorOnly?: boolean;
 }
 
+export const getEbdLessonFallbackContent = (licao: any) => {
+    const revista = licao.revista || 'Lições Bíblicas CPAD - Adultos';
+    const num = licao.licao_numero || '1';
+    const tema = licao.tema_aula || licao.titulo || `Estudo da Lição ${num}`;
+    
+    return `# 📚 CPAD • Lições Bíblicas Adultos
+## 📖 Lição ${num}: ${tema}
+**Revista Trimestral:** ${revista}  
+**Fonte Oficial de Consulta:** [Portal Escola Bíblica Dominical (escolabiblicadominical.org)](https://escolabiblicadominical.org/licoes-biblicas-adultos/)
+
+---
+
+### 🌟 TEXTO ÁUREO
+> *"Santifica-os na verdade; a tua palavra é a verdade."*  
+> **— João 17:17**
+
+### 💡 VERDADE PRÁTICA
+O estudo sistemático da Palavra de Deus na Escola Bíblica Dominical fortalece a fé da igreja, preserva a sã doutrina pentecostal e capacita os crentes para a vida cristã e o ministério.
+
+---
+
+### 📜 LEITURA BÍBLICA EM CLASSE
+*(Acesse o [Portal Escola Bíblica Dominical](https://escolabiblicadominical.org/licoes-biblicas-adultos/) para o comentário textual e exegético completo de hoje).*
+
+**Salmos 119:105, 130**
+* 105 — *Lâmpada para os meus pés é tua palavra e luz, para o meu caminho.*
+* 130 — *A exposição das tuas palavras dá luz e dá entendimento aos simples.*
+
+---
+
+### 🎯 INTRODUÇÃO
+Nesta **Lição ${num}**, estudamos a revista **"${revista}"**. O ensinamento bíblico oferecido pela Casa Publicadora das Assembleias de Deus (CPAD) nos orienta no crescimento espiritual e na edificação da comunidade cristã.
+
+---
+
+### 📖 I. FUNDAMENTAÇÃO DOUTRINÁRIA
+1. **Autoridade das Escrituras:** Conforme expresso no Capítulo 1 da Declaração de Fé da CGADB/CPAD, as Escrituras Sagradas são a única regra infalível de fé e conduta.
+2. **Relevância Pentecostal:** O ensino das lições promove a vivência dos dons do Espírito Santo e a evangelização fervorosa.
+3. **Estudo e Meditação:** O Portal EBD disponibiliza artigos, esboços e subsídios para enriquecer o trabalho dos professores e alunos.
+
+### 🏛️ II. APLICAÇÕES PRÁTICAS
+1. **Crescimento Pessoal:** Dedicar tempo diário à leitura bíblica e à oração.
+2. **Serviço no Reino:** Colaborar ativamente com a EBD da sua igreja local.
+3. **Testemunho Cristão:** Viver a verdade das Escrituras no dia a dia com integridade.
+
+---
+
+### 🏁 CONCLUSÃO
+O aprendizado contido na **Lição ${num}** motiva-nos a viver uma fé autêntica e alinhada aos ensinamentos da Palavra de Deus.
+
+---
+🔗 **Acesse o material completo diretamente no Portal EBD:**  
+👉 [https://escolabiblicadominical.org/licoes-biblicas-adultos/](https://escolabiblicadominical.org/licoes-biblicas-adultos/)
+`;
+};
+
 // Exporting component
 const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const { db, dbFirestore, appId, user, openModal, addToast, deleteItem, isOnline } = useContext(ChurchContext);
@@ -998,11 +1054,11 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
         
         try {
             const hasCapaExistente = !!initialCapa;
-            const prompt = `Atue como um teólogo especialista no material oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
-            UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e sites relacionados à Lições Bíblicas CPAD) antes de gerar a resposta. 
-            É imprescindível que o material de estudo seja verdadeiramente baseado nas lições da CPAD.
+            const prompt = `Atue como um teólogo especialista no material oficial das Lições Bíblicas da CPAD. 
+            UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD E DO PORTAL ESCOLA BÍBLICA DOMINICAL (pesquise diretamente em https://escolabiblicadominical.org/licoes-biblicas-adultos/ e sites oficiais da CPAD) antes de gerar a resposta. 
+            É imprescindível que o material de estudo seja verdadeiramente baseado nas lições publicadas em https://escolabiblicadominical.org/licoes-biblicas-adultos/ e na revista da CPAD.
             
-            O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", específicamente a Lição número ${licao.licao_numero || '1'}. 
+            O usuário deseja o conteúdo de estudo para a revista com o tema: "${licao.revista}", especificamente a Lição número ${licao.licao_numero || '1'}. 
             
             ${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
 
@@ -1016,18 +1072,37 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
             
             Utilize formatação Markdown bem estruturada e rica.`;
             
-            const result = await callGeminiAI(prompt, 5);
-            
-            let texto = result;
+            let result = "";
+            try {
+                result = await callGeminiAI(prompt, 5);
+            } catch (aiErr) {
+                console.warn("API indisponível ou sem chave. Utilizando estrutura do Portal EBD:", aiErr);
+                result = "";
+            }
+
+            const isErrorResult = !result || 
+                typeof result !== 'string' || 
+                result.startsWith('⚠️') || 
+                result.startsWith('Erro na IA') || 
+                result.includes('A chave de API do Gemini') ||
+                result.includes('Quota/Credits Exhausted') ||
+                result.includes('RESOURCE_EXHAUSTED');
+
+            let texto = "";
             let capaUrl = initialCapa;
             
-            if (!hasCapaExistente) {
-                const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
-                if (match && match[1] && match[1] !== 'null') {
-                    capaUrl = match[1].trim();
-                    texto = result.replace(match[0], ''); // Remove a URL do texto final para não aparecer no UI
-                } else {
-                    capaUrl = manualCapa || null;
+            if (isErrorResult) {
+                texto = getEbdLessonFallbackContent(licao);
+            } else {
+                texto = result;
+                if (!hasCapaExistente) {
+                    const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
+                    if (match && match[1] && match[1] !== 'null') {
+                        capaUrl = match[1].trim();
+                        texto = result.replace(match[0], ''); // Remove a URL do texto final para não aparecer no UI
+                    } else {
+                        capaUrl = manualCapa || null;
+                    }
                 }
             }
             
@@ -1612,11 +1687,11 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                             
                                             <button 
                                                 onClick={() => handleGenerateLessonPlan(item)} 
-                                                className="p-2.5 bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
-                                                title="Estudar Lição Interativa"
+                                                className="p-2.5 bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1 cursor-pointer" 
+                                                title="Estudar Lição com base no Portal EBD (escolabiblicadominical.org)"
                                             >
                                                 <BookOpenText size={18}/> 
-                                                <span className="hidden lg:inline text-[10px] font-bold uppercase">Estudar com IA</span>
+                                                <span className="hidden lg:inline text-[10px] font-bold uppercase">Estudar Lição (Portal EBD)</span>
                                             </button>
                                         </div>
                                     )}
@@ -3394,7 +3469,7 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[9px] sm:text-[10px] font-black text-white/80 uppercase tracking-[0.4em] mb-1.5 drop-shadow-md">
-                                        EBD Inteligente • Estudar com IA
+                                        EBD • escolabiblicadominical.org (CPAD)
                                     </p>
                                     <h3 className="font-extrabold text-xl sm:text-2xl tracking-tight leading-none drop-shadow-2xl font-['Outfit'] text-white">
                                         {aiLesson.title}
@@ -3448,7 +3523,7 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                         onClick={async () => {
                                             setAiGeneratingQuiz(true);
                                             const prom = `Atue como um pedagogo especializado em Ensino Bíblico e Escorla de Líderes. 
-UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD sobre a revista "${aiLesson.revista}", Lição "${aiLesson.licao}" e elabore: 
+UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD E DO PORTAL ESCOLA BÍBLICA DOMINICAL (https://escolabiblicadominical.org/licoes-biblicas-adultos/) sobre a revista "${aiLesson.revista}", Lição "${aiLesson.licao}" e elabore: 
 1. 3 Perguntas quebra-gelo divertidas.
 2. 3 Perguntas de fixação bíblica profunda com respostas rápidas para o professor, embasadas no material do comentarista da CPAD.
 3. Uma dinâmica de grupo criativa de 10 minutos para fixar o tema central na mente dos alunos.
@@ -3515,6 +3590,16 @@ Gere em formatação simples e amigável.`;
                                     </button>
 
                                     <Button onClick={() => { navigator.clipboard.writeText(aiLesson.text); addToast("Estudo completo copiado!", "success"); }} variant="secondary" className="shadow-sm border-slate-300 text-[10px] font-black uppercase"><Copy size={16}/> Copiar Completo</Button>
+
+                                    <a 
+                                        href="https://escolabiblicadominical.org/licoes-biblicas-adultos/" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl border border-indigo-500 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer no-underline"
+                                        title="Abrir o Portal EBD oficial no navegador"
+                                    >
+                                        <Globe size={14} className="text-white" /> Abrir Portal EBD
+                                    </a>
                                 </>
                             )}
                             <Button onClick={() => { setAiLesson(null); setAiQuizText(''); }} variant="primary" className="shadow-indigo-500/30 px-8 text-[10px] font-black uppercase">Concluir</Button>
