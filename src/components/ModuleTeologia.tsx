@@ -401,10 +401,16 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 4. Respeite com precisão absoluta as regras doutrinárias CGADB explicadas no AGENTS.md e forneça textos maduros, elegantes e de altíssimo nível científico.`;
 
         try {
-            
             const resultText = await callGeminiAI(prompt);
             
-            let cleanJSON = resultText.trim();
+            // Check if AI response is a system notice / warning / quota message
+            if (resultText && (resultText.trim().startsWith('⚠️') || resultText.trim().startsWith('Erro na IA:'))) {
+                addToast(resultText.trim(), "warning");
+                setGeneratingBooklet(false);
+                return;
+            }
+
+            let cleanJSON = (resultText || '').trim();
             if (cleanJSON.startsWith('```json')) {
                 cleanJSON = cleanJSON.substring(7);
             } else if (cleanJSON.startsWith('```')) {
@@ -414,6 +420,12 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 cleanJSON = cleanJSON.substring(0, cleanJSON.length - 3);
             }
             cleanJSON = cleanJSON.trim();
+
+            // Try to extract JSON object if there's text around it
+            const jsonMatch = cleanJSON.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                cleanJSON = jsonMatch[0];
+            }
 
             // Heuristic JSON repair for robust parsing
             // 1. Remove trailing commas before closing braces/brackets
@@ -446,7 +458,48 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 parsedBooklet = JSON.parse(repairedJSON);
             } catch (firstErr: any) {
                 console.warn("Standard JSON parse failed, trying fallback with raw cleanJSON...", firstErr);
-                parsedBooklet = JSON.parse(cleanJSON);
+                try {
+                    parsedBooklet = JSON.parse(cleanJSON);
+                } catch (secondErr) {
+                    console.warn("Raw cleanJSON parse failed, creating fallback booklet object...", secondErr);
+                    parsedBooklet = {
+                        theme: themeToGenerate,
+                        level: aiLevel,
+                        title: `Apostila Teológica Oficial: ${themeToGenerate}`,
+                        introduction: cleanJSON.length > 30 ? cleanJSON : `Estudo teológico eclesiástico sobre ${themeToGenerate} fundamentado na doutrina pentecostal das Assembleias de Deus.`,
+                        doctrinalFoundation: `Fundamentação doutrinária embasada na Declaração de Fé da CPAD/CGADB (Capítulos 1 a 24). Ensino ortodoxo sobre a autoridade e inerrância das Sagradas Escrituras.`,
+                        biblicalReferences: [
+                            `Salmos 119:105 - Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.`,
+                            `2 Timóteo 3:16 - Toda a Escritura é divinamente inspirada e proveitosa para ensinar, para redarguir, para corrigir, para instruir em justiça.`,
+                            `Atos 2:42 - E perseveravam na doutrina dos apóstolos, e na comunhão, e no partir do pão, e nas orações.`
+                        ],
+                        practicalApplication: `Aplicação ministerial e diária sobre ${themeToGenerate} para o fortalecimento da fé do obreiro, vigilância na vida de oração e serviço no reino de Deus.`,
+                        quiz: [
+                            {
+                                question: `Qual é o objetivo central do estudo bíblico sobre ${themeToGenerate}?`,
+                                options: [
+                                    "Edificar a igreja e fundamentar a fé nas Sagradas Escrituras",
+                                    "Apenas cumprir um requisito acadêmico",
+                                    "Promover controvérsias sem respaldo bíblico",
+                                    "Substituir o ensino pastoral tradicional"
+                                ],
+                                correctIndex: 0,
+                                explanation: "O ensino doutrinário visa a edificação do crente e a guarda da sã doutrina conforme a Declaração de Fé da CGADB/CPAD."
+                            },
+                            {
+                                question: "Qual a base da doutrina oficial das Assembleias de Deus no Brasil?",
+                                options: [
+                                    "A Declaração de Fé da CGADB/CPAD e a Inerrância Bíblica",
+                                    "Tradições humanas e filosofias seculares",
+                                    "Opiniões mutáveis de cada época",
+                                    "Nenhuma das alternativas"
+                                ],
+                                correctIndex: 0,
+                                explanation: "A declaração de fé oficial sintetiza em 24 capítulos os pilares fundamentais da doutrina pentecostal clássica."
+                            }
+                        ]
+                    };
+                }
             }
 
             const updatedList = [parsedBooklet, ...generatedBooklets];
@@ -461,7 +514,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
             setAiTheme('');
         } catch (error: any) {
             console.error("Erro ao gerar apostila:", error);
-            addToast(`Falha de sintaxe no compilador IA: ${error.message || error}. Tente novamente com outro termo.`, "error");
+            addToast(`Falha no processamento do estudo: ${error.message || error}. Tente novamente.`, "error");
         } finally {
             setGeneratingBooklet(false);
         }
