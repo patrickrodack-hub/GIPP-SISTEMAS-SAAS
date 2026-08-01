@@ -10052,7 +10052,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
             targetModuleId = 'cad_departamento';
         }
         if (user?.id === 'dev') return true; // O Desenvolvedor acede a tudo para testar
-        const plano = db.igreja?.plano || 'avancado'; // Padrão é avançado se não tiver plano
+        const plano = (db.igreja?.plano || 'avancado').toLowerCase(); // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
@@ -10186,7 +10186,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                          {db.igreja.logo ? <CachedImage src={db.igreja.logo} cacheKey="church_main_logo" className="w-12 h-12 object-contain bg-white rounded-xl shadow-md p-1" /> : <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/30"><Building2 size={24}/></div>}
                         <div>
                             <h1 className="font-black text-lg tracking-tight text-slate-800 truncate max-w-[160px] leading-tight">{db.igreja.nome || "GIPP"}</h1>
-                            <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-500">Plano {db.igreja?.plano || 'Avançado'}</p>
+                            <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-500">Plano {(db.igreja?.plano || 'avancado').toUpperCase()}</p>
                         </div>
                     </div>
                 ) : (db.igreja.logo ? <CachedImage src={db.igreja.logo} cacheKey="church_main_logo" className="w-10 h-10 mx-auto object-contain bg-white rounded-xl shadow-sm" /> : <div className="mx-auto bg-gradient-to-br from-indigo-600 to-purple-600 p-3 rounded-2xl text-white shadow-md"><Building2 size={28}/></div>)}
@@ -16887,7 +16887,7 @@ const AppLayout = () => {
             targetModuleId = 'cad_departamento';
         }
         if (user?.id === 'dev') return true; 
-        const plano = db.igreja?.plano || 'avancado';
+        const plano = (db.igreja?.plano || 'avancado').toLowerCase();
 
         const defaultPlanos: Record<string, string[]> = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],

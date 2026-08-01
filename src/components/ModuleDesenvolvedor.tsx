@@ -1040,17 +1040,18 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
     };
 
     const handleChangePlan = async (t, novoPlano) => {
+        const pNormalized = (novoPlano || "").toLowerCase();
         setConfirmDialog({
             isOpen: true,
             title: "Alterar Plano",
-            message: `Alterar o plano da igreja "${t.nome}" para ${novoPlano.toUpperCase()}? Os menus serão ajustados imediatamente.`,
+            message: `Alterar o plano da igreja "${t.nome}" para ${pNormalized.toUpperCase()}? Os menus serão ajustados imediatamente.`,
             confirmText: "Alterar",
             cancelText: "Cancelar",
             variant: "info",
             onConfirm: async () => {
                 try {
-                    await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { plano: novoPlano }, { merge: true });
-                    await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { plano: novoPlano }, { merge: true });
+                    await setDoc(doc(dbFirestore, 'artifacts', t.id, 'public', 'data', 'settings', 'config'), { plano: pNormalized }, { merge: true });
+                    await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', t.id), { plano: pNormalized }, { merge: true });
                     addToast("Plano alterado com sucesso!", "success");
                 } catch(e) {
                     addToast("Erro ao alterar o plano.", "error");
@@ -1082,7 +1083,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
     };
 
     const handleEmitirNota = (t) => {
-        const p = t.plano || 'avancado';
+        const p = (t.plano || 'avancado').toLowerCase();
         // Procura o valor no banco atual. Se não existir usa os valores padrões definidos no state.
         const valor = planosValores[p] || defaultValores[p] || 197;
         
@@ -1245,7 +1246,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
     let receitaEstimada = 0;
     tenants.forEach(t => {
         if (t.licenca_status !== 'bloqueado') {
-            const p = t.plano || 'avancado';
+            const p = (t.plano || 'avancado').toLowerCase();
             receitaEstimada += Number(valoresAtuais[p]) || 0;
         }
     });
@@ -1460,7 +1461,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                                     <span className="text-[10px] text-slate-400 font-mono">{t.id}</span>
                                                 </td>
                                                 <td className="p-3">
-                                                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider">{t.plano || 'Avançado'}</span>
+                                                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider">{(t.plano || 'avancado').toUpperCase()}</span>
                                                 </td>
                                                 <td className="p-3">
                                                     <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${t.licenca_status === 'bloqueado' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
@@ -1594,8 +1595,8 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                             <td className="p-4 text-slate-600 text-xs font-medium">{t.telefone || '-'}<br/>{t.pastor && <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.pastor}</span>}</td>
                                             <td className="p-4 text-center">
                                                 <select 
-                                                    value={t.plano || 'avancado'}
-                                                    onChange={(e) => handleChangePlan(t, (e.target.value || "").toUpperCase())}
+                                                    value={(t.plano || 'avancado').toLowerCase()}
+                                                    onChange={(e) => handleChangePlan(t, e.target.value.toLowerCase())}
                                                     className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm"
                                                 >
                                                     <option value="basico">Básico (R$ {valoresAtuais.basico})</option>
@@ -1862,7 +1863,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-1">
                                                 <h4 className="font-bold text-slate-800 text-lg leading-none">{t.nome}</h4>
-                                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">{t.plano || 'Avançado'}</span>
+                                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">{(t.plano || 'avancado').toUpperCase()}</span>
                                             </div>
                                             <p className="text-xs text-slate-500 font-mono">Vencimento Atual: {t.licenca_vencimento ? formatDateLocal(t.licenca_vencimento) : 'Em Branco'}</p>
                                         </div>
