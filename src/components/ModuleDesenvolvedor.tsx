@@ -80,6 +80,9 @@ const ModuleDesenvolvedor = () => {
     const [contratoModalOpen, setContratoModalOpen] = useState(false);
     const [selectedTenantContrato, setSelectedTenantContrato] = useState<any>(null);
     const [isSavingContrato, setIsSavingContrato] = useState(false);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [isDrawingSign, setIsDrawingSign] = useState(false);
+    const [hasSignDrawing, setHasSignDrawing] = useState(false);
     const [contratoForm, setContratoForm] = useState({
         representante: '',
         cpf: '',
@@ -87,7 +90,8 @@ const ModuleDesenvolvedor = () => {
         plano: 'avancado',
         valor: 197,
         vencimentoDia: 10,
-        aceiteTermos: true
+        aceiteTermos: true,
+        assinaturaGrafica: ''
     });
 
     // ESTADOS PARA DISPOSITIVOS CONECTADOS
@@ -1107,6 +1111,110 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         setPreviewOpen(true);
     };
 
+    // LÓGICA DO CANVAS DE ASSINATURA DIGITAL DO CONTRATANTE
+    const getCanvasCoords = (e: any, canvas: HTMLCanvasElement) => {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+    };
+
+    const handleStartSign = (e: any) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const { x, y } = getCanvasCoords(e, canvas);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        setIsDrawingSign(true);
+    };
+
+    const handleDrawSign = (e: any) => {
+        if (!isDrawingSign) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const { x, y } = getCanvasCoords(e, canvas);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        setHasSignDrawing(true);
+    };
+
+    const handleEndSign = () => {
+        if (!isDrawingSign) return;
+        setIsDrawingSign(false);
+        const canvas = canvasRef.current;
+        if (canvas) {
+            const dataUrl = canvas.toDataURL('image/png');
+            setContratoForm(prev => ({ ...prev, assinaturaGrafica: dataUrl }));
+        }
+    };
+
+    const handleClearCanvasSign = () => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        setHasSignDrawing(false);
+        setContratoForm(prev => ({ ...prev, assinaturaGrafica: '' }));
+    };
+
+    const handleUploadSignImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const result = event.target?.result as string;
+            if (result) {
+                setContratoForm(prev => ({ ...prev, assinaturaGrafica: result }));
+                if (canvasRef.current) {
+                    const canvas = canvasRef.current;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        img.onload = () => {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            setHasSignDrawing(true);
+                        };
+                        img.src = result;
+                    }
+                }
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    useEffect(() => {
+        if (contratoModalOpen && contratoForm.assinaturaGrafica && canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    setHasSignDrawing(true);
+                };
+                img.src = contratoForm.assinaturaGrafica;
+            }
+        }
+    }, [contratoModalOpen]);
+
     const handleEmitirContrato = (t) => {
         setSelectedTenantContrato(t);
         const p = (t.plano || 'avancado').toLowerCase();
@@ -1120,7 +1228,8 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
             plano: p,
             valor: existingContrato?.valor || v,
             vencimentoDia: existingContrato?.vencimento_dia || 10,
-            aceiteTermos: true
+            aceiteTermos: true,
+            assinaturaGrafica: existingContrato?.assinatura_grafica || existingContrato?.assinaturaGrafica || ''
         });
         setContratoModalOpen(true);
     };
@@ -1146,6 +1255,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                 plano: contratoForm.plano,
                 valor: contratoForm.valor,
                 vencimento_dia: contratoForm.vencimentoDia,
+                assinatura_grafica: contratoForm.assinaturaGrafica,
                 hash_assinatura: hash,
                 status: 'ativo',
                 registrado_em: new Date().toISOString()
@@ -1191,6 +1301,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
             plano: contratoForm.plano || selectedTenantContrato.plano || 'avancado',
             valor: contratoForm.valor || 197,
             vencimento_dia: contratoForm.vencimentoDia || 10,
+            assinatura_grafica: contratoForm.assinaturaGrafica,
             hash_assinatura: hash,
         };
 
@@ -5405,6 +5516,54 @@ Agende uma demonstração gratuita agora mesmo!
                                             placeholder="Ex: Pastor Presidente / Tesoureiro"
                                             className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
                                         />
+                                    </div>
+                                </div>
+
+                                {/* QUADRO DE ASSINATURA DIGITAL EM CANVAS */}
+                                <div className="pt-3 border-t border-slate-200">
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
+                                        <label className="text-[10px] font-black uppercase text-indigo-900 flex items-center gap-1.5">
+                                            <PenTool size={14} className="text-indigo-600"/> Assinatura Digital Gráfica do Signatário (Desenho Manual)
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            {contratoForm.assinaturaGrafica && (
+                                                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <CheckCircle2 size={11}/> Capturada
+                                                </span>
+                                            )}
+                                            <button 
+                                                type="button" 
+                                                onClick={handleClearCanvasSign} 
+                                                className="text-[10px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 bg-white border border-rose-200 px-2.5 py-1 rounded-lg shadow-sm hover:bg-rose-50 transition-colors cursor-pointer"
+                                            >
+                                                <RotateCcw size={12}/> Limpar
+                                            </button>
+                                            <label className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg shadow-sm hover:bg-indigo-50 transition-colors cursor-pointer">
+                                                <Upload size={12}/> Anexar Imagem
+                                                <input type="file" accept="image/*" onChange={handleUploadSignImage} className="hidden" />
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative bg-white border-2 border-dashed border-indigo-300 hover:border-indigo-500 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-1 transition-colors">
+                                        <canvas 
+                                            ref={canvasRef}
+                                            width={600}
+                                            height={130}
+                                            onMouseDown={handleStartSign}
+                                            onMouseMove={handleDrawSign}
+                                            onMouseUp={handleEndSign}
+                                            onMouseLeave={handleEndSign}
+                                            onTouchStart={handleStartSign}
+                                            onTouchMove={handleDrawSign}
+                                            onTouchEnd={handleEndSign}
+                                            className="w-full h-28 bg-white cursor-crosshair touch-none rounded-xl"
+                                        />
+                                        <div className="pointer-events-none absolute bottom-2.5 w-4/5 border-b border-slate-300 text-center">
+                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest bg-white px-2 relative -bottom-2">
+                                                Desenhe aqui a assinatura com o mouse ou tela sensível ao toque
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 

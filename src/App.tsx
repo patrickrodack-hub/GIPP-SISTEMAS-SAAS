@@ -9099,6 +9099,7 @@ export const PrintSystem = ({
         const cargoCliente = contrato?.cargo_contratante || 'Pastor Presidente / Tesoureiro';
 
         const hashSeguranca = contrato?.hash_assinatura || `SHA256-${protocolo}-${Date.now().toString(16).toUpperCase()}`;
+        const assinaturaGrafica = contrato?.assinatura_grafica || contrato?.assinaturaGrafica;
 
         return (
             <div className="w-full bg-white print-block relative flex flex-col mx-auto shadow-xl font-sans" style={{ width: '100%', minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
@@ -9209,10 +9210,26 @@ export const PrintSystem = ({
                                     <div className="flex items-center justify-center gap-1 text-emerald-600 font-black text-[10px] mb-1">
                                         <CheckCircle2 size={13}/> HOMOLOGADO PELA IGREJA
                                     </div>
+
+                                    {/* ESPAÇO RESERVADO PARA ASSINATURA GRÁFICA */}
+                                    {assinaturaGrafica ? (
+                                        <div className="my-1.5 py-1 border-b border-dashed border-slate-300 flex justify-center items-center min-h-[48px]">
+                                            <img 
+                                                src={assinaturaGrafica} 
+                                                alt="Assinatura Digital Gráfica" 
+                                                className="h-12 max-w-[200px] object-contain"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="my-1.5 py-2 border-b border-dashed border-slate-300 flex items-center justify-center min-h-[40px]">
+                                            <span className="text-[9px] text-slate-400 font-mono italic">Assinatura Eletrônica Homologada via GIPP</span>
+                                        </div>
+                                    )}
+
                                     <p className="font-black text-slate-800 text-[11px] uppercase">{repCliente}</p>
                                     <p className="text-[9px] text-slate-500 font-semibold">{cargoCliente} - {tenant?.nome}</p>
                                 </div>
-                                <div className="mt-3 pt-2 border-t border-slate-100">
+                                <div className="mt-2 pt-1.5 border-t border-slate-100">
                                     <p className="text-[8px] font-mono text-slate-400">CPF: {cpfCliente} | Registrado no GIPP System</p>
                                 </div>
                             </div>
