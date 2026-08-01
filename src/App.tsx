@@ -20,7 +20,7 @@ import {
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudRain, CloudSun, CloudLightning,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
-  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon,
+  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal
@@ -8946,11 +8946,17 @@ export const PrintSystem = ({
         );
     }
 
-    // --- NOVA NOTA FISCAL DE SERVIÇO (SaaS) ---
+    // --- NOVA NOTA FISCAL DE SERVIÇO (SaaS) COM QRCODE PIX ---
     if (mode === 'nf_servico') {
         const { tenant, valor } = data;
         const dataEmissao = new Date().toLocaleDateString('pt-BR');
         const mesRef = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+        
+        // Dados oficiais para o PIX do GIPP
+        const saasChavePix = data.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698';
+        const saasDevNome = data.igreja?.prestador_servico?.nome || data.igreja?.saas_nome_desenvolvedor || 'PATRICK PESSOA';
+        const saasCidade = data.igreja?.prestador_servico?.cidade_uf || 'Rio de Janeiro';
+        const pixPayloadNf = generatePixPayload(saasChavePix, saasDevNome, saasCidade, parseFloat(valor || 0).toFixed(2));
         
         return (
             <div className="w-full bg-white print-block relative flex flex-col mx-auto shadow-xl" style={{ width: '100%', minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
@@ -9025,14 +9031,39 @@ export const PrintSystem = ({
                         </div>
                     </div>
 
-                    {/* VALORES */}
-                    <div className="flex justify-end mb-8">
-                        <div className="w-1/2 border-2 border-emerald-500 rounded-2xl overflow-hidden shadow-md">
-                            <div className="bg-emerald-50 p-3 border-b border-emerald-200">
-                                <h3 className="text-[11px] font-black uppercase tracking-widest text-emerald-800 text-center">Valor Total Líquido da Nota</h3>
+                    {/* VALORES E QR CODE PIX */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {/* QUADRO PIX DA NOTA */}
+                        <div className="border-2 border-emerald-600 rounded-2xl p-4 bg-emerald-50/40 flex items-center gap-4 shadow-sm">
+                            <div className="bg-white p-2 rounded-xl border border-emerald-200 shadow-md shrink-0">
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pixPayloadNf)}&color=047857&bgcolor=ffffff`} 
+                                    alt="QR Code PIX Fatura" 
+                                    className="w-24 h-24 object-contain"
+                                />
                             </div>
-                            <div className="p-4 text-center bg-white">
-                                <p className="text-4xl font-black text-emerald-600">R$ {parseFloat(valor || 0).toFixed(2)}</p>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <QrCode size={14} className="text-emerald-700"/>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Pagamento Instantâneo via PIX</span>
+                                </div>
+                                <p className="text-[10px] text-slate-600 font-medium leading-tight mb-1.5">Aponte a câmera do celular no app do seu banco para quitar a mensalidade:</p>
+                                <div className="bg-white p-2 rounded-lg border border-emerald-200 text-[10px]">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Chave PIX Oficial</p>
+                                    <p className="font-mono font-black text-slate-800 break-all select-all">{saasChavePix}</p>
+                                </div>
+                                <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Favorecido: <span className="text-slate-800">{saasDevNome}</span></p>
+                            </div>
+                        </div>
+
+                        {/* QUADRO DE VALOR DA NOTA */}
+                        <div className="border-2 border-emerald-500 rounded-2xl overflow-hidden shadow-md flex flex-col justify-between">
+                            <div className="bg-emerald-600 p-3 text-white">
+                                <h3 className="text-[11px] font-black uppercase tracking-widest text-center">Valor Total Líquido a Pagar</h3>
+                            </div>
+                            <div className="p-4 text-center bg-white flex-1 flex flex-col justify-center items-center">
+                                <p className="text-3xl font-black text-emerald-600 font-mono">R$ {parseFloat(valor || 0).toFixed(2)}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Vencimento em até 5 dias após emissão</p>
                             </div>
                         </div>
                     </div>
@@ -9043,6 +9074,162 @@ export const PrintSystem = ({
                         <p className="text-[10px] text-slate-600 leading-relaxed max-w-2xl mx-auto">Documento emitido eletronicamente pelo sistema GIPP Master. Este documento atua como recibo de prestação de serviços (licenciamento de software) não gerando crédito ou débito de impostos (ICMS/IPI). Agradecemos a parceria ministerial.</p>
                         <p className="text-[9px] text-slate-400 mt-3 uppercase font-mono bg-slate-50 p-1.5 rounded inline-block border border-slate-200">Chave de Autenticação: {appId}-{tenant?.id}-{Date.now()}</p>
                     </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- NOVO CONTRATO DE PRESTAÇÃO DE SERVIÇOS E LICENCIAMENTO SAAS ---
+    if (mode === 'contrato_saas') {
+        const { tenant, valor, contrato } = data;
+        const dataEmissao = contrato?.data_emissao || new Date().toLocaleDateString('pt-BR');
+        const planoNome = (tenant?.plano || contrato?.plano || 'avancado').toUpperCase();
+        const protocolo = contrato?.protocolo || `CTR-GIPP-${tenant?.id?.slice(0, 6)?.toUpperCase() || 'MASTER'}-${Date.now().toString().slice(-6)}`;
+        const valorMensal = parseFloat(valor || contrato?.valor || 197).toFixed(2);
+        
+        const devNome = data.igreja?.prestador_servico?.nome || data.igreja?.saas_nome_desenvolvedor || 'GIPP TECNOLOGIA E SOLUÇÕES EM SOFTWARE';
+        const devCnpj = data.igreja?.prestador_servico?.cnpj || '00.000.000/0001-00';
+        const devEndereco = data.igreja?.prestador_servico?.endereco || 'Rua da Inovação Tecnológica, 100 - Centro';
+        const devCidadeUf = data.igreja?.prestador_servico?.cidade_uf || 'Rio de Janeiro / RJ';
+        const devEmail = data.igreja?.prestador_servico?.email || data.igreja?.saas_email || 'suporte@gippsystem.com';
+        const devChavePix = data.igreja?.saas_chave_pix || '4d9868d2-88f7-4fed-ad87-6dfc3c4ae698';
+
+        const repCliente = contrato?.representante_contratante || tenant?.pastor || 'Representante Legal Autorizado';
+        const cpfCliente = contrato?.cpf_contratante || 'Não Informado';
+        const cargoCliente = contrato?.cargo_contratante || 'Pastor Presidente / Tesoureiro';
+
+        const hashSeguranca = contrato?.hash_assinatura || `SHA256-${protocolo}-${Date.now().toString(16).toUpperCase()}`;
+
+        return (
+            <div className="w-full bg-white print-block relative flex flex-col mx-auto shadow-xl font-sans" style={{ width: '100%', minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
+                <div className="flex-1 border-2 border-slate-900 flex flex-col p-8 bg-white relative rounded-xl shadow-sm text-slate-800 text-xs">
+                    
+                    {/* CABEÇALHO DO CONTRATO */}
+                    <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-6">
+                        <div className="flex items-center gap-4">
+                            {data.igreja?.icone_sistema ? (
+                                <img src={data.igreja.icone_sistema} alt="Logo App" className="w-16 h-16 object-contain rounded-xl shadow-md border border-slate-200 p-1 bg-white" />
+                            ) : (
+                                <div className="w-16 h-16 bg-indigo-900 text-white flex items-center justify-center rounded-xl shadow-md font-black">
+                                    <Scale size={32}/>
+                                </div>
+                            )}
+                            <div>
+                                <h1 className="text-xl font-black uppercase text-slate-900 tracking-tight">Contrato de Prestação de Serviços SaaS</h1>
+                                <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Licenciamento de Software de Gestão Eclesiástica Inteligente</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <span className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md block mb-1">Documento Oficial</span>
+                            <p className="text-[11px] font-mono font-black text-indigo-700 tracking-wider">{protocolo}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Emissão: {dataEmissao}</p>
+                        </div>
+                    </div>
+
+                    {/* IDENTIFICAÇÃO DAS PARTES */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {/* CONTRATADA */}
+                        <div className="border border-slate-300 rounded-xl p-3.5 bg-slate-50/60">
+                            <div className="flex items-center gap-2 border-b border-slate-200 pb-1 mb-2">
+                                <Building2 size={14} className="text-indigo-700"/>
+                                <h3 className="text-[9px] font-black uppercase tracking-widest text-indigo-900">1. Contratada (Provedor do Sistema)</h3>
+                            </div>
+                            <p className="font-black text-slate-900 uppercase text-xs">{devNome}</p>
+                            <p className="text-[10px] text-slate-600 font-semibold mt-0.5">CNPJ: {devCnpj}</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5">{devEndereco} - {devCidadeUf}</p>
+                            <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">E-mail / Suporte: {devEmail}</p>
+                        </div>
+
+                        {/* CONTRATANTE */}
+                        <div className="border border-slate-300 rounded-xl p-3.5 bg-slate-50/60">
+                            <div className="flex items-center gap-2 border-b border-slate-200 pb-1 mb-2">
+                                <Users size={14} className="text-emerald-700"/>
+                                <h3 className="text-[9px] font-black uppercase tracking-widest text-emerald-900">2. Contratante (Igreja Cliente)</h3>
+                            </div>
+                            <p className="font-black text-slate-900 uppercase text-xs">{tenant?.nome || 'IGREJA NÃO IDENTIFICADA'}</p>
+                            <p className="text-[10px] text-slate-600 font-semibold mt-0.5">CNPJ: {tenant?.cnpj || 'Não Cadastrado'}</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5">Representante Legal: <strong>{repCliente}</strong> ({cargoCliente})</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5">CPF Signatário: {cpfCliente} | Tel: {tenant?.telefone || '-'}</p>
+                        </div>
+                    </div>
+
+                    {/* CLÁUSULAS CONTRATUAIS */}
+                    <div className="space-y-3 text-[11px] leading-relaxed text-slate-700 mb-6 flex-1">
+                        <div className="bg-slate-900 text-white px-3 py-1.5 rounded-lg flex justify-between items-center">
+                            <h2 className="font-black uppercase tracking-wider text-[10px]">Cláusulas e Termos do Acordo de Licenciamento (SaaS)</h2>
+                            <span className="text-[9px] font-bold text-indigo-200 uppercase">Pacote: {planoNome}</span>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                            <p>
+                                <strong>CLÁUSULA 1ª - DO OBJETO:</strong> O presente contrato tem por objeto a concessão de licença de uso do software corporativo em nuvem <strong>GIPP (Gestão Eclesiástica Inteligente)</strong> no plano <strong>{planoNome}</strong>, concedendo à CONTRATANTE acesso contínuo aos módulos de gestão financeira, secretarial, membros, portal eclesiástico e relatórios gerenciais.
+                            </p>
+                            <p>
+                                <strong>CLÁUSULA 2ª - DO VALOR E CONDIÇÕES DE PAGAMENTO:</strong> A CONTRATANTE pagará à CONTRATADA o valor mensal fixo de <strong>R$ {valorMensal}</strong> (reajustável anualmente pelo IGPM/IPCA). Os pagamentos deverão ser efetuados via PIX (Chave Oficial: <code className="font-mono text-indigo-700 bg-indigo-50 px-1 rounded">{devChavePix}</code>) ou boleto bancário no vencimento estipulado.
+                            </p>
+                            <p>
+                                <strong>CLÁUSULA 3ª - DAS OBRIGAÇÕES DE ATENDIMENTO E SUPORTE (SLA):</strong> A CONTRATADA compromete-se a manter disponibilidade de serviço igual ou superior a 99% (noventa e nove por cento), prestando atendimento e suporte técnico aos usuários autorizados em horário comercial através dos canais oficiais (WhatsApp, e-mail e chamados no painel).
+                            </p>
+                            <p>
+                                <strong>CLÁUSULA 4ª - DA INADIMPLÊNCIA E SUSPENSÃO:</strong> O atraso no pagamento por período superior a 10 (dez) dias corridos acarretará na suspensão temporária dos acessos ao sistema até a devida quitação, sem prejuízo da preservação de todos os dados cadastrados da CONTRATANTE.
+                            </p>
+                            <p>
+                                <strong>CLÁUSULA 5ª - PROTEÇÃO DE DADOS (LGPD) E CONFIDENCIALIDADE:</strong> A CONTRATADA compromete-se a adotar rígidos padrões de segurança cibernética e manter sigilo absoluto sobre os dados de membros, tesouraria e atas da CONTRATANTE, atuando em estrita observância à Lei Geral de Proteção de Dados Pessoais (LGPD - Lei nº 13.709/2018).
+                            </p>
+                            <p>
+                                <strong>CLÁUSULA 6ª - VIGÊNCIA E RESCISÃO:</strong> Este contrato possui vigência mensal com renovação automática mediante adimplemento. Ambas as partes podem solicitar a rescisão sem ônus mediante comunicação prévia de 30 (trinta) dias.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ASSINATURAS DIGITAIS E CHAVE DE VALIDAÇÃO */}
+                    <div className="border-2 border-indigo-200 rounded-2xl p-4 bg-indigo-50/30 mb-4">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-900 mb-3 text-center flex items-center justify-center gap-1.5">
+                            <FileSignature size={14} className="text-indigo-600"/> Termo de Homologação e Assinatura Eletrônica Digital
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* ASSINATURA CONTRATADA */}
+                            <div className="bg-white p-3.5 rounded-xl border border-indigo-200 text-center shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-center gap-1 text-emerald-600 font-black text-[10px] mb-1">
+                                        <CheckCircle2 size={13}/> ASSINADO DIGITALMENTE
+                                    </div>
+                                    <p className="font-black text-slate-800 text-[11px] uppercase">{devNome}</p>
+                                    <p className="text-[9px] text-slate-500 font-semibold">Diretoria de Operações e Engenharia GIPP</p>
+                                </div>
+                                <div className="mt-3 pt-2 border-t border-slate-100">
+                                    <p className="text-[8px] font-mono text-slate-400">Validação GCP-RSA | Data: {dataEmissao}</p>
+                                </div>
+                            </div>
+
+                            {/* ASSINATURA CONTRATANTE */}
+                            <div className="bg-white p-3.5 rounded-xl border border-indigo-200 text-center shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-center gap-1 text-emerald-600 font-black text-[10px] mb-1">
+                                        <CheckCircle2 size={13}/> HOMOLOGADO PELA IGREJA
+                                    </div>
+                                    <p className="font-black text-slate-800 text-[11px] uppercase">{repCliente}</p>
+                                    <p className="text-[9px] text-slate-500 font-semibold">{cargoCliente} - {tenant?.nome}</p>
+                                </div>
+                                <div className="mt-3 pt-2 border-t border-slate-100">
+                                    <p className="text-[8px] font-mono text-slate-400">CPF: {cpfCliente} | Registrado no GIPP System</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-3 bg-white p-2 rounded-xl border border-indigo-200 text-center">
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Protocolo Unificado de Autenticidade Digital</p>
+                            <p className="text-[9px] font-mono font-black text-indigo-700 break-all">{hashSeguranca}</p>
+                        </div>
+                    </div>
+
+                    {/* RODAPÉ DO CONTRATO */}
+                    <div className="mt-auto border-t border-slate-300 pt-3 flex justify-between items-center text-[9px] text-slate-500 font-medium">
+                        <p>GIPP System SaaS - Plataforma Oficial de Gestão Eclesiástica Inteligente</p>
+                        <p className="font-bold text-slate-700">Página 1 de 1 - Documento Válido e Registrado</p>
+                    </div>
+
                 </div>
             </div>
         );

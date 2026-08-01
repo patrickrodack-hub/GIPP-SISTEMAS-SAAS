@@ -76,6 +76,20 @@ const ModuleDesenvolvedor = () => {
     const [tenants, setTenants] = useState([]);
     const [loadingTenants, setLoadingTenants] = useState(false);
 
+    // ESTADOS PARA EMISSÃO DE CONTRATO SAAS
+    const [contratoModalOpen, setContratoModalOpen] = useState(false);
+    const [selectedTenantContrato, setSelectedTenantContrato] = useState<any>(null);
+    const [isSavingContrato, setIsSavingContrato] = useState(false);
+    const [contratoForm, setContratoForm] = useState({
+        representante: '',
+        cpf: '',
+        cargo: 'Pastor Presidente / Tesoureiro',
+        plano: 'avancado',
+        valor: 197,
+        vencimentoDia: 10,
+        aceiteTermos: true
+    });
+
     // ESTADOS PARA DISPOSITIVOS CONECTADOS
     const [devices, setDevices] = useState([]);
     const [loadingDevices, setLoadingDevices] = useState(false);
@@ -1093,6 +1107,103 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         setPreviewOpen(true);
     };
 
+    const handleEmitirContrato = (t) => {
+        setSelectedTenantContrato(t);
+        const p = (t.plano || 'avancado').toLowerCase();
+        const v = planosValores[p] || defaultValores[p] || 197;
+        const existingContrato = t.contrato_saas;
+
+        setContratoForm({
+            representante: existingContrato?.representante_contratante || t.pastor || 'Pastor Presidente',
+            cpf: existingContrato?.cpf_contratante || t.cpf || '',
+            cargo: existingContrato?.cargo_contratante || 'Pastor Presidente / Tesoureiro',
+            plano: p,
+            valor: existingContrato?.valor || v,
+            vencimentoDia: existingContrato?.vencimento_dia || 10,
+            aceiteTermos: true
+        });
+        setContratoModalOpen(true);
+    };
+
+    const handleSaveAndRegisterContrato = async () => {
+        if (!selectedTenantContrato) return;
+        if (!contratoForm.representante.trim()) {
+            addToast("Informe o nome do representante legal da igreja.", "warning");
+            return;
+        }
+        setIsSavingContrato(true);
+        try {
+            const protocolo = `CTR-GIPP-${selectedTenantContrato.id.slice(0, 6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+            const dataEmissao = new Date().toLocaleDateString('pt-BR');
+            const hash = `SHA256-${protocolo}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+            const contratoPayload = {
+                protocolo,
+                data_emissao: dataEmissao,
+                representante_contratante: contratoForm.representante,
+                cpf_contratante: contratoForm.cpf,
+                cargo_contratante: contratoForm.cargo,
+                plano: contratoForm.plano,
+                valor: contratoForm.valor,
+                vencimento_dia: contratoForm.vencimentoDia,
+                hash_assinatura: hash,
+                status: 'ativo',
+                registrado_em: new Date().toISOString()
+            };
+
+            // Salva na coleção master dos tenants no Firestore
+            await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', selectedTenantContrato.id), {
+                contrato_saas: contratoPayload,
+                plano: contratoForm.plano
+            }, { merge: true });
+
+            // Salva também nas configurações públicas do próprio tenant
+            await setDoc(doc(dbFirestore, 'artifacts', selectedTenantContrato.id, 'public', 'data', 'settings', 'config'), {
+                contrato_saas: contratoPayload,
+                plano: contratoForm.plano
+            }, { merge: true });
+
+            // Atualiza localmente
+            setTenants((prev: any[]) => prev.map(item => item.id === selectedTenantContrato.id ? { ...item, contrato_saas: contratoPayload, plano: contratoForm.plano } : item));
+
+            addToast(`Contrato ${protocolo} registrado no sistema com sucesso!`, "success");
+            setContratoModalOpen(false);
+        } catch (e) {
+            console.error("Erro ao registrar contrato:", e);
+            addToast("Erro ao registrar contrato no banco de dados.", "error");
+        } finally {
+            setIsSavingContrato(false);
+        }
+    };
+
+    const handlePrintContrato = () => {
+        if (!selectedTenantContrato) return;
+        const protocolo = selectedTenantContrato.contrato_saas?.protocolo || `CTR-GIPP-${selectedTenantContrato.id.slice(0, 6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+        const dataEmissao = new Date().toLocaleDateString('pt-BR');
+        const hash = selectedTenantContrato.contrato_saas?.hash_assinatura || `SHA256-${protocolo}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+        const contratoPayload = {
+            protocolo,
+            data_emissao: dataEmissao,
+            representante_contratante: contratoForm.representante || selectedTenantContrato.pastor || 'Pastor Presidente',
+            cpf_contratante: contratoForm.cpf || 'Não Informado',
+            cargo_contratante: contratoForm.cargo || 'Pastor Presidente / Tesoureiro',
+            plano: contratoForm.plano || selectedTenantContrato.plano || 'avancado',
+            valor: contratoForm.valor || 197,
+            vencimento_dia: contratoForm.vencimentoDia || 10,
+            hash_assinatura: hash,
+        };
+
+        setPrintData({
+            tenant: selectedTenantContrato,
+            valor: contratoForm.valor,
+            igreja: db.igreja,
+            contrato: contratoPayload
+        });
+        setPrintMode('contrato_saas');
+        setPreviewOpen(true);
+    };
+
     // --- FUNÇÕES DE CONFIGURAÇÃO VISUAL ---
 
     const handleSaveConfig = async () => {
@@ -1612,6 +1723,13 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                                     <ExternalLink size={16}/>
                                                 </a>
                                                 <button 
+                                                    onClick={() => handleEmitirContrato(t)} 
+                                                    className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm cursor-pointer" 
+                                                    title="Emitir Contrato SaaS da Igreja"
+                                                >
+                                                    <FileSignature size={16}/>
+                                                </button>
+                                                <button 
                                                     onClick={() => setTenantToDelete(t)} 
                                                     className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 border border-rose-100 rounded-xl transition-colors shadow-sm" 
                                                     title="Excluir Igreja permanentemente"
@@ -1877,6 +1995,9 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                             </div>
                                             <Button onClick={() => handleEmitirNota(t)} variant="secondary" className="whitespace-nowrap px-4 py-2.5 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600 shadow-sm flex-1 md:flex-none">
                                                 <Receipt size={16}/> Emitir Nota
+                                            </Button>
+                                            <Button onClick={() => handleEmitirContrato(t)} variant="secondary" className="whitespace-nowrap px-4 py-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700 font-bold shadow-sm flex-1 md:flex-none">
+                                                <FileSignature size={16}/> Emitir Contrato
                                             </Button>
                                             <Button onClick={() => handleConfirmPayment(t)} variant="success" className="shadow-emerald-500/20 whitespace-nowrap px-4 py-2.5 text-xs flex-1 md:flex-none">
                                                 <CheckCheck size={16}/> Recebido
@@ -5201,6 +5322,172 @@ Agende uma demonstração gratuita agora mesmo!
                                     ) : (
                                         <><Trash2 size={16}/> Confirmar Exclusão</>
                                     )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL DE EMISSÃO E REGISTRO DE CONTRATO DIGITAL SAAS */}
+            {contratoModalOpen && selectedTenantContrato && createPortal(
+                <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+                    <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8">
+                        <button 
+                            onClick={() => setContratoModalOpen(false)}
+                            className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
+                        >
+                            <X size={20}/>
+                        </button>
+
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+                            <div className="p-3 bg-indigo-100 text-indigo-700 rounded-2xl">
+                                <FileSignature size={28}/>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Emissão e Registro de Contrato SaaS</h3>
+                                <p className="text-xs text-slate-500 font-semibold">GIPP Gestão Eclesiástica Inteligente - Documento Jurídico de Licenciamento</p>
+                            </div>
+                        </div>
+
+                        {/* CORPO DO FORMULÁRIO DO CONTRATO */}
+                        <div className="space-y-6">
+                            {/* DADOS DAS PARTES */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-700 mb-1">CONTRATADA (GIPP Master)</p>
+                                    <p className="text-xs font-black text-slate-800 uppercase">{data.prestador_servico?.nome || data.saas_nome_desenvolvedor || 'GIPP TECNOLOGIA E SOLUÇÕES EM SOFTWARE'}</p>
+                                    <p className="text-[10px] font-semibold text-slate-600 mt-0.5">CNPJ: {data.prestador_servico?.cnpj || '00.000.000/0001-00'}</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">{data.prestador_servico?.email || data.saas_email || 'suporte@gippsystem.com'}</p>
+                                </div>
+
+                                <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1">CONTRATANTE (Igreja Cliente)</p>
+                                    <p className="text-xs font-black text-slate-800 uppercase">{selectedTenantContrato.nome}</p>
+                                    <p className="text-[10px] font-semibold text-slate-600 mt-0.5">CNPJ: {selectedTenantContrato.cnpj || 'Não Cadastrado'}</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">{selectedTenantContrato.cidade} / {selectedTenantContrato.uf || 'UF'}</p>
+                                </div>
+                            </div>
+
+                            {/* CAMPOS EDITÁVEIS DO REPRESENTANTE E DA ASSINATURA */}
+                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                                    <UserCheck size={16} className="text-indigo-600"/> Dados do Signatário / Representante da Igreja
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Representante Legal *</label>
+                                        <input 
+                                            type="text" 
+                                            value={contratoForm.representante}
+                                            onChange={(e) => setContratoForm({...contratoForm, representante: e.target.value})}
+                                            placeholder="Ex: Pr. João da Silva"
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">CPF do Signatário *</label>
+                                        <input 
+                                            type="text" 
+                                            value={contratoForm.cpf}
+                                            onChange={(e) => setContratoForm({...contratoForm, cpf: formatCPF(e.target.value)})}
+                                            placeholder="000.000.000-00"
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Cargo / Função *</label>
+                                        <input 
+                                            type="text" 
+                                            value={contratoForm.cargo}
+                                            onChange={(e) => setContratoForm({...contratoForm, cargo: e.target.value})}
+                                            placeholder="Ex: Pastor Presidente / Tesoureiro"
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-200">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Plano Selecionado</label>
+                                        <select
+                                            value={contratoForm.plano}
+                                            onChange={(e) => {
+                                                const p = e.target.value.toLowerCase();
+                                                const val = planosValores[p] || defaultValores[p] || 197;
+                                                setContratoForm({...contratoForm, plano: p, valor: val});
+                                            }}
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                                        >
+                                            <option value="basico">Básico (R$ {planosValores.basico || 97})</option>
+                                            <option value="standard">Standard (R$ {planosValores.standard || 147})</option>
+                                            <option value="avancado">Avançado (R$ {planosValores.avancado || 197})</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Valor Mensal (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            value={contratoForm.valor}
+                                            onChange={(e) => setContratoForm({...contratoForm, valor: parseFloat(e.target.value) || 0})}
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-emerald-600 outline-none focus:border-indigo-500 font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Dia de Vencimento</label>
+                                        <input 
+                                            type="number" 
+                                            min="1" max="31"
+                                            value={contratoForm.vencimentoDia}
+                                            onChange={(e) => setContratoForm({...contratoForm, vencimentoDia: parseInt(e.target.value) || 10})}
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* PREVIEW DE TERMOS E CLAUSULAS */}
+                            <div className="bg-slate-900 text-white p-4 rounded-2xl space-y-2 text-xs max-h-48 overflow-y-auto font-mono leading-relaxed border border-slate-800">
+                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest border-b border-slate-800 pb-1">Resumo das Cláusulas do Contrato Oficial (SaaS GIPP)</p>
+                                <p><strong>1. Objeto:</strong> Licenciamento não exclusivo de uso do sistema GIPP no plano {contratoForm.plano.toUpperCase()}.</p>
+                                <p><strong>2. Valor:</strong> R$ {parseFloat(contratoForm.valor || 0).toFixed(2)} / mês com vencimento no dia {contratoForm.vencimentoDia}.</p>
+                                <p><strong>3. Suporte & SLA:</strong> Garantia de 99% de disponibilidade e suporte técnico via canais oficiais em horário comercial.</p>
+                                <p><strong>4. Segurança e LGPD:</strong> Proteção de dados e conformidade total com a Lei nº 13.709/2018.</p>
+                                <p><strong>5. Assinatura Eletrônica:</strong> Homologado digitalmente com protocolo único de validação criptográfica.</p>
+                            </div>
+
+                            {/* HOMOLOGAÇÃO E CHECKBOX */}
+                            <label className="flex items-start gap-3 p-3 bg-emerald-50 rounded-2xl border border-emerald-200 cursor-pointer">
+                                <input 
+                                    type="checkbox"
+                                    checked={contratoForm.aceiteTermos}
+                                    onChange={(e) => setContratoForm({...contratoForm, aceiteTermos: e.target.checked})}
+                                    className="mt-0.5 w-4 h-4 text-indigo-600 rounded cursor-pointer"
+                                />
+                                <span className="text-xs font-bold text-slate-700 leading-snug">
+                                    Declaro que homologo o contrato corporativo de prestação de serviços SaaS para a igreja <strong className="text-slate-900">{selectedTenantContrato.nome}</strong> com registro no banco de dados e protocolo eletrônico.
+                                </span>
+                            </label>
+
+                            {/* BOTÕES DE AÇÃO */}
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-200">
+                                <Button
+                                    type="button"
+                                    onClick={handleSaveAndRegisterContrato}
+                                    disabled={isSavingContrato || !contratoForm.aceiteTermos}
+                                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                                >
+                                    {isSavingContrato ? <Loader2 size={16} className="animate-spin"/> : <CheckCircle2 size={16}/>}
+                                    Registrar no Sistema
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    onClick={handlePrintContrato}
+                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+                                >
+                                    <Printer size={16}/> Imprimir Contrato (PDF)
                                 </Button>
                             </div>
                         </div>
