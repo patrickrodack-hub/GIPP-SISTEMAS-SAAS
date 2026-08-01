@@ -10255,6 +10255,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         if (moduleId === 'ministerio_louvor' || moduleId === 'ministerio_midia' || moduleId === 'ministerio_familia') {
             targetModuleId = 'cad_departamento';
         }
+        if (moduleId === 'interativo' || moduleId === 'portal_interativo') {
+            targetModuleId = 'access_interativo';
+        }
         if (user?.id === 'dev') return true; // O Desenvolvedor acede a tudo para testar
         const plano = (db.igreja?.plano || 'avancado').toLowerCase(); // Padrão é avançado se não tiver plano
 
@@ -10463,13 +10466,14 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
                 </div>
 
-                {(hasPermission('access_sec_certificados') || hasPermission('access_midia') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
+                {(hasPermission('access_sec_certificados') || hasPermission('access_midia') || hasPermission('access_interativo') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
                     <div>
-                        <MenuGroup label="GIPP Escritório" />
+                        <MenuGroup label="GIPP Escritório & Mídia" />
                         {hasPermission('access_sec_certificados') && checkPlan('carteirinha_studio') && <MenuItem id="carteirinha_studio" icon={IdCard} label="Estúdio Carteirinhas" />}
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                         {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={GippDocsIcon} label="GIPP DOCs" />}
                         {hasPermission('access_midia') && checkPlan('sheets_editor') && <MenuItem id="sheets_editor" icon={GippSheetsIcon} label="GIPP Planilhas" />}
+                        {hasPermission('access_interativo') && checkPlan('interativo') && <MenuItem id="interativo" icon={Gamepad2} label="Módulo Interativo & Gamificação" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
                     </div>
                 )}
@@ -17066,6 +17070,7 @@ const AppLayout = () => {
         { id: 'relatorios', icon: FileText, label: "Relatórios PDF", color: 'text-slate-600', bg: 'bg-slate-600/10' },
         { id: 'carteirinha_studio', icon: IdCard, label: "Estúdio Carteirinhas", color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'rede_social', icon: ImagePlus, label: "Estúdio de Artes", color: 'text-rose-500', bg: 'bg-rose-500/10' },
+        { id: 'interativo', icon: Gamepad2, label: "Interativo & Gamificação", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
         { id: 'docs_editor', icon: GippDocsIcon, label: "GIPP DOCs", color: 'text-blue-500', bg: 'bg-blue-500/10' },
         { id: 'sheets_editor', icon: GippSheetsIcon, label: "GIPP Planilhas", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         { id: 'credencial_lote', icon: Badge, label: "Credencial em Lote", color: 'text-violet-500', bg: 'bg-violet-500/10' },
@@ -17089,6 +17094,9 @@ const AppLayout = () => {
         let targetModuleId = moduleId;
         if (moduleId === 'ministerio_louvor' || moduleId === 'ministerio_midia' || moduleId === 'ministerio_familia') {
             targetModuleId = 'cad_departamento';
+        }
+        if (moduleId === 'interativo' || moduleId === 'portal_interativo') {
+            targetModuleId = 'access_interativo';
         }
         if (user?.id === 'dev') return true; 
         const plano = (db.igreja?.plano || 'avancado').toLowerCase();
@@ -17147,6 +17155,7 @@ const AppLayout = () => {
             'docs_editor': 'access_midia',
             'sheets_editor': 'access_midia',
             'rede_social': 'access_midia',
+            'interativo': 'access_interativo',
             'credencial_lote': 'access_sec_certificados',
             'assistente_ai': 'access_ia',
             'config_sistema': 'access_config_sistema',
@@ -17494,6 +17503,7 @@ const AppLayout = () => {
         'curso_teologia': { component: ModuleTeologia, access: 'access_teologia' },
         'missoes_painel': { component: ModuleMissoes, access: 'access_missoes' },
         'rede_social': { component: ModuleRedeSocial, access: 'access_midia' },
+        'interativo': { component: ModuleInterativo, access: 'access_interativo' },
         'docs_editor': { component: ModuleGippDocs, access: 'access_midia' },
         'sheets_editor': { component: ModuleGippPlanilhas, access: 'access_midia' },
         'relatorios': { component: ModuleRelatorios, access: 'access_sec_relatorios' },

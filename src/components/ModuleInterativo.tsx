@@ -4,7 +4,8 @@ import {
   Maximize2, Minimize2, X, Award, Users, Check, Pause, 
   RotateCcw, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, 
   Coins, SkipForward, Flame, MessageCircle, HelpCircle as HelpIcon,
-  CheckCircle2, AlertTriangle, ChevronRight, Info, EyeOff, LayoutGrid, SlidersHorizontal, Move
+  CheckCircle2, AlertTriangle, ChevronRight, Info, EyeOff, LayoutGrid, SlidersHorizontal, Move,
+  Key, Lock, Unlock, Zap, Compass, BookOpen, Volume2, VolumeX, Smile, Disc, Clock, Lightbulb, Sparkle, PartyPopper
 } from 'lucide-react';
 
 // ==========================================
@@ -291,21 +292,30 @@ const COLS = 10;
 const ROWS = 20;
 
 export default function ModuleInterativo() {
-  const [activeGame, setActiveGame] = useState<'none' | 'tetris' | 'show'>('none');
+  const [activeGame, setActiveGame] = useState<'none' | 'tetris' | 'show' | 'passa' | 'escape' | 'roda'>('none');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scores, setScores] = useState({
     tetris: 0,
-    show: 0
+    show: 0,
+    passa: 0,
+    escape: 0,
+    roda: 0
   });
 
   useEffect(() => {
     const savedTetris = localStorage.getItem('gipp_game_tetris_score');
     const savedShow = localStorage.getItem('gipp_game_show_score');
+    const savedPassa = localStorage.getItem('gipp_game_passa_score');
+    const savedEscape = localStorage.getItem('gipp_game_escape_score');
+    const savedRoda = localStorage.getItem('gipp_game_roda_score');
     if (savedTetris) setScores(prev => ({ ...prev, tetris: parseInt(savedTetris) }));
     if (savedShow) setScores(prev => ({ ...prev, show: parseInt(savedShow) }));
+    if (savedPassa) setScores(prev => ({ ...prev, passa: parseInt(savedPassa) }));
+    if (savedEscape) setScores(prev => ({ ...prev, escape: parseInt(savedEscape) }));
+    if (savedRoda) setScores(prev => ({ ...prev, roda: parseInt(savedRoda) }));
   }, []);
 
-  const updateHighScore = (game: 'tetris' | 'show', val: number) => {
+  const updateHighScore = (game: 'tetris' | 'show' | 'passa' | 'escape' | 'roda', val: number) => {
     setScores(prev => {
       if (val > prev[game]) {
         const next = { ...prev, [game]: val };
@@ -323,80 +333,172 @@ export default function ModuleInterativo() {
       {activeGame === 'none' && (
         <div className="p-6 md:p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
           <div className="text-center max-w-3xl mx-auto mb-10">
-            <span className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs font-black text-indigo-450 tracking-widest uppercase inline-flex items-center gap-2 mb-4">
+            <span className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs font-black text-indigo-400 tracking-widest uppercase inline-flex items-center gap-2 mb-4">
               <Sparkles size={14} className="animate-pulse" />
-              Módulo de Interatividade Cristã
+              Módulo de Interatividade & Gamificação Cristã
             </span>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent mb-4">
               GIPP Interativo & Edificação
             </h1>
             <p className="text-sm md:text-base text-slate-400 leading-relaxed">
-              Entretenimento de alto nível para toda a família! Divirta-se com o clássico jogo **Tetris** para aguçar a agilidade mental, ou prove seus conhecimentos doutrinários no eletrizante **Show do Cristão**, baseado estritamente na Declaração de Fé das Assembleias de Deus.
+              Plataforma completa de dinamização e gamificação eclesiástica! Divirta-se em família, na EBD, nos grupos de jovens ou no ministério infantil com jogos teológicos fundamentados na Declaração de Fé da CGADB/CPAD.
             </p>
           </div>
 
-          {/* GRID DE CARTÕES DE GAMES */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+          {/* GRID DE CARTÕES DE GAMES (5 JOGOS) */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
             
             {/* CARD 1: TETRIS CLÁSSICO */}
-            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-8 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-indigo-500/30 transition-all hover:scale-[1.01] duration-300">
+            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-indigo-500/30 transition-all hover:scale-[1.01] duration-300">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/10 transition-all"></div>
               <div>
-                <div className="w-14 h-14 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
-                  <Gamepad2 size={28} />
+                <div className="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
+                  <Gamepad2 size={24} />
                 </div>
-                <h3 className="text-2xl font-black text-white mb-3 flex items-center gap-2">
+                <h3 className="text-xl font-black text-white mb-2 flex items-center gap-2">
                   Tetris Tradicional
-                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">Agilidade</span>
+                  <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Agilidade</span>
                 </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Encaixe os blocos que caem sob gravidade progressiva. Limpe linhas inteiras para acumular pontos, subir de nível e quebrar seu recorde pessoal. Com suporte completo a gestos na tela do celular e painel direcional flutuante!
+                <p className="text-slate-400 text-xs leading-relaxed mb-6">
+                  Encaixe os blocos que caem sob gravidade progressiva. Limpe linhas inteiras para acumular pontos, subir de nível e quebrar seu recorde pessoal.
                 </p>
               </div>
 
-              <div className="border-t border-slate-800 pt-6 mt-6 flex items-center justify-between gap-4">
+              <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Recorde Pessoal</p>
-                  <p className="text-xl font-black text-indigo-400">{scores.tetris} pontos</p>
+                  <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">Recorde</p>
+                  <p className="text-lg font-black text-indigo-400">{scores.tetris} Pts</p>
                 </div>
                 <button 
                   onClick={() => { setActiveGame('tetris'); setIsFullscreen(false); }}
-                  className="px-6 py-3.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
                 >
-                  <Play size={15} fill="currentColor" />
-                  Jogar Agora
+                  <Play size={14} fill="currentColor" />
+                  Jogar
                 </button>
               </div>
             </div>
 
-            {/* CARD 2: SHOW DO CRISTÃO - MELHORADO E BRILHANTE */}
-            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-8 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-amber-500/30 transition-all hover:scale-[1.01] duration-300">
+            {/* CARD 2: SHOW DO CRISTÃO */}
+            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-amber-500/30 transition-all hover:scale-[1.01] duration-300">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-all"></div>
               <div>
-                <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mb-6 shadow-inner animate-pulse">
-                  <Trophy size={28} />
+                <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
+                  <Trophy size={24} />
                 </div>
-                <h3 className="text-2xl font-black text-white mb-3 flex items-center gap-2">
+                <h3 className="text-xl font-black text-white mb-2 flex items-center gap-2">
                   Show do Cristão
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">Teologia</span>
+                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Teologia</span>
                 </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Inspirado na atmosfera do clássico "Show do Milhão". Avance pelas perguntas teológicas de níveis crescentes e conquiste prêmios fictícios até 1.000.000 Pts! Conte com ajuda das Cartas, Universitários, Placas e Pulos.
+                <p className="text-slate-400 text-xs leading-relaxed mb-6">
+                  Avance pelas perguntas teológicas de níveis crescentes e conquiste prêmios fictícios até 1.000.000 Pts! Com Cartas, Universitários, Placas e Pulos.
                 </p>
               </div>
 
-              {/* BOTAO CORRIGIDO E SUPER BRILHANTE - SEM AMBER-550 */}
-              <div className="border-t border-slate-800 pt-6 mt-6 flex items-center justify-between gap-4">
+              <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Maior Prêmio</p>
-                  <p className="text-xl font-black text-amber-400">{scores.show.toLocaleString('pt-BR')} Pts</p>
+                  <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">Maior Prêmio</p>
+                  <p className="text-lg font-black text-amber-400">{scores.show.toLocaleString('pt-BR')} Pts</p>
                 </div>
                 <button 
                   onClick={() => { setActiveGame('show'); setIsFullscreen(false); }}
-                  className="px-6 py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-550 hover:to-orange-550 text-slate-950 font-black rounded-2xl text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 active:scale-95 transition-all cursor-pointer"
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
                 >
-                  <Play size={15} fill="currentColor" />
-                  Jogar Agora
+                  <Play size={14} fill="currentColor" />
+                  Jogar
+                </button>
+              </div>
+            </div>
+
+            {/* CARD 3: PASSA OU REPASSA TEOLÓGICO */}
+            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-rose-500/30 transition-all hover:scale-[1.01] duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-rose-500/10 transition-all"></div>
+              <div>
+                <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
+                  <Flame size={24} />
+                </div>
+                <h3 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                  Passa ou Repassa
+                  <span className="text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Equipes</span>
+                </h3>
+                <p className="text-slate-400 text-xs leading-relaxed mb-6">
+                  Duelo eletrizante entre a **Equipe Azul** e a **Equipe Vermelha**! Responda, Passe, Repasse ou leve uma animada **Torta no Rosto** virtual!
+                </p>
+              </div>
+
+              <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">Recorde Geral</p>
+                  <p className="text-lg font-black text-rose-400">{scores.passa} Pts</p>
+                </div>
+                <button 
+                  onClick={() => { setActiveGame('passa'); setIsFullscreen(false); }}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 hover:shadow-lg hover:shadow-rose-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Play size={14} fill="currentColor" />
+                  Jogar
+                </button>
+              </div>
+            </div>
+
+            {/* CARD 4: ESCAPE ROOM BÍBLICO */}
+            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-emerald-500/30 transition-all hover:scale-[1.01] duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/10 transition-all"></div>
+              <div>
+                <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
+                  <Key size={24} />
+                </div>
+                <h3 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                  Escape Room Bíblico
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Enigma</span>
+                </h3>
+                <p className="text-slate-400 text-xs leading-relaxed mb-6">
+                  Investigue o Tabernáculo de Moisés, decifre as pistas bíblicas nos objetos sagrados e descubra a combinação secreta para abrir a Arca e escapar!
+                </p>
+              </div>
+
+              <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">Fugas Concluídas</p>
+                  <p className="text-lg font-black text-emerald-400">{scores.escape} x</p>
+                </div>
+                <button 
+                  onClick={() => { setActiveGame('escape'); setIsFullscreen(false); }}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Play size={14} fill="currentColor" />
+                  Jogar
+                </button>
+              </div>
+            </div>
+
+            {/* CARD 5: RODA DA TEOLOGIA */}
+            <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-cyan-500/30 transition-all hover:scale-[1.01] duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/10 transition-all"></div>
+              <div>
+                <div className="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
+                  <Disc size={24} />
+                </div>
+                <h3 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                  Roda da Teologia
+                  <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Roleta</span>
+                </h3>
+                <p className="text-slate-400 text-xs leading-relaxed mb-6">
+                  Gire a roleta teológica, sorteie categorias doutrinárias (Pneumatologia, Cristologia, Escatologia) e acumule bônus da graça e pontuações!
+                </p>
+              </div>
+
+              <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">Recorde Roleta</p>
+                  <p className="text-lg font-black text-cyan-400">{scores.roda} Pts</p>
+                </div>
+                <button 
+                  onClick={() => { setActiveGame('roda'); setIsFullscreen(false); }}
+                  className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 hover:shadow-lg hover:shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Play size={14} fill="currentColor" />
+                  Jogar
                 </button>
               </div>
             </div>
@@ -405,7 +507,7 @@ export default function ModuleInterativo() {
 
           <div className="mt-12 text-center text-xs text-slate-500 flex items-center justify-center gap-2 max-w-lg mx-auto bg-slate-900/25 p-4 rounded-2xl border border-slate-800/40">
             <Info size={14} className="text-indigo-400 shrink-0" />
-            <span>Seus recordes são salvos de forma 100% segura e direta no navegador para futuras visitas ao Portal do Membro.</span>
+            <span>Seus recordes e troféus são salvos de forma 100% segura e direta no navegador para futuras visitas.</span>
           </div>
         </div>
       )}
@@ -420,12 +522,26 @@ export default function ModuleInterativo() {
             {/* TOPO DA JANELA */}
             <div className="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between select-none shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeGame === 'tetris' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                  {activeGame === 'tetris' ? <Gamepad2 size={16} /> : <Trophy size={16} />}
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  activeGame === 'tetris' ? 'bg-indigo-500/10 text-indigo-400' :
+                  activeGame === 'show' ? 'bg-amber-500/10 text-amber-400' :
+                  activeGame === 'passa' ? 'bg-rose-500/10 text-rose-400' :
+                  activeGame === 'escape' ? 'bg-emerald-500/10 text-emerald-400' :
+                  'bg-cyan-500/10 text-cyan-400'
+                }`}>
+                  {activeGame === 'tetris' && <Gamepad2 size={16} />}
+                  {activeGame === 'show' && <Trophy size={16} />}
+                  {activeGame === 'passa' && <Flame size={16} />}
+                  {activeGame === 'escape' && <Key size={16} />}
+                  {activeGame === 'roda' && <Disc size={16} />}
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-white tracking-wide uppercase">
-                    {activeGame === 'tetris' ? 'TETRIS TRADICIONAL GIPP' : 'SHOW DO CRISTÃO GIPP'}
+                    {activeGame === 'tetris' && 'TETRIS TRADICIONAL GIPP'}
+                    {activeGame === 'show' && 'SHOW DO CRISTÃO GIPP'}
+                    {activeGame === 'passa' && 'PASSA OU REPASSA TEOLÓGICO'}
+                    {activeGame === 'escape' && 'ESCAPE ROOM BÍBLICO - O TABERNÁCULO'}
+                    {activeGame === 'roda' && 'RODA DA TEOLOGIA GIPP'}
                   </h3>
                   <p className="text-[10px] text-slate-450 uppercase tracking-wider font-semibold leading-none mt-1">
                     {isFullscreen ? 'Modo Full HD / Tela Inteira' : 'Janela HD'}
@@ -453,10 +569,20 @@ export default function ModuleInterativo() {
 
             {/* CONTEÚDO DINÂMICO DO GAME */}
             <div className="flex-1 overflow-y-auto bg-slate-950 flex flex-col relative">
-              {activeGame === 'tetris' ? (
+              {activeGame === 'tetris' && (
                 <TetrisGame onGameOver={(score) => updateHighScore('tetris', score)} highScore={scores.tetris} />
-              ) : (
+              )}
+              {activeGame === 'show' && (
                 <ShowDoCristaoGame onGameOver={(prize) => updateHighScore('show', prize)} highScore={scores.show} />
+              )}
+              {activeGame === 'passa' && (
+                <PassaOuRepassaGame onGameOver={(score) => updateHighScore('passa', score)} highScore={scores.passa} />
+              )}
+              {activeGame === 'escape' && (
+                <EscapeRoomGame onGameOver={(successCount) => updateHighScore('escape', successCount)} highScore={scores.escape} />
+              )}
+              {activeGame === 'roda' && (
+                <RodaDaTeologiaGame onGameOver={(score) => updateHighScore('roda', score)} highScore={scores.roda} />
               )}
             </div>
 
@@ -1689,3 +1815,864 @@ function ShowDoCristaoGame({ onGameOver, highScore }: ShowDoCristaoProps) {
     </div>
   );
 }
+
+// ==========================================
+// SUBCOMPONENTE 3: PASSA OU REPASSA TEOLÓGICO
+// ==========================================
+interface PassaOuRepassaProps {
+  onGameOver: (score: number) => void;
+  highScore: number;
+}
+
+function PassaOuRepassaGame({ onGameOver, highScore }: PassaOuRepassaProps) {
+  const [team1Name, setTeam1Name] = useState('Equipe Azul');
+  const [team2Name, setTeam2Name] = useState('Equipe Vermelha');
+  const [score1, setScore1] = useState(0);
+  const [score2, setScore2] = useState(0);
+  const [pies1, setPies1] = useState(0);
+  const [pies2, setPies2] = useState(0);
+
+  const [currentTurn, setCurrentTurn] = useState<1 | 2>(1);
+  const [multiplier, setMultiplier] = useState<1 | 2 | 3>(1); // 1 = Responder, 2 = Passa, 3 = Repassa
+  const [round, setRound] = useState(1);
+  const maxRounds = 10;
+
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [timer, setTimer] = useState(25);
+  const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [isAnswering, setIsAnswering] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+
+  const [tortaOverlay, setTortaOverlay] = useState<{ teamName: string; teamNum: 1 | 2; pointsLost: number } | null>(null);
+  const [celebration, setCelebration] = useState<string | null>(null);
+
+  // Pergunta atual
+  const currentQuestion = QUESTIONS_DB[questionIndex % QUESTIONS_DB.length];
+
+  // Cronômetro
+  useEffect(() => {
+    if (!isTimerRunning || isAnswering || tortaOverlay) return;
+    if (timer <= 0) {
+      // Tempo esgotado -> Torta automática na equipe do turno!
+      handleTimeOut();
+      return;
+    }
+    const interval = setInterval(() => setTimer(t => t - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timer, isTimerRunning, isAnswering, tortaOverlay]);
+
+  const handleTimeOut = () => {
+    setIsTimerRunning(false);
+    const lost = 100 * multiplier;
+    if (currentTurn === 1) {
+      setScore1(s => Math.max(0, s - lost));
+      setPies1(p => p + 1);
+    } else {
+      setScore2(s => Math.max(0, s - lost));
+      setPies2(p => p + 1);
+    }
+    setTortaOverlay({
+      teamName: currentTurn === 1 ? team1Name : team2Name,
+      teamNum: currentTurn,
+      pointsLost: lost
+    });
+  };
+
+  const handlePassa = () => {
+    if (multiplier === 1) {
+      setMultiplier(2);
+      setCurrentTurn(currentTurn === 1 ? 2 : 1);
+      setTimer(20);
+    }
+  };
+
+  const handleRepassa = () => {
+    if (multiplier === 2) {
+      setMultiplier(3);
+      setCurrentTurn(currentTurn === 1 ? 2 : 1);
+      setTimer(15);
+    }
+  };
+
+  const handlePagarTortaDirect = () => {
+    handleTimeOut();
+  };
+
+  const handleAnswerClick = (optionIdx: number) => {
+    setSelectedAnswer(optionIdx);
+    setIsTimerRunning(false);
+
+    const points = 100 * multiplier;
+    const isCorrect = optionIdx === currentQuestion.answer;
+
+    setTimeout(() => {
+      if (isCorrect) {
+        if (currentTurn === 1) {
+          setScore1(s => s + points);
+        } else {
+          setScore2(s => s + points);
+        }
+        setCelebration(`🎉 ACERTOU! +${points} Pts para ${currentTurn === 1 ? team1Name : team2Name}!`);
+      } else {
+        if (currentTurn === 1) {
+          setScore1(s => Math.max(0, s - points));
+          setPies1(p => p + 1);
+        } else {
+          setScore2(s => Math.max(0, s - points));
+          setPies2(p => p + 1);
+        }
+        setTortaOverlay({
+          teamName: currentTurn === 1 ? team1Name : team2Name,
+          teamNum: currentTurn,
+          pointsLost: points
+        });
+      }
+    }, 1000);
+  };
+
+  const advanceNextRound = () => {
+    setTortaOverlay(null);
+    setCelebration(null);
+    setSelectedAnswer(null);
+    setIsAnswering(false);
+    setMultiplier(1);
+    setTimer(25);
+    setIsTimerRunning(true);
+
+    if (round >= maxRounds) {
+      const topScore = Math.max(score1, score2);
+      onGameOver(topScore);
+    } else {
+      setRound(r => r + 1);
+      setCurrentTurn(r => (r % 2 === 0 ? 1 : 2) as 1 | 2);
+      setQuestionIndex(i => (i + 1) % QUESTIONS_DB.length);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-5xl mx-auto w-full flex flex-col gap-6 select-none font-sans">
+      
+      {/* PLACAR DAS EQUIPES */}
+      <div className="grid grid-cols-2 gap-4 md:gap-8">
+        
+        {/* EQUIPE AZUL */}
+        <div className={`p-5 rounded-3xl border-2 transition-all relative overflow-hidden ${
+          currentTurn === 1 ? 'bg-indigo-950/80 border-indigo-500 ring-4 ring-indigo-500/20 shadow-xl' : 'bg-slate-900/60 border-slate-800 opacity-80'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1">
+              <Users size={12} /> Equipe 1
+            </span>
+            {currentTurn === 1 && (
+              <span className="bg-indigo-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                Na Vez!
+              </span>
+            )}
+          </div>
+          <input 
+            type="text" 
+            value={team1Name} 
+            onChange={(e) => setTeam1Name(e.target.value)}
+            className="bg-transparent font-black text-xl text-white outline-none w-full border-b border-transparent hover:border-indigo-500/50 focus:border-indigo-500"
+          />
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl md:text-4xl font-black text-indigo-300">{score1} <span className="text-xs text-indigo-400/70 font-semibold">Pts</span></span>
+            <span className="text-xs text-slate-400 font-bold flex items-center gap-1">
+              🥧 {pies1} {pies1 === 1 ? 'Torta' : 'Tortas'}
+            </span>
+          </div>
+        </div>
+
+        {/* EQUIPE VERMELHA */}
+        <div className={`p-5 rounded-3xl border-2 transition-all relative overflow-hidden ${
+          currentTurn === 2 ? 'bg-rose-950/80 border-rose-500 ring-4 ring-rose-500/20 shadow-xl' : 'bg-slate-900/60 border-slate-800 opacity-80'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-1">
+              <Users size={12} /> Equipe 2
+            </span>
+            {currentTurn === 2 && (
+              <span className="bg-rose-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                Na Vez!
+              </span>
+            )}
+          </div>
+          <input 
+            type="text" 
+            value={team2Name} 
+            onChange={(e) => setTeam2Name(e.target.value)}
+            className="bg-transparent font-black text-xl text-white outline-none w-full border-b border-transparent hover:border-rose-500/50 focus:border-rose-500"
+          />
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl md:text-4xl font-black text-rose-300">{score2} <span className="text-xs text-rose-400/70 font-semibold">Pts</span></span>
+            <span className="text-xs text-slate-400 font-bold flex items-center gap-1">
+              🥧 {pies2} {pies2 === 1 ? 'Torta' : 'Tortas'}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* BARRA DE STATUS DA RODADA E TIMER */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="px-3 py-1 bg-slate-800 text-slate-300 font-black text-xs rounded-xl border border-slate-700">
+            Rodada {round} / {maxRounds}
+          </span>
+          <span className={`px-3 py-1 font-black text-xs rounded-xl uppercase tracking-wider border ${
+            multiplier === 1 ? 'bg-slate-800 text-slate-300 border-slate-700' :
+            multiplier === 2 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+            'bg-rose-500/20 text-rose-300 border-rose-500/30 animate-pulse'
+          }`}>
+            {multiplier === 1 && '1x Resposta (100 Pts)'}
+            {multiplier === 2 && '2x PASSOUS! (200 Pts)'}
+            {multiplier === 3 && '3x REPASSOUS! (300 Pts + Torta Mandatory)'}
+          </span>
+        </div>
+
+        {/* CONTADOR REGRESSIVO */}
+        <div className="flex items-center gap-2">
+          <Clock size={16} className={timer <= 5 ? 'text-rose-500 animate-bounce' : 'text-slate-400'} />
+          <span className={`font-black text-xl font-mono ${timer <= 5 ? 'text-rose-400' : 'text-white'}`}>
+            00:{timer < 10 ? `0${timer}` : timer}
+          </span>
+        </div>
+      </div>
+
+      {/* CARD DA PERGUNTA DO PASSA OU REPASSA */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <span className="text-xs font-bold text-amber-400 flex items-center gap-2">
+            <BookOpen size={14} />
+            {currentQuestion.chapter}
+          </span>
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">
+            Valendo {100 * multiplier} Pts
+          </span>
+        </div>
+
+        <h2 className="text-xl md:text-2xl font-black text-white leading-relaxed">
+          {currentQuestion.question}
+        </h2>
+
+        {/* BOTOES DE AÇÃO: RESPONDER, PASSAR, REPASSAR, PAGAR TORTA */}
+        {!isAnswering && !tortaOverlay && !celebration && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4 border-t border-slate-800">
+            <button
+              onClick={() => setIsAnswering(true)}
+              className="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer active:scale-95 transition-all"
+            >
+              <Check size={16} /> Responder
+            </button>
+
+            <button
+              onClick={handlePassa}
+              disabled={multiplier !== 1}
+              className={`px-4 py-3 font-extrabold text-sm rounded-2xl flex items-center justify-center gap-2 transition-all ${
+                multiplier === 1 
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-95' 
+                  : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <ArrowRight size={16} /> Passar
+            </button>
+
+            <button
+              onClick={handleRepassa}
+              disabled={multiplier !== 2}
+              className={`px-4 py-3 font-extrabold text-sm rounded-2xl flex items-center justify-center gap-2 transition-all ${
+                multiplier === 2 
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 cursor-pointer active:scale-95 animate-pulse' 
+                  : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <RotateCcw size={16} /> Repassar
+            </button>
+
+            <button
+              onClick={handlePagarTortaDirect}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-rose-300 font-extrabold text-sm rounded-2xl flex items-center justify-center gap-2 border border-rose-500/20 cursor-pointer active:scale-95 transition-all"
+            >
+              🥧 Pagar Torta
+            </button>
+          </div>
+        )}
+
+        {/* OPÇÕES DE RESPOSTA */}
+        {isAnswering && !tortaOverlay && !celebration && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+            {currentQuestion.options.map((opt, idx) => {
+              const isSelected = selectedAnswer === idx;
+              const isCorrect = idx === currentQuestion.answer;
+              let btnStyle = "bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700";
+              if (selectedAnswer !== null) {
+                if (isCorrect) btnStyle = "bg-emerald-600 text-white border-emerald-500 ring-2 ring-emerald-400";
+                else if (isSelected) btnStyle = "bg-rose-600 text-white border-rose-500";
+                else btnStyle = "bg-slate-900/40 text-slate-600 border-slate-800";
+              }
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => selectedAnswer === null && handleAnswerClick(idx)}
+                  className={`p-4 rounded-2xl text-left font-bold text-sm border transition-all flex items-start gap-3 cursor-pointer ${btnStyle}`}
+                >
+                  <span className="w-6 h-6 rounded-lg bg-black/20 flex items-center justify-center text-xs font-black shrink-0">
+                    {['A', 'B', 'C', 'D'][idx]}
+                  </span>
+                  <span>{opt}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* CELEBRAÇÃO / SUCESSO */}
+        {celebration && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-2xl text-center flex flex-col items-center gap-4 animate-fadeIn">
+            <h3 className="text-2xl font-black text-emerald-400">{celebration}</h3>
+            <p className="text-slate-300 text-xs max-w-md">{currentQuestion.explanation}</p>
+            <button
+              onClick={advanceNextRound}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm rounded-xl cursor-pointer active:scale-95 transition-all"
+            >
+              Próxima Rodada
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* OVERLAY DE TORTA NO ROSTO (ANIMAÇÃO DERTIDA) */}
+      {tortaOverlay && (
+        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-6 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-rose-500/80 rounded-3xl p-8 max-w-md w-full text-center flex flex-col items-center gap-5 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500"></div>
+            
+            <div className="w-24 h-24 bg-rose-500/20 text-rose-400 rounded-full flex items-center justify-center text-6xl animate-bounce shadow-inner border border-rose-500/30">
+              🥧
+            </div>
+
+            <div>
+              <span className="px-3 py-1 bg-rose-500/20 text-rose-300 font-extrabold text-xs rounded-full uppercase tracking-widest border border-rose-500/30 inline-block mb-2">
+                Splash! Torta no Rosto!
+              </span>
+              <h2 className="text-3xl font-black text-white">
+                {tortaOverlay.teamName}!
+              </h2>
+              <p className="text-sm text-rose-300 font-bold mt-2">
+                -{tortaOverlay.pointsLost} Pontos e +1 Torta de Chantilly acumulada!
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              💡 {currentQuestion.explanation}
+            </p>
+
+            <button
+              onClick={advanceNextRound}
+              className="w-full py-4 bg-gradient-to-r from-rose-500 to-amber-500 text-slate-950 font-black text-sm rounded-2xl hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-rose-500/20"
+            >
+              Continuar para a Próxima Rodada ➡️
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ==========================================
+// SUBCOMPONENTE 4: ESCAPE ROOM BÍBLICO
+// ==========================================
+interface EscapeRoomProps {
+  onGameOver: (count: number) => void;
+  highScore: number;
+}
+
+function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
+  const [visitedHotspots, setVisitedHotspots] = useState<number[]>([]);
+  const [unlockedDigits, setUnlockedDigits] = useState<{ [key: number]: string }>({});
+  const [activeSpot, setActiveSpot] = useState<number | null>(null);
+
+  const [pin, setPin] = useState(['', '', '', '']);
+  const [timer, setTimer] = useState(900); // 15 minutos
+  const [isEscaped, setIsEscaped] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Código correto do Tabernáculo: 6 - 5 - 7 - 2
+  const CORRECT_CODE = ['6', '5', '7', '2'];
+
+  useEffect(() => {
+    if (isEscaped || timer <= 0) return;
+    const interval = setInterval(() => setTimer(t => t - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timer, isEscaped]);
+
+  const hotspots = [
+    {
+      id: 1,
+      title: '1. Altar de Bronze (O Átrio)',
+      icon: Flame,
+      color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+      passage: 'Levítico 6:13 - "O fogo arderá continuamente sobre o altar; não se apagará."',
+      riddle: 'No Átrio, o fogo continuo representa o fervor do Espírito. Quantas colunas sustentavam a cortina da entrada do Átrio de acácia (Êxodo 27:16)?',
+      answerDigit: '6',
+      hint: 'Dígito 1 do Código = 6'
+    },
+    {
+      id: 2,
+      title: '2. Bacia de Cobre (Pia de Bronze)',
+      icon: Sparkles,
+      color: 'border-cyan-500/50 bg-cyan-500/10 text-cyan-400',
+      passage: 'Êxodo 30:18 - "Farás também uma bacia de bronze com a sua base de bronze, para lavar..."',
+      riddle: 'A Pia de Bronze purificava os sacerdotes. Quantas eram as ofertas levíticas no Tabernáculo (Holocausto, Alimento, Pacífico, Pecado, Ofensa)?',
+      answerDigit: '5',
+      hint: 'Dígito 2 do Código = 5'
+    },
+    {
+      id: 3,
+      title: '3. Candelabro de Ouro (Menorá)',
+      icon: Lightbulb,
+      color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+      passage: 'Êxodo 25:37 - "Farás também as suas lâmpadas, sete; e as suas lâmpadas se acenderão..."',
+      riddle: 'A Menorá ilumina o Lugar Santo. Quantas lâmpadas e hastes perfeitas compunham o Candelabro de ouro puro?',
+      answerDigit: '7',
+      hint: 'Dígito 3 do Código = 7'
+    },
+    {
+      id: 4,
+      title: '4. Mesa dos Pães da Proposição',
+      icon: BookOpen,
+      color: 'border-orange-500/50 bg-orange-500/10 text-orange-400',
+      passage: 'Levítico 24:5-6 - "Tomarás da flor de farinha e dela cozerás doze pães... em duas fileiras..."',
+      riddle: 'Os 12 pães no Lugar Santo ficavam organizados sobre a mesa em quantas fileiras perfeitas?',
+      answerDigit: '2',
+      hint: 'Dígito 4 do Código = 2'
+    },
+    {
+      id: 5,
+      title: '5. O Véu e o Cadeado da Arca',
+      icon: Key,
+      color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+      passage: 'Hebreus 10:19-20 - "Tendo, pois, irmãos, intrepidez para entrar no Santo dos Santos pelo sangue de Jesus..."',
+      riddle: 'Combine os 4 dígitos descobertos na sequência exata dos objetos sagrados (Átrio -> Pia -> Menorá -> Pães) para destravar a Arca da Aliança e Escapar!',
+      answerDigit: 'FINAL',
+      hint: 'Ordem das Pistas: [1º] [2º] [3º] [4º]'
+    }
+  ];
+
+  const handleInspect = (spotId: number) => {
+    setActiveSpot(spotId);
+    if (!visitedHotspots.includes(spotId)) {
+      setVisitedHotspots(prev => [...prev, spotId]);
+    }
+  };
+
+  const handleUnlockClue = (spot: typeof hotspots[0]) => {
+    if (spot.answerDigit !== 'FINAL') {
+      setUnlockedDigits(prev => ({ ...prev, [spot.id]: spot.answerDigit }));
+    }
+    setActiveSpot(null);
+  };
+
+  const handleDigitChange = (index: number, val: string) => {
+    if (val.length > 1) val = val.slice(-1);
+    const newPin = [...pin];
+    newPin[index] = val;
+    setPin(newPin);
+    setErrorMsg(null);
+  };
+
+  const handleVerifyCode = () => {
+    if (pin.join('') === CORRECT_CODE.join('')) {
+      setIsEscaped(true);
+      onGameOver(highScore + 1);
+    } else {
+      setErrorMsg('CÓDIGO INCORRETO! Revise suas pistas nos objetos sagrados do Tabernáculo.');
+    }
+  };
+
+  const formatTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-5xl mx-auto w-full flex flex-col gap-6 font-sans">
+      
+      {/* CABEÇALHO COM CONTADOR REGRESSIVO */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div>
+          <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-xs rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 mb-2">
+            <Key size={12} /> Desafio de Fuga Teológica
+          </span>
+          <h2 className="text-2xl font-black text-white">O Segredo do Tabernáculo de Moisés</h2>
+          <p className="text-xs text-slate-400">Vasculhe os 5 pontos sagrados para obter a combinação do Santo dos Santos!</p>
+        </div>
+
+        <div className="bg-slate-950 border border-slate-800 px-5 py-3 rounded-2xl flex items-center gap-3">
+          <Clock size={20} className="text-emerald-400 animate-pulse" />
+          <div>
+            <p className="text-[10px] text-slate-500 font-extrabold uppercase">Tempo Restante</p>
+            <p className="text-xl font-black text-white font-mono">{formatTimer(timer)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* MAPA DOS OBJETOS DO TABERNÁCULO */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        {/* COLUNA ESQUERDA: LISTA DE OBJETOS */}
+        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {hotspots.map((spot) => {
+            const IconComp = spot.icon;
+            const isVisited = visitedHotspots.includes(spot.id);
+            const hasClue = !!unlockedDigits[spot.id];
+
+            return (
+              <div 
+                key={spot.id}
+                onClick={() => handleInspect(spot.id)}
+                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:scale-[1.02] active:scale-95 ${
+                  isVisited ? 'bg-slate-900/90 border-slate-700' : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${spot.color}`}>
+                    <IconComp size={20} />
+                  </div>
+                  {hasClue && (
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full text-xs font-black">
+                      Pista: {unlockedDigits[spot.id]}
+                    </span>
+                  )}
+                </div>
+
+                <h4 className="font-extrabold text-sm text-white mb-1">{spot.title}</h4>
+                <p className="text-[11px] text-slate-400 line-clamp-2">{spot.passage}</p>
+
+                <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[10px] font-bold text-slate-500">
+                  <span>{isVisited ? '✓ Investigado' : 'Clique para Investigar'}</span>
+                  <ChevronRight size={14} className="text-slate-400" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* COLUNA DIREITA: PAINEL DO CADEADO SECRETO */}
+        <div className="bg-slate-900 border-2 border-emerald-500/30 rounded-3xl p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Lock size={18} className="text-emerald-400" />
+              <h3 className="font-black text-sm text-white uppercase tracking-wider">Cadeado da Arca</h3>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed mb-6">
+              Digite a combinação de 4 dígitos na ordem correta obtida nos objetos do Tabernáculo:
+            </p>
+
+            {/* DIGITOS DO PIN */}
+            <div className="flex justify-center gap-2 mb-6">
+              {[0, 1, 2, 3].map((idx) => (
+                <input
+                  key={idx}
+                  type="text"
+                  maxLength={1}
+                  value={pin[idx]}
+                  onChange={(e) => handleDigitChange(idx, e.target.value)}
+                  className="w-12 h-14 bg-slate-950 border-2 border-slate-700 focus:border-emerald-500 rounded-2xl text-center text-2xl font-black text-emerald-400 outline-none transition-all"
+                />
+              ))}
+            </div>
+
+            {errorMsg && (
+              <p className="text-xs font-bold text-rose-400 text-center mb-4 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                {errorMsg}
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={handleVerifyCode}
+            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-600/20 cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <Key size={16} /> Abrir o Santo dos Santos
+          </button>
+        </div>
+
+      </div>
+
+      {/* MODAL DE INVESTIGAÇÃO DE PONTO SAGRADO */}
+      {activeSpot !== null && (() => {
+        const spot = hotspots.find(h => h.id === activeSpot)!;
+        const IconComp = spot.icon;
+
+        return (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-fadeIn">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 max-w-lg w-full flex flex-col gap-5 relative shadow-2xl">
+              <button 
+                onClick={() => setActiveSpot(null)}
+                className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center ${spot.color}`}>
+                  <IconComp size={24} />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">{spot.title}</h3>
+                  <p className="text-xs text-amber-400 font-bold">{spot.passage}</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs text-slate-300 leading-relaxed">
+                <p className="font-bold text-white mb-2">📖 Enigma do Objeto:</p>
+                <p>{spot.riddle}</p>
+              </div>
+
+              <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl text-center">
+                <p className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest mb-1">Pista Oculta Encontrada</p>
+                <p className="text-xl font-black text-emerald-300">{spot.hint}</p>
+              </div>
+
+              <button
+                onClick={() => handleUnlockClue(spot)}
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-2xl cursor-pointer active:scale-95 transition-all"
+              >
+                Anotar Pista e Continuar ➔
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* TELA DE VITÓRIA / FUGA CONCLUÍDA */}
+      {isEscaped && (
+        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-8 max-w-md w-full text-center flex flex-col items-center gap-6 shadow-2xl relative overflow-hidden">
+            <div className="w-20 h-20 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center justify-center text-4xl shadow-inner animate-pulse">
+              🏆
+            </div>
+
+            <div>
+              <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 font-extrabold text-xs rounded-full uppercase tracking-widest border border-emerald-500/30 inline-block mb-2">
+                Glória a Deus! Você Escapou!
+              </span>
+              <h2 className="text-3xl font-black text-white">Desafio Concluído!</h2>
+              <p className="text-xs text-slate-300 mt-2">
+                Você decifrou todas as sombras do Tabernáculo e revelou a glória da Nova Aliança em Cristo Jesus!
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsEscaped(false);
+                setVisitedHotspots([]);
+                setUnlockedDigits({});
+                setPin(['', '', '', '']);
+                setTimer(900);
+              }}
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-600/20 cursor-pointer active:scale-95 transition-all"
+            >
+              Jogar Novamente 🔄
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ==========================================
+// SUBCOMPONENTE 5: RODA DA TEOLOGIA
+// ==========================================
+interface RodaProps {
+  onGameOver: (score: number) => void;
+  highScore: number;
+}
+
+function RodaDaTeologiaGame({ onGameOver, highScore }: RodaProps) {
+  const [score, setScore] = useState(0);
+  const [rotation, setRotation] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinsLeft, setSpinsLeft] = useState(10);
+
+  const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
+  const [landedSector, setLandedSector] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+
+  const sectors = [
+    { label: 'Bibliologia', color: 'from-blue-600 to-indigo-700', pts: 100, type: 'question' },
+    { label: 'Pneumatologia', color: 'from-purple-600 to-indigo-800', pts: 200, type: 'question' },
+    { label: 'Cristologia', color: 'from-amber-500 to-orange-600', pts: 300, type: 'question' },
+    { label: 'Escatologia', color: 'from-emerald-600 to-teal-700', pts: 500, type: 'question' },
+    { label: 'Passa a Vez', color: 'from-slate-700 to-slate-800', pts: 0, type: 'pass' },
+    { label: 'Bônus x2', color: 'from-amber-400 to-yellow-500', pts: 0, type: 'bonus' },
+    { label: 'Torta -200', color: 'from-rose-600 to-pink-700', pts: -200, type: 'pie' },
+    { label: 'Milagre +1000', color: 'from-cyan-500 to-blue-600', pts: 1000, type: 'milagre' }
+  ];
+
+  const handleSpin = () => {
+    if (isSpinning || spinsLeft <= 0) return;
+
+    setIsSpinning(true);
+    setActiveQuestion(null);
+    setLandedSector(null);
+    setSelectedOption(null);
+
+    const randomDegrees = 1440 + Math.floor(Math.random() * 360);
+    const newRotation = rotation + randomDegrees;
+    setRotation(newRotation);
+
+    setTimeout(() => {
+      setIsSpinning(false);
+      setSpinsLeft(s => s - 1);
+
+      const actualDegree = newRotation % 360;
+      const sectorAngle = 360 / sectors.length;
+      const landedIdx = Math.floor((360 - (actualDegree % 360)) / sectorAngle) % sectors.length;
+      const sector = sectors[landedIdx];
+
+      setLandedSector(sector.label);
+
+      if (sector.type === 'question') {
+        const randQ = QUESTIONS_DB[Math.floor(Math.random() * QUESTIONS_DB.length)];
+        setActiveQuestion(randQ);
+      } else if (sector.type === 'bonus') {
+        setScore(s => s * 2);
+      } else if (sector.type === 'pie') {
+        setScore(s => Math.max(0, s - 200));
+      } else if (sector.type === 'milagre') {
+        setScore(s => s + 1000);
+      }
+    }, 4000);
+  };
+
+  const handleAnswerQuestion = (optIdx: number) => {
+    if (!activeQuestion || selectedOption !== null) return;
+    setSelectedOption(optIdx);
+
+    const isCorrect = optIdx === activeQuestion.answer;
+    setTimeout(() => {
+      if (isCorrect) {
+        setScore(s => s + 300);
+      }
+      setActiveQuestion(null);
+      if (spinsLeft <= 0) {
+        onGameOver(score);
+      }
+    }, 1200);
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full flex flex-col items-center gap-6 font-sans">
+      
+      {/* PLACAR DE PONTOS E GIROS */}
+      <div className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 flex items-center justify-between shadow-xl">
+        <div>
+          <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Pontuação Acumulada</span>
+          <p className="text-3xl font-black text-cyan-400">{score.toLocaleString('pt-BR')} Pts</p>
+        </div>
+
+        <div className="text-right">
+          <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Giros Restantes</span>
+          <p className="text-3xl font-black text-white">{spinsLeft} / 10</p>
+        </div>
+      </div>
+
+      {/* PAINEL DA ROLETA TEOLÓGICA */}
+      <div className="relative flex flex-col items-center my-4">
+        
+        {/* PONTEIRO DA ROLETA */}
+        <div className="w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-t-[28px] border-t-amber-400 z-20 -mb-4 drop-shadow-md"></div>
+
+        {/* CIRCULO DA ROLETA */}
+        <div 
+          className="w-72 h-72 md:w-80 md:h-80 rounded-full border-8 border-slate-800 shadow-2xl relative overflow-hidden transition-all duration-[4000ms] ease-out flex items-center justify-center bg-slate-900"
+          style={{ transform: `rotate(${rotation}deg)` }}
+        >
+          {sectors.map((sec, idx) => {
+            const angle = (360 / sectors.length) * idx;
+
+            return (
+              <div 
+                key={idx}
+                className={`absolute w-full h-full flex justify-center pt-2 text-[10px] font-black uppercase text-white tracking-wider`}
+                style={{ transform: `rotate(${angle}deg)`, transformOrigin: '50% 50%' }}
+              >
+                <span className="bg-slate-950/80 px-2 py-1 rounded-full border border-slate-800 shadow-sm">
+                  {sec.label}
+                </span>
+              </div>
+            );
+          })}
+
+          <div className="w-16 h-16 rounded-full bg-slate-950 border-4 border-amber-400 z-10 flex items-center justify-center text-amber-400 font-black text-xs shadow-inner">
+            GIPP
+          </div>
+        </div>
+
+        {/* BOTAO GIRAR */}
+        <button
+          onClick={handleSpin}
+          disabled={isSpinning || spinsLeft <= 0}
+          className={`mt-6 px-8 py-4 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl transition-all ${
+            isSpinning || spinsLeft <= 0 
+              ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 cursor-pointer active:scale-95'
+          }`}
+        >
+          {isSpinning ? 'GIRANDO A RODA...' : spinsLeft > 0 ? 'GIRAR A RODA TEOLÓGICA 🔄' : 'FIM DOS GIROS!'}
+        </button>
+      </div>
+
+      {/* RESULTADO DO SETOR LANDED */}
+      {landedSector && !activeQuestion && (
+        <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl text-center animate-fadeIn">
+          <p className="text-xs text-slate-400 font-bold">Você tirou no giro:</p>
+          <p className="text-lg font-black text-amber-400">{landedSector}</p>
+        </div>
+      )}
+
+      {/* PERGUNTA SORTEADA */}
+      {activeQuestion && (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full flex flex-col gap-4 shadow-2xl animate-fadeIn">
+          <span className="text-xs font-bold text-cyan-400">{activeQuestion.chapter}</span>
+          <h3 className="text-lg font-black text-white">{activeQuestion.question}</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {activeQuestion.options.map((opt, idx) => {
+              const isSelected = selectedOption === idx;
+              const isCorrect = idx === activeQuestion.answer;
+              let style = "bg-slate-800 text-slate-200 border-slate-700";
+              if (selectedOption !== null) {
+                if (isCorrect) style = "bg-emerald-600 text-white border-emerald-500";
+                else if (isSelected) style = "bg-rose-600 text-white border-rose-500";
+              }
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleAnswerQuestion(idx)}
+                  className={`p-3.5 rounded-2xl text-left font-bold text-xs border transition-all cursor-pointer ${style}`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
