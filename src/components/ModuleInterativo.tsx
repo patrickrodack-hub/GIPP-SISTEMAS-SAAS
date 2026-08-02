@@ -5,7 +5,8 @@ import {
   RotateCcw, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, 
   Coins, SkipForward, Flame, MessageCircle, HelpCircle as HelpIcon,
   CheckCircle2, AlertTriangle, ChevronRight, Info, EyeOff, LayoutGrid, SlidersHorizontal, Move,
-  Key, Lock, Unlock, Zap, Compass, BookOpen, Volume2, VolumeX, Smile, Disc, Clock, Lightbulb, Sparkle, PartyPopper
+  Key, Lock, Unlock, Zap, Compass, BookOpen, Volume2, VolumeX, Smile, Disc, Clock, Lightbulb, Sparkle, PartyPopper,
+  Layers, Sun, Heart, Shield
 } from 'lucide-react';
 
 // ==========================================
@@ -2183,84 +2184,678 @@ function PassaOuRepassaGame({ onGameOver, highScore }: PassaOuRepassaProps) {
 }
 
 // ==========================================
-// SUBCOMPONENTE 4: ESCAPE ROOM BÍBLICO
+// SUBCOMPONENTE 4: ESCAPE ROOM BÍBLICO (10 TEMAS)
 // ==========================================
 interface EscapeRoomProps {
   onGameOver: (count: number) => void;
   highScore: number;
 }
 
+interface EscapeScenario {
+  id: number;
+  title: string;
+  subtitle: string;
+  correctCode: string[];
+  lockLabel: string;
+  badge: string;
+  hotspots: {
+    id: number;
+    title: string;
+    icon: any;
+    color: string;
+    passage: string;
+    riddle: string;
+    answerDigit: string;
+    hint: string;
+  }[];
+}
+
+const ESCAPE_SCENARIOS: EscapeScenario[] = [
+  {
+    id: 0,
+    title: '1. O Segredo do Tabernáculo de Moisés',
+    subtitle: 'Desvende as sombras do Santuário e abra o Santo dos Santos!',
+    badge: 'Tabernáculo',
+    lockLabel: 'Cadeado do Santo dos Santos',
+    correctCode: ['6', '5', '7', '2'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. Altar de Bronze (O Átrio)',
+        icon: Flame,
+        color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+        passage: 'Levítico 6:13 - "O fogo arderá continuamente sobre o altar; não se apagará."',
+        riddle: 'No Átrio, o fogo contínuo purifica. Quantas colunas sustentavam a cortina de entrada do Átrio de acácia (Êxodo 27:16)?',
+        answerDigit: '6',
+        hint: 'Dígito 1 do Código = 6'
+      },
+      {
+        id: 2,
+        title: '2. Bacia de Cobre (Pia de Bronze)',
+        icon: Sparkles,
+        color: 'border-cyan-500/50 bg-cyan-500/10 text-cyan-400',
+        passage: 'Êxodo 30:18 - "Farás também uma bacia de bronze com a sua base para lavar..."',
+        riddle: 'A Pia de Bronze purifica os sacerdotes. Quantas eram as ofertas levíticas no Tabernáculo (Holocausto, Alimento, Pacífico, Pecado, Ofensa)?',
+        answerDigit: '5',
+        hint: 'Dígito 2 do Código = 5'
+      },
+      {
+        id: 3,
+        title: '3. Candelabro de Ouro (Menorá)',
+        icon: Lightbulb,
+        color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+        passage: 'Êxodo 25:37 - "Farás também as suas lâmpadas, sete; e as suas lâmpadas se acenderão..."',
+        riddle: 'A Menorá ilumina o Lugar Santo. Quantas lâmpadas e hastes perfeitas compunham o Candelabro de ouro puro?',
+        answerDigit: '7',
+        hint: 'Dígito 3 do Código = 7'
+      },
+      {
+        id: 4,
+        title: '4. Mesa dos Pães da Proposição',
+        icon: BookOpen,
+        color: 'border-orange-500/50 bg-orange-500/10 text-orange-400',
+        passage: 'Levítico 24:5-6 - "Tomarás da flor de farinha e dela cozerás doze pães... em duas fileiras..."',
+        riddle: 'Os 12 pães no Lugar Santo ficavam dispostos sobre a mesa em quantas fileiras perfeitas?',
+        answerDigit: '2',
+        hint: 'Dígito 4 do Código = 2'
+      },
+      {
+        id: 5,
+        title: '5. O Véu e a Arca da Aliança',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'Hebreus 10:19-20 - "Tendo, pois, irmãos, intrepidez para entrar no Santo dos Santos pelo sangue de Jesus..."',
+        riddle: 'Junte os 4 dígitos na ordem exata dos objetos (Altar -> Pia -> Menorá -> Pães) para destravar a Arca da Aliança e Escapar!',
+        answerDigit: 'FINAL',
+        hint: 'Ordem das Pistas: [1º] [2º] [3º] [4º]'
+      }
+    ]
+  },
+  {
+    id: 1,
+    title: '2. A Arca de Noé & O Grande Dilúvio',
+    subtitle: 'Decifre as medidas divinas de Gopher para abrir a escotilha de libertação!',
+    badge: 'Dilúvio',
+    lockLabel: 'Cadeado da Porta da Arca',
+    correctCode: ['3', '1', '4', '0'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. Os Andares de Madeira de Gopher',
+        icon: Layers,
+        color: 'border-amber-600/50 bg-amber-600/10 text-amber-400',
+        passage: 'Gênesis 6:16 - "Farás a arca com andar inferior, segundo e terceiro..."',
+        riddle: 'Em quantos andares internos dividiu Noé a estrutura da Arca para abrigar a criação?',
+        answerDigit: '3',
+        hint: 'Dígito 1 do Código = 3'
+      },
+      {
+        id: 2,
+        title: '2. A Janela Superior de Luz',
+        icon: Sun,
+        color: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-300',
+        passage: 'Gênesis 6:16 - "Farás na arca uma janela e de um côvado a terminarás em cima..."',
+        riddle: 'De quantos côvados de altura era a abertura da janela superior para entrada da luz celestial?',
+        answerDigit: '1',
+        hint: 'Dígito 2 do Código = 1'
+      },
+      {
+        id: 3,
+        title: '3. A Tempestade do Dilúvio',
+        icon: Compass,
+        color: 'border-blue-500/50 bg-blue-500/10 text-blue-400',
+        passage: 'Gênesis 7:12 - "E esteve a chuva sobre a terra quarenta dias e quarenta noites."',
+        riddle: 'A chuva do dilúvio caiu por 40 dias e 40 noites. Qual é o primeiro dígito desse número solene (40)?',
+        answerDigit: '4',
+        hint: 'Dígito 3 do Código = 4'
+      },
+      {
+        id: 4,
+        title: '4. A Pomba e o Arco da Aliança',
+        icon: Sparkles,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300',
+        passage: 'Gênesis 9:13 - "O meu arco tenho posto na nuvem; este será por sinal da aliança..."',
+        riddle: 'Deus prometeu que NUNCA MAIS destruiria a terra por águas. Quantas vezes a terra voltou a ser destruída por dilúvio universal?',
+        answerDigit: '0',
+        hint: 'Dígito 4 do Código = 0'
+      },
+      {
+        id: 5,
+        title: '5. A Selagem da Porta de Madeira',
+        icon: Key,
+        color: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-400',
+        passage: 'Gênesis 7:16 - "E o SENHOR o fechou dentro."',
+        riddle: 'Junte as pistas dos Andares (3), Janela (1), Tempestade (4) e Aliança (0) para destravar a porta e sair para a terra renovada!',
+        answerDigit: 'FINAL',
+        hint: 'Código da Fuga: 3 - 1 - 4 - 0'
+      }
+    ]
+  },
+  {
+    id: 2,
+    title: '3. A Prisão de Filipos (Paulo e Silas)',
+    subtitle: 'Cante louvores à meia-noite para que o terremoto celestial abra as portas de ferro!',
+    badge: 'Cárcere',
+    lockLabel: 'Cadeado das Correntes do Cárcere',
+    correctCode: ['1', '2', '2', '4'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. A Hora do Louvor da Meia-Noite',
+        icon: Clock,
+        color: 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400',
+        passage: 'Atos 16:25 - "E, perto da meia-noite, Paulo e Silas oravam e cantavam hinos a Deus..."',
+        riddle: 'A meia-noite representa qual hora no relógio de 12 horas em que o louvor abalou os alicerces?',
+        answerDigit: '1',
+        hint: 'Dígito 1 do Código = 1 (12h -> 1)'
+      },
+      {
+        id: 2,
+        title: '2. Os Servos no Tronco Interior',
+        icon: Users,
+        color: 'border-purple-500/50 bg-purple-500/10 text-purple-300',
+        passage: 'Atos 16:24 - "O qual... os lançou no cárcere interior e lhes segurou os pés no tronco."',
+        riddle: 'Quantos servos de Cristo (Paulo e Silas) cantavam hinos no cárcere de Filipos?',
+        answerDigit: '2',
+        hint: 'Dígito 2 do Código = 2'
+      },
+      {
+        id: 3,
+        title: '3. O Grande Terremoto',
+        icon: Zap,
+        color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+        passage: 'Atos 16:26 - "E de repente sobreveio um tão grande terremoto, que os alicerces do cárcere se moveram..."',
+        riddle: 'Quantas portas do cárcere e correntes de prisioneiros foram soltas no milagre imediato?',
+        answerDigit: '2',
+        hint: 'Dígito 3 do Código = 2'
+      },
+      {
+        id: 4,
+        title: '4. A Salvação do Carcereiro',
+        icon: Heart,
+        color: 'border-rose-500/50 bg-rose-500/10 text-rose-400',
+        passage: 'Atos 16:31 - "Crê no Senhor Jesus Cristo e serás salvo, tu e a tua casa."',
+        riddle: 'Quantos capítulos do livro de Atos antecederam este grande acontecimento (Atos Cap. 16 - 12 = 4)? Ou quantos açoites foram lavados pela família convertida?',
+        answerDigit: '4',
+        hint: 'Dígito 4 do Código = 4'
+      },
+      {
+        id: 5,
+        title: '5. A Chave das Algemas de Ferro',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'Atos 16:36 - "Saí, pois, agora e ide em paz."',
+        riddle: 'Digite 1 - 2 - 2 - 4 para libertar os apóstolos e pregar o evangelho em toda a Ásia!',
+        answerDigit: 'FINAL',
+        hint: 'Código da Libertação: 1 - 2 - 2 - 4'
+      }
+    ]
+  },
+  {
+    id: 3,
+    title: '4. O Palácio da Babilônia & A Cova dos Leões',
+    subtitle: 'Decifre a oração inabalável de Daniel para fechar a boca dos leões da Babilônia!',
+    badge: 'Daniel',
+    lockLabel: 'Cadeado de Pedra do Selo Real',
+    correctCode: ['3', '6', '2', '1'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. A Janela da Oração de Daniel',
+        icon: Lightbulb,
+        color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+        passage: 'Daniel 6:10 - "Três vezes ao dia se ajoelhava, e orava, e dava graças diante do seu Deus..."',
+        riddle: 'Quantas vezes por dia Daniel se ajoelhava com as janelas abertas rumo a Jerusalém?',
+        answerDigit: '3',
+        hint: 'Dígito 1 do Código = 3'
+      },
+      {
+        id: 2,
+        title: '2. O Livro do Profeta Daniel',
+        icon: BookOpen,
+        color: 'border-orange-500/50 bg-orange-500/10 text-orange-400',
+        passage: 'Daniel 6:1 - "E pareceu bem a Dario constituir sobre o reino cento e vinte príncipes..."',
+        riddle: 'Qual é o número do capítulo do Livro de Daniel onde ocorre o livramento milagroso na Cova dos Leões?',
+        answerDigit: '6',
+        hint: 'Dígito 2 do Código = 6'
+      },
+      {
+        id: 3,
+        title: '3. Os Anjos Protetores',
+        icon: Shield,
+        color: 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300',
+        passage: 'Daniel 6:22 - "O meu Deus enviou o seu anjo, e fechou a boca dos leões, para que não me fizessem dano..."',
+        riddle: 'Quantas noites permaneceu Daniel ileso na cova com os leões famintos antes do amanhecer?',
+        answerDigit: '2',
+        hint: 'Dígito 3 do Código = 2 (Noite e Amanhecer)'
+      },
+      {
+        id: 4,
+        title: '4. O Deus Vivo de Daniel',
+        icon: Award,
+        color: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400',
+        passage: 'Daniel 6:26 - "Porque ele é o Deus vivo e permanece para sempre, e o seu reino não se poderá destruir..."',
+        riddle: 'Quantos Deuses Verdadeiros e Vivos foram proclamados pelo Rei Dario em todo o seu vasto império?',
+        answerDigit: '1',
+        hint: 'Dígito 4 do Código = 1'
+      },
+      {
+        id: 5,
+        title: '5. A Pedra do Selo do Rei Dario',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'Daniel 6:23 - "Nenhum dano se achou nele, porque crera no seu Deus."',
+        riddle: 'Digite a combinação da Fé (3 - 6 - 2 - 1) para remover a pedra e revelar o Deus que livra!',
+        answerDigit: 'FINAL',
+        hint: 'Código Real: 3 - 6 - 2 - 1'
+      }
+    ]
+  },
+  {
+    id: 4,
+    title: '5. A Saída do Egito & O Mar Vermelho',
+    subtitle: 'Estenda o cajado da fé para dividir as águas e libertar o povo de Israel!',
+    badge: 'Éxodo',
+    lockLabel: 'Cadeado das Águas de Pi-Hahirote',
+    correctCode: ['1', '0', '1', '4'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. O Cajado de Moisés',
+        icon: Compass,
+        color: 'border-amber-600/50 bg-amber-600/10 text-amber-400',
+        passage: 'Êxodo 14:16 - "E tu, levanta a tua vara, e estende a tua mão sobre o mar, e fende-o..."',
+        riddle: 'Com quantos cajados de acácia na mão de Moisés o Senhor operou a divisão do mar?',
+        answerDigit: '1',
+        hint: 'Dígito 1 do Código = 1'
+      },
+      {
+        id: 2,
+        title: '2. As Pragas no Egito',
+        icon: Flame,
+        color: 'border-rose-500/50 bg-rose-500/10 text-rose-400',
+        passage: 'Êxodo 12:12 - "E executarei juízos sobre todos os deuses do Egito. Eu sou o SENHOR."',
+        riddle: 'Quantas pragas solenes foram enviadas sobre o Egito antes de Faraó deixar o povo partir? Qual o segundo dígito de 10?',
+        answerDigit: '0',
+        hint: 'Dígito 2 do Código = 0 (10 pragas -> 0)'
+      },
+      {
+        id: 3,
+        title: '3. A Coluna de Fogo e Nuvem',
+        icon: Sun,
+        color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+        passage: 'Êxodo 13:21 - "E o SENHOR ia adiante deles, de dia numa coluna de nuvem... e de noite numa coluna de fogo..."',
+        riddle: 'Quantas colunas divinas guiavam Israel dia e noite pelo deserto rumo à promessa?',
+        answerDigit: '1',
+        hint: 'Dígito 3 do Código = 1'
+      },
+      {
+        id: 4,
+        title: '4. O Capítulo da Vitória no Mar',
+        icon: BookOpen,
+        color: 'border-blue-500/50 bg-blue-500/10 text-blue-400',
+        passage: 'Êxodo 14:31 - "E viu Israel a grande mão que o SENHOR mostrara aos egípcios..."',
+        riddle: 'Qual o segundo dígito do capítulo 14 de Êxodo onde as águas se fecharam sobre os carros de Faraó?',
+        answerDigit: '4',
+        hint: 'Dígito 4 do Código = 4'
+      },
+      {
+        id: 5,
+        title: '5. O Cântico de Miriã nas Margens',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'Êxodo 15:1 - "Cantarei ao SENHOR, porque gloriosamente triunfou; lançou no mar o cavalo e o seu cavaleiro."',
+        riddle: 'Combine 1 - 0 - 1 - 4 para caminhar em terra seca e entoar o hino da vitória!',
+        answerDigit: 'FINAL',
+        hint: 'Código da Passagem: 1 - 0 - 1 - 4'
+      }
+    ]
+  },
+  {
+    id: 5,
+    title: '6. As Muralhas de Jericó e Raabe',
+    subtitle: 'Marche ao som das trombetas de chifre de carneiro para fazer ruir os muros!',
+    badge: 'Jericó',
+    lockLabel: 'Cadeado das Portas de Bronze de Jericó',
+    correctCode: ['7', '1', '3', '6'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. As Voltas em Redor da Cidade',
+        icon: RotateCcw,
+        color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+        passage: 'Josué 6:4 - "E sete sacerdotes levarão sete trombetas... e no sétimo dia rodeareis a cidade sete vezes..."',
+        riddle: 'Em quantos dias e voltas no sétimo dia o povo de Israel marchou em redor da cidade fortaleza?',
+        answerDigit: '7',
+        hint: 'Dígito 1 do Código = 7'
+      },
+      {
+        id: 2,
+        title: '2. O Cordão de Escarlate na Janela',
+        icon: Sparkles,
+        color: 'border-rose-500/50 bg-rose-500/10 text-rose-400',
+        passage: 'Josué 2:18 - "Atarás este cordão de fio de escarlata à janela por onde nos fizeste descer..."',
+        riddle: 'Quantas famílias (a casa de Raabe) foram poupadas da ruína devido ao cordão vermelho de salvação?',
+        answerDigit: '1',
+        hint: 'Dígito 2 do Código = 1'
+      },
+      {
+        id: 3,
+        title: '3. Os Espias na Terra Prometida',
+        icon: EyeOff,
+        color: 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300',
+        passage: 'Josué 2:1 - "E enviou Josué... dois homens espias secretamente, dizendo: Andai, e observai a terra e a Jericó..."',
+        riddle: 'Quantos espias fieis foram enviados secretamente por Josué mais 1 dia de busca nos montes (2+1 = 3)?',
+        answerDigit: '3',
+        hint: 'Dígito 3 do Código = 3'
+      },
+      {
+        id: 4,
+        title: '4. O Livro de Josué',
+        icon: BookOpen,
+        color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+        passage: 'Josué 6:20 - "Gritou, pois, o povo, tocando os sacerdotes as trombetas... e o muro caiu abaixo..."',
+        riddle: 'Qual é o número do capítulo de Josué que narra a queda milagrosa das muralhas de Jericó?',
+        answerDigit: '6',
+        hint: 'Dígito 4 do Código = 6'
+      },
+      {
+        id: 5,
+        title: '5. As Trombetas do Jubileu',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'Josué 6:20 - "E o povo subiu à cidade, cada qual em frente de si, e tomaram a cidade."',
+        riddle: 'Combine 7 - 1 - 3 - 6 para dar o brado de vitória e derrubar as muralhas do inimigo!',
+        answerDigit: 'FINAL',
+        hint: 'Código da Queda: 7 - 1 - 3 - 6'
+      }
+    ]
+  },
+  {
+    id: 6,
+    title: '7. O Desafio do Fogo no Monte Carmelo',
+    subtitle: 'Restaure o altar do Senhor com 12 pedras e clame pelo fogo dos céus!',
+    badge: 'Elias',
+    lockLabel: 'Cadeado do Altar do Monte Carmelo',
+    correctCode: ['1', '2', '4', '1'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. As Pedras do Altar Restaurado',
+        icon: Layers,
+        color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+        passage: '1 Reis 18:31 - "E Elias tomou doze pedras, segundo o número das tribos dos filhos de Jacó..."',
+        riddle: 'Quantas pedras usou o profeta Elias para reparar o altar do Senhor que estava quebrado? Qual o primeiro dígito de 12?',
+        answerDigit: '1',
+        hint: 'Dígito 1 do Código = 1 (12 pedras -> 1)'
+      },
+      {
+        id: 2,
+        title: '2. As Tribos de Israel',
+        icon: Users,
+        color: 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300',
+        passage: '1 Reis 18:31 - "...ao qual viera a palavra do SENHOR, dizendo: Israel será o teu nome."',
+        riddle: 'Qual o segundo dígito do número de pedras representando as tribos de Israel (12)?',
+        answerDigit: '2',
+        hint: 'Dígito 2 do Código = 2 (12 pedras -> 2)'
+      },
+      {
+        id: 3,
+        title: '3. Os Cântaros de Água no Holocausto',
+        icon: Compass,
+        color: 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300',
+        passage: '1 Reis 18:33 - "Enchei de água quatro cântaros, e derramai-a sobre o holocausto e sobre a lenha..."',
+        riddle: 'Quantos cântaros de água foram derramados por 3 vezes consecutivas sobre o altar de Elias?',
+        answerDigit: '4',
+        hint: 'Dígito 3 do Código = 4'
+      },
+      {
+        id: 4,
+        title: '4. A Nuvem do Tamanho da Mão de um Homem',
+        icon: Sparkles,
+        color: 'border-yellow-400/50 bg-yellow-400/10 text-yellow-300',
+        passage: '1 Reis 18:44 - "E sucedeu que, à sétima vez, disse: Eis aqui uma pequena nuvem, como a mão de um homem..."',
+        riddle: 'Quantas nuvens no céu surgiram para anunciar a grande abundância de chuva após 3 anos de seca?',
+        answerDigit: '1',
+        hint: 'Dígito 4 do Código = 1'
+      },
+      {
+        id: 5,
+        title: '5. O Fogo Consumidor de Deus',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: '1 Reis 18:38 - "Então caiu fogo do SENHOR, e consumiu o holocausto, e a lenha, e as pedras, e o pó..."',
+        riddle: 'Digite 1 - 2 - 4 - 1 para testemunhar o fogo descer e o povo clamar: Só o SENHOR é Deus!',
+        answerDigit: 'FINAL',
+        hint: 'Código do Fogo: 1 - 2 - 4 - 1'
+      }
+    ]
+  },
+  {
+    id: 7,
+    title: '8. A Tumba Vazia da Ressurreição',
+    subtitle: 'A pedra foi removida! Verifique o sepulcro vazio e o lenço dobrado do Rei!',
+    badge: 'Ressurreição',
+    lockLabel: 'Cadeado de Pedra do Sepulcro Vazio',
+    correctCode: ['3', '2', '1', '1'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. Os Três Dias no Coração da Terra',
+        icon: Clock,
+        color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+        passage: 'Mateus 12:40 - "Pois, como Jonas esteve três dias e três noites... assim estará o Filho do homem..."',
+        riddle: 'Ao terceiro dia Jesus ressuscitou triunfante da morte! Qual é o número desse dia sagrado?',
+        answerDigit: '3',
+        hint: 'Dígito 1 do Código = 3'
+      },
+      {
+        id: 2,
+        title: '2. Os Anjos na Entrada da Tumba',
+        icon: Sparkles,
+        color: 'border-cyan-400/50 bg-cyan-400/10 text-cyan-300',
+        passage: 'João 20:12 - "E viu dois anjos vestidos de branco, assentados onde jazera o corpo de Jesus..."',
+        riddle: 'Quantos anjos de vestes resplandecentes estavam assentados dentro da tumba (cabeceira e pés)?',
+        answerDigit: '2',
+        hint: 'Dígito 2 do Código = 2'
+      },
+      {
+        id: 3,
+        title: '3. O Primeiro Dia da Semana',
+        icon: Sun,
+        color: 'border-yellow-400/50 bg-yellow-400/10 text-yellow-300',
+        passage: 'João 20:1 - "E no primeiro dia da semana, Maria Madalena foi ao sepulcro de manhã..."',
+        riddle: 'Qual é o ordinal do dia da semana (Domingo da Ressurreição) em que acharam a pedra removida?',
+        answerDigit: '1',
+        hint: 'Dígito 3 do Código = 1'
+      },
+      {
+        id: 4,
+        title: '4. O Único Mediador e Salvador',
+        icon: Heart,
+        color: 'border-rose-500/50 bg-rose-500/10 text-rose-400',
+        passage: '1 Timóteo 2:5 - "Porque há um só Deus, e um só Mediador entre Deus e os homens, Jesus Cristo homem."',
+        riddle: 'Quantos Salvadores ressuscitados venceram o grilhão da morte e da sepultura?',
+        answerDigit: '1',
+        hint: 'Dígito 4 do Código = 1'
+      },
+      {
+        id: 5,
+        title: '5. O Lenço Dobrado à Parte',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'João 20:7 - "E o lenço, que estivera sobre a sua cabeça, que não estava com os lençóis, mas dobrado num lugar à parte."',
+        riddle: 'Combine 3 - 2 - 1 - 1 para abrir o sepulcro e proclamar: Ele não está aqui, porque já ressuscitou!',
+        answerDigit: 'FINAL',
+        hint: 'Código da Vida: 3 - 2 - 1 - 1'
+      }
+    ]
+  },
+  {
+    id: 8,
+    title: '9. O Templo de Salomão & A Glória da Shekinah',
+    subtitle: 'Decifre as medidas do Templo de Ouro para presenciar o encher da glória de Deus!',
+    badge: 'Templo',
+    lockLabel: 'Cadeado das Portas de Ouro do Templo',
+    correctCode: ['7', '2', '1', '0'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. Os Sete Anos de Construção',
+        icon: Clock,
+        color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+        passage: '1 Reis 6:38 - "Assim o edificou em sete anos."',
+        riddle: 'Quantos anos durou a edificação solene do Templo de Salomão em Jerusalém sem som de machado?',
+        answerDigit: '7',
+        hint: 'Dígito 1 do Código = 7'
+      },
+      {
+        id: 2,
+        title: '2. As Duas Colunas de Bronze: Jaquim e Boaz',
+        icon: Layers,
+        color: 'border-orange-500/50 bg-orange-500/10 text-orange-400',
+        passage: '1 Reis 7:21 - "Levantou as colunas no pórtico do templo... e chamou o nome da da direita Jaquim, e o da esquerda Boaz."',
+        riddle: 'Quantas colunas majestosas de bronze ficavam na entrada do Pórtico do Santuário?',
+        answerDigit: '2',
+        hint: 'Dígito 2 do Código = 2'
+      },
+      {
+        id: 3,
+        title: '3. O Mar de Fundição de Cobre',
+        icon: Compass,
+        color: 'border-blue-500/50 bg-blue-500/10 text-blue-400',
+        passage: '1 Reis 7:23 - "Fez também um mar de fundição, de dez côvados de uma borda até à outra..."',
+        riddle: 'Quantos grandes mares de fundição para purificação dos sacerdotes repousavam sobre 12 bois de bronze?',
+        answerDigit: '1',
+        hint: 'Dígito 3 do Código = 1'
+      },
+      {
+        id: 4,
+        title: '4. A Nuvem da Glória da Shekinah',
+        icon: Sparkles,
+        color: 'border-amber-300/50 bg-amber-300/10 text-amber-300',
+        passage: '1 Reis 8:10-11 - "E sucedeu que... a nuvem encheu a casa do SENHOR, de sorte que os sacerdotes não podiam ter-se em pé..."',
+        riddle: 'Qual é o último dígito do capítulo 8 de 1 Reis (80 -> 0) em que o fogo desceu do céu e a glória encheu o templo?',
+        answerDigit: '0',
+        hint: 'Dígito 4 do Código = 0'
+      },
+      {
+        id: 5,
+        title: '5. O Propiciatório de Ouro do Templo',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: '2 Crônicas 7:1 - "E acabando Salomão de orar, desceu o fogo do céu, e consumiu o holocausto..."',
+        riddle: 'Combine 7 - 2 - 1 - 0 para contemplar a majestade da glória de Deus habitando entre os homens!',
+        answerDigit: 'FINAL',
+        hint: 'Código do Santuário: 7 - 2 - 1 - 0'
+      }
+    ]
+  },
+  {
+    id: 9,
+    title: '10. A Ilha de Patmos & As 7 Igrejas do Apocalipse',
+    subtitle: 'Decifre as revelações do Cordeiro Glorificado ao apóstolo João na ilha de Patmos!',
+    badge: 'Apocalipse',
+    lockLabel: 'Cadeado dos Sete Selos do Apocalipse',
+    correctCode: ['7', '7', '1', '2'],
+    hotspots: [
+      {
+        id: 1,
+        title: '1. Os Sete Candelabros de Ouro',
+        icon: Lightbulb,
+        color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
+        passage: 'Apocalipse 1:12 - "E virei-me para ver a voz... e vi sete candelabros de ouro."',
+        riddle: 'Quantas igrejas da Ásia foram representadas pelos candelabros de ouro na visão de Patmos?',
+        answerDigit: '7',
+        hint: 'Dígito 1 do Código = 7'
+      },
+      {
+        id: 2,
+        title: '2. As Sete Estrelas na Mão Direita',
+        icon: Sparkles,
+        color: 'border-cyan-400/50 bg-cyan-400/10 text-cyan-300',
+        passage: 'Apocalipse 1:16 - "E ele tinha na sua mão direita sete estrelas..."',
+        riddle: 'Quantos anjos (pastores das igrejas) eram mantidos em segurança na mão do Senhor ressuscitado?',
+        answerDigit: '7',
+        hint: 'Dígito 2 do Código = 7'
+      },
+      {
+        id: 3,
+        title: '3. O Alfa e o Ômega',
+        icon: Award,
+        color: 'border-yellow-400/50 bg-yellow-400/10 text-yellow-300',
+        passage: 'Apocalipse 1:8 - "Eu sou o Alfa e o Ômega, o princípio e o fim, diz o Senhor..."',
+        riddle: 'Quantos Senhores Soberanos assentados no trono têm o Livro da Vida selado?',
+        answerDigit: '1',
+        hint: 'Dígito 3 do Código = 1'
+      },
+      {
+        id: 4,
+        title: '4. As Doze Portas da Nova Jerusalém',
+        icon: Compass,
+        color: 'border-indigo-400/50 bg-indigo-400/10 text-indigo-300',
+        passage: 'Apocalipse 21:12 - "E tinha um grande e alto muro com doze portas... e nomes escritos..."',
+        riddle: 'Qual é o segundo dígito do número de portas de pérola da Nova Jerusalém celeste (12 portas)?',
+        answerDigit: '2',
+        hint: 'Dígito 4 do Código = 2 (12 portas -> 2)'
+      },
+      {
+        id: 5,
+        title: '5. A Porta Aberta no Céu',
+        icon: Key,
+        color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+        passage: 'Apocalipse 3:8 - "Eis que tenho posto diante de ti uma porta aberta, e ninguém a pode fechar..."',
+        riddle: 'Digite a combinação celeste (7 - 7 - 1 - 2) para romper os selos e reinar com Cristo para sempre!',
+        answerDigit: 'FINAL',
+        hint: 'Código do Cordeiro: 7 - 7 - 1 - 2'
+      }
+    ]
+  }
+];
+
 function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
+  const [selectedScenarioIdx, setSelectedScenarioIdx] = useState(0);
   const [visitedHotspots, setVisitedHotspots] = useState<number[]>([]);
   const [unlockedDigits, setUnlockedDigits] = useState<{ [key: number]: string }>({});
   const [activeSpot, setActiveSpot] = useState<number | null>(null);
 
   const [pin, setPin] = useState(['', '', '', '']);
-  const [timer, setTimer] = useState(900); // 15 minutos
+  const [timer, setTimer] = useState(900); // 15 minutos por cenário
   const [isEscaped, setIsEscaped] = useState(false);
+  const [completedScenarios, setCompletedScenarios] = useState<number[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Código correto do Tabernáculo: 6 - 5 - 7 - 2
-  const CORRECT_CODE = ['6', '5', '7', '2'];
+  const scenario = ESCAPE_SCENARIOS[selectedScenarioIdx];
 
+  // Restaura cenários concluídos do localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('gipp_escape_completed');
+    if (saved) {
+      try {
+        setCompletedScenarios(JSON.parse(saved));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  // Timer
   useEffect(() => {
     if (isEscaped || timer <= 0) return;
     const interval = setInterval(() => setTimer(t => t - 1), 1000);
     return () => clearInterval(interval);
   }, [timer, isEscaped]);
 
-  const hotspots = [
-    {
-      id: 1,
-      title: '1. Altar de Bronze (O Átrio)',
-      icon: Flame,
-      color: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
-      passage: 'Levítico 6:13 - "O fogo arderá continuamente sobre o altar; não se apagará."',
-      riddle: 'No Átrio, o fogo continuo representa o fervor do Espírito. Quantas colunas sustentavam a cortina da entrada do Átrio de acácia (Êxodo 27:16)?',
-      answerDigit: '6',
-      hint: 'Dígito 1 do Código = 6'
-    },
-    {
-      id: 2,
-      title: '2. Bacia de Cobre (Pia de Bronze)',
-      icon: Sparkles,
-      color: 'border-cyan-500/50 bg-cyan-500/10 text-cyan-400',
-      passage: 'Êxodo 30:18 - "Farás também uma bacia de bronze com a sua base de bronze, para lavar..."',
-      riddle: 'A Pia de Bronze purificava os sacerdotes. Quantas eram as ofertas levíticas no Tabernáculo (Holocausto, Alimento, Pacífico, Pecado, Ofensa)?',
-      answerDigit: '5',
-      hint: 'Dígito 2 do Código = 5'
-    },
-    {
-      id: 3,
-      title: '3. Candelabro de Ouro (Menorá)',
-      icon: Lightbulb,
-      color: 'border-amber-400/50 bg-amber-400/10 text-amber-300',
-      passage: 'Êxodo 25:37 - "Farás também as suas lâmpadas, sete; e as suas lâmpadas se acenderão..."',
-      riddle: 'A Menorá ilumina o Lugar Santo. Quantas lâmpadas e hastes perfeitas compunham o Candelabro de ouro puro?',
-      answerDigit: '7',
-      hint: 'Dígito 3 do Código = 7'
-    },
-    {
-      id: 4,
-      title: '4. Mesa dos Pães da Proposição',
-      icon: BookOpen,
-      color: 'border-orange-500/50 bg-orange-500/10 text-orange-400',
-      passage: 'Levítico 24:5-6 - "Tomarás da flor de farinha e dela cozerás doze pães... em duas fileiras..."',
-      riddle: 'Os 12 pães no Lugar Santo ficavam organizados sobre a mesa em quantas fileiras perfeitas?',
-      answerDigit: '2',
-      hint: 'Dígito 4 do Código = 2'
-    },
-    {
-      id: 5,
-      title: '5. O Véu e o Cadeado da Arca',
-      icon: Key,
-      color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
-      passage: 'Hebreus 10:19-20 - "Tendo, pois, irmãos, intrepidez para entrar no Santo dos Santos pelo sangue de Jesus..."',
-      riddle: 'Combine os 4 dígitos descobertos na sequência exata dos objetos sagrados (Átrio -> Pia -> Menorá -> Pães) para destravar a Arca da Aliança e Escapar!',
-      answerDigit: 'FINAL',
-      hint: 'Ordem das Pistas: [1º] [2º] [3º] [4º]'
-    }
-  ];
+  const resetScenarioState = (idx: number) => {
+    setSelectedScenarioIdx(idx);
+    setVisitedHotspots([]);
+    setUnlockedDigits({});
+    setActiveSpot(null);
+    setPin(['', '', '', '']);
+    setTimer(900);
+    setIsEscaped(false);
+    setErrorMsg(null);
+  };
 
   const handleInspect = (spotId: number) => {
     setActiveSpot(spotId);
@@ -2269,7 +2864,7 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
     }
   };
 
-  const handleUnlockClue = (spot: typeof hotspots[0]) => {
+  const handleUnlockClue = (spot: typeof scenario.hotspots[0]) => {
     if (spot.answerDigit !== 'FINAL') {
       setUnlockedDigits(prev => ({ ...prev, [spot.id]: spot.answerDigit }));
     }
@@ -2285,11 +2880,14 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
   };
 
   const handleVerifyCode = () => {
-    if (pin.join('') === CORRECT_CODE.join('')) {
+    if (pin.join('') === scenario.correctCode.join('')) {
       setIsEscaped(true);
-      onGameOver(highScore + 1);
+      const newCompleted = Array.from(new Set([...completedScenarios, scenario.id]));
+      setCompletedScenarios(newCompleted);
+      localStorage.setItem('gipp_escape_completed', JSON.stringify(newCompleted));
+      onGameOver(newCompleted.length);
     } else {
-      setErrorMsg('CÓDIGO INCORRETO! Revise suas pistas nos objetos sagrados do Tabernáculo.');
+      setErrorMsg(`CÓDIGO INCORRETO! Verifique suas pistas e o enigma de ${scenario.badge}.`);
     }
   };
 
@@ -2300,16 +2898,58 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto w-full flex flex-col gap-6 font-sans">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto w-full flex flex-col gap-6 font-sans select-none">
       
-      {/* CABEÇALHO COM CONTADOR REGRESSIVO */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+      {/* SELETOR DE TEMAS / CENÁRIOS (10 TEMAS) */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Compass size={18} className="text-emerald-400" />
+            <h3 className="text-xs font-black text-white uppercase tracking-wider">
+              Escolha um dos 10 Cenários Bíblicos de Fuga:
+            </h3>
+          </div>
+          <span className="text-[11px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+            🏆 {completedScenarios.length} / 10 Temas Concluídos
+          </span>
+        </div>
+
+        {/* BARRA DE BOTÕES DOS TEMAS */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          {ESCAPE_SCENARIOS.map((sc, idx) => {
+            const isSelected = selectedScenarioIdx === idx;
+            const isDone = completedScenarios.includes(sc.id);
+
+            return (
+              <button
+                key={sc.id}
+                onClick={() => resetScenarioState(idx)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black shrink-0 flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400'
+                    : isDone
+                    ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900'
+                    : 'bg-slate-800/80 text-slate-400 border border-slate-700/60 hover:bg-slate-800 hover:text-slate-200'
+                }`}
+              >
+                <span>{isDone ? '✓' : `#${idx + 1}`}</span>
+                <span>{sc.badge}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CABEÇALHO DO CENÁRIO ATUAL */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
         <div>
           <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-xs rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 mb-2">
-            <Key size={12} /> Desafio de Fuga Teológica
+            <Key size={12} /> Desafio #{scenario.id + 1} de 10
           </span>
-          <h2 className="text-2xl font-black text-white">O Segredo do Tabernáculo de Moisés</h2>
-          <p className="text-xs text-slate-400">Vasculhe os 5 pontos sagrados para obter a combinação do Santo dos Santos!</p>
+          <h2 className="text-2xl font-black text-white">{scenario.title}</h2>
+          <p className="text-xs text-slate-400 mt-1">{scenario.subtitle}</p>
         </div>
 
         <div className="bg-slate-950 border border-slate-800 px-5 py-3 rounded-2xl flex items-center gap-3">
@@ -2321,12 +2961,12 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
         </div>
       </div>
 
-      {/* MAPA DOS OBJETOS DO TABERNÁCULO */}
+      {/* MAPA DE PONTOS DO SCENARIO */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        {/* COLUNA ESQUERDA: LISTA DE OBJETOS */}
+        {/* COLUNA ESQUERDA: LISTA DE OBJETOS DO CENÁRIO */}
         <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {hotspots.map((spot) => {
+          {scenario.hotspots.map((spot) => {
             const IconComp = spot.icon;
             const isVisited = visitedHotspots.includes(spot.id);
             const hasClue = !!unlockedDigits[spot.id];
@@ -2362,18 +3002,18 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
           })}
         </div>
 
-        {/* COLUNA DIREITA: PAINEL DO CADEADO SECRETO */}
+        {/* COLUNA DIREITA: PAINEL DO CADEADO SECRETO DO CENÁRIO */}
         <div className="bg-slate-900 border-2 border-emerald-500/30 rounded-3xl p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Lock size={18} className="text-emerald-400" />
-              <h3 className="font-black text-sm text-white uppercase tracking-wider">Cadeado da Arca</h3>
+              <h3 className="font-black text-sm text-white uppercase tracking-wider">{scenario.lockLabel}</h3>
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed mb-6">
-              Digite a combinação de 4 dígitos na ordem correta obtida nos objetos do Tabernáculo:
+              Digite a combinação de 4 dígitos na ordem correta obtida nos enigmas de {scenario.badge}:
             </p>
 
             {/* DIGITOS DO PIN */}
@@ -2401,7 +3041,7 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
             onClick={handleVerifyCode}
             className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-600/20 cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            <Key size={16} /> Abrir o Santo dos Santos
+            <Key size={16} /> Destravar e Escapar!
           </button>
         </div>
 
@@ -2409,7 +3049,7 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
 
       {/* MODAL DE INVESTIGAÇÃO DE PONTO SAGRADO */}
       {activeSpot !== null && (() => {
-        const spot = hotspots.find(h => h.id === activeSpot)!;
+        const spot = scenario.hotspots.find(h => h.id === activeSpot)!;
         const IconComp = spot.icon;
 
         return (
@@ -2463,26 +3103,31 @@ function EscapeRoomGame({ onGameOver, highScore }: EscapeRoomProps) {
 
             <div>
               <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 font-extrabold text-xs rounded-full uppercase tracking-widest border border-emerald-500/30 inline-block mb-2">
-                Glória a Deus! Você Escapou!
+                Glória a Deus! Fuga Concluída!
               </span>
-              <h2 className="text-3xl font-black text-white">Desafio Concluído!</h2>
+              <h2 className="text-3xl font-black text-white">{scenario.title}</h2>
               <p className="text-xs text-slate-300 mt-2">
-                Você decifrou todas as sombras do Tabernáculo e revelou a glória da Nova Aliança em Cristo Jesus!
+                Você decifrou com sabedoria todos os enigmas bíblicos e desvelou a verdade da Palavra de Deus!
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setIsEscaped(false);
-                setVisitedHotspots([]);
-                setUnlockedDigits({});
-                setPin(['', '', '', '']);
-                setTimer(900);
-              }}
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-600/20 cursor-pointer active:scale-95 transition-all"
-            >
-              Jogar Novamente 🔄
-            </button>
+            <div className="flex flex-col gap-3 w-full">
+              {selectedScenarioIdx < ESCAPE_SCENARIOS.length - 1 && (
+                <button
+                  onClick={() => resetScenarioState(selectedScenarioIdx + 1)}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-500/20 hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                >
+                  Ir para o Próximo Cenário (#{selectedScenarioIdx + 2}) ➡️
+                </button>
+              )}
+
+              <button
+                onClick={() => resetScenarioState(selectedScenarioIdx)}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-2xl transition-all cursor-pointer"
+              >
+                Repetir este Cenário 🔄
+              </button>
+            </div>
           </div>
         </div>
       )}
