@@ -10512,7 +10512,13 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
              <div className="p-6 border-t border-white/30 bg-white/40 backdrop-blur-md shrink-0">
                 <div className={`flex items-center gap-4 p-3 rounded-2xl bg-white/60 shadow-sm border border-white/50 ${!open && 'justify-center'}`}>
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md">{safeText(user.nome).charAt(0)}</div>
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md overflow-hidden shrink-0">
+                      {user?.fotoUrl || user?.foto ? (
+                        <img src={user.fotoUrl || user.foto} alt={user.nome || 'Usuário'} className="w-full h-full object-cover" />
+                      ) : (
+                        safeText(user.nome).charAt(0)
+                      )}
+                    </div>
                     {open && <div className="overflow-hidden flex-1"><p className="text-sm font-bold text-slate-800 truncate">{safeText(user.nome).split(' ')[0]}</p><p className="text-[10px] text-emerald-600 uppercase font-black tracking-widest">Sessão Ativa</p></div>}
                 </div>
                 <button onClick={() => { playMenuSound(); handleLogoutRequest(); }} className={`mt-4 w-full flex items-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white font-bold transition-all shadow-sm border border-transparent hover:border-rose-400 hover:shadow-rose-500/30 ${!open && 'justify-center'}`}>
@@ -16259,7 +16265,13 @@ const MemberPortalLayout = () => {
                 </nav>
                 <div className="p-6 border-t border-slate-200/60 shrink-0">
                     <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-xs">
-                        <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{user.nome.charAt(0)}</div>
+                        <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold overflow-hidden shrink-0">
+                          {user?.fotoUrl || user?.foto ? (
+                            <img src={user.fotoUrl || user.foto} alt={user.nome} className="w-full h-full object-cover" />
+                          ) : (
+                            user.nome.charAt(0)
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">{user.nome.split(' ')[0]}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase truncate">
@@ -16391,7 +16403,13 @@ const MemberPortalLayout = () => {
                         </div>
                         <div className="mt-6 pt-5 border-t border-slate-200/50 flex flex-col gap-3">
                             <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-500/5 border border-slate-200/20">
-                                <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold font-mono">{user.nome.charAt(0)}</div>
+                                <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold font-mono overflow-hidden shrink-0">
+                                  {user?.fotoUrl || user?.foto ? (
+                                    <img src={user.fotoUrl || user.foto} alt={user.nome} className="w-full h-full object-cover" />
+                                  ) : (
+                                    user.nome.charAt(0)
+                                  )}
+                                </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 truncate">{user.nome}</p>
                                     <p className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5">
@@ -17797,8 +17815,12 @@ const AppLayout = () => {
                         <div className="fixed inset-0 z-[98]" onClick={() => setMacosControlCenterOpen(false)}></div>
                         <div className="fixed right-4 top-8 w-72 bg-[#1c1d24]/95 border border-white/10 rounded-2xl shadow-2xl z-[99] p-4 select-none animate-slide-up-fade text-white">
                             <div className="flex items-center gap-3 border-b border-white/5 pb-3 mb-3">
-                                <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold border border-indigo-500/20 text-lg">
-                                    {user?.nome?.charAt(0)}
+                                <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold border border-indigo-500/20 text-lg overflow-hidden shrink-0">
+                                    {user?.fotoUrl || user?.foto ? (
+                                        <img src={user.fotoUrl || user.foto} alt={user.nome || 'Usuário'} className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.nome?.charAt(0)
+                                    )}
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-black text-white">{user?.nome || 'Usuário Teológico'}</h4>
@@ -18199,8 +18221,12 @@ const AppLayout = () => {
                             {/* Footer bar with quick settings & logout */}
                             <div className="border-t border-white/10 mt-8 pt-6 flex justify-between items-center text-white/60 text-xs font-bold">
                                 <div className="flex items-center gap-3 bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
-                                    <div className="w-8 h-8 rounded-full bg-[#e95420] text-white flex items-center justify-center font-bold">
-                                        {user?.nome?.charAt(0)}
+                                    <div className="w-8 h-8 rounded-full bg-[#e95420] text-white flex items-center justify-center font-bold overflow-hidden shrink-0">
+                                        {user?.fotoUrl || user?.foto ? (
+                                            <img src={user.fotoUrl || user.foto} alt={user.nome || 'Usuário'} className="w-full h-full object-cover" />
+                                        ) : (
+                                            user?.nome?.charAt(0)
+                                        )}
                                     </div>
                                     <div className="text-left">
                                         <p className="text-white text-xs font-extrabold">{user?.nome}</p>
@@ -18901,8 +18927,12 @@ const AppLayout = () => {
                                 isLight ? 'border-slate-200' : 'border-white/10'
                             }`}>
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-                                        {user?.nome?.charAt(0)}
+                                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold overflow-hidden shrink-0">
+                                        {user?.fotoUrl || user?.foto ? (
+                                            <img src={user.fotoUrl || user.foto} alt={user.nome || 'Usuário'} className="w-full h-full object-cover" />
+                                        ) : (
+                                            user?.nome?.charAt(0)
+                                        )}
                                     </div>
                                     <div className="text-left leading-tight">
                                         <p className="font-bold">{user?.nome}</p>

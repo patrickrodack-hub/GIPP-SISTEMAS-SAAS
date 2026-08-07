@@ -2,7 +2,8 @@ import React, { useState, useEffect, useContext, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Shield, Search, Plus, Edit, Trash2, Loader2, Check, X, Info, 
-  MapPin, User, Key, Users, BookOpen, Layers, Lock, AlertTriangle, ArrowUpDown
+  MapPin, User, Key, Users, BookOpen, Layers, Lock, AlertTriangle, ArrowUpDown,
+  Camera, Upload, Image as ImageIcon
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { ChurchContext } from '../App';
@@ -80,7 +81,7 @@ const CATEGORIAS_PERMISSOES = [
 ];
 
 const ModuleUsuarios = memo(() => {
-  const { db, dbFirestore, appId, addToast, logAction, user, setConfirmDialog } = useContext(ChurchContext);
+  const { db, dbFirestore, appId, addToast, logAction, user, setUser, setConfirmDialog } = useContext(ChurchContext);
 
   // Estados locais para pesquisa e filtragem
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,12 +103,36 @@ const ModuleUsuarios = memo(() => {
     nome: '',
     usuario: '',
     senha: '',
+    fotoUrl: '',
     congregacao_id: 'sede',
     nivel: 'restrito',
     funcao_administrativa: '',
     permissoes: [],
     bloqueado: false
   });
+
+  // Handler para upload da foto do operador
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addToast('Por favor selecione um arquivo de imagem válido.', 'warning');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      addToast('A imagem deve ter no máximo 2MB.', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setFormData((prev: any) => ({ ...prev, fotoUrl: result }));
+        addToast('Foto anexada com sucesso!', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Filtra operadores válidos (excluindo os excluídos logicamente)
   const usersList = useMemo(() => {
@@ -159,6 +184,7 @@ const ModuleUsuarios = memo(() => {
       nome: '',
       usuario: '',
       senha: '',
+      fotoUrl: '',
       congregacao_id: 'sede',
       nivel: 'restrito',
       funcao_administrativa: '',
@@ -175,6 +201,7 @@ const ModuleUsuarios = memo(() => {
       nome: operator.nome || '',
       usuario: operator.usuario || '',
       senha: operator.senha || '',
+      fotoUrl: operator.fotoUrl || operator.foto || '',
       congregacao_id: operator.congregacao_id || 'sede',
       nivel: operator.nivel || 'restrito',
       funcao_administrativa: operator.funcao_administrativa || '',
@@ -268,6 +295,8 @@ const ModuleUsuarios = memo(() => {
         nome: formData.nome.trim(),
         usuario: formData.usuario.trim(),
         senha: formData.senha.trim(),
+        fotoUrl: formData.fotoUrl || '',
+        foto: formData.fotoUrl || '',
         congregacao_id: formData.congregacao_id,
         nivel: formData.nivel,
         funcao_administrativa: formData.funcao_administrativa,
@@ -290,6 +319,12 @@ const ModuleUsuarios = memo(() => {
         logAction('CRIACAO_USUARIO', `Cadastrou o novo operador: ${payload.nome}`, 'usuarios', newDocRef.id);
         addToast("Novo operador cadastrado com sucesso!", "success");
       }
+
+      // Se o usuário editado é o operador atualmente conectado, atualiza o perfil em tempo real
+      if (user && setUser && (user.id === editingUser?.id || user.usuario === payload.usuario)) {
+        setUser((prev: any) => ({ ...prev, ...payload }));
+      }
+
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -429,8 +464,12 @@ const ModuleUsuarios = memo(() => {
                     <tr key={operator.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-black text-xs border border-slate-200">
-                            {operator.nome?.charAt(0).toUpperCase()}
+                          <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-black text-xs border border-slate-200 overflow-hidden shrink-0 shadow-xs">
+                            {operator.fotoUrl || operator.foto ? (
+                              <img src={operator.fotoUrl || operator.foto} alt={operator.nome} className="w-full h-full object-cover" />
+                            ) : (
+                              operator.nome?.charAt(0).toUpperCase()
+                            )}
                           </div>
                           <div>
                             <span className="font-extrabold text-sm text-slate-800 flex items-center gap-2 leading-tight">
@@ -538,8 +577,63 @@ const ModuleUsuarios = memo(() => {
               <form onSubmit={handleSubmit} id="operator-form" className="space-y-6">
                 
                 {/* Form Inputs Grid */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-xs">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Informações de Credenciais</h4>
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-xs space-y-5">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Informações de Credenciais & Perfil</h4>
+                  
+                  {/* Anexo de Foto do Usuário */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center gap-5">
+                    <div className="relative group shrink-0">
+                      <div className="w-20 h-20 rounded-2xl bg-white border-2 border-slate-200 shadow-sm flex items-center justify-center overflow-hidden text-slate-400">
+                        {formData.fotoUrl ? (
+                          <img src={formData.fotoUrl} alt="Foto do Usuário" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={36} className="text-slate-300" />
+                        )}
+                      </div>
+                      {formData.fotoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, fotoUrl: '' })}
+                          className="absolute -top-2 -right-2 p-1.5 rounded-full bg-rose-500 text-white shadow-md hover:bg-rose-600 transition-colors"
+                          title="Remover Foto"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 w-full space-y-2">
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-widest flex items-center gap-1.5">
+                        <Camera size={14} className="text-indigo-500" /> Foto de Perfil do Operador
+                      </label>
+                      <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                        Anexe a imagem do operador. Ela será exibida quando o usuário estiver conectado ao sistema e nos menus do portal.
+                      </p>
+                      
+                      <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-500/20 transition-all">
+                          <Upload size={14} /> Anexar Foto
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handlePhotoUpload} 
+                            className="hidden" 
+                          />
+                        </label>
+
+                        <span className="text-xs text-slate-400 font-bold uppercase">ou</span>
+
+                        <input 
+                          type="url" 
+                          placeholder="URL da foto (http://...)" 
+                          value={formData.fotoUrl} 
+                          onChange={(e) => setFormData({ ...formData, fotoUrl: e.target.value })} 
+                          className="flex-1 min-w-[200px] px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 bg-white" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                     
                     <div>
