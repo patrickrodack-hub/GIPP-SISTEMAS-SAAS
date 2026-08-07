@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, createContext, useMemo, memo, u
 import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
 import { 
   PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line
@@ -22,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, Bookmark
 } from 'lucide-react';
 
 import { 
@@ -42,12 +43,1186 @@ import {
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
 
+// Helper para formatar / resolver valores de campos em formato legível
+const resolveFieldValue = (item: any, key: string, db: any) => {
+    if (!item) return '-';
+    let val = item[key];
+    
+    // Mapeamento de IDs de Congregação
+    if (key === 'congregacao_id' || key === 'congregacao') {
+        if (val === 'sede' || val === 'SEDE' || !val) return 'Sede Principal';
+        const c = (db.congregacoes || []).find((x: any) => x.id === val);
+        return c ? c.nome : (val || 'Sede Principal');
+    }
+
+    // Mapeamento de Turmas da EBD
+    if (key === 'turma_id') {
+        const turma = (db.ebd?.turmas || []).find((t: any) => t.id === val);
+        return turma ? turma.nome : (val || 'Classe Geral');
+    }
+
+    // Mapeamento de Datas
+    if (key === 'data' || key === 'data_nascimento' || key === 'data_visita' || key === 'data_batismo' || key === 'data_admissao' || key === 'vencimento') {
+        return val ? formatDateLocal(val) : '-';
+    }
+
+    if (val === undefined || val === null || val === '') return '-';
+    if (typeof val === 'boolean') return val ? 'SIM' : 'NÃO';
+    return String(val);
+};
+
+// Dicionário de Módulos e Campos Disponíveis para o Construtor Dinâmico
+const MODULE_DATASETS = [
+    {
+        id: 'membros',
+        label: 'Membros & Obreiros',
+        desc: 'Cadastro geral do rol de membros, cargos, congregações e contatos',
+        icon: Users,
+        color: 'pink',
+        getData: (db: any) => db.membros || [],
+        fields: [
+            { key: 'nome', label: 'Nome do Membro', isNumeric: false, defaultSelected: true },
+            { key: 'cpf', label: 'CPF', isNumeric: false, defaultSelected: true },
+            { key: 'cargo', label: 'Cargo Eclesiástico', isNumeric: false, defaultSelected: true },
+            { key: 'status', label: 'Status', isNumeric: false, defaultSelected: true },
+            { key: 'data_nascimento', label: 'Data de Nascimento', isNumeric: false, defaultSelected: false },
+            { key: 'telefone', label: 'Telefone / WhatsApp', isNumeric: false, defaultSelected: true },
+            { key: 'email', label: 'E-mail', isNumeric: false, defaultSelected: false },
+            { key: 'congregacao_id', label: 'Congregação / Filial', isNumeric: false, defaultSelected: true },
+            { key: 'data_batismo', label: 'Data do Batismo', isNumeric: false, defaultSelected: false },
+            { key: 'data_admissao', label: 'Data de Admissão', isNumeric: false, defaultSelected: false },
+            { key: 'sexo', label: 'Sexo', isNumeric: false, defaultSelected: false },
+            { key: 'estado_civil', label: 'Estado Civil', isNumeric: false, defaultSelected: false },
+            { key: 'profissao', label: 'Profissão', isNumeric: false, defaultSelected: false },
+            { key: 'endereco', label: 'Endereço Residencial', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'financeiro',
+        label: 'Financeiro (Fluxo de Caixa)',
+        desc: 'Lançamentos de dízimos, ofertas, receitas e despesas',
+        icon: DollarSign,
+        color: 'emerald',
+        getData: (db: any) => db.financeiro || [],
+        fields: [
+            { key: 'descricao', label: 'Descrição da Transação', isNumeric: false, defaultSelected: true },
+            { key: 'tipo', label: 'Tipo (Entrada/Saída)', isNumeric: false, defaultSelected: true },
+            { key: 'valor', label: 'Valor (R$)', isNumeric: true, defaultSelected: true },
+            { key: 'categoria', label: 'Categoria', isNumeric: false, defaultSelected: true },
+            { key: 'data', label: 'Data da Operação', isNumeric: false, defaultSelected: true },
+            { key: 'congregacao_id', label: 'Congregação', isNumeric: false, defaultSelected: true },
+            { key: 'forma_pagamento', label: 'Forma de Pagamento', isNumeric: false, defaultSelected: false },
+            { key: 'conciliado', label: 'Status Conciliação', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'ebd_alunos',
+        label: 'EBD (Escola Bíblica)',
+        desc: 'Matrículas de alunos, turmas, frequências e professores',
+        icon: BookOpen,
+        color: 'blue',
+        getData: (db: any) => db.ebd?.alunos || [],
+        fields: [
+            { key: 'nome', label: 'Nome do Aluno', isNumeric: false, defaultSelected: true },
+            { key: 'turma_id', label: 'Turma / Classe', isNumeric: false, defaultSelected: true },
+            { key: 'frequencia', label: 'Frequência (%)', isNumeric: true, defaultSelected: true },
+            { key: 'status', label: 'Status do Aluno', isNumeric: false, defaultSelected: true },
+            { key: 'telefone', label: 'Telefone Contato', isNumeric: false, defaultSelected: true },
+            { key: 'responsavel', label: 'Responsável', isNumeric: false, defaultSelected: false },
+            { key: 'batizado', label: 'Batizado', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'missoes',
+        label: 'Missões & Evangelismo',
+        desc: 'Missionários mantidos, campos, ofertas e projetos',
+        icon: Globe,
+        color: 'indigo',
+        getData: (db: any) => db.missoes?.missionarios || [],
+        fields: [
+            { key: 'nome', label: 'Nome do Missionário', isNumeric: false, defaultSelected: true },
+            { key: 'projeto', label: 'Campo / Projeto', isNumeric: false, defaultSelected: true },
+            { key: 'localizacao', label: 'País / Região', isNumeric: false, defaultSelected: true },
+            { key: 'oferta_mensal', label: 'Prebenda / Oferta Mensal (R$)', isNumeric: true, defaultSelected: true },
+            { key: 'status', label: 'Status no Campo', isNumeric: false, defaultSelected: true },
+            { key: 'contato', label: 'Contato do Campo', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'patrimonio',
+        label: 'Patrimônio & Inventário',
+        desc: 'Bens materiais, equipamentos, estado de conservação e localização',
+        icon: Package,
+        color: 'amber',
+        getData: (db: any) => db.patrimonio || [],
+        fields: [
+            { key: 'nome', label: 'Descrição do Item', isNumeric: false, defaultSelected: true },
+            { key: 'categoria', label: 'Categoria do Bem', isNumeric: false, defaultSelected: true },
+            { key: 'quantidade', label: 'Quantidade', isNumeric: true, defaultSelected: true },
+            { key: 'valor_estimado', label: 'Valor Estimado (R$)', isNumeric: true, defaultSelected: true },
+            { key: 'conservacao', label: 'Estado de Conservação', isNumeric: false, defaultSelected: true },
+            { key: 'localizacao', label: 'Local / Congregação', isNumeric: false, defaultSelected: true },
+            { key: 'codigo_patrimonio', label: 'Código Patrimonial', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'visitantes',
+        label: 'Visitantes Registrados',
+        desc: 'Pessoas atendidas, pedidos de oração, telefones e consolidador',
+        icon: HeartHandshake,
+        color: 'teal',
+        getData: (db: any) => db.visitantes || [],
+        fields: [
+            { key: 'nome', label: 'Nome do Visitante', isNumeric: false, defaultSelected: true },
+            { key: 'data_visita', label: 'Data da Visita', isNumeric: false, defaultSelected: true },
+            { key: 'telefone', label: 'Telefone / WhatsApp', isNumeric: false, defaultSelected: true },
+            { key: 'congregacao_id', label: 'Congregação Visitada', isNumeric: false, defaultSelected: true },
+            { key: 'pedido_oracao', label: 'Pedido de Oração / Intenção', isNumeric: false, defaultSelected: true },
+            { key: 'consolidador', label: 'Irmão Consolidador', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'carnes',
+        label: 'Carnês & Contribuições',
+        desc: 'Controle de carnes de construção, eventos e compromissos',
+        icon: CreditCard,
+        color: 'purple',
+        getData: (db: any) => db.carnes || [],
+        fields: [
+            { key: 'membro_nome', label: 'Nome do Contribuinte', isNumeric: false, defaultSelected: true },
+            { key: 'tipo', label: 'Campanha / Finalidade', isNumeric: false, defaultSelected: true },
+            { key: 'valor_mensal', label: 'Valor Mensal (R$)', isNumeric: true, defaultSelected: true },
+            { key: 'status', label: 'Status do Carnê', isNumeric: false, defaultSelected: true },
+            { key: 'vencimento', label: 'Dia de Vencimento', isNumeric: false, defaultSelected: false }
+        ]
+    },
+    {
+        id: 'departamentos',
+        label: 'Departamentos & Ministérios',
+        desc: 'Grupos e equipes da igreja, lideranças e total de integrantes',
+        icon: Layers,
+        color: 'stone',
+        getData: (db: any) => db.departamentos || [],
+        fields: [
+            { key: 'nome', label: 'Nome do Departamento', isNumeric: false, defaultSelected: true },
+            { key: 'lider', label: 'Líder Responsável', isNumeric: false, defaultSelected: true },
+            { key: 'vice_lider', label: 'Vice-Líder', isNumeric: false, defaultSelected: true },
+            { key: 'integrantes_count', label: 'Total Integrantes', isNumeric: true, defaultSelected: true },
+            { key: 'dia_reuniao', label: 'Dia dos Encontros', isNumeric: false, defaultSelected: false }
+        ]
+    }
+];
+
+// Modelos pré-configurados para carregamento rápido
+const PRESET_TEMPLATES = [
+    {
+        id: 'preset_1',
+        nome: '📞 Contatos de Membros com WhatsApp',
+        moduloId: 'membros',
+        fields: ['nome', 'cargo', 'telefone', 'email', 'congregacao_id', 'status'],
+        statusFilter: 'Ativo'
+    },
+    {
+        id: 'preset_2',
+        nome: '💰 Balancete Financeiro Detalhado',
+        moduloId: 'financeiro',
+        fields: ['data', 'descricao', 'categoria', 'tipo', 'valor', 'congregacao_id'],
+        statusFilter: 'todos'
+    },
+    {
+        id: 'preset_3',
+        nome: '📦 Inventário de Bens por Conservação',
+        moduloId: 'patrimonio',
+        fields: ['nome', 'categoria', 'quantidade', 'valor_estimado', 'conservacao', 'localizacao'],
+        statusFilter: 'todos'
+    },
+    {
+        id: 'preset_4',
+        nome: '🤝 Relação de Visitantes e Pedidos',
+        moduloId: 'visitantes',
+        fields: ['nome', 'data_visita', 'telefone', 'pedido_oracao', 'congregacao_id'],
+        statusFilter: 'todos'
+    }
+];
+
+// Subcomponente Construtor de Relatórios Dinâmico
+const ConstrutorRelatoriosDinamicos = ({ db, setPrintMode, setPrintData, setPreviewOpen, addToast, user }: any) => {
+    const [selectedModuleId, setSelectedModuleId] = useState<string>('membros');
+    const [selectedFields, setSelectedFields] = useState<{ [key: string]: boolean }>({
+        nome: true,
+        cpf: true,
+        cargo: true,
+        status: true,
+        telefone: true,
+        congregacao_id: true
+    });
+    const [columnLabels, setColumnLabels] = useState<{ [key: string]: string }>({});
+    const [customTitle, setCustomTitle] = useState<string>('Relatório Consolidado de Membros');
+    const [congregacaoFilter, setCongregacaoFilter] = useState<string>('todas');
+    const [statusFilter, setStatusFilter] = useState<string>('todos');
+    const [dateStart, setDateStart] = useState<string>('');
+    const [dateEnd, setDateEnd] = useState<string>('');
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [sortBy, setSortBy] = useState<string>('nome');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    
+    // Pagination
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const pageSize = 15;
+
+    // Custom templates stored locally
+    const [savedTemplates, setSavedTemplates] = useState<any[]>(() => {
+        try {
+            const stored = localStorage.getItem('gipp_custom_reports_v1');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [templateNameInput, setTemplateNameInput] = useState<string>('');
+    const [showSaveTemplateModal, setShowSaveTemplateModal] = useState<boolean>(false);
+
+    // Current dataset definition
+    const currentModule = useMemo(() => {
+        return MODULE_DATASETS.find(m => m.id === selectedModuleId) || MODULE_DATASETS[0];
+    }, [selectedModuleId]);
+
+    // Initialize labels & defaults on module change
+    const handleModuleChange = (modId: string) => {
+        setSelectedModuleId(modId);
+        setCurrentPage(1);
+        const mod = MODULE_DATASETS.find(m => m.id === modId) || MODULE_DATASETS[0];
+        const newSelected: { [key: string]: boolean } = {};
+        const newLabels: { [key: string]: string } = {};
+        mod.fields.forEach(f => {
+            newSelected[f.key] = f.defaultSelected;
+            newLabels[f.key] = f.label;
+        });
+        setSelectedFields(newSelected);
+        setColumnLabels(newLabels);
+        setCustomTitle(`Relatório Consolidado - ${mod.label}`);
+        setSortBy(mod.fields[0].key);
+    };
+
+    // Toggle field selection
+    const toggleField = (key: string) => {
+        setSelectedFields(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const selectAllFields = () => {
+        const newSelected: { [key: string]: boolean } = {};
+        currentModule.fields.forEach(f => { newSelected[f.key] = true; });
+        setSelectedFields(newSelected);
+    };
+
+    const clearAllFields = () => {
+        const newSelected: { [key: string]: boolean } = {};
+        currentModule.fields.forEach(f => { newSelected[f.key] = false; });
+        setSelectedFields(newSelected);
+    };
+
+    // Selected fields list
+    const selectedFieldsList = useMemo(() => {
+        return currentModule.fields.filter(f => selectedFields[f.key]);
+    }, [currentModule, selectedFields]);
+
+    // Raw data from current module
+    const rawData = useMemo(() => {
+        return currentModule.getData(db);
+    }, [currentModule, db]);
+
+    // Filtered and Sorted Data
+    const filteredData = useMemo(() => {
+        let list = [...rawData];
+
+        // Filter by Congregação
+        if (congregacaoFilter !== 'todas') {
+            list = list.filter(item => {
+                const cId = item.congregacao_id || item.localizacao || item.congregacao;
+                if (congregacaoFilter === 'sede') {
+                    return cId === 'sede' || cId === 'SEDE' || !cId;
+                }
+                return cId === congregacaoFilter;
+            });
+        }
+
+        // Filter by Status if field exists
+        if (statusFilter !== 'todos') {
+            list = list.filter(item => {
+                if (!item.status && !item.tipo) return true;
+                const s = (item.status || item.tipo || '').toLowerCase();
+                return s === statusFilter.toLowerCase();
+            });
+        }
+
+        // Filter by Date range
+        if (dateStart || dateEnd) {
+            list = list.filter(item => {
+                const itemDateStr = item.data || item.data_nascimento || item.data_visita || item.data_admissao || item.vencimento;
+                if (!itemDateStr) return true;
+                let pass = true;
+                if (dateStart && itemDateStr < dateStart) pass = false;
+                if (dateEnd && itemDateStr > dateEnd) pass = false;
+                return pass;
+            });
+        }
+
+        // Filter by Search term
+        if (searchTerm.trim()) {
+            const term = searchTerm.toLowerCase();
+            list = list.filter(item => {
+                return Object.values(item).some(v => {
+                    if (v === null || v === undefined) return false;
+                    return String(v).toLowerCase().includes(term);
+                });
+            });
+        }
+
+        // Sort
+        list.sort((a, b) => {
+            let valA = a[sortBy];
+            let valB = b[sortBy];
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return sortOrder === 'asc' ? valA - valB : valB - valA;
+            }
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return sortOrder === 'asc' ? -1 : 1;
+            if (strA > strB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return list;
+    }, [rawData, congregacaoFilter, statusFilter, dateStart, dateEnd, searchTerm, sortBy, sortOrder]);
+
+    // Paginated list for table view
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filteredData.slice(start, start + pageSize);
+    }, [filteredData, currentPage, pageSize]);
+
+    const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
+
+    // Calculate totals for numeric fields
+    const calculatedTotals = useMemo(() => {
+        const totals: { [label: string]: number } = {};
+        selectedFieldsList.forEach(col => {
+            if (col.isNumeric) {
+                const label = columnLabels[col.key] || col.label;
+                const sum = filteredData.reduce((acc, item) => {
+                    const val = Number(item[col.key]);
+                    return acc + (isNaN(val) ? 0 : val);
+                }, 0);
+                totals[label] = sum;
+            }
+        });
+        return totals;
+    }, [selectedFieldsList, columnLabels, filteredData]);
+
+    // Save custom template
+    const handleSaveTemplate = () => {
+        if (!templateNameInput.trim()) {
+            addToast("Digite um nome para o modelo de relatório.", "warning");
+            return;
+        }
+        const newTemplate = {
+            id: `tmpl_${Date.now()}`,
+            nome: templateNameInput.trim(),
+            moduloId: selectedModuleId,
+            selectedFields,
+            columnLabels,
+            customTitle,
+            congregacaoFilter,
+            statusFilter,
+            dateStart,
+            dateEnd,
+            sortBy,
+            sortOrder,
+            criadoEm: new Date().toLocaleDateString('pt-BR')
+        };
+        const updated = [newTemplate, ...savedTemplates];
+        setSavedTemplates(updated);
+        try {
+            localStorage.setItem('gipp_custom_reports_v1', JSON.stringify(updated));
+        } catch (e) { console.error(e); }
+        addToast("Modelo de relatório salvo com sucesso!", "success");
+        setTemplateNameInput('');
+        setShowSaveTemplateModal(false);
+    };
+
+    // Load template or preset
+    const loadTemplate = (tmpl: any) => {
+        setSelectedModuleId(tmpl.moduloId);
+        setCurrentPage(1);
+        if (tmpl.fields) {
+            const newSel: { [key: string]: boolean } = {};
+            tmpl.fields.forEach((k: string) => { newSel[k] = true; });
+            setSelectedFields(newSel);
+        } else if (tmpl.selectedFields) {
+            setSelectedFields(tmpl.selectedFields);
+        }
+        if (tmpl.columnLabels) setColumnLabels(tmpl.columnLabels);
+        if (tmpl.nome) setCustomTitle(tmpl.nome);
+        if (tmpl.congregacaoFilter) setCongregacaoFilter(tmpl.congregacaoFilter);
+        if (tmpl.statusFilter) setStatusFilter(tmpl.statusFilter);
+        if (tmpl.dateStart) setDateStart(tmpl.dateStart);
+        if (tmpl.dateEnd) setDateEnd(tmpl.dateEnd);
+        if (tmpl.sortBy) setSortBy(tmpl.sortBy);
+        if (tmpl.sortOrder) setSortOrder(tmpl.sortOrder);
+        addToast(`Modelo "${tmpl.nome || tmpl.titulo || 'Personalizado'}" carregado!`, "info");
+    };
+
+    const deleteSavedTemplate = (id: string) => {
+        const updated = savedTemplates.filter(t => t.id !== id);
+        setSavedTemplates(updated);
+        try {
+            localStorage.setItem('gipp_custom_reports_v1', JSON.stringify(updated));
+        } catch (e) { console.error(e); }
+        addToast("Modelo removido.", "info");
+    };
+
+    // Export Excel (.XLSX)
+    const exportToExcel = () => {
+        if (filteredData.length === 0) {
+            addToast("Nenhum dado para exportar com os filtros atuais.", "warning");
+            return;
+        }
+        const excelRows = filteredData.map(row => {
+            const formattedRow: any = {};
+            selectedFieldsList.forEach(col => {
+                const headerLabel = columnLabels[col.key] || col.label;
+                const rawVal = row[col.key];
+                if (col.isNumeric && typeof rawVal === 'number') {
+                    formattedRow[headerLabel] = rawVal;
+                } else {
+                    formattedRow[headerLabel] = resolveFieldValue(row, col.key, db);
+                }
+            });
+            return formattedRow;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(excelRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Relatorio");
+        const filename = `${customTitle || currentModule.label}_${getTodayDate()}.xlsx`.toLowerCase().replace(/\s+/g, '_');
+        XLSX.writeFile(workbook, filename);
+        addToast("Relatório Excel (.xlsx) baixado com sucesso!", "success");
+    };
+
+    // Export CSV (.CSV)
+    const exportToCSV = () => {
+        if (filteredData.length === 0) {
+            addToast("Nenhum dado para exportar.", "warning");
+            return;
+        }
+        const headers = selectedFieldsList.map(col => columnLabels[col.key] || col.label);
+        const rows = filteredData.map(row => {
+            return selectedFieldsList.map(col => {
+                const rawVal = row[col.key];
+                if (col.isNumeric && typeof rawVal === 'number') {
+                    return rawVal;
+                }
+                return resolveFieldValue(row, col.key, db);
+            });
+        });
+
+        const csvContent = "\uFEFF" + [
+            headers.join(';'),
+            ...rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';'))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${customTitle || currentModule.label}_${getTodayDate()}.csv`.toLowerCase().replace(/\s+/g, '_'));
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addToast("Arquivo CSV baixado com sucesso!", "success");
+    };
+
+    // Export PDF via jsPDF
+    const exportToPDF = () => {
+        if (filteredData.length === 0) {
+            addToast("Nenhum dado para exportar em PDF.", "warning");
+            return;
+        }
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const churchName = db.igreja?.nome || 'IGREJA EVANGÉLICA ASSEMBLEIA DE DEUS';
+        const reportTitle = customTitle || `Relatório Consolidado - ${currentModule.label}`;
+
+        // Header Bar
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, 297, 20, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text(churchName.toUpperCase(), 14, 12);
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 280, 12, { align: 'right' });
+
+        // Title & Metadata
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(reportTitle, 14, 30);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Total: ${filteredData.length} registros | Módulo: ${currentModule.label} | Congregação: ${congregacaoFilter === 'todas' ? 'Todas' : congregacaoFilter}`, 14, 36);
+
+        // Headers
+        const headers = selectedFieldsList.map(f => columnLabels[f.key] || f.label);
+        let startY = 44;
+        const colWidth = Math.max(15, Math.min(268 / Math.max(1, headers.length), 65));
+
+        // Table Header
+        doc.setFillColor(241, 245, 249);
+        doc.rect(14, startY, 269, 8, 'F');
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+
+        headers.forEach((h, i) => {
+            doc.text(String(h).substring(0, 20), 16 + (i * colWidth), startY + 5.5);
+        });
+
+        startY += 10;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(51, 65, 85);
+
+        filteredData.forEach((row, rIdx) => {
+            if (startY > 185) {
+                doc.addPage();
+                doc.setFillColor(15, 23, 42);
+                doc.rect(0, 0, 297, 12, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(8);
+                doc.text(`${reportTitle} - Continuação`, 14, 8);
+
+                startY = 20;
+                doc.setFillColor(241, 245, 249);
+                doc.rect(14, startY, 269, 8, 'F');
+                doc.setTextColor(15, 23, 42);
+                doc.setFont('helvetica', 'bold');
+                headers.forEach((h, i) => {
+                    doc.text(String(h).substring(0, 20), 16 + (i * colWidth), startY + 5.5);
+                });
+                startY += 10;
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(51, 65, 85);
+            }
+
+            if (rIdx % 2 === 1) {
+                doc.setFillColor(248, 250, 252);
+                doc.rect(14, startY - 4, 269, 7, 'F');
+            }
+
+            selectedFieldsList.forEach((col, cIdx) => {
+                const rawVal = row[col.key];
+                let formattedVal = resolveFieldValue(row, col.key, db);
+                if (col.isNumeric && typeof rawVal === 'number') {
+                    formattedVal = `R$ ${rawVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
+                doc.text(String(formattedVal).substring(0, 22), 16 + (cIdx * colWidth), startY);
+            });
+
+            startY += 7;
+        });
+
+        // Totals Footer
+        if (Object.keys(calculatedTotals).length > 0 && startY < 185) {
+            startY += 3;
+            doc.setFillColor(241, 245, 249);
+            doc.rect(14, startY - 4, 269, 9, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 23, 42);
+            const totalsText = "SOMAS: " + Object.entries(calculatedTotals).map(([k, v]) => `${k}: R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`).join(' | ');
+            doc.text(totalsText, 16, startY + 2);
+        }
+
+        doc.save(`${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${getTodayDate()}.pdf`);
+        addToast("PDF exportado com sucesso!", "success");
+    };
+
+    // Official Print System
+    const handlePrintSystem = () => {
+        if (filteredData.length === 0) {
+            addToast("Nenhum registro para imprimir.", "warning");
+            return;
+        }
+        const columnsFormatted = selectedFieldsList.map(col => ({
+            key: col.key,
+            label: columnLabels[col.key] || col.label,
+            isNumeric: col.isNumeric
+        }));
+
+        const rowsFormatted = filteredData.map(row => {
+            const rObj: any = {};
+            selectedFieldsList.forEach(col => {
+                const val = row[col.key];
+                if (col.isNumeric && typeof val === 'number') {
+                    rObj[col.key] = val;
+                } else {
+                    rObj[col.key] = resolveFieldValue(row, col.key, db);
+                }
+            });
+            return rObj;
+        });
+
+        setPrintMode('rel_dinamico');
+        setPrintData({
+            titulo: customTitle || `Relatório Consolidado - ${currentModule.label}`,
+            subtitulo: `Total: ${filteredData.length} Registros Consolidado(s) | Congregação: ${congregacaoFilter === 'todas' ? 'Todas' : congregacaoFilter}`,
+            moduloNome: currentModule.label,
+            colunas: columnsFormatted,
+            registros: rowsFormatted,
+            totais: calculatedTotals,
+            dataGeracao: new Date().toLocaleString('pt-BR'),
+            usuarioNome: user?.nome,
+            igreja: db.igreja
+        });
+        setPreviewOpen(true);
+    };
+
+    return (
+        <div className="space-y-8 animate-entrance">
+            {/* INTRO BANNER */}
+            <div className="p-6 md:p-8 rounded-[2rem] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl relative overflow-hidden border border-indigo-900/50">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+                <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-amber-400 text-amber-950 font-black text-[10px] px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                <Sparkles size={12} /> Exclusivo Secretaria
+                            </span>
+                            <span className="bg-indigo-500/20 text-indigo-300 font-bold text-xs px-2.5 py-1 rounded-md border border-indigo-500/30">
+                                Versão Dinâmica Pro
+                            </span>
+                        </div>
+                        <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">Construtor Personalizado de Relatórios</h3>
+                        <p className="text-xs md:text-sm text-indigo-200/80 mt-1 font-medium max-w-2xl leading-relaxed">
+                            Selecione qualquer módulo e os campos exatos que deseja visualizar. Filtre, ordene e exporte instantaneamente para Excel (.xlsx), CSV, PDF ou Imprima com o timbre oficial da igreja.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 shrink-0">
+                        <Button
+                            onClick={() => setShowSaveTemplateModal(true)}
+                            variant="ghost"
+                            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold py-3 px-4 rounded-xl flex items-center gap-2"
+                        >
+                            <Save size={16} /> Salvar Configuração
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* PRESET QUICK LOAD TEMPLATES */}
+            <div className="glass-card p-6 rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-black text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <Bookmark size={18} className="text-indigo-600"/> Modelos e Atalhos Rápidos
+                    </h4>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">{savedTemplates.length} Modelos Salvos</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {PRESET_TEMPLATES.map(p => (
+                        <button
+                            key={p.id}
+                            onClick={() => loadTemplate(p)}
+                            className="p-3.5 text-left rounded-2xl bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-200 transition-all cursor-pointer group"
+                        >
+                            <p className="font-bold text-xs text-slate-800 group-hover:text-indigo-950 truncate">{p.nome}</p>
+                            <p className="text-[10px] text-slate-500 font-medium mt-0.5 uppercase tracking-wider">Atalho Padrão</p>
+                        </button>
+                    ))}
+
+                    {savedTemplates.map(st => (
+                        <div
+                            key={st.id}
+                            className="p-3.5 text-left rounded-2xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between group hover:border-indigo-300 transition-all"
+                        >
+                            <button
+                                onClick={() => loadTemplate(st)}
+                                className="flex-1 min-w-0 text-left cursor-pointer"
+                            >
+                                <p className="font-bold text-xs text-indigo-950 truncate">{st.nome}</p>
+                                <p className="text-[10px] text-indigo-600/70 font-semibold mt-0.5">Criado em {st.criadoEm}</p>
+                            </button>
+                            <button
+                                onClick={() => deleteSavedTemplate(st.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors ml-2"
+                                title="Excluir Modelo"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* PASSO 1: SELEÇÃO DE MÓDULO */}
+            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-slate-200 bg-white shadow-sm space-y-6">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md">1</span>
+                    <div>
+                        <h4 className="font-black text-base text-slate-800 uppercase tracking-tight">Selecione o Módulo / Fonte de Dados</h4>
+                        <p className="text-xs text-slate-500 font-medium">Escolha de qual setor da igreja os registros serão consolidados</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                    {MODULE_DATASETS.map(mod => {
+                        const Icon = mod.icon;
+                        const isSelected = mod.id === selectedModuleId;
+                        const dataCount = mod.getData(db).length;
+
+                        return (
+                            <button
+                                key={mod.id}
+                                onClick={() => handleModuleChange(mod.id)}
+                                className={`p-4 rounded-2xl text-center transition-all cursor-pointer border relative flex flex-col items-center justify-center gap-2 ${
+                                    isSelected
+                                        ? `bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/25 ring-2 ring-indigo-300 scale-105`
+                                        : `bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-indigo-300 hover:shadow-md`
+                                }`}
+                            >
+                                <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-white/20 text-white' : `bg-${mod.color}-100 text-${mod.color}-600`}`}>
+                                    <Icon size={20} />
+                                </div>
+                                <span className="font-black text-xs leading-tight block truncate w-full">{mod.label.split(' ')[0]}</span>
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                    {dataCount} recs
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* PASSO 2: SELEÇÃO DE CAMPOS E RÓTULOS */}
+            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-slate-200 bg-white shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md">2</span>
+                        <div>
+                            <h4 className="font-black text-base text-slate-800 uppercase tracking-tight">Campos Disponíveis ({selectedFieldsList.length} Selecionados)</h4>
+                            <p className="text-xs text-slate-500 font-medium">Marque quais colunas deverão constar no relatório e edite seus títulos se desejar</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={selectAllFields}
+                            className="px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors cursor-pointer"
+                        >
+                            Selecionar Todos
+                        </button>
+                        <button
+                            onClick={clearAllFields}
+                            className="px-3 py-1.5 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                        >
+                            Limpar Seleção
+                        </button>
+                    </div>
+                </div>
+
+                {/* FIELDS CHECKBOX GRID WITH CUSTOM LABEL INPUT */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {currentModule.fields.map(field => {
+                        const isChecked = !!selectedFields[field.key];
+                        return (
+                            <div
+                                key={field.key}
+                                className={`p-3 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
+                                    isChecked
+                                        ? 'bg-indigo-50/60 border-indigo-200 shadow-xs'
+                                        : 'bg-slate-50/50 border-slate-200 opacity-70 hover:opacity-100'
+                                }`}
+                            >
+                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => toggleField(field.key)}
+                                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                                    />
+                                    <span className={`text-xs font-bold ${isChecked ? 'text-indigo-950' : 'text-slate-600'}`}>
+                                        {field.label}
+                                    </span>
+                                    {field.isNumeric && (
+                                        <span className="ml-auto text-[9px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 rounded uppercase">
+                                            R$ Soma
+                                        </span>
+                                    )}
+                                </label>
+
+                                {isChecked && (
+                                    <input
+                                        type="text"
+                                        value={columnLabels[field.key] ?? field.label}
+                                        onChange={e => setColumnLabels({ ...columnLabels, [field.key]: e.target.value })}
+                                        placeholder="Título da Coluna..."
+                                        className="w-full bg-white border border-indigo-200 focus:border-indigo-500 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-800 outline-none"
+                                        title="Personalize o rótulo da coluna"
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* PASSO 3: FILTROS & ORDENAÇÃO */}
+            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-slate-200 bg-white shadow-sm space-y-6">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md">3</span>
+                    <div>
+                        <h4 className="font-black text-base text-slate-800 uppercase tracking-tight">Filtros de Abrangência & Ordenação</h4>
+                        <p className="text-xs text-slate-500 font-medium">Refine por Congregação, período de datas, pesquisa textual e ordenação de colunas</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Título Personalizado do Relatório</label>
+                        <FormInput
+                            label="Título do Relatório"
+                            value={customTitle}
+                            onChange={v => setCustomTitle(v)}
+                            placeholder="Ex: Relação de Membros para Círculo de Oração"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Filtrar por Congregação</label>
+                        <select
+                            value={congregacaoFilter}
+                            onChange={e => setCongregacaoFilter(e.target.value)}
+                            className="w-full bg-white border border-slate-200 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 outline-none shadow-xs"
+                        >
+                            <option value="todas">-- Todas as Congregações --</option>
+                            <option value="sede">Sede Principal</option>
+                            {(db.congregacoes || []).map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.nome}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Data Inicial</label>
+                        <input
+                            type="date"
+                            value={dateStart}
+                            onChange={e => setDateStart(e.target.value)}
+                            className="w-full bg-white border border-slate-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 outline-none shadow-xs"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Data Final</label>
+                        <input
+                            type="date"
+                            value={dateEnd}
+                            onChange={e => setDateEnd(e.target.value)}
+                            className="w-full bg-white border border-slate-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 outline-none shadow-xs"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Buscar Palavra-Chave</label>
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-3 text-slate-400" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                placeholder="Filtrar por qualquer palavra..."
+                                className="w-full bg-white border border-slate-200 focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-800 outline-none shadow-xs"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Ordenar Por Coluna</label>
+                        <select
+                            value={sortBy}
+                            onChange={e => setSortBy(e.target.value)}
+                            className="w-full bg-white border border-slate-200 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 outline-none shadow-xs"
+                        >
+                            {currentModule.fields.map(f => (
+                                <option key={f.key} value={f.key}>{columnLabels[f.key] || f.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Direção da Ordenação</label>
+                        <select
+                            value={sortOrder}
+                            onChange={e => setSortOrder(e.target.value as 'asc' | 'desc')}
+                            className="w-full bg-white border border-slate-200 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 outline-none shadow-xs"
+                        >
+                            <option value="asc">Crescente (A-Z / 0-9)</option>
+                            <option value="desc">Decrescente (Z-A / 9-0)</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-end">
+                        <Button
+                            onClick={() => {
+                                setCongregacaoFilter('todas');
+                                setStatusFilter('todos');
+                                setDateStart('');
+                                setDateEnd('');
+                                setSearchTerm('');
+                                addToast("Filtros resetados.", "info");
+                            }}
+                            variant="ghost"
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl border border-slate-200"
+                        >
+                            Limpar Filtros
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* PASSO 4: CONSOLIDAÇÃO & AÇÕES DE EXPORTAÇÃO */}
+            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-white to-white shadow-md space-y-6">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-indigo-100 pb-6">
+                    <div>
+                        <h4 className="font-black text-lg text-indigo-950 uppercase tracking-tight flex items-center gap-2">
+                            <FileSpreadsheet size={22} className="text-indigo-600"/> Dados Consolidados Prontos
+                        </h4>
+                        <p className="text-xs text-indigo-700/80 font-semibold mt-1">
+                            Foram consolidados <strong className="text-indigo-950">{filteredData.length} registros</strong> de um total de {rawData.length} itens do módulo {currentModule.label}.
+                        </p>
+                    </div>
+
+                    {/* METRIC CARDS */}
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <div className="bg-white px-4 py-2.5 rounded-2xl border border-indigo-100 shadow-xs flex items-center gap-3">
+                            <Users size={18} className="text-indigo-600" />
+                            <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase">Total Registros</p>
+                                <p className="text-base font-black text-slate-800 leading-none">{filteredData.length}</p>
+                            </div>
+                        </div>
+
+                        {Object.entries(calculatedTotals).map(([lbl, val]) => (
+                            <div key={lbl} className="bg-emerald-50 px-4 py-2.5 rounded-2xl border border-emerald-200 shadow-xs flex items-center gap-3">
+                                <DollarSign size={18} className="text-emerald-600" />
+                                <div>
+                                    <p className="text-[9px] font-black text-emerald-800 uppercase truncate max-w-[120px]">{lbl}</p>
+                                    <p className="text-base font-black text-emerald-900 leading-none font-mono">
+                                        R$ {Number(val).toLocaleString('pt-BR')}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* EXPORT BUTTONS ROW */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                        onClick={exportToExcel}
+                        variant="primary"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3.5 px-5 rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center gap-2"
+                    >
+                        <FileSpreadsheet size={18} /> Exportar Excel (.XLSX)
+                    </Button>
+
+                    <Button
+                        onClick={exportToCSV}
+                        variant="ghost"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs py-3.5 px-5 rounded-2xl border border-slate-300 flex items-center gap-2"
+                    >
+                        <Download size={18} /> Exportar CSV (.CSV)
+                    </Button>
+
+                    <Button
+                        onClick={exportToPDF}
+                        variant="ghost"
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs py-3.5 px-5 rounded-2xl border border-rose-200 flex items-center gap-2"
+                    >
+                        <FileText size={18} /> Baixar PDF (A4)
+                    </Button>
+
+                    <Button
+                        onClick={handlePrintSystem}
+                        variant="primary"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3.5 px-6 rounded-2xl shadow-lg shadow-indigo-600/25 flex items-center gap-2 ml-auto"
+                    >
+                        <Printer size={18} /> Imprimir Timbrado no Sistema
+                    </Button>
+                </div>
+            </div>
+
+            {/* PASSO 5: TABELA DE PRÉ-VISUALIZAÇÃO DA PLANILHA / RELATÓRIO */}
+            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-slate-200 bg-white shadow-sm overflow-hidden space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h4 className="font-black text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <Eye size={18} className="text-indigo-600" /> Pré-visualização da Tabela Consolidada
+                    </h4>
+
+                    {/* PAGINATION CONTROLS */}
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                        <span>Página {currentPage} de {totalPages}</span>
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100 cursor-pointer"
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <button
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100 cursor-pointer"
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* TABLE RENDER */}
+                <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-inner bg-slate-50/50">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-100">
+                            <tr>
+                                {selectedFieldsList.map(col => (
+                                    <th
+                                        key={col.key}
+                                        className={`px-4 py-3.5 text-left text-[11px] font-black text-slate-700 uppercase tracking-wider ${
+                                            col.isNumeric ? 'text-right' : ''
+                                        }`}
+                                    >
+                                        {columnLabels[col.key] || col.label}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-100">
+                            {paginatedData.map((row, rIdx) => (
+                                <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                                    {selectedFieldsList.map(col => {
+                                        const rawVal = row[col.key];
+                                        const isNum = col.isNumeric && typeof rawVal === 'number';
+                                        const displayVal = isNum
+                                            ? `R$ ${rawVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                            : resolveFieldValue(row, col.key, db);
+
+                                        return (
+                                            <td
+                                                key={col.key}
+                                                className={`px-4 py-3 text-xs font-semibold text-slate-700 whitespace-nowrap ${
+                                                    isNum ? 'text-right font-mono font-bold text-emerald-800' : ''
+                                                }`}
+                                            >
+                                                {displayVal}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+
+                            {filteredData.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan={Math.max(1, selectedFieldsList.length)}
+                                        className="px-4 py-12 text-center text-xs font-medium text-slate-400 italic"
+                                    >
+                                        Nenhum registro encontrado para os filtros selecionados. Altere a congregação, datas ou módulo.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+
+                        {/* TOTALS FOOTER ROW IF NUMERIC FIELDS */}
+                        {Object.keys(calculatedTotals).length > 0 && (
+                            <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold">
+                                <tr>
+                                    {selectedFieldsList.map((col, idx) => {
+                                        const label = columnLabels[col.key] || col.label;
+                                        const hasTotal = calculatedTotals[label] !== undefined;
+                                        return (
+                                            <td
+                                                key={col.key}
+                                                className={`px-4 py-3 text-xs text-slate-800 ${col.isNumeric ? 'text-right font-mono font-black text-emerald-900' : ''}`}
+                                            >
+                                                {idx === 0 && !hasTotal ? 'SOMA DOS VALORES:' : ''}
+                                                {hasTotal && `R$ ${calculatedTotals[label].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            </tfoot>
+                        )}
+                    </table>
+                </div>
+            </div>
+
+            {/* SAVE TEMPLATE MODAL */}
+            {showSaveTemplateModal && createPortal(
+                <div className="fixed inset-0 bg-slate-900/60 z-[11000] flex items-center justify-center p-4 backdrop-blur-sm animate-entrance">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-6 border border-slate-200">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                            <h3 className="font-black text-base text-slate-800 flex items-center gap-2">
+                                <Save size={18} className="text-indigo-600" /> Salvar Modelo do Relatório
+                            </h3>
+                            <button
+                                onClick={() => setShowSaveTemplateModal(false)}
+                                className="p-1 hover:bg-slate-100 text-slate-400 rounded-full cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="text-xs text-slate-500 font-medium">
+                                Salve essa estrutura de campos, filtros e rótulos para poder reexecutá-la em 1 clique no futuro.
+                            </p>
+
+                            <FormInput
+                                label="Nome do Modelo"
+                                value={templateNameInput}
+                                onChange={v => setTemplateNameInput(v)}
+                                placeholder="Ex: Relatório Semanal de Dizimistas Ativos"
+                            />
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="ghost" onClick={() => setShowSaveTemplateModal(false)}>Cancelar</Button>
+                                <Button onClick={handleSaveTemplate} variant="primary" className="bg-indigo-600 text-white font-bold">
+                                    Salvar Modelo
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
+
 // Exporting component
 const ModuleRelatorios = memo(() => {
-    const { db, setPrintMode, setPrintData, setPreviewOpen, addToast } = useContext(ChurchContext); 
+    const { db, setPrintMode, setPrintData, setPreviewOpen, addToast, user } = useContext(ChurchContext); 
     const [configModal, setConfigModal] = useState({ open: false, type: null });
     const [inputs, setInputs] = useState({});
     const [loadingAiAta, setLoadingAiAta] = useState(false);
+    const [activeTab, setActiveTab] = useState<'oficiais' | 'construtor'>('oficiais');
 
     // AI Query States
     const [aiQuery, setAiQuery] = useState('');
@@ -352,17 +1527,54 @@ RESSALTAMOS QUE, A PARTIR DA PRESENTE DATA, O(A) MESMO(A) FICA DESLIGADO(A) DE Q
 
     return (
         <div className="glass-modern p-8 rounded-[2.5rem] animate-entrance">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
                 <div className="flex items-center gap-3">
                     <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-600">
                         <FileText size={28}/>
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight text-gradient">Central de Relatórios Oficiais</h2>
-                        <p className="text-xs text-slate-500 font-medium">Gere relatórios impressos, cartas oficiais ou consulte análises inteligentes com IA.</p>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tight text-gradient">Central de Relatórios</h2>
+                        <p className="text-xs text-slate-500 font-medium">Gere relatórios impressos, cartas oficiais ou construa relatórios dinâmicos consolidados.</p>
                     </div>
                 </div>
+
+                {/* Tab Switcher */}
+                <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner shrink-0 self-start md:self-auto">
+                    <button
+                        onClick={() => setActiveTab('oficiais')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                            activeTab === 'oficiais'
+                                ? 'bg-white text-indigo-950 shadow-md border border-slate-200/80'
+                                : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <FileText size={16} /> Relatórios Oficiais & IA
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('construtor')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                            activeTab === 'construtor'
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                                : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <Sliders size={16} /> Construtor Dinâmico
+                        <span className="bg-amber-400 text-amber-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">NOVO</span>
+                    </button>
+                </div>
             </div>
+
+            {activeTab === 'construtor' ? (
+                <ConstrutorRelatoriosDinamicos
+                    db={db}
+                    setPrintMode={setPrintMode}
+                    setPrintData={setPrintData}
+                    setPreviewOpen={setPreviewOpen}
+                    addToast={addToast}
+                    user={user}
+                />
+            ) : (
+                <>
 
             {/* AI ANALYTICS CONSOLE */}
             <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-indigo-50/40 via-white to-white shadow-md mb-8 ring-1 ring-indigo-50/50">
@@ -781,6 +1993,8 @@ RESSALTAMOS QUE, A PARTIR DA PRESENTE DATA, O(A) MESMO(A) FICA DESLIGADO(A) DE Q
                     </div>
                 </div>,
                 document.body
+            )}
+            </>
             )}
         </div>
     );

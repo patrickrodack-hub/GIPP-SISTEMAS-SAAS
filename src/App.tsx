@@ -8362,6 +8362,56 @@ export const PrintSystem = ({
         );
     }
 
+    // 14 - RELATÓRIO DINÂMICO CONSOLIDADO (CONSTRUTOR DE RELATÓRIOS)
+    if (mode === 'rel_dinamico') {
+        const { titulo, subtitulo, colunas, registros, totais, dataGeracao, usuarioNome, moduloNome } = data;
+        return (
+            <PageContainer title={titulo || "Relatório Consolidado Dinâmico"} subtitle={subtitulo || `Total: ${registros?.length || 0} Registros`}>
+                <div className="mb-3 flex justify-between items-center text-[10px] text-slate-500 font-bold bg-slate-50 p-2 rounded border border-slate-200">
+                    <span>Módulo Base: <strong className="uppercase text-indigo-700">{moduloNome || 'GIPP'}</strong></span>
+                    <span>Emitido em: {dataGeracao || new Date().toLocaleString('pt-BR')} {usuarioNome ? `por ${usuarioNome}` : ''}</span>
+                </div>
+                <Table headers={(colunas || []).map((col: any) => ({ label: col.label, align: col.isNumeric ? 'right' : 'left' }))}>
+                    {(registros || []).map((row: any, rowIndex: number) => (
+                        <tr key={rowIndex} className="border-b avoid-break hover:bg-slate-50 border-slate-200">
+                            {(colunas || []).map((col: any, colIndex: number) => {
+                                const val = row[col.key];
+                                const displayVal = col.isNumeric && typeof val === 'number'
+                                    ? `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : (val !== undefined && val !== null && val !== '' ? String(val) : '-');
+                                return (
+                                    <td key={colIndex} className={`p-2 text-xs border-r border-slate-200 ${col.isNumeric ? 'text-right font-mono font-bold text-slate-800' : ''}`}>
+                                        {displayVal}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                    {(registros || []).length === 0 && (
+                        <tr>
+                            <td colSpan={(colunas || []).length || 1} className="p-4 text-center italic text-slate-500">
+                                Nenhum registro encontrado com os filtros selecionados.
+                            </td>
+                        </tr>
+                    )}
+                </Table>
+
+                {totais && Object.keys(totais).length > 0 && (
+                    <div className="mt-4 p-3 bg-slate-100 border border-slate-300 rounded-lg avoid-break flex flex-wrap gap-4 items-center justify-between text-xs font-bold text-slate-800">
+                        <span>RESUMO DOS VALORES SOMADOS:</span>
+                        <div className="flex flex-wrap gap-3">
+                            {Object.entries(totais).map(([key, value]: [string, any]) => (
+                                <span key={key} className="bg-white px-3 py-1 rounded border border-slate-300 shadow-xs">
+                                    {key}: <strong className="text-emerald-700 font-mono">R$ {Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </PageContainer>
+        );
+    }
+
     // --- CONTRA-CHEQUE CORPORATIVO DEPARTAMENTO PESSOAL ---
     if (mode === 'dp_contracheque') {
         const { slip, colaborador, igreja, mesReferenciaExtenso } = data;
@@ -22024,7 +22074,7 @@ export default function App() {
   if (!user) { 
     return ( 
       <ChurchContext.Provider value={ctxValues}>
-        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#0f172a]">
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-x-hidden overflow-y-auto bg-[#0f172a] p-2 sm:p-4 md:p-6">
           <GlobalStyles />
           <OsThemeStyles />
           <ToastContainer toasts={toasts} removeToast={removeToast} />
@@ -22041,41 +22091,41 @@ export default function App() {
               <ThemeBackground theme={osTheme} />
           </div>
           
-          <div className="relative z-10 w-full max-w-6xl h-[85vh] bg-white/10 backdrop-blur-2xl rounded-[3.5rem] shadow-2xl border border-white/20 flex overflow-hidden animate-scale-in ring-1 ring-white/30">
-              <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 p-20 flex-col justify-between relative overflow-hidden login-left-hero">
+          <div className="relative z-10 w-full max-w-6xl h-auto max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] my-auto bg-white/10 backdrop-blur-2xl rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/20 flex overflow-hidden animate-scale-in ring-1 ring-white/30">
+              <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 p-6 xl:p-10 2xl:p-12 flex-col justify-between relative overflow-y-auto custom-scrollbar login-left-hero shrink-0">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                <div className="relative z-10">
-                    <div className="flex items-center gap-6 mb-12">
-                        <div className="w-28 h-28 bg-white/10 rounded-[2rem] backdrop-blur-md p-4 shadow-2xl shadow-indigo-500/40 border border-white/20 flex items-center justify-center transform hover:scale-105 transition-all shrink-0">
+                <div className="relative z-10 space-y-4 xl:space-y-6">
+                    <div className="flex items-center gap-4 xl:gap-6 mb-4 xl:mb-6">
+                        <div className="w-20 h-20 xl:w-24 xl:h-24 bg-white/10 rounded-[1.8rem] backdrop-blur-md p-3 shadow-2xl shadow-indigo-500/40 border border-white/20 flex items-center justify-center transform hover:scale-105 transition-all shrink-0">
                             <img src={db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"} className="w-full h-full object-contain drop-shadow-md" alt="Sistema GIPP" />
                         </div>
-                        <div className="flex flex-col border-l-2 border-indigo-500/30 pl-6">
-                            <h2 className="font-serif text-4xl sm:text-5xl text-white drop-shadow-lg leading-tight tracking-wide font-normal">
+                        <div className="flex flex-col border-l-2 border-indigo-500/30 pl-4 xl:pl-6">
+                            <h2 className="font-serif text-3xl xl:text-4xl text-white drop-shadow-lg leading-tight tracking-wide font-normal">
                                 Sistema <br/><span className="italic font-light text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-indigo-400 login-gradient-text">de Gestão</span>
                             </h2>
-                            <p className="font-sans text-xs font-black uppercase tracking-[0.4em] text-indigo-400/80 mt-3 login-accent-text">
+                            <p className="font-sans text-[10px] xl:text-xs font-black uppercase tracking-[0.3em] xl:tracking-[0.4em] text-indigo-400/80 mt-2 xl:mt-3 login-accent-text">
                                 Para Igrejas
                             </p>
                         </div>
                     </div>
-                    <h1 className="text-6xl font-black text-white leading-[1.1] mb-8 drop-shadow-lg">
+                    <h1 className="text-4xl xl:text-5xl 2xl:text-6xl font-black text-white leading-[1.1] mb-4 xl:mb-6 drop-shadow-lg">
                         Gestão <br/>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 login-gradient-text">Inteligente</span>
                     </h1>
-                    <p className="text-indigo-200/80 text-xl font-light max-w-sm leading-relaxed mb-6 login-accent-text">
+                    <p className="text-indigo-200/80 text-base xl:text-lg font-light max-w-sm leading-relaxed mb-4 xl:mb-6 login-accent-text">
                         A plataforma completa para transformar a administração da sua igreja.
                     </p>
-                    <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm animate-entrance">
-                        <p className="text-white text-base italic font-medium leading-relaxed mb-3">"{loginVerse.text}"</p>
-                        <p className="text-indigo-300 text-xs font-black uppercase tracking-widest login-accent-text">— {loginVerse.ref}</p>
+                    <div className="p-4 xl:p-5 bg-white/5 border border-white/10 rounded-2xl xl:rounded-3xl backdrop-blur-sm animate-entrance">
+                        <p className="text-white text-sm xl:text-base italic font-medium leading-relaxed mb-2">"{loginVerse.text}"</p>
+                        <p className="text-indigo-300 text-[10px] xl:text-xs font-black uppercase tracking-widest login-accent-text">— {loginVerse.ref}</p>
                     </div>
 
                     {/* --- CLASSIFICAÇÃO OFICIAL DO SISTEMA --- */}
-                    <div className="mt-6 p-5 bg-black/40 border border-white/10 rounded-3xl backdrop-blur-md animate-entrance relative overflow-hidden group google-review-card transition-all duration-500 cursor-default">
+                    <div className="mt-3 xl:mt-5 p-4 xl:p-5 bg-black/40 border border-white/10 rounded-2xl xl:rounded-3xl backdrop-blur-md animate-entrance relative overflow-hidden group google-review-card transition-all duration-500 cursor-default">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[slideRight_2s_ease-in-out] pointer-events-none"></div>
-                        <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] p-2">
+                        <div className="flex items-start gap-3 xl:gap-4">
+                            <div className="w-10 h-10 xl:w-12 xl:h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] p-2">
                                 <svg width="100%" height="100%" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -22085,224 +22135,226 @@ export default function App() {
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
-                                    <h4 className="font-bold text-white text-sm">Classificação do Sistema</h4>
-                                    <span className="text-slate-400 text-[10px] font-medium flex items-center gap-1"><ShieldCheck size={12} className="text-blue-400"/> Google Cloud Verified</span>
+                                    <h4 className="font-bold text-white text-xs xl:text-sm">Classificação do Sistema</h4>
+                                    <span className="text-slate-400 text-[9px] xl:text-[10px] font-medium flex items-center gap-1"><ShieldCheck size={12} className="text-blue-400"/> Google Cloud Verified</span>
                                 </div>
-                                <div className="flex items-center gap-1 mb-2 google-review-stars">
+                                <div className="flex items-center gap-1 mb-1.5 google-review-stars">
                                     {[1, 2, 3, 4, 5].map(star => (
-                                        <Star key={star} size={14} className="text-[#FBBC05] fill-[#FBBC05] drop-shadow-[0_0_8px_rgba(251,188,5,0.6)]" />
+                                        <Star key={star} size={13} className="text-[#FBBC05] fill-[#FBBC05] drop-shadow-[0_0_8px_rgba(251,188,5,0.6)]" />
                                     ))}
-                                    <span className="text-white/80 text-[10px] ml-2 font-bold tracking-wider">5.0 / EXCELÊNCIA</span>
+                                    <span className="text-white/80 text-[9px] xl:text-[10px] ml-1.5 font-bold tracking-wider">5.0 / EXCELÊNCIA</span>
                                 </div>
-                                <p className="text-white/80 text-xs font-medium leading-relaxed">
+                                <p className="text-white/80 text-[11px] xl:text-xs font-medium leading-relaxed">
                                     Sistema classificado com excelência em segurança de dados, alta performance e estabilidade na nuvem. Atende a todos os rigorosos padrões de proteção corporativa.
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="relative z-10">
-                    <div className="flex gap-4">
+                <div className="relative z-10 mt-4 xl:mt-6">
+                    <div className="flex gap-4 items-center">
                         <div className="flex -space-x-3">
-                            {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-indigo-900 bg-indigo-800/50 backdrop-blur-sm flex items-center justify-center text-[10px] text-white font-bold">{i}</div>)}
+                            {[1,2,3,4].map(i => <div key={i} className="w-8 h-8 xl:w-9 xl:h-9 rounded-full border-2 border-indigo-900 bg-indigo-800/50 backdrop-blur-sm flex items-center justify-center text-[10px] text-white font-bold">{i}</div>)}
                         </div>
-                        <div className="text-xs text-indigo-300 font-medium flex items-center gap-1">
+                        <div className="text-[11px] xl:text-xs text-indigo-300 font-medium flex items-center gap-1">
                             Desenvolvedor : {db.igreja?.saas_nome_desenvolvedor || "PATRICK PESSOA"}
                         </div>
                     </div>
                 </div>
             </div>
-            <div className="w-full lg:w-1/2 bg-white/80 backdrop-blur-xl p-8 sm:p-16 flex flex-col justify-center relative">
-                <div className="mb-8 flex flex-col text-center lg:text-left animate-entrance gap-6">
-                    <div className="flex flex-col lg:flex-row items-center gap-5">
-                        <div className="w-20 h-20 bg-gradient-to-br from-indigo-50 to-white rounded-[2rem] shadow-xl shadow-indigo-500/20 flex items-center justify-center p-3 border-2 border-white shrink-0 transform hover:scale-105 transition-all animate-float">
-                            {db.igreja?.logo ? <img src={db.igreja.logo} alt="Logo Igreja" className="w-full h-full object-contain drop-shadow-md" /> : <Building2 className="text-indigo-400" size={32}/>}
-                        </div>
-                        <div className="text-center lg:text-left">
-                            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1.5">{db.igreja?.nome || "Igreja Local"}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-1 rounded-md border border-[#bbf7d0]">GIPP Versão 9.5.0 Ultimate Platinum v14</p>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-1 tracking-tight">Acesso ao Painel</h3>
-                        <p className="text-slate-500 font-medium text-sm">Informe as suas credenciais para continuar.</p>
-                    </div>
-                </div>
-                
-                {/* MODIFICADO: Oculta a barra de abas se for um dispositivo móvel */}
-                {!isMobileDevice && (
-                    <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">
-                        <button type="button" onClick={() => { setLoginMode('admin'); setIsFirstAccess(false); }} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${loginMode === 'admin' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Administração</button>
-                        <button type="button" onClick={() => setLoginMode('membro')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${loginMode === 'membro' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Sou Membro</button>
-                    </div>
-                )}
-
-                <MobilePushCompatibilityCheck />
-
-                <form onSubmit={handleLogin} autoComplete="off" className="space-y-6" key={loginMode}>
-                    {!isFirstAccess ? (
-                        <>
-                            <div className="space-y-2 relative">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{loginMode === 'admin' ? 'Utilizador' : 'Nome do Membro'}</label>
-                                <div className="relative group">
-                                    <User className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20}/>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-slate-700 font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
-                                        placeholder={loginMode === 'admin' ? "O seu login de acesso" : "Ex: João da Silva"} 
-                                        value={loginData.user} 
-                                        onChange={e => { setLoginData({...loginData, user: e.target.value}); if(loginMode==='membro') setShowMemberDropdown(true); }} 
-                                        onFocus={() => { if(loginMode==='membro') setShowMemberDropdown(true); }}
-                                        onBlur={() => setTimeout(() => setShowMemberDropdown(false), 200)}
-                                    />
-                                </div>
-                                {loginMode === 'membro' && showMemberDropdown && loginData.user && (
-                                    <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
-                                        {(db.membros || []).filter(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().includes((loginData.user || '').toLowerCase())).map(m => (
-                                            <div key={m.id} onClick={() => { setLoginData({...loginData, user: m.nome}); setShowMemberDropdown(false); }} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
-                                                {m.nome}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+            <div className="w-full lg:w-1/2 bg-white/80 backdrop-blur-xl p-5 sm:p-8 xl:p-12 flex flex-col justify-between relative overflow-y-auto custom-scrollbar shrink-0">
+                <div className="space-y-4 xl:space-y-6">
+                    <div className="mb-4 xl:mb-6 flex flex-col text-center lg:text-left animate-entrance gap-4 xl:gap-5">
+                        <div className="flex flex-col lg:flex-row items-center gap-3 xl:gap-4">
+                            <div className="w-16 h-16 xl:w-20 xl:h-20 bg-gradient-to-br from-indigo-50 to-white rounded-[1.8rem] shadow-xl shadow-indigo-500/20 flex items-center justify-center p-2.5 border-2 border-white shrink-0 transform hover:scale-105 transition-all animate-float">
+                                {db.igreja?.logo ? <img src={db.igreja.logo} alt="Logo Igreja" className="w-full h-full object-contain drop-shadow-md" /> : <Building2 className="text-indigo-400" size={28}/>}
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{loginMode === 'admin' ? 'Palavra-passe' : 'Senha do Portal'}</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20}/>
-                                    <input 
-                                        type="password" 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-6 text-slate-700 font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
-                                        placeholder={loginMode === 'admin' ? "••••••••" : "A sua senha criada"} 
-                                        value={loginData.pass} 
-                                        onChange={e => setLoginData({...loginData, pass: e.target.value})} 
-                                    />
-                                </div>
-                                {loginMode === 'membro' && (
-                                    <div className="text-right mt-2">
-                                        <button type="button" onClick={() => setIsFirstAccess(true)} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Primeiro Acesso? Crie sua senha aqui.</button>
-                                    </div>
-                                )}
+                            <div className="text-center lg:text-left">
+                                <h2 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1">{db.igreja?.nome || "Igreja Local"}</h2>
+                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 9.5.0 Ultimate Platinum v14</p>
                             </div>
-                            <button className={`w-full text-white font-bold py-5 rounded-2xl transition-all hover:shadow-lg hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 mt-8 group ${loginMode === 'admin' ? 'bg-gradient-to-r from-indigo-600 to-pink-600 hover:shadow-indigo-500/30' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-emerald-500/30'}`}>
-                                Aceder ao Sistema <ChevronRight className="group-hover:translate-x-1 transition-transform"/>
-                            </button>
-                        </>
-                    ) : firstAccessSuccessData ? (
-                        <div className="space-y-6 animate-entrance text-center pb-4">
-                            <div className="w-24 h-24 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-lg shadow-emerald-500/20">
-                                <CheckCircle size={48} />
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800">Cadastro feito com sucesso!</h3>
-                            <p className="text-sm text-slate-500 font-medium">Os seus dados de acesso ao portal foram validados e a senha gravada.</p>
-                            
-                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-left space-y-3 mt-6">
-                                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest border-b border-slate-200 pb-2">Dados Registados</p>
-                                <p className="text-sm font-bold text-slate-800">Nome: <span className="font-medium text-slate-600">{firstAccessSuccessData.nome}</span></p>
-                                <p className="text-sm font-bold text-slate-800">Nascimento: <span className="font-medium text-slate-600">{formatDateLocal(firstAccessSuccessData.data_nascimento)}</span></p>
-                            </div>
-                            
-                            <Button type="button" onClick={confirmFirstAccess} variant="success" className="w-full py-4 mt-8 shadow-lg shadow-emerald-500/30 text-base">
-                                OK, Continuar
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="space-y-4 animate-entrance">
-                             <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 mb-4">
-                                 <p className="text-xs font-bold text-emerald-800 flex items-center gap-2"><Lock size={14}/> Validação de Segurança</p>
-                                 <p className="text-[10px] text-emerald-600 mt-1 leading-relaxed">Informe o seu Nome Exato e Data de Nascimento para criar a sua senha de acesso ao portal.</p>
-                             </div>
-                             <div className="space-y-2 relative">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nome Completo</label>
-                                <input 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" 
-                                    placeholder="Ex: João da Silva" 
-                                    value={firstAccessData.nome} 
-                                    onChange={e => { setFirstAccessData({...firstAccessData, nome: e.target.value}); setShowFirstAccessDropdown(true); }}
-                                    onFocus={() => setShowFirstAccessDropdown(true)}
-                                    onBlur={() => setTimeout(() => setShowFirstAccessDropdown(false), 200)}
-                                />
-                                {showFirstAccessDropdown && firstAccessData.nome && (
-                                    <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto custom-scrollbar">
-                                        {(db.membros || []).filter(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().includes((firstAccessData.nome || '').toLowerCase())).map(m => (
-                                            <div key={m.id} onClick={() => { setFirstAccessData({...firstAccessData, nome: m.nome}); setShowFirstAccessDropdown(false); }} className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
-                                                {m.nome}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                             </div>
-                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Data de Nascimento</label>
-                                <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.data_nascimento} onChange={e => setFirstAccessData({...firstAccessData, data_nascimento: e.target.value})} />
-                             </div>
-                             <div className="grid grid-cols-2 gap-4 pt-2">
-                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nova Senha</label>
-                                    <input type="password" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.senha} onChange={e => setFirstAccessData({...firstAccessData, senha: e.target.value})} />
-                                 </div>
-                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirmar Senha</label>
-                                    <input type="password" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.confirmar} onChange={e => setFirstAccessData({...firstAccessData, confirmar: e.target.value})} />
-                                 </div>
-                             </div>
-                             <div className="flex gap-3 pt-4">
-                                 <Button type="button" onClick={() => { setIsFirstAccess(false); setFirstAccessSuccessData(null); }} variant="ghost" className="flex-1 border border-slate-200 text-slate-500 hover:bg-slate-50">Voltar</Button>
-                                 <Button type="submit" variant="success" className="flex-1 shadow-emerald-500/30">Criar Senha</Button>
-                             </div>
-                        </div>
-                    )}
-                </form>
-                
-                {/* NOVO: Botão dedicado de instalação com Modal de Fallback */}
-                <button 
-                    type="button"
-                    onClick={() => {
-                        setInstallStep(1);
-                        setInstallDeviceType(null);
-                        setInstallMobileOS(null);
-                        setIsNotificationConfirmed(false);
-                        setShowInstallGuide(true);
-                    }}
-                    className="w-full mt-4 bg-gradient-to-r from-slate-100 to-indigo-50/50 hover:from-indigo-100 hover:to-indigo-50/50 text-slate-700 hover:text-indigo-800 font-bold py-4 rounded-2xl transition-all shadow-sm border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                    <DownloadCloud size={20} className="text-indigo-600 animate-pulse"/> 
-                    Instalar Sistema GIPP
-                </button>
-                
-                {loginMode === 'admin' ? (
-                    <p className="text-center mt-8 text-xs text-slate-400 font-medium">
-                        Esqueceu a sua palavra-passe? Contacte o administrador master.
-                    </p>
-                ) : (
-                    <div className="mt-8 p-5 bg-emerald-50/80 backdrop-blur-sm rounded-3xl border border-emerald-200/50 items-center gap-5 animate-entrance shadow-inner hidden md:flex">
-                        <div className="bg-white p-2 rounded-2xl shadow-sm shrink-0 border border-emerald-100">
-                            <img 
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}&color=047857`} 
-                                alt="QR Code Portal do Membro" 
-                                className="w-16 h-16 object-contain" 
-                            />
                         </div>
                         <div>
-                            <h4 className="font-black text-emerald-800 text-sm mb-1 flex items-center gap-1"><Smartphone size={16}/> Aceder pelo Smartphone / Tablet</h4>
-                            <p className="text-xs text-emerald-600/90 font-medium leading-relaxed">
-                                Faça scan ao QR Code com a câmara do seu Smartphone / Tablet para abrir o Portal do Membro exatamente neste link.
-                            </p>
+                            <h3 className="text-lg xl:text-xl font-bold text-slate-800 mb-0.5 tracking-tight">Acesso ao Painel</h3>
+                            <p className="text-slate-500 font-medium text-xs xl:text-sm">Informe as suas credenciais para continuar.</p>
                         </div>
                     </div>
-                )}
+                    
+                    {/* MODIFICADO: Oculta a barra de abas se for um dispositivo móvel */}
+                    {!isMobileDevice && (
+                        <div className="flex bg-slate-100 p-1 rounded-2xl mb-4 xl:mb-6">
+                            <button type="button" onClick={() => { setLoginMode('admin'); setIsFirstAccess(false); }} className={`flex-1 py-2.5 xl:py-3 text-xs xl:text-sm font-bold rounded-xl transition-all cursor-pointer ${loginMode === 'admin' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Administração</button>
+                            <button type="button" onClick={() => setLoginMode('membro')} className={`flex-1 py-2.5 xl:py-3 text-xs xl:text-sm font-bold rounded-xl transition-all cursor-pointer ${loginMode === 'membro' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Sou Membro</button>
+                        </div>
+                    )}
 
-                {/* NOVO: Atalho discreto para administradores logarem pelo telemóvel, caso precisem */}
-                {isMobileDevice && loginMode === 'membro' && (
+                    <MobilePushCompatibilityCheck />
+
+                    <form onSubmit={handleLogin} autoComplete="off" className="space-y-4 xl:space-y-5" key={loginMode}>
+                        {!isFirstAccess ? (
+                            <>
+                                <div className="space-y-1.5 relative">
+                                    <label className="text-[11px] xl:text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{loginMode === 'admin' ? 'Utilizador' : 'Nome do Membro'}</label>
+                                    <div className="relative group">
+                                        <User className="absolute left-4 xl:left-5 top-3.5 xl:top-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18}/>
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 xl:py-3.5 pl-12 xl:pl-14 pr-5 text-slate-700 font-medium text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
+                                            placeholder={loginMode === 'admin' ? "O seu login de acesso" : "Ex: João da Silva"} 
+                                            value={loginData.user} 
+                                            onChange={e => { setLoginData({...loginData, user: e.target.value}); if(loginMode==='membro') setShowMemberDropdown(true); }} 
+                                            onFocus={() => { if(loginMode==='membro') setShowMemberDropdown(true); }}
+                                            onBlur={() => setTimeout(() => setShowMemberDropdown(false), 200)}
+                                        />
+                                    </div>
+                                    {loginMode === 'membro' && showMemberDropdown && loginData.user && (
+                                        <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
+                                            {(db.membros || []).filter(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().includes((loginData.user || '').toLowerCase())).map(m => (
+                                                <div key={m.id} onClick={() => { setLoginData({...loginData, user: m.nome}); setShowMemberDropdown(false); }} className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
+                                                    {m.nome}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] xl:text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{loginMode === 'admin' ? 'Palavra-passe' : 'Senha do Portal'}</label>
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 xl:left-5 top-3.5 xl:top-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18}/>
+                                        <input 
+                                            type="password" 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 xl:py-3.5 pl-12 xl:pl-14 pr-5 text-slate-700 font-medium text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" 
+                                            placeholder={loginMode === 'admin' ? "••••••••" : "A sua senha criada"} 
+                                            value={loginData.pass} 
+                                            onChange={e => setLoginData({...loginData, pass: e.target.value})} 
+                                        />
+                                    </div>
+                                    {loginMode === 'membro' && (
+                                        <div className="text-right mt-1.5">
+                                            <button type="button" onClick={() => setIsFirstAccess(true)} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Primeiro Acesso? Crie sua senha aqui.</button>
+                                        </div>
+                                    )}
+                                </div>
+                                <button className={`w-full text-white font-bold py-3.5 xl:py-4 rounded-2xl transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-3 mt-4 xl:mt-6 group cursor-pointer ${loginMode === 'admin' ? 'bg-gradient-to-r from-indigo-600 to-pink-600 hover:shadow-indigo-500/30' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-emerald-500/30'}`}>
+                                    Aceder ao Sistema <ChevronRight className="group-hover:translate-x-1 transition-transform"/>
+                                </button>
+                            </>
+                        ) : firstAccessSuccessData ? (
+                            <div className="space-y-4 animate-entrance text-center pb-2">
+                                <div className="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg shadow-emerald-500/20">
+                                    <CheckCircle size={40} />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-800">Cadastro feito com sucesso!</h3>
+                                <p className="text-xs text-slate-500 font-medium">Os seus dados de acesso ao portal foram validados e a senha gravada.</p>
+                                
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left space-y-2 mt-4">
+                                    <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest border-b border-slate-200 pb-1.5">Dados Registados</p>
+                                    <p className="text-xs font-bold text-slate-800">Nome: <span className="font-medium text-slate-600">{firstAccessSuccessData.nome}</span></p>
+                                    <p className="text-xs font-bold text-slate-800">Nascimento: <span className="font-medium text-slate-600">{formatDateLocal(firstAccessSuccessData.data_nascimento)}</span></p>
+                                </div>
+                                
+                                <Button type="button" onClick={confirmFirstAccess} variant="success" className="w-full py-3 mt-6 shadow-lg shadow-emerald-500/30 text-sm">
+                                    OK, Continuar
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3.5 animate-entrance">
+                                 <div className="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 mb-3">
+                                     <p className="text-xs font-bold text-emerald-800 flex items-center gap-2"><Lock size={14}/> Validação de Segurança</p>
+                                     <p className="text-[10px] text-emerald-600 mt-1 leading-relaxed">Informe o seu Nome Exato e Data de Nascimento para criar a sua senha de acesso ao portal.</p>
+                                 </div>
+                                 <div className="space-y-1.5 relative">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nome Completo</label>
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm focus:border-emerald-500 outline-none" 
+                                        placeholder="Ex: João da Silva" 
+                                        value={firstAccessData.nome} 
+                                        onChange={e => { setFirstAccessData({...firstAccessData, nome: e.target.value}); setShowFirstAccessDropdown(true); }}
+                                        onFocus={() => setShowFirstAccessDropdown(true)}
+                                        onBlur={() => setTimeout(() => setShowFirstAccessDropdown(false), 200)}
+                                    />
+                                    {showFirstAccessDropdown && firstAccessData.nome && (
+                                        <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto custom-scrollbar">
+                                            {(db.membros || []).filter(m => m && typeof m.nome === 'string' && m.nome.toLowerCase().includes((firstAccessData.nome || '').toLowerCase())).map(m => (
+                                                <div key={m.id} onClick={() => { setFirstAccessData({...firstAccessData, nome: m.nome}); setShowFirstAccessDropdown(false); }} className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm font-bold text-slate-700">
+                                                    {m.nome}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                 </div>
+                                 <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Data de Nascimento</label>
+                                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.data_nascimento} onChange={e => setFirstAccessData({...firstAccessData, data_nascimento: e.target.value})} />
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-3 pt-1">
+                                     <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nova Senha</label>
+                                        <input type="password" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.senha} onChange={e => setFirstAccessData({...firstAccessData, senha: e.target.value})} />
+                                     </div>
+                                     <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirmar Senha</label>
+                                        <input type="password" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm focus:border-emerald-500 outline-none" value={firstAccessData.confirmar} onChange={e => setFirstAccessData({...firstAccessData, confirmar: e.target.value})} />
+                                     </div>
+                                 </div>
+                                 <div className="flex gap-3 pt-3">
+                                     <Button type="button" onClick={() => { setIsFirstAccess(false); setFirstAccessSuccessData(null); }} variant="ghost" className="flex-1 border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs py-2.5">Voltar</Button>
+                                     <Button type="submit" variant="success" className="flex-1 shadow-emerald-500/30 text-xs py-2.5">Criar Senha</Button>
+                                 </div>
+                            </div>
+                        )}
+                    </form>
+
+                    {/* NOVO: Botão dedicado de instalação com Modal de Fallback */}
                     <button 
-                        type="button" 
-                        onClick={() => { setLoginMode('admin'); setIsFirstAccess(false); }} 
-                        className="w-full mt-6 text-[10px] font-bold text-slate-300 hover:text-indigo-500 transition-colors uppercase tracking-widest text-center"
+                        type="button"
+                        onClick={() => {
+                            setInstallStep(1);
+                            setInstallDeviceType(null);
+                            setInstallMobileOS(null);
+                            setIsNotificationConfirmed(false);
+                            setShowInstallGuide(true);
+                        }}
+                        className="w-full mt-3 xl:mt-4 bg-gradient-to-r from-slate-100 to-indigo-50/50 hover:from-indigo-100 hover:to-indigo-50/50 text-slate-700 hover:text-indigo-800 font-bold py-3 xl:py-3.5 rounded-2xl transition-all shadow-sm border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2 cursor-pointer text-xs xl:text-sm"
                     >
+                        <DownloadCloud size={18} className="text-indigo-600 animate-pulse"/> 
+                        Instalar Sistema GIPP
+                    </button>
+
+                    {loginMode === 'admin' ? (
+                        <p className="text-center mt-4 xl:mt-6 text-[11px] xl:text-xs text-slate-400 font-medium">
+                            Esqueceu a sua palavra-passe? Contacte o administrador master.
+                        </p>
+                    ) : (
+                        <div className="mt-4 xl:mt-6 p-3.5 xl:p-4 bg-emerald-50/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl border border-emerald-200/50 items-center gap-4 animate-entrance shadow-inner hidden md:flex">
+                            <div className="bg-white p-2 rounded-xl xl:rounded-2xl shadow-sm shrink-0 border border-emerald-100">
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}&color=047857`} 
+                                    alt="QR Code Portal do Membro" 
+                                    className="w-12 h-12 xl:w-14 xl:h-14 object-contain" 
+                                />
+                            </div>
+                            <div>
+                                <h4 className="font-black text-emerald-800 text-xs xl:text-sm mb-0.5 flex items-center gap-1"><Smartphone size={15}/> Aceder pelo Smartphone / Tablet</h4>
+                                <p className="text-[10px] xl:text-xs text-emerald-600/90 font-medium leading-relaxed">
+                                    Faça scan ao QR Code com a câmara do seu Smartphone / Tablet para abrir o Portal do Membro exatamente neste link.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* NOVO: Atalho discreto para administradores logarem pelo telemóvel, caso precisem */}
+                    {isMobileDevice && loginMode === 'membro' && (
+                        <button 
+                            type="button" 
+                            onClick={() => { setLoginMode('admin'); setIsFirstAccess(false); }} 
+                            className="w-full mt-4 text-[10px] font-bold text-slate-300 hover:text-indigo-500 transition-colors uppercase tracking-widest text-center cursor-pointer"
+                        >
                         Acesso Administrativo
                     </button>
                 )}
+                </div>
             </div>
-        </div>
+          </div>
 
         {/* MODAL DE GUIA DE INSTALAÇÃO DA APP */}
         {showInstallGuide && (
