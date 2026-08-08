@@ -16289,10 +16289,12 @@ const MemberPortalLayout = () => {
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_cursos': return <PortalCursos user={user} />;
             case 'portal_informativo': return <ModuleBoletim />;
-            case 'portal_interativo': return <ModuleInterativo />;
+            case 'portal_interativo': return <ModuleInterativo onClose={() => setView('portal_home')} />;
             default: return <PortalHome user={user} db={db} setView={setView} />;
         }
     };
+
+    const isInterativoMode = view === 'portal_interativo';
 
     return (
         <div className="flex flex-col md:flex-row w-full overflow-hidden relative font-sans text-slate-900" style={{ height: '100dvh' }}>
@@ -16300,80 +16302,89 @@ const MemberPortalLayout = () => {
                 <ThemeBackground theme={osTheme} />
             </div>
             {/* Desktop Sidebar */}
-            <aside className="hidden md:flex w-72 glass-modern h-full flex-col border-r border-slate-200/60 z-50 shrink-0">
-                <div className="p-8 text-center border-b border-slate-200/60">
-                     {db.igreja.logo ? <img src={db.igreja.logo} className="h-16 mx-auto object-contain mb-4 bg-white rounded-2xl shadow-sm p-2" /> : <div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30"><Building2 size={32}/></div>}
-                     <h2 className="font-black text-lg text-slate-800 tracking-tight leading-tight">{db.igreja.nome}</h2>
-                     <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1 bg-emerald-50 py-1 px-3 rounded-full inline-block">Portal do Membro</p>
-                </div>
-                <nav className="flex-1 p-5 space-y-2 overflow-y-auto custom-scrollbar">
-                    {navItems.map(item => (
-                        <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all group ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transform scale-[1.02]' : 'text-slate-500 hover:bg-emerald-50 hover:text-slate-800'}`}>
-                            <item.icon size={20} className={`transition-transform duration-300 ${view === item.id ? 'text-white' : `${item.hoverColor} group-hover:scale-110`}`}/> {item.label}
-                        </button>
-                    ))}
-                </nav>
-                <div className="p-6 border-t border-slate-200/60 shrink-0">
-                    <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-xs">
-                        <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold overflow-hidden shrink-0">
-                          {user?.fotoUrl || user?.foto ? (
-                            <img src={user.fotoUrl || user.foto} alt={user.nome} className="w-full h-full object-cover" />
-                          ) : (
-                            user.nome.charAt(0)
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-slate-800 truncate">{user.nome.split(' ')[0]}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase truncate">
-                                {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro')}
-                            </p>
-                        </div>
+            {!isInterativoMode && (
+                <aside className="hidden md:flex w-72 glass-modern h-full flex-col border-r border-slate-200/60 z-50 shrink-0">
+                    <div className="p-8 text-center border-b border-slate-200/60">
+                         {db.igreja.logo ? <img src={db.igreja.logo} className="h-16 mx-auto object-contain mb-4 bg-white rounded-2xl shadow-sm p-2" /> : <div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30"><Building2 size={32}/></div>}
+                         <h2 className="font-black text-lg text-slate-800 tracking-tight leading-tight">{db.igreja.nome}</h2>
+                         <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1 bg-emerald-50 py-1 px-3 rounded-full inline-block">Portal do Membro</p>
                     </div>
-                    <button onClick={logout} className="w-full flex items-center justify-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-500/10 font-bold transition-colors"><LogOut size={20}/> Terminar Sessão</button>
-                </div>
-            </aside>
+                    <nav className="flex-1 p-5 space-y-2 overflow-y-auto custom-scrollbar">
+                        {navItems.map(item => (
+                            <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all group ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transform scale-[1.02]' : 'text-slate-500 hover:bg-emerald-50 hover:text-slate-800'}`}>
+                                <item.icon size={20} className={`transition-transform duration-300 ${view === item.id ? 'text-white' : `${item.hoverColor} group-hover:scale-110`}`}/> {item.label}
+                            </button>
+                        ))}
+                    </nav>
+                    <div className="p-6 border-t border-slate-200/60 shrink-0">
+                        <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-xs">
+                            <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold overflow-hidden shrink-0">
+                              {user?.fotoUrl || user?.foto ? (
+                                <img src={user.fotoUrl || user.foto} alt={user.nome} className="w-full h-full object-cover" />
+                              ) : (
+                                user.nome.charAt(0)
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-800 truncate">{user.nome.split(' ')[0]}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase truncate">
+                                    {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro')}
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={logout} className="w-full flex items-center justify-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-500/10 font-bold transition-colors"><LogOut size={20}/> Terminar Sessão</button>
+                    </div>
+                </aside>
+            )}
 
             {/* Mobile Header (Strict Flex Item - Fixado) */}
-            <header className={`md:hidden shrink-0 backdrop-blur-md p-4 flex justify-between items-center shadow-sm z-40 transition-all duration-300 ${getHeaderStyles()}`}>
-                <div className="flex items-center gap-3">
-                    {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain rounded-lg" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs"><Building2 size={16}/></div>}
-                    <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <OsThemeToggle variant="mobile" />
-                    <AnimBgToggle variant="mobile" />
-                    <ThemeToggle variant="mobile" />
-                    <MemberPaymentAlerts />
-                    <NotificationCenter />
-                    <FullScreenToggle variant="mobile" />
-                    <button onClick={logout} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"><LogOut size={18}/></button>
-                </div>
-            </header>
+            {!isInterativoMode && (
+                <header className={`md:hidden shrink-0 backdrop-blur-md p-4 flex justify-between items-center shadow-sm z-40 transition-all duration-300 ${getHeaderStyles()}`}>
+                    <div className="flex items-center gap-3">
+                        {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain rounded-lg" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs"><Building2 size={16}/></div>}
+                        <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <OsThemeToggle variant="mobile" />
+                        <AnimBgToggle variant="mobile" />
+                        <ThemeToggle variant="mobile" />
+                        <MemberPaymentAlerts />
+                        <NotificationCenter />
+                        <FullScreenToggle variant="mobile" />
+                        <button onClick={logout} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"><LogOut size={18}/></button>
+                    </div>
+                </header>
+            )}
 
             {/* Main Content (Área Rolável) */}
-            <main className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative z-10 pb-24 md:pb-16" style={{ height: 'calc(100vh - 4rem)' }}>
-                <div className="max-w-[1800px] mx-auto">
+            <main 
+                className={isInterativoMode ? "flex-1 p-0 m-0 w-full overflow-y-auto relative z-10 h-screen" : "flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative z-10 pb-24 md:pb-16"} 
+                style={isInterativoMode ? { height: '100dvh' } : { height: 'calc(100vh - 4rem)' }}
+            >
+                <div className={isInterativoMode ? "w-full h-full" : "max-w-[1800px] mx-auto"}>
                     {/* Desktop Header Panel */}
-                    <header className="hidden md:flex justify-between items-center pb-6 border-b border-slate-200/40 mb-8 shrink-0 relative z-20">
-                        <div>
-                            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
-                                Olá, {user.nome.split(' ')[0]}! 👋
-                            </h1>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1.5">
-                                Seja bem-vindo de volta ao portal da sua congregação.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <WebPushNotificationTrigger />
-                            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-1" />
-                            <OsThemeToggle />
-                            <AnimBgToggle />
-                            <ThemeToggle />
-                            <MemberPaymentAlerts />
-                            <NotificationCenter />
-                            <FullScreenToggle />
-                        </div>
-                    </header>
+                    {!isInterativoMode && (
+                        <header className="hidden md:flex justify-between items-center pb-6 border-b border-slate-200/40 mb-8 shrink-0 relative z-20">
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
+                                    Olá, {user.nome.split(' ')[0]}! 👋
+                                </h1>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1.5">
+                                    Seja bem-vindo de volta ao portal da sua congregação.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <WebPushNotificationTrigger />
+                                <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-1" />
+                                <OsThemeToggle />
+                                <AnimBgToggle />
+                                <ThemeToggle />
+                                <MemberPaymentAlerts />
+                                <NotificationCenter />
+                                <FullScreenToggle />
+                            </div>
+                        </header>
+                    )}
 
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -16391,33 +16402,35 @@ const MemberPortalLayout = () => {
             </main>
 
             {/* Mobile Bottom Navigation (Strict Flex Item - Fixado no rodapé no mobile) */}
-            <div className={`md:hidden shrink-0 border-t flex items-center justify-around z-45 h-20 px-2 select-none shadow-lg ${getBottomSheetStyles()}`}>
-                {mobileBottomItems.map(item => {
-                    const isActive = view === item.id || (item.id === 'portal_more' && showMoreMenu);
-                    const styles = getBottomNavItemStyles(isActive, item.hoverColor);
-                    return (
-                        <button 
-                            key={item.id} 
-                            onClick={() => {
-                                if (item.id === 'portal_more') {
-                                    setShowMoreMenu(!showMoreMenu);
-                                } else {
-                                    setView(item.id);
-                                    setShowMoreMenu(false);
-                                }
-                            }}
-                            className="flex flex-col items-center justify-center flex-1 h-full py-2 hover:bg-slate-100/10 transition-colors focus:outline-none relative"
-                        >
-                            <div className={`p-1.5 rounded-xl transition-all ${styles.iconBg}`}>
-                                <item.icon size={20} className={`transition-transform duration-300 ${styles.icon} ${isActive ? 'scale-110' : ''}`} />
-                            </div>
-                            <span className={`text-[9px] mt-1 font-bold leading-none select-none text-center ${styles.text}`}>
-                                {item.label}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+            {!isInterativoMode && (
+                <div className={`md:hidden shrink-0 border-t flex items-center justify-around z-45 h-20 px-2 select-none shadow-lg ${getBottomSheetStyles()}`}>
+                    {mobileBottomItems.map(item => {
+                        const isActive = view === item.id || (item.id === 'portal_more' && showMoreMenu);
+                        const styles = getBottomNavItemStyles(isActive, item.hoverColor);
+                        return (
+                            <button 
+                                key={item.id} 
+                                onClick={() => {
+                                    if (item.id === 'portal_more') {
+                                        setShowMoreMenu(!showMoreMenu);
+                                    } else {
+                                        setView(item.id);
+                                        setShowMoreMenu(false);
+                                    }
+                                }}
+                                className="flex flex-col items-center justify-center flex-1 h-full py-2 hover:bg-slate-100/10 transition-colors focus:outline-none relative"
+                            >
+                                <div className={`p-1.5 rounded-xl transition-all ${styles.iconBg}`}>
+                                    <item.icon size={20} className={`transition-transform duration-300 ${styles.icon} ${isActive ? 'scale-110' : ''}`} />
+                                </div>
+                                <span className={`text-[9px] mt-1 font-bold leading-none select-none text-center ${styles.text}`}>
+                                    {item.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Mobile "More" Menu Modal */}
             {showMoreMenu && (

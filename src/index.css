@@ -1,5 +1,294 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   GIPP DESIGN SYSTEM & UI STANDARDIZATION
+   ========================================================================== */
+
+/* Modern Custom Scrollbar across all scrollable modules and lists */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5);
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* Dark Mode Scrollbars */
+[data-os-theme="dark"] .custom-scrollbar::-webkit-scrollbar-track,
+[data-os-theme="premium_black"] .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+[data-os-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb,
+[data-os-theme="premium_black"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+/* --- Standard Module Containers & Cards --- */
+.gipp-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1.25rem; /* 20px */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gipp-card:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+}
+
+/* --- Standard Module Header Bar --- */
+.gipp-module-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(to right, #ffffff, #f8fafc);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+}
+@media (min-width: 640px) {
+  .gipp-module-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.gipp-module-title {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.gipp-module-subtitle {
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 0.125rem;
+}
+
+/* --- Standard Form Controls (Inputs, Selects, Textareas) --- */
+.gipp-label {
+  display: block;
+  font-size: 0.75rem; /* 12px */
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.375rem;
+  margin-left: 0.125rem;
+}
+
+.gipp-input,
+.gipp-select,
+.gipp-textarea {
+  width: 100%;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.875rem; /* 14px */
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+.gipp-input::placeholder,
+.gipp-textarea::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+.gipp-input:focus,
+.gipp-select:focus,
+.gipp-textarea:focus {
+  background-color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.gipp-input:hover:not(:focus),
+.gipp-select:hover:not(:focus),
+.gipp-textarea:hover:not(:focus) {
+  border-color: #94a3b8;
+  background-color: #ffffff;
+}
+
+/* --- Standard Button Variants --- */
+.gipp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 700;
+  border-radius: 0.875rem; /* 14px */
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.gipp-btn:active {
+  transform: scale(0.97);
+}
+
+.gipp-btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(79, 70, 229, 0.35);
+}
+.gipp-btn-primary:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+  box-shadow: 0 4px 12px -1px rgba(79, 70, 229, 0.45);
+  transform: translateY(-1px);
+}
+
+.gipp-btn-secondary {
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+.gipp-btn-secondary:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.gipp-btn-success {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(16, 185, 129, 0.35);
+}
+.gipp-btn-success:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  box-shadow: 0 4px 12px -1px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
+}
+
+.gipp-btn-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(239, 68, 68, 0.35);
+}
+.gipp-btn-danger:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px -1px rgba(239, 68, 68, 0.45);
+  transform: translateY(-1px);
+}
+
+.gipp-btn-ghost {
+  background-color: transparent;
+  color: #64748b;
+}
+.gipp-btn-ghost:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* --- Standard Status Badges --- */
+.gipp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.gipp-badge-success {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.gipp-badge-warning {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.gipp-badge-danger {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.gipp-badge-info {
+  background-color: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.gipp-badge-neutral {
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* --- Standard Data Table Formatting --- */
+.gipp-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.gipp-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.gipp-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.gipp-table td {
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem; /* 14px */
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.gipp-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.gipp-table tbody tr:hover {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+.gipp-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* Readability Enhancement for Digital Informativo Content */
 .informativo-digital-content {
   line-height: 1.85 !important;
@@ -44,7 +333,7 @@
 
 /* Alternating colors for all table body rows in the system to improve readability */
 tbody tr:nth-child(even) {
-  background-color: rgba(99, 102, 241, 0.05) !important; /* light mode: distinct indigo-tinted slate */
+  background-color: rgba(99, 102, 241, 0.04) !important; /* light mode: distinct indigo-tinted slate */
 }
 tbody tr:nth-child(odd) {
   background-color: #ffffff !important;
@@ -74,8 +363,6 @@ tbody tr:nth-child(odd) {
   -ms-overflow-style: none !important;  /* IE and Edge */
   scrollbar-width: none !important;  /* Firefox */
 }
-
-
 
 /* FortuneSheet Tailwind CSS fix */
 .fortune-sheet-container * {
@@ -128,4 +415,5 @@ tbody tr:nth-child(odd) {
 .print-area table th {
   border: 1px solid black !important;
 }
+
 

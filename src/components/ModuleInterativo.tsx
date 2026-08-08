@@ -292,9 +292,14 @@ const COLORS = {
 const COLS = 10;
 const ROWS = 20;
 
-export default function ModuleInterativo() {
+interface ModuleInterativoProps {
+  onClose?: () => void;
+}
+
+export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}) {
   const [activeGame, setActiveGame] = useState<'none' | 'tetris' | 'show' | 'passa' | 'escape' | 'roda'>('none');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isHubMaximized, setIsHubMaximized] = useState(false);
   const [scores, setScores] = useState({
     tetris: 0,
     show: 0,
@@ -328,7 +333,66 @@ export default function ModuleInterativo() {
   };
 
   return (
-    <div id="module-interativo-container" className="w-full min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div 
+      id="module-interativo-container" 
+      className={`w-full bg-slate-950 text-slate-100 flex flex-col font-sans transition-all duration-300 ${
+        isHubMaximized 
+          ? 'fixed inset-0 z-[99999] w-screen h-screen overflow-y-auto custom-scrollbar' 
+          : 'min-h-screen relative'
+      }`}
+    >
+      
+      {/* BARRA SUPERIOR DE CONTROLE E MAXIMIZAÇÃO (SISTEMA INDEPENDENTE) */}
+      <div className="w-full bg-slate-900/90 border-b border-slate-800/80 px-4 md:px-8 py-3 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shadow-inner">
+            <Gamepad2 size={18} />
+          </div>
+          <div>
+            <h2 className="font-extrabold text-sm text-white tracking-wide uppercase flex items-center gap-2">
+              GIPP Interativo & Gamificação
+              {isHubMaximized && (
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                  Sistema Independente
+                </span>
+              )}
+            </h2>
+            <p className="text-[10px] text-slate-400 font-medium">Jogos & Dinâmicas Eclesiásticas Edificantes</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsHubMaximized(!isHubMaximized)}
+            className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-extrabold flex items-center gap-2 transition-all border border-slate-700/60 cursor-pointer shadow-sm active:scale-95"
+            title={isHubMaximized ? "Restaurar layout do portal" : "Maximizar tela sobrepondo menus (Sistema Independente)"}
+          >
+            {isHubMaximized ? (
+              <>
+                <Minimize2 size={14} className="text-amber-400" />
+                <span className="hidden sm:inline">Restaurar Layout</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 size={14} className="text-indigo-400" />
+                <span className="hidden sm:inline">Maximizar</span>
+              </>
+            )}
+          </button>
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 hover:text-white text-xs font-black flex items-center gap-2 transition-all border border-rose-500/30 cursor-pointer shadow-sm active:scale-95"
+              title="Fechar Módulo Interativo e Voltar ao Portal"
+            >
+              <X size={15} className="text-rose-400" />
+              <span className="hidden sm:inline">Fechar / Voltar ao Portal</span>
+              <span className="sm:hidden">Fechar</span>
+            </button>
+          )}
+        </div>
+      </div>
       
       {/* HEADER DE BOAS VINDAS DA CENTRAL */}
       {activeGame === 'none' && (
@@ -515,9 +579,9 @@ export default function ModuleInterativo() {
 
       {/* JANELA EXCLUSIVA FULL HD / HD */}
       {activeGame !== 'none' && (
-        <div className="fixed inset-0 z-[50] flex items-center justify-center bg-black/90 backdrop-blur-md p-2 md:p-6 no-print overflow-hidden">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 backdrop-blur-xl p-0 md:p-4 no-print overflow-hidden">
           <div className={`flex flex-col bg-slate-950 border border-slate-800 shadow-2xl transition-all duration-300 overflow-hidden ${
-            isFullscreen ? 'fixed inset-0 w-screen h-screen rounded-none z-[100]' : 'max-w-6xl w-full h-[90vh] rounded-3xl relative z-10'
+            isFullscreen ? 'fixed inset-0 w-screen h-screen rounded-none z-[100000]' : 'max-w-6xl w-full h-[92vh] rounded-2xl md:rounded-3xl relative z-10'
           }`}>
             
             {/* TOPO DA JANELA */}
