@@ -55,6 +55,7 @@ const ModuleIgreja = lazy(() => import('./components/ModuleIgreja'));
 const ModuleDesenvolvedor = lazy(() => import('./components/ModuleDesenvolvedor'));
 const ModuleAssistenteAI = lazy(() => import('./components/ModuleAssistenteAI'));
 const FloatingChatWidget = lazy(() => import('./components/ModuleAssistenteAI').then(m => ({ default: m.FloatingChatWidget })));
+import { FloatingActionButton } from './components/FloatingActionButton';
 const ModuleDevSuporte = lazy(() => import('./components/ModuleDevSuporte'));
 const ModuleBiblia = lazy(() => import('./components/ModuleBiblia'));
 const ModuleMembros = lazy(() => import('./components/ModuleMembros'));
@@ -22891,6 +22892,7 @@ export default function App() {
         <DynamicPrintStyles orientation={printOrientation} marginType={printMarginType} mode={printMode} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         <FloatingChatWidget />
+        <FloatingActionButton />
         {isSystemBooting && <SplashScreen onComplete={() => setIsSystemBooting(false)} corTema={db.igreja?.cor_tema || '#6366f1'} themeBg={osTheme} isDevMode={user?.id === 'dev'} isMaryMode={user?.usuario?.toLowerCase() === 'mary'} saasSettings={db.igreja} userModule={getUserModule(user)} />}
         {confirmDialog.isOpen && <ConfirmModal isOpen={confirmDialog.isOpen} onClose={()=>setConfirmDialog({...confirmDialog, isOpen:false})} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} cancelText={confirmDialog.cancelText} variant={confirmDialog.variant} />}
         {modalOpen && <GenericModal isOpen={modalOpen} onClose={closeModal} type={modalType} data={formData} setData={setFormData} onSave={handleSaveForm} />}
