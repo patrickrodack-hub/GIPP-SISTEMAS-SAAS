@@ -20345,8 +20345,8 @@ export default function App() {
 
       // 2. Criar e injetar um manifesto PWA dinâmico (Blob) para forçar a adoção do logotipo na instalação
       const manifestObj = {
-          "name": nomeIgreja,
-          "short_name": nomeIgreja.length > 12 ? nomeIgreja.substring(0, 10) + '..' : nomeIgreja,
+          "name": "GIPP",
+          "short_name": "GIPP",
           "start_url": window.location.origin + "/",
           "display": "standalone",
           "orientation": "any",
@@ -20922,11 +20922,11 @@ export default function App() {
       const activeLaunchUrl = window.location.origin + window.location.pathname + window.location.search;
 
       const manifest = {
-          name: "GIPP - Gestão de Igreja",
-          short_name: "GIPP App",
+          name: "GIPP",
+          short_name: "GIPP",
           description: "Sistema Inteligente de Gestão Eclesiástica",
           start_url: activeLaunchUrl,
-          display: "fullscreen", // CRUCIAL: Força tela cheia nativa ao instalar o PWA
+          display: "standalone", // Executa como app nativo independente sem barra ou extensões do navegador
           background_color: "#0f172a",
           theme_color: "#4f46e5",
           icons: [
@@ -21005,11 +21005,11 @@ export default function App() {
       if (manifestLink) {
           const activeLaunchUrl = window.location.origin + window.location.pathname + window.location.search;
           const manifest = {
-            name: "GIPP - Gestão de Igreja",
-            short_name: "GIPP App",
+            name: "GIPP",
+            short_name: "GIPP",
             description: "Sistema Inteligente de Gestão Eclesiástica",
             start_url: activeLaunchUrl,
-            display: "fullscreen",
+            display: "standalone",
             background_color: "#0f172a",
             theme_color: "#4f46e5",
             icons: [
