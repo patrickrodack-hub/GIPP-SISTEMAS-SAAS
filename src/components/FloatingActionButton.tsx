@@ -617,14 +617,18 @@ export function FloatingActionButton() {
 
               {/* Contextual Action Items List */}
               <div className="p-2 space-y-1 max-h-[380px] overflow-y-auto custom-scrollbar">
-                <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-3 py-1">Atalhos Recomendados</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-3 py-1 flex items-center justify-between">
+                  <span>Atalhos Recomendados</span>
+                  <span className="text-[8px] font-semibold text-slate-500">Toque para executar</span>
+                </div>
                 {contextualShortcuts.map((shortcut) => {
                   const Icon = shortcut.icon;
                   return (
                     <button
                       key={shortcut.id}
                       onClick={shortcut.action}
-                      className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all duration-200 text-left group cursor-pointer border border-transparent hover:border-slate-700/60 ${shortcut.bg}`}
+                      title={`${shortcut.label}: ${shortcut.sublabel || 'Executar ação rápida'}`}
+                      className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all duration-200 text-left group cursor-pointer border border-transparent hover:border-slate-700/60 ${shortcut.bg} relative`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/50 shrink-0 ${shortcut.color} group-hover:scale-110 transition-transform`}>
@@ -658,12 +662,14 @@ export function FloatingActionButton() {
               <div className="p-2 border-t border-slate-800/80 bg-slate-950/80 grid grid-cols-2 gap-1.5 text-center">
                 <button
                   onClick={() => { setQuickModal('membro'); setIsOpen(false); }}
+                  title="Abrir modal para cadastro expresso de novo membro"
                   className="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold border border-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <UserPlus size={12} className="text-emerald-400" /> + Membro
                 </button>
                 <button
                   onClick={() => { setQuickModal('financeiro'); setIsOpen(false); }}
+                  title="Abrir modal para registro rápido de dízimo ou oferta"
                   className="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold border border-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <DollarSign size={12} className="text-blue-400" /> + Dízimo/Oferta
