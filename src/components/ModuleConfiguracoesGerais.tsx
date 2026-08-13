@@ -644,7 +644,18 @@ const ModuleConfiguracoesGerais = () => {
                         docsToWrite.push({ collection: 'settings', id: 'config', data: targetData.igreja });
                     }
                     
-                    const simpleCollections = ['membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 'emails', 'mural', 'orcamentos'];
+                    const simpleCollections = [
+                      'membros', 'celulas', 'celulas_relatorios', 'congregacoes', 'fornecedores', 
+                      'departamentos', 'usuarios', 'agenda', 'tarefas', 'financeiro', 'carnes', 
+                      'centro_custo', 'projetos_midia', 'solicitacoes', 'patrimonio', 'visitantes', 
+                      'emails', 'mural', 'orcamentos', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos',
+                      'pastor_atas', 'pastor_liturgias', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias',
+                      'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas',
+                      'frotas_multas', 'secretaria_contatos', 'auditoria', 'certificados', 'atas_eclesiasticas',
+                      'gipp_docs', 'gipp_planilhas', 'teologia_materias', 'teologia_alunos', 'vendas_propostas',
+                      'interativo_scores', 'fcm_push_logs', 'portal_acessos', 'dupla_custodia', 'fundos_restritos',
+                      'prebenda_compliance', 'voluntarios_contratos', 'reserva_espacos', 'lixeira'
+                    ];
                     simpleCollections.forEach(col => {
                         if (targetData[col]) {
                             targetData[col].forEach((item: any) => {

@@ -22,8 +22,8 @@ import {
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
-  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal
+  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car, ShoppingBag, ShieldAlert, Webhook,
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Keyboard, Command
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -54,6 +54,31 @@ const ModuleChangelog = lazy(() => import('./components/ModuleChangelog'));
 const ModuleIgreja = lazy(() => import('./components/ModuleIgreja'));
 const ModuleDesenvolvedor = lazy(() => import('./components/ModuleDesenvolvedor'));
 const ModuleAssistenteAI = lazy(() => import('./components/ModuleAssistenteAI'));
+const ModuleInteligenciaPastoral = lazy(() => import('./components/ModuleInteligenciaPastoral'));
+const ModuleGippPay = lazy(() => import('./components/ModuleGippPay'));
+const ModuleMultiCongregacao = lazy(() => import('./components/ModuleMultiCongregacao'));
+const ModuleAutomacaoWhatsApp = lazy(() => import('./components/ModuleAutomacaoWhatsApp'));
+const ModuleAprovacaoCompras = lazy(() => import('./components/ModuleAprovacaoCompras'));
+const ModulePatrimonioQrCode = lazy(() => import('./components/ModulePatrimonioQrCode'));
+const ModuleReservaEspacos = lazy(() => import('./components/ModuleReservaEspacos'));
+const ModuleBancoVoluntarios = lazy(() => import('./components/ModuleBancoVoluntarios'));
+const ModulePrestacaoContas = lazy(() => import('./components/ModulePrestacaoContas'));
+const ModuleOrcamentoCentrosCusto = lazy(() => import('./components/ModuleOrcamentoCentrosCusto'));
+const ModuleFluxoCaixaPreditivo = lazy(() => import('./components/ModuleFluxoCaixaPreditivo'));
+const ModuleFundosRestritos = lazy(() => import('./components/ModuleFundosRestritos'));
+const ModulePrebendaCompliance = lazy(() => import('./components/ModulePrebendaCompliance'));
+const ModuleDuplaCustodiaOfertas = lazy(() => import('./components/ModuleDuplaCustodiaOfertas'));
+const ModuleAuditLogs = lazy(() => import('./components/ModuleAuditLogs'));
+const ModuleOfflineSync = lazy(() => import('./components/ModuleOfflineSync'));
+const ModuleWebhooksApiKeys = lazy(() => import('./components/ModuleWebhooksApiKeys'));
+const ModuleFeatureFlagsTenant = lazy(() => import('./components/ModuleFeatureFlagsTenant'));
+const ModuleTelemetriaHealth = lazy(() => import('./components/ModuleTelemetriaHealth'));
+const ModuleDocumentosSecretariaExpress = lazy(() => import('./components/ModuleDocumentosSecretariaExpress'));
+const ModuleGridOfficeExcelWord = lazy(() => import('./components/ModuleGridOfficeExcelWord'));
+const ModuleLancamentoExpressTeclado = lazy(() => import('./components/ModuleLancamentoExpressTeclado'));
+const ModuleCommandPaletteGlobal = lazy(() => import('./components/ModuleCommandPaletteGlobal'));
+const ModuleErgonomiaDesignerUI = lazy(() => import('./components/ModuleErgonomiaDesignerUI'));
+const ModuleVendasEDivulgacao = lazy(() => import('./components/ModuleVendasEDivulgacao'));
 const FloatingChatWidget = lazy(() => import('./components/ModuleAssistenteAI').then(m => ({ default: m.FloatingChatWidget })));
 import { FloatingActionButton } from './components/FloatingActionButton';
 const ModuleDevSuporte = lazy(() => import('./components/ModuleDevSuporte'));
@@ -10313,9 +10338,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const plano = (db.igreja?.plano || 'avancado').toLowerCase(); // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'inteligencia_pastoral', 'gipp_pay', 'multi_congregacao', 'automacao_whatsapp', 'aprovacao_compras', 'patrimonio_qrcode', 'reserva_espacos', 'banco_voluntarios', 'prestacao_contas', 'orcamento_centros', 'fluxo_caixa_preditivo', 'fundos_restritos', 'prebenda_compliance', 'dupla_custodia', 'audit_logs', 'offline_sync', 'webhooks_api_keys', 'feature_flags', 'telemetria_health', 'documentos_express', 'grid_office', 'lancamento_teclado', 'command_palette', 'ergonomia_designer', 'vendas_divulgacao'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo', 'inteligencia_pastoral', 'gipp_pay', 'multi_congregacao', 'automacao_whatsapp', 'aprovacao_compras', 'patrimonio_qrcode', 'reserva_espacos', 'banco_voluntarios', 'prestacao_contas', 'orcamento_centros', 'fluxo_caixa_preditivo', 'fundos_restritos', 'prebenda_compliance', 'dupla_custodia', 'audit_logs', 'offline_sync', 'webhooks_api_keys', 'feature_flags', 'telemetria_health', 'documentos_express', 'grid_office', 'lancamento_teclado', 'command_palette', 'ergonomia_designer', 'vendas_divulgacao'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'inteligencia_pastoral', 'gipp_pay', 'multi_congregacao', 'automacao_whatsapp', 'aprovacao_compras', 'patrimonio_qrcode', 'reserva_espacos', 'banco_voluntarios', 'prestacao_contas', 'orcamento_centros', 'fluxo_caixa_preditivo', 'fundos_restritos', 'prebenda_compliance', 'dupla_custodia', 'audit_logs', 'offline_sync', 'webhooks_api_keys', 'feature_flags', 'telemetria_health', 'documentos_express', 'grid_office', 'lancamento_teclado', 'command_palette', 'ergonomia_designer', 'vendas_divulgacao']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -10505,6 +10530,33 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                 )}
 
                 <div>
+                    <MenuGroup label="Gestão Financeira Executiva (CFO)" />
+                    <MenuItem id="orcamento_centros" icon={PieChart} label="Orçamento x Realizado" />
+                    <MenuItem id="fluxo_caixa_preditivo" icon={Activity} label="Fluxo Caixa (30/60/90d)" />
+                    <MenuItem id="fundos_restritos" icon={Lock} label="Fundos Carimbados / Restritos" />
+                    <MenuItem id="prebenda_compliance" icon={FileCheck} label="Prebendas & RDT (eSocial)" />
+                    <MenuItem id="dupla_custodia" icon={ShieldAlert} label="Dupla Custódia & Ata Culto" />
+                </div>
+
+
+                <div>
+                    <MenuGroup label="Inteligência & Inovação" />
+                    <MenuItem id="inteligencia_pastoral" icon={Sparkles} label="Inteligência Pastoral AI" />
+                    <MenuItem id="gipp_pay" icon={CreditCard} label="GIPP Pay & Dízimo Pix" />
+                    <MenuItem id="multi_congregacao" icon={Building2} label="Campo & Sub-Sedes" />
+                    <MenuItem id="automacao_whatsapp" icon={MessageSquare} label="WhatsApp & Escalas" />
+                </div>
+
+                <div>
+                    <MenuGroup label="Administração Eclesiástica" />
+                    <MenuItem id="aprovacao_compras" icon={ShoppingBag} label="Cotações & Compras" />
+                    <MenuItem id="patrimonio_qrcode" icon={Package} label="Patrimônio & QR Code" />
+                    <MenuItem id="reserva_espacos" icon={Calendar} label="Reserva de Espaços" />
+                    <MenuItem id="banco_voluntarios" icon={Users} label="Voluntariado (Lei 9608)" />
+                    <MenuItem id="prestacao_contas" icon={FileText} label="Balancete Assembleia" />
+                </div>
+
+                <div>
                     <MenuGroup label="Secretaria Eclesiástica" />
                     {hasPermission('access_boletim') && checkPlan('boletim') && <MenuItem id="boletim" icon={Newspaper} label="Boletim Digital" />}
                     {checkPlan('biblia') && <MenuItem id="biblia" icon={Book} label="Bíblia de Estudo" />}
@@ -10557,6 +10609,17 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {user?.id === 'dev' && <MenuItem id="desenvolvedor" icon={Code} label="Painel Master SaaS" />}
                         <MenuItem id="marketing_social" icon={Share2} label="Marketing & Redes" />
                         <MenuItem id="suporte_dev" icon={Headset} label="Op. de Suporte" />
+                        <MenuItem id="audit_logs" icon={ShieldCheck} label="Audit Logs (Imutável)" />
+                        <MenuItem id="offline_sync" icon={Wifi} label="Sync Offline-First (PWA)" />
+                        <MenuItem id="webhooks_api_keys" icon={Webhook} label="API Keys & Webhooks" />
+                        <MenuItem id="feature_flags" icon={SlidersHorizontal} label="Feature Flags (Tenant)" />
+                        <MenuItem id="telemetria_health" icon={Activity} label="Telemetria & APM Health" />
+                        <MenuItem id="documentos_express" icon={FileText} label="Expediente de Secretaria" />
+                        <MenuItem id="grid_office" icon={FileSpreadsheet} label="Suíte Office (Excel/Word)" />
+                        <MenuItem id="lancamento_teclado" icon={Keyboard} label="Caixa Express (Numpad)" />
+                        <MenuItem id="command_palette" icon={Command} label="Busca Global (Ctrl+K)" />
+                        <MenuItem id="ergonomia_designer" icon={Palette} label="Ergonomia Visual (UI/UX)" />
+                        <MenuItem id="vendas_divulgacao" icon={Rocket} label="Vendas, Propostas & Mkt" />
                     </div>
                 )}
             </div>
@@ -17609,7 +17672,32 @@ const AppLayout = () => {
         'config_visual': { component: ModuleConfigVisual, access: 'access_config_visual' },
         'config_sistema': { component: ModuleConfiguracoesGerais, access: 'access_config_sistema' },
         'marketing_social': { component: ModuleMarketingSocial, access: 'master' },
-        'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
+        'suporte_dev': { component: ModuleDevSuporte, access: 'master' },
+        'inteligencia_pastoral': { component: ModuleInteligenciaPastoral, access: 'public' },
+        'gipp_pay': { component: ModuleGippPay, access: 'public' },
+        'multi_congregacao': { component: ModuleMultiCongregacao, access: 'public' },
+        'automacao_whatsapp': { component: ModuleAutomacaoWhatsApp, access: 'public' },
+        'aprovacao_compras': { component: ModuleAprovacaoCompras, access: 'public' },
+        'patrimonio_qrcode': { component: ModulePatrimonioQrCode, access: 'public' },
+        'reserva_espacos': { component: ModuleReservaEspacos, access: 'public' },
+        'banco_voluntarios': { component: ModuleBancoVoluntarios, access: 'public' },
+        'prestacao_contas': { component: ModulePrestacaoContas, access: 'public' },
+        'orcamento_centros': { component: ModuleOrcamentoCentrosCusto, access: 'public' },
+        'fluxo_caixa_preditivo': { component: ModuleFluxoCaixaPreditivo, access: 'public' },
+        'fundos_restritos': { component: ModuleFundosRestritos, access: 'public' },
+        'prebenda_compliance': { component: ModulePrebendaCompliance, access: 'public' },
+        'dupla_custodia': { component: ModuleDuplaCustodiaOfertas, access: 'public' },
+        'audit_logs': { component: ModuleAuditLogs, access: 'public' },
+        'offline_sync': { component: ModuleOfflineSync, access: 'public' },
+        'webhooks_api_keys': { component: ModuleWebhooksApiKeys, access: 'public' },
+        'feature_flags': { component: ModuleFeatureFlagsTenant, access: 'public' },
+        'telemetria_health': { component: ModuleTelemetriaHealth, access: 'public' },
+        'documentos_express': { component: ModuleDocumentosSecretariaExpress, access: 'public' },
+        'grid_office': { component: ModuleGridOfficeExcelWord, access: 'public' },
+        'lancamento_teclado': { component: ModuleLancamentoExpressTeclado, access: 'public' },
+        'command_palette': { component: ModuleCommandPaletteGlobal, access: 'public' },
+        'ergonomia_designer': { component: ModuleErgonomiaDesignerUI, access: 'public' },
+        'vendas_divulgacao': { component: ModuleVendasEDivulgacao, access: 'public' }
     };
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
     const currentProps = MODULE_REGISTRY[view]?.props || {};
@@ -21272,26 +21360,26 @@ export default function App() {
   };
 
   const DATABASE_SECTIONS = [
-    { key: 'igreja', label: 'Configurações da Igreja' },
-    { key: 'membros', label: 'Rol de Membros' },
+    { key: 'igreja', label: 'Configurações da Igreja & Módulos' },
+    { key: 'membros', label: 'Rol de Membros e Fichas Cadastrais' },
     { key: 'celulas', label: 'Células e Pequenos Grupos' },
     { key: 'celulas_relatorios', label: 'Relatórios de Células' },
-    { key: 'congregacoes', label: 'Congregações' },
+    { key: 'congregacoes', label: 'Congregações e Sub-Sedes' },
     { key: 'fornecedores', label: 'Fornecedores e Contatos' },
     { key: 'departamentos', label: 'Departamentos e Ministérios' },
-    { key: 'usuarios', label: 'Usuários e Permissões' },
-    { key: 'financeiro', label: 'Fluxo de Caixa (Lançamentos)' },
-    { key: 'carnes', label: 'Carnês de Dizimistas' },
-    { key: 'centro_custo', label: 'Centros de Custo' },
-    { key: 'ebd', label: 'EBD: Turmas, Alunos e Professores' },
-    { key: 'missoes', label: 'Missões e Projetos Sociais' },
-    { key: 'agenda', label: 'Agenda de Eventos' },
-    { key: 'tarefas', label: 'Quadro de Tarefas' },
-    { key: 'projetos_midia', label: 'Projetos de Comunicação' },
+    { key: 'usuarios', label: 'Usuários, Níveis e Permissões' },
+    { key: 'financeiro', label: 'Fluxo de Caixa (Lançamentos de Receitas e Despesas)' },
+    { key: 'carnes', label: 'Carnês de Dizimistas e Campanhas' },
+    { key: 'centro_custo', label: 'Centros de Custo e DRE' },
+    { key: 'ebd', label: 'EBD: Turmas, Alunos, Professores e Lições' },
+    { key: 'missoes', label: 'Missões, Missionários, Agências e Projetos' },
+    { key: 'agenda', label: 'Agenda de Eventos e Cultos' },
+    { key: 'tarefas', label: 'Quadro de Tarefas e Atividades' },
+    { key: 'projetos_midia', label: 'Projetos de Comunicação e Estúdio' },
     { key: 'solicitacoes', label: 'Solicitações e Requerimentos' },
-    { key: 'visitantes', label: 'Registro de Visitantes' },
-    { key: 'patrimonio', label: 'Patrimônio e Ativos' },
-    { key: 'emails', label: 'Histórico de E-mails' },
+    { key: 'visitantes', label: 'Registro de Visitantes e Funil CRM' },
+    { key: 'patrimonio', label: 'Patrimônio, Ativos e QR Code' },
+    { key: 'emails', label: 'Histórico de E-mails e Webmail' },
     { key: 'mural', label: 'Mural de Avisos da Igreja' },
     { key: 'orcamentos', label: 'Orçamentos de Compras' },
     { key: 'pastor_agenda', label: 'Gabinete: Agenda Pastoral' },
@@ -21302,14 +21390,30 @@ export default function App() {
     { key: 'kids_criancas', label: 'Kids: Cadastro de Crianças' },
     { key: 'kids_presencas', label: 'Kids: Lista de Presença' },
     { key: 'kids_ocorrencias', label: 'Kids: Ocorrências / Avisos' },
-    { key: 'dp_colaboradores', label: 'D.P.: Cadastro de Funcionários' },
+    { key: 'dp_colaboradores', label: 'D.P.: Cadastro de Funcionários / RH' },
     { key: 'dp_folhas', label: 'D.P.: Folhas de Pagamento' },
     { key: 'frotas_veiculos', label: 'Frotas: Veículos Cadastrados' },
     { key: 'frotas_motoristas', label: 'Frotas: Motoristas Habilitados' },
     { key: 'frotas_despesas', label: 'Frotas: Despesas de Manutenção' },
     { key: 'frotas_multas', label: 'Frotas: Registro de Multas' },
     { key: 'secretaria_contatos', label: 'Secretaria: Agenda Telefônica' },
-    { key: 'auditoria', label: 'Auditoria: Logs de Segurança' }
+    { key: 'auditoria', label: 'Auditoria: Logs de Segurança' },
+    { key: 'certificados', label: 'Certificados, Diplomas e Credenciais' },
+    { key: 'atas_eclesiasticas', label: 'Livro Digital de Atas Eclesiásticas' },
+    { key: 'gipp_docs', label: 'GIPP DOCs (Documentos Corporativos)' },
+    { key: 'gipp_planilhas', label: 'GIPP Planilhas (Planilhas Financeiras e Eclesiásticas)' },
+    { key: 'teologia_materias', label: 'Faculdade Teológica (Matérias, Apostilas e Lições)' },
+    { key: 'teologia_alunos', label: 'Faculdade Teológica (Matrículas e Notas)' },
+    { key: 'vendas_propostas', label: 'Vendas & Mkt (Propostas Comercial SaaS)' },
+    { key: 'interativo_scores', label: 'Gamificação & Minigames Interativos' },
+    { key: 'fcm_push_logs', label: 'Notificações Push FCM Disparadas' },
+    { key: 'portal_acessos', label: 'Logs de Acesso do Portal do Membro' },
+    { key: 'dupla_custodia', label: 'Dupla Custódia de Ofertas e Dízimos' },
+    { key: 'fundos_restritos', label: 'Fundos Carimbados e Restritos' },
+    { key: 'prebenda_compliance', label: 'Prebendas e Compliance (eSocial)' },
+    { key: 'voluntarios_contratos', label: 'Termos de Voluntariado (Lei 9.608)' },
+    { key: 'reserva_espacos', label: 'Reservas de Instalações e Tendas' },
+    { key: 'lixeira', label: 'Lixeira Virtual de Itens Excluídos' }
   ];
 
   const getRecordCount = (dataObj: any, key: string) => {
@@ -22185,7 +22289,7 @@ export default function App() {
                             </div>
                             <div className="text-center lg:text-left">
                                 <h2 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1">{db.igreja?.nome || "Igreja Local"}</h2>
-                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 9.5.0 Ultimate Platinum v14</p>
+                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 9.6.0 Ultimate Platinum v15</p>
                             </div>
                         </div>
                         <div>

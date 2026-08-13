@@ -31,6 +31,11 @@ import {
 } from 'firebase/firestore';
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from '../lib/indexedDbService';
+import { 
+  GippDocsIcon, GippSheetsIcon, GippSlidesIcon, GippFormsIcon, 
+  GippOfficeWordIcon, GippOfficeExcelIcon, GippOfficePowerPointIcon, GippOfficePdfIcon,
+  GippChurchIcon, GippFinanceIcon, GippEbdIcon, GippSalinhaKidsIcon, GippVendasIcon, GippInterativoIcon 
+} from './GippOfficeIcons';
 
 import {
   ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
@@ -594,12 +599,26 @@ const ModuleConfigVisual = () => {
                             <Sliders className="text-indigo-600" size={24}/>
                             <div>
                                 <h3 className="text-lg font-black text-slate-800">3. Pacote de Ícones do Sistema</h3>
-                                <p className="text-xs text-slate-550 font-medium">Escolha a identidade visual dos ícones do menu e botões do portal.</p>
+                                <p className="text-xs text-slate-550 font-medium">Escolha a identidade visual dos ícones do menu, botões e suíte de aplicativos do portal.</p>
                             </div>
                         </div>
 
                         <div className="flex flex-col space-y-4">
                             {[
+                                {
+                                    id: 'office_v15',
+                                    name: 'GIPP Office & Corporate Suite v15 (Ultra Profissional)',
+                                    badge: 'NOVO • RECOMENDADO',
+                                    desc: 'Pacote oficial de vetorização corporativa HD inspirada no Google Workspace 365 e Microsoft Office. Ícones exclusivos para DOCs, Planilhas, PDF, Financeiro, EBD e Eclesiástico.',
+                                    previewStyle: (
+                                        <div className="flex gap-2 items-center">
+                                            <div className="p-1 hover:scale-110 transition-transform"><GippDocsIcon size={22} /></div>
+                                            <div className="p-1 hover:scale-110 transition-transform"><GippSheetsIcon size={22} /></div>
+                                            <div className="p-1 hover:scale-110 transition-transform"><GippChurchIcon size={22} /></div>
+                                            <div className="p-1 hover:scale-110 transition-transform"><GippFinanceIcon size={22} /></div>
+                                        </div>
+                                    )
+                                },
                                 {
                                     id: '3d',
                                     name: 'GIPP 3D Esférico (Claymorphism)',
@@ -614,7 +633,7 @@ const ModuleConfigVisual = () => {
                                 },
                                 {
                                     id: 'gipp',
-                                    name: 'GIPP Tecnológico (Padrão)',
+                                    name: 'GIPP Tecnológico (Padrão Neon)',
                                     desc: 'Ícones cibernéticos de alta precisão, realces em neon dinâmico e contornos radiantes que se adaptam inteligentemente às cores de cada departamento do portal.',
                                     previewStyle: (
                                         <div className="flex gap-2 items-center">
@@ -670,11 +689,16 @@ const ModuleConfigVisual = () => {
                                             setSelectedIconPack(pack.id);
                                             handleSaveConfig(selectedWall, selectedAnim, opacityFilter, pack.id);
                                         }}
-                                        className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-3xl border-2 text-left transition-all ${isSelected ? 'border-indigo-600 bg-indigo-55/15 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
+                                        className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-3xl border-2 text-left transition-all cursor-pointer ${isSelected ? 'border-indigo-600 bg-indigo-50/20 shadow-xs ring-2 ring-indigo-500/20' : 'border-slate-100 bg-slate-50/20 hover:border-slate-200'}`}
                                     >
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="text-xs sm:text-sm font-black text-slate-800 leading-none">{pack.name}</span>
+                                                {pack.badge && (
+                                                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shadow-xs">
+                                                        {pack.badge}
+                                                    </span>
+                                                )}
                                                 {isSelected && <span className="text-[9px] font-black uppercase text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md leading-none tracking-wider">Ativo</span>}
                                             </div>
                                             <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5 font-semibold pr-2">{pack.desc}</p>
@@ -705,7 +729,7 @@ const ModuleConfigVisual = () => {
                                     setTheme('light');
                                     addToast("Modo Claro ativado permanente!", "success");
                                 }}
-                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 ${theme === 'light' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
+                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 cursor-pointer ${theme === 'light' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
                             >
                                 <div className={`p-3 rounded-2xl ${theme === 'light' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                     <Sun size={24}/>
@@ -722,7 +746,7 @@ const ModuleConfigVisual = () => {
                                     setTheme('dark');
                                     addToast("Modo Escuro ativado permanente!", "success");
                                 }}
-                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 ${theme === 'dark' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
+                                className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all space-y-3 cursor-pointer ${theme === 'dark' ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' : 'border-slate-100 bg-slate-50/20 hover:border-indigo-100 hover:bg-slate-50/50'}`}
                             >
                                 <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                     <Moon size={24}/>
@@ -736,9 +760,65 @@ const ModuleConfigVisual = () => {
                     </div>
                 </div>
             </div>
+
+            {/* SEÇÃO ESPECIAL: MATRIZ MOSTRUÁRIO DE ÍCONES DO SISTEMA (OFFICE & CORPORATE SUITE) */}
+            <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl shadow-md">
+                            <GridOfficeIconPlaceholder size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-800">Mostruário do Pacote de Ícones Office & Eclesiástico v15</h3>
+                            <p className="text-xs text-slate-500 font-semibold">Exibição interativa das ilustrações vetoriais integradas nos módulos e relatórios do portal.</p>
+                        </div>
+                    </div>
+                    <div className="bg-indigo-50 text-indigo-700 px-3.5 py-1.5 rounded-2xl text-xs font-black border border-indigo-100 self-start md:self-auto">
+                        Pacote Selecionado: <span className="uppercase">{selectedIconPack}</span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {[
+                        { title: 'GIPP DOCs', sub: 'Editor de Textos', comp: <GippDocsIcon size={32} /> },
+                        { title: 'GIPP Planilhas', sub: 'Planilhas & Dados', comp: <GippSheetsIcon size={32} /> },
+                        { title: 'Apresentações', sub: 'Slides & Mídia', comp: <GippSlidesIcon size={32} /> },
+                        { title: 'Formulários', sub: 'Pesquisas & CRM', comp: <GippFormsIcon size={32} /> },
+                        { title: 'MS Word 365', sub: 'Documentos Office', comp: <GippOfficeWordIcon size={32} /> },
+                        { title: 'MS Excel 365', sub: 'Financeiro Office', comp: <GippOfficeExcelIcon size={32} /> },
+                        { title: 'MS PowerPoint', sub: 'Projeções Culto', comp: <GippOfficePowerPointIcon size={32} /> },
+                        { title: 'PDF Oficial', sub: 'Relatórios & Atas', comp: <GippOfficePdfIcon size={32} /> },
+                        { title: 'Sede & Campo', sub: 'Eclesiástico Sede', comp: <GippChurchIcon size={32} /> },
+                        { title: 'CFO Tesouraria', sub: 'Fluxo & DRE', comp: <GippFinanceIcon size={32} /> },
+                        { title: 'EBD & Teologia', sub: 'Ensino CGADB', comp: <GippEbdIcon size={32} /> },
+                        { title: 'Salinha Kids', sub: 'Check-In Infantil', comp: <GippSalinhaKidsIcon size={32} /> },
+                        { title: 'Vendas & Mkt', sub: 'Propostas Comercial', comp: <GippVendasIcon size={32} /> },
+                        { title: 'Gamificação', sub: 'Minigames & Scores', comp: <GippInterativoIcon size={32} /> },
+                    ].map((item, idx) => (
+                        <div 
+                            key={idx}
+                            className="flex flex-col items-center justify-center p-4 rounded-3xl bg-slate-50/60 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all hover:-translate-y-1 group"
+                        >
+                            <div className="p-3 bg-white rounded-2xl shadow-xs border border-slate-100 mb-3 group-hover:scale-110 transition-transform">
+                                {item.comp}
+                            </div>
+                            <span className="text-xs font-black text-slate-800 text-center leading-tight">{item.title}</span>
+                            <span className="text-[10px] font-semibold text-slate-400 text-center mt-1">{item.sub}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
 
+const GridOfficeIconPlaceholder = ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+);
 
 export default ModuleConfigVisual;
