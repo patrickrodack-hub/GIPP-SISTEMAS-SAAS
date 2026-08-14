@@ -42,6 +42,7 @@ import {
 } from '../App';
 
 import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
+import { requestAppFullscreen } from '../lib/performanceHelpers';
 
 // Exporting component
 const ModuleConfigVisual = () => {
@@ -55,6 +56,18 @@ const ModuleConfigVisual = () => {
     const [customUrl, setCustomUrl] = useState('');
     const [saving, setSaving] = useState(false);
     const [previewTheme, setPreviewTheme] = useState(osTheme || 'default');
+    const [delphiSubTheme, setDelphiSubTheme] = useState<'retro' | 'classic' | 'high_contrast'>(() => {
+        return (localStorage.getItem('gipp_delphi_subtheme') as any) || 'retro';
+    });
+
+    const handleDelphiSubThemeChange = (subTheme: 'retro' | 'classic' | 'high_contrast') => {
+        setDelphiSubTheme(subTheme);
+        localStorage.setItem('gipp_delphi_subtheme', subTheme);
+        window.dispatchEvent(new CustomEvent('gipp_subtheme_changed', { detail: { subTheme } }));
+        addToast(`Estilo Delphi 13 Florence atualizado para: ${
+            subTheme === 'retro' ? 'GIPP Retro' : subTheme === 'classic' ? 'Delphi Classic (VCL)' : 'High Contrast (Acessibilidade)'
+        }`, 'success');
+    };
 
     const [isDragging, setIsDragging] = useState(false);
 
@@ -193,9 +206,9 @@ const ModuleConfigVisual = () => {
                     <div className="lg:col-span-5 flex flex-col space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {[
                             { id: 'default', name: 'GIPP Padrão (Moderno)', label: 'Default', desc: 'Interface moderna com cantos arredondados, gradientes e estética minimalista.' },
+                            { id: 'gipp_retro', name: 'GIPP RETRO (Delphi 13 Florence)', label: 'Delphi 13', desc: 'Ambiente RAD clássico e corporativo baseado no Embarcadero Delphi 13 (Florence) com componentes VCL, TDBGrid, TSpeedButton e grelha de formulário.' },
                             { id: 'macos_tahoe', name: 'macOS 26 Tahoe (Elegante) ', label: 'macOS', desc: 'Tema exuberante com barra superior translúcida, dock flutuante com zoom, Launchpad e cantos super-arredondados.' },
                             { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
-                            { id: 'winxp', name: 'Windows XP (Luna)', label: 'WinXP', desc: 'Retrô vibrante dos anos 2005, com cabeçalhos azuis e botões verdes.' },
                             { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
                             { id: 'msdos', name: 'Sistema COBOL (Mainframe)', label: 'COBOL', desc: 'Visual clássico de terminal AS/400 ou mainframe IBM, fontes mono espaçadas em fósforo verde com destaques coloridos.' },
                             { id: 'linux', name: 'Linux Ubuntu (GNOME)', label: 'Linux', desc: 'Soberbo tema inspirado na elegância do Ubuntu e do ecossistema GNOME, com gradientes aubergine e detalhes em laranja Yaru.' },
@@ -244,27 +257,26 @@ const ModuleConfigVisual = () => {
                         <div 
                           className={`w-full h-[330px] rounded-[1.5rem] overflow-hidden relative flex flex-col p-4 shadow-inner border border-slate-200/60 transition-all duration-300 ${
                             previewTheme === 'default' ? 'bg-[#0f172a]' :
+                            previewTheme === 'gipp_retro' ? 'bg-[#E2E6EA]' :
                             previewTheme === 'macos_tahoe' ? 'bg-[#0b0c16]' :
                             previewTheme === 'win11' ? 'bg-gradient-to-tr from-[#9ec2e6] to-[#d6e5f5]' :
-                            previewTheme === 'winxp' ? 'bg-[#0050e6]' : /* Bliss classic blue */
                             previewTheme === 'win95' ? 'bg-[#008080]' : /* classic teal */
                             previewTheme === 'msdos' ? 'bg-black' :
                             previewTheme === 'linux' ? 'bg-[#1f0b1a]' : /* aubergine */
                             previewTheme === 'premium_black' ? 'bg-[#1a1a1a]' :
                             previewTheme === 'futuristic' ? 'bg-[#03001e]' : 'bg-slate-100'
                           }`}
+                          style={{
+                            backgroundImage: previewTheme === 'gipp_retro' ? 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)' : undefined,
+                            backgroundSize: previewTheme === 'gipp_retro' ? '8px 8px' : undefined
+                          }}
                         >
-                            {/* Papel de Parede simulado */}
-                            {previewTheme === 'winxp' && (
-                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=400&q=80')`, filter: 'brightness(0.95)' }}></div>
-                            )}
-
                             {/* Janela simulada */}
                             <div 
                               className={`w-full max-w-md mx-auto mt-6 relative flex flex-col transition-all duration-300 z-10 ${
                                 previewTheme === 'macos_tahoe' ? 'bg-[#16171e]/95 rounded-[1.2rem] border border-white/10 p-1.5 shadow-2xl text-slate-100' :
+                                previewTheme === 'gipp_retro' ? 'bg-[#ECEFF4] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] rounded-xs shadow-xl text-slate-900 p-1' :
                                 previewTheme === 'win95' ? 'bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#808080] border-b-[#808080] outline-1 outline-black p-0.5' :
-                                previewTheme === 'winxp' ? 'bg-[#d4d0c8] rounded-t-lg border-2 border-[#0054e3] p-0.5' :
                                 previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
                                 previewTheme === 'msdos' ? 'bg-black border-4 border-double border-green-500 p-2 text-green-500 font-mono text-[11px]' :
                                 previewTheme === 'linux' ? 'bg-[#221820] rounded-2xl border border-white/10 p-1 shadow-2xl text-slate-100' :
@@ -273,7 +285,8 @@ const ModuleConfigVisual = () => {
                                 'bg-white/95 rounded-3xl border border-slate-100 p-3 shadow-xl text-slate-800'
                               }`}
                               style={{ 
-                                fontFamily: previewTheme === 'win95' || previewTheme === 'winxp' ? "'Tahoma', sans-serif" : 
+                                fontFamily: previewTheme === 'gipp_retro' ? "'Segoe UI', 'Tahoma', sans-serif" :
+                                             previewTheme === 'win95' ? "'Tahoma', sans-serif" : 
                                              previewTheme === 'msdos' ? "'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
                               }}
                             >
@@ -281,8 +294,8 @@ const ModuleConfigVisual = () => {
                                 <div 
                                   className={`flex items-center justify-between px-2 py-1 select-none ${
                                     previewTheme === 'macos_tahoe' ? 'bg-[#1e2029] rounded-t-xl p-2 border-b border-white/5 text-white font-bold flex-row-reverse' :
+                                    previewTheme === 'gipp_retro' ? 'bg-gradient-to-r from-[#004E98] to-[#1D65A6] text-white font-black p-1.5 rounded-xs shadow-xs' :
                                     previewTheme === 'win95' ? 'bg-[#000080] text-white font-bold' :
-                                    previewTheme === 'winxp' ? 'bg-gradient-to-r from-[#0054e3] to-[#278df1] text-white font-bold rounded-t-md' :
                                     previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
                                     previewTheme === 'msdos' ? 'bg-black border-b border-green-500 pb-1 mb-2 font-mono text-yellow-400 font-bold uppercase tracking-wider' :
                                     previewTheme === 'linux' ? 'bg-[#1b1118] rounded-t-xl p-2 border-b border-white/5 text-white font-bold' :
@@ -291,8 +304,9 @@ const ModuleConfigVisual = () => {
                                     'bg-slate-50/80 p-2 rounded-2xl text-slate-800 font-bold'
                                   }`}
                                 >
-                                    <span className="text-[11px] truncate uppercase tracking-wide">
-                                        {previewTheme === 'msdos' ? 'C:\\GIPP\\DASHBOARD.EXE' : 'GIPP - Visual Preview'}
+                                    <span className="text-[11px] truncate uppercase tracking-wider font-bold">
+                                        {previewTheme === 'msdos' ? 'C:\\GIPP\\DASHBOARD.EXE' : 
+                                         previewTheme === 'gipp_retro' ? 'FormMembros: TForm (Delphi 13 Florence)' : 'GIPP - Visual Preview'}
                                     </span>
                                     {/* Botões de controle simulados */}
                                     <div className="flex items-center gap-1 shrink-0">
@@ -302,17 +316,17 @@ const ModuleConfigVisual = () => {
                                                 <span className="w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-amber-600/30"></span>
                                                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full flex items-center justify-center border border-emerald-600/30"></span>
                                             </div>
+                                        ) : previewTheme === 'gipp_retro' ? (
+                                            <div className="flex gap-0.5">
+                                                <span className="w-4 h-3.5 bg-[#E6E9ED] border-t border-l border-t-white border-l-white border-r border-b border-r-[#5A6578] border-b-[#5A6578] text-[8px] flex items-center justify-center font-bold text-[#102A43] select-none">_</span>
+                                                <span className="w-4 h-3.5 bg-[#E6E9ED] border-t border-l border-t-white border-l-white border-r border-b border-r-[#5A6578] border-b-[#5A6578] text-[8px] flex items-center justify-center font-bold text-[#102A43] select-none">▢</span>
+                                                <span className="w-4 h-3.5 bg-[#E6E9ED] border-t border-l border-t-white border-l-white border-r border-b border-r-[#5A6578] border-b-[#5A6578] text-[8px] flex items-center justify-center font-bold text-rose-700 select-none">✕</span>
+                                            </div>
                                         ) : previewTheme === 'win95' ? (
                                             <div className="flex gap-0.5">
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">_</span>
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">▢</span>
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">✕</span>
-                                            </div>
-                                        ) : previewTheme === 'winxp' ? (
-                                            <div className="flex gap-0.5">
-                                                <span className="w-4 h-4 bg-blue-600 rounded-full border border-blue-900 text-white text-[8px] flex items-center justify-center font-bold select-none">_</span>
-                                                <span className="w-4 h-4 bg-green-600 rounded-full border border-green-900 text-white text-[8px] flex items-center justify-center font-bold select-none">▢</span>
-                                                <span className="w-4 h-4 bg-red-600 rounded-full border border-red-900 text-white text-[8px] flex items-center justify-center font-bold select-none">✕</span>
                                             </div>
                                         ) : previewTheme === 'linux' ? (
                                             <div className="flex gap-1.5">
@@ -333,22 +347,25 @@ const ModuleConfigVisual = () => {
                                 {/* Conteúdo simulado */}
                                 <div className={`p-4 mt-1 flex flex-col space-y-3.5 ${
                                     previewTheme === 'macos_tahoe' ? 'bg-[#16171e] text-slate-100' :
+                                    previewTheme === 'gipp_retro' ? 'bg-[#ECEFF4] text-[#102A43] border border-[#CBD5E1]' :
                                     previewTheme === 'msdos' ? 'bg-black text-green-500 font-mono' :
                                     previewTheme === 'premium_black' ? 'bg-[#050505] text-slate-100' :
                                     previewTheme === 'futuristic' ? 'bg-[#03001e] text-slate-100' :
                                     previewTheme === 'linux' ? 'bg-[#221820] text-slate-100' :
-                                    previewTheme === 'win95' || previewTheme === 'winxp' ? 'bg-[#d4d0c8] text-black' :
+                                    previewTheme === 'win95' ? 'bg-[#d4d0c8] text-black' :
                                     'bg-white text-slate-800'
                                 }`}>
-                                    <div className="text-[11px] font-bold">Secretaria GIPP (Demonstração)</div>
+                                    <div className="text-[11px] font-extrabold flex items-center justify-between">
+                                        <span className={previewTheme === 'gipp_retro' ? 'text-[#004E98] font-black' : ''}>Secretaria GIPP (Demonstração)</span>
+                                    </div>
                                     
                                     {/* Campo de input simulado */}
                                     <div className="flex flex-col space-y-1">
-                                        <span className="text-[10px] font-bold opacity-85">Nome do Membro:</span>
+                                        <span className="text-[10px] font-bold opacity-85">Nome do Membro (TDBEdit):</span>
                                         <div className={`p-1.5 text-[10px] truncate ${
                                             previewTheme === 'macos_tahoe' ? 'border border-white/10 bg-white/5 text-white rounded-lg' :
+                                            previewTheme === 'gipp_retro' ? 'bg-white border-t-2 border-l-2 border-t-[#6E7A8A] border-l-[#6E7A8A] border-r border-b border-r-[#CBD5E1] border-b-[#CBD5E1] text-[#0F172A] font-bold shadow-inner' :
                                             previewTheme === 'win95' ? 'bg-white border-t-1.5 border-l-1.5 border-t-[#404040] border-l-[#404040] border-r-1.5 border-b-1.5 border-r-white border-b-white text-black' :
-                                            previewTheme === 'winxp' ? 'bg-white border border-blue-600 text-black rounded' :
                                             previewTheme === 'msdos' ? 'border-b-2 border-cyan-400 bg-black text-cyan-400 font-mono font-bold' :
                                             previewTheme === 'linux' ? 'border border-white/10 bg-[#150d14] text-white rounded-lg' :
                                             previewTheme === 'premium_black' ? 'border border-[#D4AF37]/40 bg-black text-[#D4AF37]' :
@@ -363,27 +380,27 @@ const ModuleConfigVisual = () => {
                                     <div className="flex gap-2">
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
                                             previewTheme === 'macos_tahoe' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-400/20 text-white rounded-lg text-center shadow-md' :
+                                            previewTheme === 'gipp_retro' ? 'bg-gradient-to-b from-white via-[#E6E9ED] to-[#D2D7DF] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#102A43] font-black rounded-xs shadow-xs text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
-                                            previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded shadow-xs' :
                                             previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
                                             previewTheme === 'linux' ? 'bg-gradient-to-b from-[#e95420] to-[#df3812] border border-transparent text-white rounded-lg text-center font-bold shadow-[0_4px_10px_rgba(223,56,18,0.3)]' :
                                             previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border border-[#D4AF37] text-[#D4AF37] text-center font-bold' :
                                             previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#00f0ff] to-[#ff007f] border border-white/10 text-white text-center font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)] rounded-lg' :
                                             'bg-indigo-600 text-white rounded-xl font-bold shadow-md shadow-indigo-100 text-center'
                                         }`}>
-                                            Gravar Registro
+                                            Gravar [F9]
                                         </div>
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
                                             previewTheme === 'macos_tahoe' ? 'bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg text-center' :
+                                            previewTheme === 'gipp_retro' ? 'bg-gradient-to-b from-white via-[#E6E9ED] to-[#D2D7DF] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#5A6578] font-bold rounded-xs shadow-xs text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
-                                            previewTheme === 'winxp' ? 'bg-gradient-to-b from-[#eaeaea] to-[#cccccc] border border-slate-400 text-black rounded' :
                                             previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
                                             previewTheme === 'linux' ? 'bg-[#3a3a44] border border-white/5 text-white rounded-lg text-center font-bold' :
                                             previewTheme === 'premium_black' ? 'bg-black border border-slate-700 text-slate-400 text-center' :
                                             previewTheme === 'futuristic' ? 'bg-slate-900/80 border border-[#ff007f]/40 text-[#ff007f] text-center rounded-lg shadow-[0_0_8px_rgba(255,0,127,0.15)]' :
                                             'bg-slate-100 text-slate-500 rounded-xl font-bold text-center'
                                         }`}>
-                                            Cancelar
+                                            Cancelar [Esc]
                                         </div>
                                     </div>
                                 </div>
@@ -399,6 +416,9 @@ const ModuleConfigVisual = () => {
                                 type="button"
                                 onClick={() => {
                                     setOsTheme(previewTheme);
+                                    if (previewTheme === 'win11') {
+                                        requestAppFullscreen();
+                                    }
                                     addToast(`Tema do sistema alterado para: ${previewTheme.toUpperCase()}`, "success");
                                 }}
                                 className="px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-2xl font-black text-xs hover:-translate-y-0.5 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer shadow-md"
@@ -406,6 +426,74 @@ const ModuleConfigVisual = () => {
                                 <Save size={14} /> Aplicar Tema do Sistema
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                {/* PAINEL ESPECIAL: VARIAÇÕES DO TEMA DELPHI 13 FLORENCE */}
+                <div className="mt-4 pt-6 border-t border-slate-100 flex flex-col space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 bg-sky-100 text-sky-800 rounded-xl">
+                                <Code size={18} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black text-slate-800">Variações do Tema Delphi 13 Florence</h4>
+                                <p className="text-[11px] text-slate-550 font-medium">Personalize a paleta de cores VCL, relevos 3D e contraste para a experiência Delphi 13.</p>
+                            </div>
+                        </div>
+                        <span className="text-[10px] font-mono bg-sky-50 text-sky-800 px-2 py-0.5 rounded-full font-bold border border-sky-200">
+                            VCL Florence 64-bit
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[
+                            {
+                                id: 'retro',
+                                name: 'GIPP Retro (Florence)',
+                                desc: 'Padrão moderno Embarcadero Delphi 13 com azul profundo (#004E98) e cinza Florence.',
+                                previewBg: 'bg-[#ECEFF4] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#102A43]'
+                            },
+                            {
+                                id: 'classic',
+                                name: 'Delphi Classic (VCL)',
+                                desc: 'Visual clássico nostálgico Delphi 7 / Windows Classic com barra azul marinho e cinza neutro.',
+                                previewBg: 'bg-[#ECE9D8] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#404040] border-b-[#404040] text-black'
+                            },
+                            {
+                                id: 'high_contrast',
+                                name: 'High Contrast (Acessibilidade)',
+                                desc: 'Modo alto contraste com fundo preto profundo, texto e bordas em amarelo vibrante (#FACC15).',
+                                previewBg: 'bg-black border-2 border-yellow-400 text-yellow-400 font-black'
+                            }
+                        ].map((v) => {
+                            const isSelected = delphiSubTheme === v.id;
+                            return (
+                                <button
+                                    key={v.id}
+                                    type="button"
+                                    onClick={() => handleDelphiSubThemeChange(v.id as any)}
+                                    className={`p-3.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2.5 cursor-pointer ${
+                                        isSelected 
+                                            ? 'border-sky-600 bg-sky-50/40 shadow-sm ring-2 ring-sky-300' 
+                                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/50'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-black text-slate-850">{v.name}</span>
+                                        {isSelected && (
+                                            <span className="bg-sky-600 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase">
+                                                Ativo
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`w-full py-1.5 px-2.5 rounded-xs text-[10px] font-bold text-center ${v.previewBg}`}>
+                                        TFormPreview [3D Bevel]
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-medium leading-relaxed">{v.desc}</p>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

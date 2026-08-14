@@ -47,3 +47,30 @@ export function fastFilter<T>(
     return queryWords.every(word => combinedString.includes(word));
   });
 }
+
+/**
+ * Solicita modo Full Screen de forma compatível e segura com suporte a múltiplos navegadores
+ */
+export function requestAppFullscreen(): void {
+  try {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const doc = window.document as any;
+    const docEl = doc.documentElement as any;
+    const isFullScreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+    
+    if (!isFullScreen && docEl) {
+      const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+      if (requestFullScreen) {
+        const res = requestFullScreen.call(docEl);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err: any) => {
+            // Silenciosamente captura caso o browser exija interação prévia
+            console.log('Fullscreen request pending user interaction:', err);
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao solicitar tela cheia:', err);
+  }
+}

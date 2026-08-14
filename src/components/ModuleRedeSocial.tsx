@@ -1740,9 +1740,9 @@ export const GALLERY_WALLPAPERS = [
 
 export const ANIMATION_OPTIONS = [
   { id: 'auto', name: 'Automático (Tema)', icon: RefreshCw, desc: 'Adapta-se ao estilo clássico, moderno ou escuro de acordo com o tema selecionado.' },
+  { id: 'gipp_retro', name: 'Delphi Form Designer (VCL Grid)', icon: LayoutTemplate, desc: 'Grade 8x8 de formulário do Delphi 13 Florence com componentes FireDAC e VCL flutuantes.' },
   { id: 'none', name: 'Nenhuma (Estático)', icon: Compass, desc: 'Para computadores mais lentos ou maior foco. Desativa todas as movimentações.' },
   { id: 'aurora', name: 'Aurora Boreal Fluida', icon: Sparkle, desc: 'Grandes bolhas coloridas brilhantes de movimentação orgânica contínua.' },
-  { id: 'winxp', name: 'XP Bliss (Nuvens reais)', icon: Smile, desc: 'Brilho solar, nuvens que cruzam o monitor e borboletas flutuantes na tela.' },
   { id: 'win95', name: 'Windows 95 Starfield', icon: Sparkle, desc: 'Estrelas clássicas e logotipos voadores de velocidade hipersônica retrô.' },
   { id: 'premium_black', name: 'Brilho Dourado (Premium)', icon: Sparkle, desc: 'Moderna e sofisticada pulsação de luz dourada indireta excelente para salas escuras.' },
   { id: 'stars', name: 'Chuva de Estrelas Prateadas', icon: Star, desc: 'Animação de céu limpo com micro estrelas que brilham em ritmos alternados.' },

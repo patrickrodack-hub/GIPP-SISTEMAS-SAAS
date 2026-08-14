@@ -43,6 +43,7 @@ import { GippDocsIcon, GippSheetsIcon } from './components/GippOfficeIcons';
 // --- MODULARIZED IMPORTS ---
 import { Win11PropertiesModal } from './components/Win11PropertiesModal';
 import { InteractiveWindow } from './components/InteractiveWindow';
+import { DelphiFlorenceLayout } from './components/DelphiFlorenceLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
@@ -107,6 +108,7 @@ const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin'));
 import { LockScreenModal } from './components/LockScreenModal';
 import { MobileBottomDock } from './components/MobileBottomDock';
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
+import { requestAppFullscreen } from './lib/performanceHelpers';
 // ----------------------------
 
 
@@ -535,380 +537,6 @@ const OsThemeStyles = () => (
             stroke-width: 1.5px !important; 
         }
 
-        body[data-os-theme="winxp"] {
-            background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Bliss_%28Windows_XP%29.png/1440px-Bliss_%28Windows_XP%29.png') center/cover no-repeat fixed, linear-gradient(to bottom, #5998D6 0%, #76A8D9 50%, #75A943 50%, #4D8E2E 100%) !important;
-            font-family: Tahoma, 'Trebuchet MS', Arial, sans-serif !important;
-            color: #000000 !important;
-            image-rendering: auto !important;
-        }
-
-        /* Animações e Transições Suaves do Windows XP */
-        @keyframes xp-window-entrance {
-            from {
-                opacity: 0;
-                transform: scale(0.96) translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-backdrop {
-            background-color: rgba(0, 0, 0, 0.35) !important;
-            backdrop-filter: blur(1.5px) !important;
-            transition: all 0.3s ease-in-out;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-main {
-            animation: xp-window-entrance 0.25s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important;
-            background: #ece9d8 !important;
-            border: 3px solid #0054e3 !important;
-            border-radius: 8px 8px 4px 4px !important;
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45) !important;
-            font-family: Tahoma, Arial, sans-serif !important;
-            overflow: hidden;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-header {
-            background: linear-gradient(to bottom, #1e72e1 0%, #1656c0 10%, #1247a8 50%, #1247a8 51%, #1d69e4 100%) !important;
-            border-bottom: 2px solid #002d96 !important;
-            border-radius: 5px 5px 0 0 !important;
-            color: #ffffff !important;
-            padding: 8px 14px !important;
-            text-shadow: 1px 1px 1px #002d96 !important;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-title {
-            font-family: Tahoma, sans-serif !important;
-            font-weight: bold !important;
-            font-size: 14.5px !important;
-            color: #ffffff !important;
-            letter-spacing: 0.3px !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-subtitle {
-            color: #bfd5ff !important;
-            font-family: Tahoma, sans-serif !important;
-            font-weight: bold !important;
-            font-size: 9px !important;
-            letter-spacing: 0.2em !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-icon-container {
-            background: rgba(255, 255, 255, 0.2) !important;
-            border: 1px solid rgba(255, 255, 255, 0.45) !important;
-            border-radius: 4px !important;
-            width: 32px !important;
-            height: 32px !important;
-        }
-
-        /* Estilo Autêntico de Botões Luna do Windows XP no Painel Superior */
-        body[data-os-theme="winxp"] .interactive-window-btn {
-            width: 21px !important;
-            height: 21px !important;
-            border-radius: 3px !important;
-            padding: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin-left: 2px !important;
-            transition: all 0.1s ease !important;
-            box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.55), 1px 1px 1px rgba(0, 0, 0, 0.15) !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-reset,
-        body[data-os-theme="winxp"] .interactive-window-btn-resize {
-            background: linear-gradient(to bottom, #9ebcf2 0%, #5d93ec 45%, #2564db 55%, #3d80ea 100%) !important;
-            border: 1px solid #1c4ea3 !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-reset:hover,
-        body[data-os-theme="winxp"] .interactive-window-btn-resize:hover {
-            background: linear-gradient(to bottom, #b8cefa 0%, #7fabf5 45%, #427ee8 55%, #5e9cf5 100%) !important;
-            filter: brightness(1.1);
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-reset svg,
-        body[data-os-theme="winxp"] .interactive-window-btn-resize svg {
-            color: #ffffff !important;
-            filter: none !important;
-            stroke-width: 3px !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-close {
-            background: linear-gradient(to bottom, #f39174 0%, #e35a3e 45%, #d13a1a 55%, #da5f3d 100%) !important;
-            border: 1px solid #701500 !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-close:hover {
-            background: linear-gradient(to bottom, #f7b29d 0%, #ea7d66 45%, #e04a29 55%, #e78267 100%) !important;
-            filter: brightness(1.15);
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-close:active {
-            background: linear-gradient(to bottom, #be3316 0%, #cd4226 100%) !important;
-            box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4) !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-btn-close svg {
-            color: #ffffff !important;
-            filter: none !important;
-            stroke-width: 3px !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-content {
-            background-color: #f1ebd9 !important; /* Visual suave e clássico das janelas de diálogo do XP */
-            border: 1px solid #919082 !important;
-            border-radius: 0px !important;
-            margin: 8px !important;
-            padding: 20px !important;
-            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.08), inset -1px -1px 0px #ffffff !important;
-        }
-
-        body[data-os-theme="winxp"] .interactive-window-footer {
-            background: #ece9d8 !important;
-            border-top: 1px solid #d8d2bd !important;
-            padding: 12px 16px !important;
-            display: flex !important;
-            gap: 12px !important;
-        }
-
-        /* Scrollbar Retro do Windows XP */
-        body[data-os-theme="winxp"] ::-webkit-scrollbar {
-            width: 16px !important;
-            height: 16px !important;
-        }
-        body[data-os-theme="winxp"] ::-webkit-scrollbar-track {
-            background: #ece9d8 url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='2' height='2' fill='%23ffffff'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%23ffffff'/%3E%3Crect x='2' width='2' height='2' fill='%23dcd9cd'/%3E%3Crect y='2' width='2' height='2' fill='%23dcd9cd'/%3E%3C/svg%3E") repeat !important;
-        }
-        body[data-os-theme="winxp"] ::-webkit-scrollbar-thumb {
-            background-color: #ece9d8 !important;
-            border: 1px solid #919082 !important;
-            box-shadow: inset 1px 1px 0px #ffffff, inset -1px -1px 0px #b5b2a0 !important;
-        }
-        body[data-os-theme="winxp"] ::-webkit-scrollbar-thumb:hover {
-            background-color: #f1efe2 !important;
-        }
-
-        /* Janelas e Cards Luna Clássico */
-        body[data-os-theme="winxp"] .glass-modern, 
-        body[data-os-theme="winxp"] .glass-card, 
-        body[data-os-theme="winxp"] .glass-panel {
-            background: #ece9d8 !important;
-            backdrop-filter: none !important;
-            border: 3px solid #0054e3 !important;
-            border-radius: 8px 8px 0px 0px !important;
-            box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.45) !important;
-            color: #000000 !important;
-            padding: 12px !important;
-        }
-
-        /* Inversão de textos do tema escuro global que possam conflitar com o fundo claro das janelas XP */
-        body[data-os-theme="winxp"] .text-slate-900,
-        body[data-os-theme="winxp"] .text-slate-800,
-        body[data-os-theme="winxp"] .text-slate-700,
-        body[data-os-theme="winxp"] h1,
-        body[data-os-theme="winxp"] h2,
-        body[data-os-theme="winxp"] h3,
-        body[data-os-theme="winxp"] h4,
-        body[data-os-theme="winxp"] .text-gray-900,
-        body[data-os-theme="winxp"] .text-zinc-900 {
-            color: #000000 !important;
-            text-shadow: none !important;
-        }
-        
-        body[data-os-theme="winxp"] .text-slate-600,
-        body[data-os-theme="winxp"] .text-slate-500,
-        body[data-os-theme="winxp"] .text-gray-600 {
-            color: #3d3d3d !important;
-        }
-
-        /* Cabeçalhos Simulando a Barra de Título Azul do Windows XP */
-        body[data-os-theme="winxp"] .border-b.border-white\\/30, 
-        body[data-os-theme="winxp"] .border-b.border-slate-100,
-        body[data-os-theme="winxp"] .glass-modern > div:first-child,
-        body[data-os-theme="winxp"] .glass-card > div:first-child {
-            background: linear-gradient(to bottom, #1e72e1 0%, #1656c0 50%, #1247a8 50%, #1d69e4 100%) !important;
-            color: white !important;
-            border: none !important;
-            border-bottom: 1px solid #002d96 !important;
-            border-radius: 5px 5px 0 0 !important;
-            padding: 8px 12px !important;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.7) !important;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
-        }
-
-        body[data-os-theme="winxp"] .border-b.border-white\\/30 *, 
-        body[data-os-theme="winxp"] .border-b.border-slate-100 *,
-        body[data-os-theme="winxp"] .glass-modern > div:first-child *,
-        body[data-os-theme="winxp"] .glass-card > div:first-child * {
-            color: #ffffff !important;
-        }
-
-        /* Barra de Tarefas Lateral / Sidebar no Estilo do Painel do Windows Explorer */
-        body[data-os-theme="winxp"] aside {
-            background: linear-gradient(to bottom, #749be8 0%, #5d81d2 100%) !important;
-            border-right: 3px solid #0054e3 !important;
-            border-radius: 0px !important;
-            box-shadow: none !important;
-        }
-        body[data-os-theme="winxp"] aside * {
-            color: #002d96 !important;
-        }
-        body[data-os-theme="winxp"] aside .bg-slate-[#131154]/50,
-        body[data-os-theme="winxp"] aside .bg-slate-900\/50,
-        body[data-os-theme="winxp"] aside [class*="bg-"] {
-            background-color: transparent !important;
-        }
-        body[data-os-theme="winxp"] aside a,
-        body[data-os-theme="winxp"] aside button {
-            background: linear-gradient(to bottom, #ffffff 0%, #f4f6fb 100%) !important;
-            border: 1px solid #9fb9ef !important;
-            border-radius: 5px !important;
-            padding: 8px 12px !important;
-            color: #002d96 !important;
-            margin-bottom: 4px !important;
-            font-weight: bold !important;
-            text-shadow: none !important;
-            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05) !important;
-            transition: all 0.15s ease !important;
-        }
-        body[data-os-theme="winxp"] aside a:hover,
-        body[data-os-theme="winxp"] aside button:hover {
-            text-decoration: none !important;
-            background: #ffea9f !important;
-            border-color: #fca724 !important;
-            color: #002d96 !important;
-            transform: translateX(2px);
-        }
-
-        /* Inputs e Formulários */
-        body[data-os-theme="winxp"] input, 
-        body[data-os-theme="winxp"] select, 
-        body[data-os-theme="winxp"] textarea {
-            border-radius: 0px !important;
-            border: 1px solid #7f9db9 !important;
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            padding: 4px 6px !important;
-            box-shadow: none !important;
-            font-family: Tahoma, Arial, sans-serif !important;
-        }
-        body[data-os-theme="winxp"] input:focus, 
-        body[data-os-theme="winxp"] select:focus, 
-        body[data-os-theme="winxp"] textarea:focus {
-            border: 1px solid #14358a !important;
-            outline: none !important;
-        }
-        body[data-os-theme="winxp"] input[type="checkbox"] {
-            width: 13px !important;
-            height: 13px !important;
-            appearance: checkbox !important;
-            border: 1px solid #808080 !important;
-            border-radius: 0px !important;
-        }
-
-        /* Botão Iniciar e Botões Gerais XP Luna */
-        body[data-os-theme="winxp"] button {
-            background: linear-gradient(to bottom, #faf9f5 0%, #f4f3ee 45%, #e3e1da 85%, #d8d5cb 100%) !important;
-            color: #000000 !important;
-            border: 1px solid #003c74 !important;
-            border-radius: 3px !important;
-            box-shadow: inset 1px 1px 0px #ffffff, 1px 1px 2px rgba(0,0,0,0.15) !important;
-            text-shadow: none !important;
-            font-weight: normal !important;
-            padding: 5px 14px !important;
-            transition: none !important;
-        }
-        body[data-os-theme="winxp"] button:hover {
-            background: linear-gradient(to bottom, #ffea9f 0%, #fed276 45%, #fcb847 85%, #ffcf78 100%) !important;
-            border: 1px solid #e59310 !important;
-        }
-        body[data-os-theme="winxp"] button:active {
-            background: linear-gradient(to bottom, #e3e1da 0%, #d8d5cb 100%) !important;
-            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
-        }
-
-        /* Botões Primários no Estilo Verde Oliva / Botão Iniciar */
-        body[data-os-theme="winxp"] button.bg-indigo-600,
-        body[data-os-theme="winxp"] button.bg-emerald-600,
-        body[data-os-theme="winxp"] button.bg-blue-600,
-        body[data-os-theme="winxp"] button.bg-gradient-to-r,
-        body[data-os-theme="winxp"] button[type="submit"] {
-            background: linear-gradient(to bottom, #3cc03c 0%, #2ba52b 45%, #198019 85%, #116811 100%) !important;
-            color: #ffffff !important;
-            font-weight: bold !important;
-            border: 1px solid #104c10 !important;
-            border-radius: 3px !important;
-            box-shadow: inset 1px 1px 1px rgba(255,255,255,0.4), 1px 1px 2px rgba(0,0,0,0.2) !important;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.4) !important;
-            padding: 6px 16px !important;
-        }
-        body[data-os-theme="winxp"] button.bg-indigo-600:hover,
-        body[data-os-theme="winxp"] button.bg-emerald-600:hover,
-        body[data-os-theme="winxp"] button.bg-blue-600:hover,
-        body[data-os-theme="winxp"] button.bg-gradient-to-r:hover,
-        body[data-os-theme="winxp"] button[type="submit"]:hover {
-            background: linear-gradient(to bottom, #5fe45f 0%, #30b130 50%, #1a8e1a 100%) !important;
-        }
-
-        body[data-os-theme="winxp"] table {
-            background-color: #ffffff !important;
-            border-collapse: collapse !important;
-            border: 1px solid #d6dff7 !important;
-        }
-        body[data-os-theme="winxp"] th {
-            background: linear-gradient(to bottom, #faf9f6 0%, #f2f0e8 100%) !important;
-            color: #000000 !important;
-            border: 1px solid #d6dff7 !important;
-            font-weight: bold !important;
-        }
-        body[data-os-theme="winxp"] td {
-            border: 1px solid #e1e1e1 !important;
-            color: #000000 !important;
-            background-color: #ffffff !important;
-        }
-        body[data-os-theme="winxp"] tr:nth-child(even) td {
-            background-color: #f7f5ef !important;
-        }
-
-        /* SVG Icons e Sombras Retro */
-        body[data-os-theme="winxp"] svg {
-            stroke-width: 2.2px !important;
-            filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.25)) saturate(1.1);
-        }
-
-        /* Modal Customizada clássica do WinXP */
-        body[data-os-theme="winxp"] .fixed.inset-0.bg-slate-900\\/60 {
-            backdrop-filter: none !important;
-            background-color: rgba(0, 0, 0, 0.4) !important;
-        }
-        body[data-os-theme="winxp"] .fixed.inset-0.bg-slate-900\\/60 > div {
-            border-radius: 8px 8px 0px 0px !important;
-            border: 4px solid #0054e3 !important;
-            background: #ece9d8 !important;
-            box-shadow: 6px 6px 20px rgba(0,0,0,0.6) !important;
-        }
-        body[data-os-theme="winxp"] .fixed.inset-0.bg-slate-900\\/60 div[class*="bg-gradient-to-br"] {
-            background: linear-gradient(to right, #0058e6 0%, #3a93ff 50%, #0058e6 100%) !important;
-            border-radius: 4px 4px 0 0 !important;
-            border-bottom: 1px solid #002d96 !important;
-        }
-        body[data-os-theme="winxp"] .fixed.inset-0.bg-slate-900\\/60 input,
-        body[data-os-theme="winxp"] .fixed.inset-0.bg-slate-900\\/60 select {
-            border: 1px solid #7f9db9 !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-        }
-        body[data-os-theme="winxp"] .fixed.inset-0.bg-slate-900\\/60 button[class*="hover:bg-rose-500"] {
-            background-color: #e04343 !important;
-            border: 1px solid #721c1c !important;
-            color: white !important;
-            border-radius: 3px !important;
-        }
-
         body[data-os-theme="win95"] { background-color: #008080 !important; background-image: none !important; font-family: 'Pixelated', 'Courier New', Courier, monospace !important; }
         body[data-os-theme="win95"] * { border-radius: 0 !important; box-shadow: none !important; backdrop-filter: none !important; text-transform: uppercase !important; }
         body[data-os-theme="win95"] .glass-modern, body[data-os-theme="win95"] .glass-card, body[data-os-theme="win95"] .glass-panel, body[data-os-theme="win95"] aside, body[data-os-theme="win95"] .bg-white { background-color: #c0c0c0 !important; border-top: 2px solid #ffffff !important; border-left: 2px solid #ffffff !important; border-right: 2px solid #000000 !important; border-bottom: 2px solid #000000 !important; color: #000000 !important; }
@@ -1221,6 +849,256 @@ const OsThemeStyles = () => (
             border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
             color: #ffffff !important;
             padding: 12px 18px !important;
+        }
+
+        /* =========================================================================
+           THEME: GIPP RETRO (Embarcadero Delphi 13 Florence - VCL RAD Studio Style)
+           ========================================================================= */
+        body[data-os-theme="gipp_retro"] {
+            background-color: #E2E6EA !important;
+            background-image: radial-gradient(#9AA5B1 1.2px, transparent 1.2px) !important;
+            background-size: 8px 8px !important;
+            font-family: 'Segoe UI', 'Tahoma', 'MS Sans Serif', system-ui, sans-serif !important;
+            color: #1A202C !important;
+        }
+
+        /* Delphi VCL Bevel Scrollbars */
+        body[data-os-theme="gipp_retro"] ::-webkit-scrollbar {
+            width: 14px !important;
+            height: 14px !important;
+        }
+        body[data-os-theme="gipp_retro"] ::-webkit-scrollbar-track {
+            background: #E4E7EB !important;
+            border: 1px solid #CBD5E1 !important;
+        }
+        body[data-os-theme="gipp_retro"] ::-webkit-scrollbar-thumb {
+            background: #D1D5DB !important;
+            border-top: 2px solid #FFFFFF !important;
+            border-left: 2px solid #FFFFFF !important;
+            border-right: 2px solid #6B7280 !important;
+            border-bottom: 2px solid #6B7280 !important;
+            border-radius: 0px !important;
+        }
+        body[data-os-theme="gipp_retro"] ::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF !important;
+        }
+
+        /* Delphi VCL Panels & Form Containers (TPanel / TGroupBox) */
+        body[data-os-theme="gipp_retro"] .glass-modern, 
+        body[data-os-theme="gipp_retro"] .glass-card, 
+        body[data-os-theme="gipp_retro"] .glass-panel, 
+        body[data-os-theme="gipp_retro"] aside, 
+        body[data-os-theme="gipp_retro"] .bg-white, 
+        body[data-os-theme="gipp_retro"] .bg-slate-50,
+        body[data-os-theme="gipp_retro"] .bg-white\/80,
+        body[data-os-theme="gipp_retro"] .bg-slate-50\/80 {
+            background: #ECEFF4 !important;
+            border-top: 2px solid #FFFFFF !important;
+            border-left: 2px solid #FFFFFF !important;
+            border-right: 2px solid #7B8794 !important;
+            border-bottom: 2px solid #7B8794 !important;
+            border-radius: 4px !important;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.12), inset 1px 1px 0px #FFFFFF !important;
+            backdrop-filter: none !important;
+            color: #102A43 !important;
+        }
+
+        body[data-os-theme="gipp_retro"] .glass-card:hover {
+            background: #F0F3F7 !important;
+            border-top-color: #FFFFFF !important;
+            border-left-color: #FFFFFF !important;
+            border-right-color: #004E98 !important;
+            border-bottom-color: #004E98 !important;
+            transform: none !important;
+            box-shadow: 3px 3px 8px rgba(0, 78, 152, 0.18) !important;
+        }
+
+        /* Delphi Header Bars (TForm Title / TToolBar) */
+        body[data-os-theme="gipp_retro"] aside {
+            background: #DFE3E8 !important;
+            border-right: 2px solid #7B8794 !important;
+            border-left: none !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            box-shadow: 3px 0px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Typography & Headings (Delphi VCL Classic Navy / Steel) */
+        body[data-os-theme="gipp_retro"] h1, 
+        body[data-os-theme="gipp_retro"] h2, 
+        body[data-os-theme="gipp_retro"] h3,
+        body[data-os-theme="gipp_retro"] h4 {
+            color: #004E98 !important;
+            font-family: 'Segoe UI', 'Tahoma', sans-serif !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.2px !important;
+        }
+
+        body[data-os-theme="gipp_retro"] .text-slate-800,
+        body[data-os-theme="gipp_retro"] .text-slate-900,
+        body[data-os-theme="gipp_retro"] .text-slate-700 {
+            color: #102A43 !important;
+            font-weight: 600 !important;
+        }
+
+        body[data-os-theme="gipp_retro"] .text-slate-600,
+        body[data-os-theme="gipp_retro"] .text-slate-500,
+        body[data-os-theme="gipp_retro"] .text-slate-400 {
+            color: #334E68 !important;
+        }
+
+        /* Delphi Primary Accent */
+        body[data-os-theme="gipp_retro"] .text-gradient,
+        body[data-os-theme="gipp_retro"] .text-indigo-600,
+        body[data-os-theme="gipp_retro"] .text-indigo-500 {
+            background: linear-gradient(135deg, #004E98, #1D65A6) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: #004E98 !important;
+            font-weight: 800 !important;
+        }
+
+        body[data-os-theme="gipp_retro"] .bg-indigo-50,
+        body[data-os-theme="gipp_retro"] .bg-indigo-100\/50,
+        body[data-os-theme="gipp_retro"] .bg-slate-100 {
+            background-color: #DDE2E8 !important;
+            color: #004E98 !important;
+            border: 1px solid #BAC7D5 !important;
+            border-radius: 3px !important;
+        }
+
+        /* Delphi TBitBtn & TButton 3D Controls */
+        body[data-os-theme="gipp_retro"] button.bg-gradient-to-r, 
+        body[data-os-theme="gipp_retro"] .bg-indigo-600, 
+        body[data-os-theme="gipp_retro"] .bg-indigo-500,
+        body[data-os-theme="gipp_retro"] .bg-emerald-500,
+        body[data-os-theme="gipp_retro"] .bg-emerald-600 {
+            background: linear-gradient(180deg, #FFFFFF 0%, #E6E9ED 40%, #D2D7DF 100%) !important;
+            border-top: 2px solid #FFFFFF !important;
+            border-left: 2px solid #FFFFFF !important;
+            border-right: 2px solid #5A6578 !important;
+            border-bottom: 2px solid #5A6578 !important;
+            border-radius: 3px !important;
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15) !important;
+            color: #102A43 !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.2px !important;
+            transition: none !important;
+            text-shadow: 0 1px 0 #FFFFFF !important;
+        }
+
+        body[data-os-theme="gipp_retro"] button.bg-gradient-to-r:hover,
+        body[data-os-theme="gipp_retro"] .bg-indigo-600:hover,
+        body[data-os-theme="gipp_retro"] .bg-indigo-500:hover,
+        body[data-os-theme="gipp_retro"] .bg-emerald-500:hover,
+        body[data-os-theme="gipp_retro"] .bg-emerald-600:hover {
+            background: linear-gradient(180deg, #FFFFFF 0%, #EDF1F6 50%, #DDE3EB 100%) !important;
+            color: #004E98 !important;
+            border-right-color: #004E98 !important;
+            border-bottom-color: #004E98 !important;
+        }
+
+        body[data-os-theme="gipp_retro"] button:active,
+        body[data-os-theme="gipp_retro"] button.bg-gradient-to-r:active,
+        body[data-os-theme="gipp_retro"] .bg-indigo-600:active {
+            border-top: 2px solid #5A6578 !important;
+            border-left: 2px solid #5A6578 !important;
+            border-right: 2px solid #FFFFFF !important;
+            border-bottom: 2px solid #FFFFFF !important;
+            background: #CBD2DB !important;
+            transform: translate(1px, 1px) !important;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
+        }
+
+        /* Delphi TEdit Sunken Input Fields */
+        body[data-os-theme="gipp_retro"] input, 
+        body[data-os-theme="gipp_retro"] select, 
+        body[data-os-theme="gipp_retro"] textarea {
+            background-color: #FFFFFF !important;
+            border-top: 2px solid #6E7A8A !important;
+            border-left: 2px solid #6E7A8A !important;
+            border-right: 1px solid #CBD5E1 !important;
+            border-bottom: 1px solid #CBD5E1 !important;
+            border-radius: 2px !important;
+            color: #0F172A !important;
+            font-weight: 600 !important;
+            box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        body[data-os-theme="gipp_retro"] input:focus, 
+        body[data-os-theme="gipp_retro"] select:focus, 
+        body[data-os-theme="gipp_retro"] textarea:focus {
+            border-top: 2px solid #004E98 !important;
+            border-left: 2px solid #004E98 !important;
+            border-right: 1px solid #004E98 !important;
+            border-bottom: 1px solid #004E98 !important;
+            outline: 1px solid #004E98 !important;
+            background-color: #FFFFFA !important;
+        }
+
+        /* Delphi TDBGrid Table Styling */
+        body[data-os-theme="gipp_retro"] table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 2px solid #7B8794 !important;
+            background-color: #FFFFFF !important;
+        }
+
+        body[data-os-theme="gipp_retro"] table th {
+            background: linear-gradient(180deg, #F0F3F7 0%, #DDE3EA 100%) !important;
+            border-top: 1px solid #FFFFFF !important;
+            border-left: 1px solid #FFFFFF !important;
+            border-right: 1px solid #9AA5B1 !important;
+            border-bottom: 2px solid #6E7A8A !important;
+            color: #102A43 !important;
+            font-weight: 800 !important;
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        body[data-os-theme="gipp_retro"] table td {
+            border-right: 1px solid #E2E8F0 !important;
+            border-bottom: 1px solid #CBD5E1 !important;
+            color: #1E293B !important;
+            background-color: #FFFFFF !important;
+            font-size: 12px !important;
+        }
+
+        body[data-os-theme="gipp_retro"] tr:hover td {
+            background-color: #E6F0FA !important;
+            color: #004E98 !important;
+            font-weight: 700 !important;
+        }
+
+        /* Delphi Icons */
+        body[data-os-theme="gipp_retro"] svg {
+            filter: drop-shadow(0.5px 0.5px 0px rgba(0,0,0,0.15));
+            color: #243B53 !important;
+        }
+        body[data-os-theme="gipp_retro"] button svg,
+        body[data-os-theme="gipp_retro"] .text-indigo-600 svg {
+            color: #004E98 !important;
+        }
+
+        /* Modal & Window Headers in Delphi 13 VCL */
+        body[data-os-theme="gipp_retro"] .interactive-window-main {
+            background: #ECEFF4 !important;
+            border-top: 2px solid #FFFFFF !important;
+            border-left: 2px solid #FFFFFF !important;
+            border-right: 2px solid #5A6578 !important;
+            border-bottom: 2px solid #5A6578 !important;
+            border-radius: 4px !important;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        body[data-os-theme="gipp_retro"] .interactive-window-header {
+            background: linear-gradient(90deg, #004E98 0%, #1D65A6 100%) !important;
+            color: #FFFFFF !important;
+            font-weight: 800 !important;
+            padding: 8px 14px !important;
+            border-bottom: 2px solid #003366 !important;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5) !important;
         }
 
     `}</style>
@@ -1644,8 +1522,8 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     const getBaseThemeStyles = () => {
         if (theme === 'macos_tahoe') return "bg-[#0b0c16]";
         if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
-        if (theme === 'winxp') return "bg-[#5998D6]";
         if (theme === 'win95') return "bg-[#008080]";
+        if (theme === 'gipp_retro') return "bg-[#E2E6EA]";
         if (theme === 'premium_black') return "bg-[#050505]";
         if (theme === 'msdos') return "bg-[#000022]";
         if (theme === 'linux') return "bg-[#1f0b1a]";
@@ -1659,14 +1537,6 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         if (isSplash) return "bg-[#0f172a] bg-[radial-gradient(at_0%_0%,_hsla(253,16%,7%,1)_0,_transparent_50%),_radial-gradient(at_50%_0%,_hsla(242,47%,18%,1)_0,_transparent_50%)]";
         return "bg-white"; // default
     };
-
-    const WinxpButterfly = ({ className = "", style = {} }) => (
-        <div className={`relative pointer-events-none select-none ${className}`} style={{ width: '16px', height: '16px', ...style }}>
-            <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-                <path d="M50 40 C35 20, 10 30, 25 55 C35 70, 48 65, 50 60 C52 65, 65 70, 75 55 C90 30, 65 20, 50 40 Z" />
-            </svg>
-        </div>
-    );
 
     const Win95Logo = () => (
         <div className="relative flex flex-wrap gap-0.5 pointer-events-none select-none" style={{ width: '28px', height: '28px', transformStyle: 'preserve-3d' }}>
@@ -1703,69 +1573,9 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                 </div>
             )}
 
-            {/* Backdrops originais de sistema caso papel de parede não esteja ativo */}
-            {!papelParede && theme === 'winxp' && (
-                <div 
-                    className="absolute inset-0 bg-cover bg-center" 
-                    style={{ backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Bliss_%28Windows_XP%29.png/1440px-Bliss_%28Windows_XP%29.png')`, backgroundPosition: '50% 65%' }}
-                />
-            )}
-
             {/* ANIMAÇÃO SELECIONADA OU AUTOMÁTICA */}
             {(activeAnim === 'win11' || activeAnim === 'aurora') && (
                 <div className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] bg-blue-400/30 dark:bg-blue-600/20 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen" style={{ animation: 'aurora-blob-1 20s infinite ease-in-out' }}></div>
-            )}
-
-            {activeAnim === 'winxp' && (
-                <>
-                    <style>{`
-                        @keyframes xp-drift-cloud {
-                            0% { transform: translateX(0); }
-                            100% { transform: translateX(calc(100vw + 400px)); }
-                        }
-                        @keyframes xp-flutter {
-                            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-                            25% { transform: translate(30px, -45px) rotate(15deg); }
-                            50% { transform: translate(60px, -20px) rotate(-10deg); }
-                            75% { transform: translate(25px, 25px) rotate(20deg); }
-                        }
-                        @keyframes xp-flutter-fast {
-                            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-                            33% { transform: translate(-35px, -55px) rotate(-20deg) scale(0.9); }
-                            66% { transform: translate(35px, -30px) rotate(30deg) scale(1.1); }
-                        }
-                    `}</style>
-                    {/* Linha solar */}
-                    <div 
-                        className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-yellow-100/20 filter blur-[80px]" 
-                        style={{ animation: 'pulse-glow 6s infinite ease-in-out' }}
-                    />
-                    <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-yellow-200/10 filter blur-[40px]" />
-                    
-                    {/* Nuves do XP */}
-                    <div className="absolute top-[8%] left-[-250px] w-56 h-12 bg-white/45 rounded-full filter blur-[6px]"
-                         style={{ animation: 'xp-drift-cloud 55s linear infinite', animationDelay: '0s' }} />
-                    <div className="absolute top-[18%] left-[-300px] w-64 h-16 bg-white/50 rounded-full filter blur-[5px]"
-                         style={{ animation: 'xp-drift-cloud 40s linear infinite', animationDelay: '-12s' }} />
-                    <div className="absolute top-[28%] left-[-200px] w-48 h-10 bg-white/40 rounded-full filter blur-[4px]"
-                         style={{ animation: 'xp-drift-cloud 30s linear infinite', animationDelay: '-5s' }} />
-                    <div className="absolute top-[3%] left-[-350px] w-80 h-20 bg-white/30 rounded-full filter blur-[8px]"
-                         style={{ animation: 'xp-drift-cloud 80s linear infinite', animationDelay: '-25s' }} />
-
-                    {/* Borboletas */}
-                    <div className="absolute bottom-[20%] left-[15%] w-6 h-6 text-amber-500 pointer-events-none"
-                         style={{ animation: 'xp-flutter 12s ease-in-out infinite' }}>
-                        <WinxpButterfly />
-                    </div>
-                    <div className="absolute bottom-[28%] right-[25%] w-5 h-5 text-sky-400 pointer-events-none"
-                         style={{ animation: 'xp-flutter-fast 9s ease-in-out infinite', animationDelay: '-3s' }}>
-                        <WinxpButterfly />
-                    </div>
-                    
-                    {/* Brilhos de relva */}
-                    <div className="absolute bottom-[10%] left-[35%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-60" style={{ animationDuration: '3s' }} />
-                    <div className="absolute bottom-[15%] right-[45%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-40" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }} />
-                </>
             )}
 
             {activeAnim === 'win11' && (
@@ -1912,6 +1722,37 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                 </>
             )}
 
+            {activeAnim === 'gipp_retro' && (
+                <>
+                    <style>{`
+                        @keyframes delphi-scan {
+                            0% { transform: translateY(-100%); opacity: 0; }
+                            50% { opacity: 0.15; }
+                            100% { transform: translateY(100vh); opacity: 0; }
+                        }
+                        @keyframes delphi-badge-float {
+                            0%, 100% { transform: translateY(0px); }
+                            50% { transform: translateY(-8px); }
+                        }
+                    `}</style>
+                    <div className="absolute inset-0 bg-[#E2E6EA]" style={{ 
+                        backgroundImage: 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)',
+                        backgroundSize: '8px 8px'
+                    }}></div>
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#004E98] via-[#1D65A6] to-[#004E98] shadow-sm"></div>
+                    {/* Delphi Florence VCL floating designer badges */}
+                    <div className="absolute top-12 right-16 opacity-30 select-none pointer-events-none text-[10px] font-mono font-bold bg-[#ECEFF4] border border-[#7B8794] px-2 py-1 shadow-xs text-[#004E98] rounded-xs" style={{ animation: 'delphi-badge-float 8s infinite ease-in-out' }}>
+                        TFDConnection: FDConnGIPP [Connected]
+                    </div>
+                    <div className="absolute bottom-20 left-12 opacity-25 select-none pointer-events-none text-[10px] font-mono font-bold bg-[#ECEFF4] border border-[#7B8794] px-2 py-1 shadow-xs text-[#004E98] rounded-xs" style={{ animation: 'delphi-badge-float 10s infinite ease-in-out', animationDelay: '-4s' }}>
+                        TFormMain: TForm (Delphi 13 Florence VCL)
+                    </div>
+                    <div className="absolute top-1/3 left-8 opacity-20 select-none pointer-events-none text-[10px] font-mono font-bold bg-[#ECEFF4] border border-[#7B8794] px-2 py-1 shadow-xs text-[#102A43] rounded-xs" style={{ animation: 'delphi-badge-float 12s infinite ease-in-out', animationDelay: '-2s' }}>
+                        TDBGrid: DBGridMembros (DataSet: qryMembros)
+                    </div>
+                </>
+            )}
+
             {(activeAnim === 'stars' || activeAnim === 'splash' || (activeAnim === 'default' && !papelParede)) && (
                 <>
                     {isLightTheme ? (
@@ -1969,9 +1810,11 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const { osTheme, setOsTheme } = useContext(ChurchContext);
     const [isOpen, setIsOpen] = useState(false);
     const themesList = [
-        { id: 'default', label: 'GIPP Padrão' }, { id: 'premium_black', label: 'Premium Black' },
+        { id: 'default', label: 'GIPP Padrão' }, 
+        { id: 'gipp_retro', label: 'GIPP RETRO (Delphi 13) ⚡' },
+        { id: 'premium_black', label: 'Premium Black' },
         { id: 'macos_tahoe', label: 'macOS 26 Tahoe ' },
-        { id: 'win11', label: 'Windows 11' }, { id: 'winxp', label: 'Windows XP' },
+        { id: 'win11', label: 'Windows 11' },
         { id: 'win95', label: 'Windows 95' }, { id: 'msdos', label: 'Sistema COBOL' },
         { id: 'linux', label: 'Linux Ubuntu' }, { id: 'futuristic', label: 'GIPP Sci-Fi' }
     ];
@@ -1988,7 +1831,13 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 overflow-hidden">
                         {themesList.map(t => (
-                            <button key={t.id} onClick={() => { setOsTheme(t.id); setIsOpen(false); }} className={`w-full text-left px-4 py-3 text-sm font-bold border-b border-slate-50 ${osTheme === t.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-700'}`}>
+                            <button key={t.id} onClick={() => { 
+                                setOsTheme(t.id); 
+                                if (t.id === 'win11') {
+                                    requestAppFullscreen();
+                                }
+                                setIsOpen(false); 
+                            }} className={`w-full text-left px-4 py-3 text-sm font-bold border-b border-slate-50 ${osTheme === t.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-700'}`}>
                                 {t.label} {osTheme === t.id && <Check size={14} className="inline float-right mt-0.5"/>}
                             </button>
                         ))}
@@ -16175,9 +16024,6 @@ const MemberPortalLayout = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-black/70 border-b border-white/10 text-white backdrop-blur-md";
         }
-        if (osTheme === 'winxp') {
-            return "bg-[#3d7bad]/70 border-b border-blue-400/30 text-white backdrop-blur-md";
-        }
         if (osTheme === 'win95') {
             return "bg-[#008080]/70 border-b border-teal-900/30 text-white backdrop-blur-md";
         }
@@ -16187,9 +16033,6 @@ const MemberPortalLayout = () => {
     const getFooterStyles = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-black/70 border-t border-white/10 text-white/70 backdrop-blur-md";
-        }
-        if (osTheme === 'winxp') {
-            return "bg-[#3d7bad]/70 border-t border-blue-450/40 text-white/80 backdrop-blur-md";
         }
         if (osTheme === 'win95') {
             return "bg-[#008080]/70 border-t border-teal-900/40 text-white/80 backdrop-blur-md";
@@ -16201,9 +16044,6 @@ const MemberPortalLayout = () => {
         if (osTheme === 'premium_black' || osTheme === 'msdos' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-slate-900/70 text-white border-t border-white/10 backdrop-blur-md";
         }
-        if (osTheme === 'winxp') {
-            return "bg-[#1c5a93]/70 text-white border-t border-blue-400 backdrop-blur-md";
-        }
         if (osTheme === 'win95') {
             return "bg-[#008080]/70 text-white border-t border-teal-300 backdrop-blur-md";
         }
@@ -16211,7 +16051,7 @@ const MemberPortalLayout = () => {
     };
 
     const getBottomSheetTextStyles = () => {
-        if (isThemeDark || osTheme === 'winxp' || osTheme === 'win95') {
+        if (isThemeDark || osTheme === 'win95') {
             return {
                 title: "text-white",
                 sub: "text-slate-300",
@@ -16229,7 +16069,7 @@ const MemberPortalLayout = () => {
 
     const getBottomNavItemStyles = (active, hoverColor) => {
         if (active) {
-            if (isThemeDark || osTheme === 'winxp' || osTheme === 'win95') {
+            if (isThemeDark || osTheme === 'win95') {
                 return {
                     text: "text-emerald-300 font-extrabold",
                     iconBg: "bg-emerald-500/25 scale-110 shadow-sm",
@@ -16242,7 +16082,7 @@ const MemberPortalLayout = () => {
                 icon: "text-emerald-600"
             };
         } else {
-            if (isThemeDark || osTheme === 'winxp' || osTheme === 'win95') {
+            if (isThemeDark || osTheme === 'win95') {
                 return {
                     text: "text-white/60 hover:text-white/95 font-medium",
                     iconBg: "bg-transparent hover:bg-white/5",
@@ -16417,7 +16257,7 @@ const MemberPortalLayout = () => {
                 <header className={`md:hidden shrink-0 backdrop-blur-md p-4 flex justify-between items-center shadow-sm z-40 transition-all duration-300 ${getHeaderStyles()}`}>
                     <div className="flex items-center gap-3">
                         {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain rounded-lg" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs"><Building2 size={16}/></div>}
-                        <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'winxp' || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
+                        <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <OsThemeToggle variant="mobile" />
@@ -16587,7 +16427,7 @@ const RestoreOutlineIcon = ({ size = 12 }: { size?: number }) => (
 );
 
 const AppLayout = () => {
-    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, hasPermission, dismissedAnnouncement, setDismissedAnnouncement, theme, setTheme, setIsScreenLocked, lockScreen } = useContext(ChurchContext);
+    const { view, setView, sidebarOpen, setSidebarOpen, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, hasPermission, dismissedAnnouncement, setDismissedAnnouncement, theme, setTheme, setIsScreenLocked, lockScreen } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
 
     // --- LINUX UBUNTU / GNOME DESKTOP ARCHITECTURE & WINDOWS 11 ---
@@ -17141,6 +16981,27 @@ const AppLayout = () => {
     useEffect(() => {
         if (osTheme === 'win11') {
             fetchWeatherForCoords(-26.3045, -48.8456, 'Joinville', 'Santa Catarina');
+
+            // Executar sempre iniciando por Full Screen ao abrir o tema Windows 11
+            requestAppFullscreen();
+
+            // Garantir Full Screen na primeira interação do usuário caso o navegador bloqueie autoplay
+            const handleFirstGesture = () => {
+                requestAppFullscreen();
+                window.removeEventListener('click', handleFirstGesture);
+                window.removeEventListener('touchstart', handleFirstGesture);
+                window.removeEventListener('keydown', handleFirstGesture);
+            };
+
+            window.addEventListener('click', handleFirstGesture, { once: true });
+            window.addEventListener('touchstart', handleFirstGesture, { once: true });
+            window.addEventListener('keydown', handleFirstGesture, { once: true });
+
+            return () => {
+                window.removeEventListener('click', handleFirstGesture);
+                window.removeEventListener('touchstart', handleFirstGesture);
+                window.removeEventListener('keydown', handleFirstGesture);
+            };
         }
     }, [osTheme]);
 
@@ -17698,6 +17559,33 @@ const AppLayout = () => {
     const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
     const currentProps = MODULE_REGISTRY[view]?.props || {};
     const access = MODULE_REGISTRY[view]?.access || 'public';
+
+    if (osTheme === 'gipp_retro') {
+        const mMeta = getModuleMeta(view);
+        return (
+            <DelphiFlorenceLayout
+                view={view}
+                setView={setView}
+                user={user}
+                db={db}
+                mMeta={mMeta}
+                isModuleAllowed={isModuleAllowed}
+                hasPermission={hasPermission}
+                access={access}
+                CurrentModule={CurrentModule}
+                currentProps={currentProps}
+                handleLogoutRequest={handleLogoutRequest}
+                setIsScreenLocked={setIsScreenLocked}
+                theme={theme}
+                setTheme={setTheme}
+                osTheme={osTheme}
+                setOsTheme={setOsTheme}
+                animBgEnabled={animBgEnabled}
+                setAnimBgEnabled={setAnimBgEnabled}
+                ALL_AVAILABLE_MODULES={ALL_AVAILABLE_MODULES}
+            />
+        );
+    }
 
     if (osTheme === 'macos_tahoe') {
         const isMinimized = minimizedModules.includes(view) || !view;
@@ -18813,8 +18701,26 @@ const AppLayout = () => {
                             </div>
                         </div>
 
-                        {/* Right Status Tray (Time, Date, Wifi, battery) */}
+                        {/* Right Status Tray (Time, Date, Wifi, battery, Fullscreen) */}
                         <div className="flex items-center gap-1 text-xs font-semibold shrink-0">
+                            {/* Fullscreen Toggle Button */}
+                            <button
+                                onClick={() => {
+                                    const doc: any = document;
+                                    const docEl: any = document.documentElement;
+                                    if (!doc.fullscreenElement && !doc.webkitFullscreenElement && !doc.mozFullScreenElement && !doc.msFullscreenElement) {
+                                        requestAppFullscreen();
+                                    } else {
+                                        const cancelFullScreen = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+                                        if (cancelFullScreen) cancelFullScreen.call(doc);
+                                    }
+                                }}
+                                className="p-1.5 hover:bg-white/10 dark:hover:bg-white/5 rounded-md cursor-pointer transition-colors text-sky-400"
+                                title="Tela Cheia (Full Screen)"
+                            >
+                                <Maximize size={14} />
+                            </button>
+
                             {/* Fast Action Toggles (Wifi/Volume/Battery block) */}
                             <div className="flex items-center gap-2 hover:bg-white/10 dark:hover:bg-white/5 px-2 py-1.5 rounded-md cursor-pointer transition-colors">
                                 <Wifi size={14} className="text-blue-500" />

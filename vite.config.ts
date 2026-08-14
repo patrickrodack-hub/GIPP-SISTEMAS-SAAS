@@ -7,7 +7,9 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     build: {
-      minify: false,
+      outDir: 'dist',
+      emptyOutDir: true,
+      chunkSizeWarningLimit: 3000,
     },
     resolve: {
       alias: {
