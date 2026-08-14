@@ -3,121 +3,101 @@ import { createPortal } from 'react-dom';
 import { 
   Shield, Search, Plus, Edit, Trash2, Loader2, Check, X, Info, 
   MapPin, User, Key, Users, BookOpen, Layers, Lock, AlertTriangle, ArrowUpDown,
-  Camera, Upload, Image as ImageIcon, CheckSquare
+  Camera, Upload, Image as ImageIcon, Music, Video, Heart, Baby, Globe,
+  DollarSign, CreditCard, Activity, FileCheck, FileSpreadsheet, FileText,
+  Newspaper, Mail, Sparkles, Award, IdCard, Badge, Database, Palette,
+  Settings, ShieldCheck, Book, Car, FileCode
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { ChurchContext } from '../App';
 
-// Categorias organizadas de permissão cobrindo 100% dos módulos do sistema
+// Categorias organizadas de permissão com 100% dos módulos do sistema GIPP
 const CATEGORIAS_PERMISSOES = [
   {
-    titulo: "Gestão Eclesiástica & Pessoas",
-    desc: "Rol de Membros, Visitantes CRM, Congregações, Patrimônio, QR Code, Células, Frotas, Voluntários e Compras",
+    titulo: "Administrativo & Cadastros",
+    desc: "Cadastro de pessoas, visitantes, filiais, patrimônio e frotas",
     icon: Users,
     opcoes: [
-      { id: 'access_membros', label: 'Membros (Rol & Ficha Completa)' },
-      { id: 'access_visitantes', label: 'Visitantes & Funil CRM' },
-      { id: 'access_igreja', label: 'Sede & Congregações (Campos)' },
-      { id: 'access_patrimonio', label: 'Patrimônio & Bens da Igreja' },
-      { id: 'access_patrimonio_qrcode', label: 'Tombamento & QR Code de Ativos' },
-      { id: 'access_celulas', label: 'Células & Pequenos Grupos' },
-      { id: 'access_ministerios', label: 'Ministérios & Departamentos' },
+      { id: 'access_membros', label: 'Membros (Rol & Fichas)' },
+      { id: 'access_acessos_portal', label: 'Acessos do Portal de Membros' },
+      { id: 'access_visitantes', label: 'Visitantes & CRM' },
+      { id: 'access_igreja', label: 'Sede & Congregações' },
+      { id: 'access_patrimonio', label: 'Patrimônio & Bens' },
       { id: 'access_frotas', label: 'Controle de Frotas & Veículos' },
-      { id: 'access_familia', label: 'Ministério da Família & Casais' },
-      { id: 'access_banco_voluntarios', label: 'Banco de Voluntários (Lei 9.608)' },
-      { id: 'access_reserva_espacos', label: 'Reserva de Espaços & Tendas' },
-      { id: 'access_aprovacao_compras', label: 'Cotações & Aprovação de Compras' }
+      { id: 'access_celulas', label: 'Células & Pequenos Grupos' },
+      { id: 'access_ministerios', label: 'Departamentos & Ministérios Gerais' }
     ]
   },
   {
-    titulo: "Financeiro & CFO Executivo",
-    desc: "Dízimos, Entradas, Despesas, DRE, Carnês, Depto. Pessoal, Prebendas, Dupla Custódia e Fundos Restritos",
+    titulo: "Ministérios Específicos & Cuidado",
+    desc: "Louvor, Mídia, Família, Salinha Kids e Missões",
+    icon: Heart,
+    opcoes: [
+      { id: 'access_ministerio_louvor', label: 'Ministério de Louvor (Músicas/Escalas)' },
+      { id: 'access_ministerio_midia', label: 'Ministério de Mídia (Equipamentos/Escalas)' },
+      { id: 'access_ministerio_familia', label: 'Ministério da Família & Aconselhamento' },
+      { id: 'access_salinha_kids', label: 'Salinha Kids & Berçário (Check-In)' },
+      { id: 'access_missoes', label: 'Departamento de Missões & Projetos' }
+    ]
+  },
+  {
+    titulo: "Financeiro, RH & Tesouraria",
+    desc: "Dízimos, despesas, conciliações, DRE, carnês e folha de pagamento",
     icon: Layers,
     opcoes: [
-      { id: 'access_fin_entradas', label: 'Receitas (Entradas & Dízimos)' },
-      { id: 'access_fin_saidas', label: 'Despesas & Pagamentos (Saídas)' },
-      { id: 'access_fin_analise', label: 'DRE, Balanço & Conciliações' },
-      { id: 'access_fin_carnes', label: 'Carnês & Campanhas Especiais' },
+      { id: 'access_fin_entradas', label: 'Receitas (Dízimos & Ofertas)' },
+      { id: 'access_fin_saidas', label: 'Despesas (Saídas & Pagamentos)' },
+      { id: 'access_fin_analise', label: 'DRE Gerencial & Balancetes' },
+      { id: 'access_fin_conciliacao', label: 'Conciliação Bancária & DDA' },
+      { id: 'access_fin_carnes', label: 'Carnês de Dizimistas & Campanhas' },
       { id: 'access_fin_cadastros', label: 'Fornecedores & Centros de Custo' },
-      { id: 'access_dp_contabilidade', label: 'Depto. Pessoal & RH (Folha)' },
-      { id: 'access_orcamento_centros', label: 'Orçamento x Realizado' },
-      { id: 'access_fluxo_caixa_preditivo', label: 'Fluxo de Caixa Preditivo (30/60/90d)' },
-      { id: 'access_fundos_restritos', label: 'Fundos Carimbados / Restritos' },
-      { id: 'access_prebenda_compliance', label: 'Prebendas & Compliance (eSocial)' },
-      { id: 'access_dupla_custodia', label: 'Dupla Custódia & Ata de Culto' },
-      { id: 'access_prestacao_contas', label: 'Prestação de Contas (Balancetes)' },
-      { id: 'access_gipp_pay', label: 'GIPP Pay & Dízimo PIX' },
-      { id: 'access_lancamento_teclado', label: 'Caixa Express Teclado (Numpad)' }
+      { id: 'access_dp_contabilidade', label: 'Recursos Humanos (RH) & D.P.' }
     ]
   },
   {
-    titulo: "Secretaria, Ensino EAD & Gabinete",
-    desc: "Agenda, Certificados, Relatórios, Livro de Atas, EBD, Kids, Cursos EAD, Faculdade Teológica e Gabinete Pastoral",
+    titulo: "Secretaria, Relatórios & Ensino",
+    desc: "Agenda, Atas, Certificados, Carteirinhas, EBD, Cursos e Teologia",
     icon: BookOpen,
     opcoes: [
-      { id: 'access_sec_agenda', label: 'Agenda & Secretaria Integrada' },
-      { id: 'access_sec_certificados', label: 'Certificados & Credenciais em Lote' },
-      { id: 'access_sec_relatorios', label: 'Emissão de Relatórios Executivos PDF' },
-      { id: 'access_livro_atas', label: 'Livro Digital de Atas Eclesiásticas' },
-      { id: 'access_ebd', label: 'Escola Bíblica (EBD - Turmas e Chamadas)' },
-      { id: 'access_salinha_kids', label: 'Salinha Kids (Check-In QR Code)' },
-      { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos)' },
-      { id: 'access_teologia', label: 'Universidade Teológica GIPP (CGADB/CPAD)' },
-      { id: 'access_missoes', label: 'Departamento de Missões & Projetos' },
-      { id: 'access_biblia', label: 'Bíblia de Estudo Digital Interativa' },
-      { id: 'access_portal_pastor', label: 'Portal do Pastor & Gabinete' },
-      { id: 'access_portal_tesoureiro', label: 'Portal do Tesoureiro' },
-      { id: 'access_documentos_express', label: 'Expediente de Secretaria Express' }
+      { id: 'access_sec_agenda', label: 'Secretaria & Agenda de Tarefas' },
+      { id: 'access_sec_livro_atas', label: 'Livro Oficial de Atas' },
+      { id: 'access_sec_certificados', label: 'Emissão de Certificados' },
+      { id: 'access_carteirinha_studio', label: 'Estúdio de Carteirinhas' },
+      { id: 'access_credencial_lote', label: 'Credenciais em Lote' },
+      { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' },
+      { id: 'access_ebd', label: 'Escola Bíblica (EBD) - Turmas/Chamadas' },
+      { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos Online)' },
+      { id: 'access_teologia', label: 'Universidade Teológica GIPP' },
+      { id: 'access_biblia', label: 'Bíblia de Estudos & Comentários' }
     ]
   },
   {
-    titulo: "GIPP Office, Comunicação & Inteligência",
-    desc: "Estúdio de Artes, GIPP DOCs, GIPP Planilhas, Grid Office, Webmail, IA Pastoral, Automação WhatsApp, Módulo Interativo e Vendas",
-    icon: Shield,
+    titulo: "Comunicação, Escritório & IA Pastoral",
+    desc: "Estúdio de artes, editores DOCs/Planilhas, boletins e inteligência artificial",
+    icon: Sparkles,
     opcoes: [
       { id: 'access_midia', label: 'Estúdio de Artes & Mídia' },
-      { id: 'access_gipp_docs', label: 'GIPP DOCs (Editor de Documentos)' },
-      { id: 'access_gipp_sheets', label: 'GIPP Planilhas (Editor de Planilhas)' },
-      { id: 'access_grid_office', label: 'Suíte Office (Excel/Word Grid)' },
-      { id: 'access_boletim', label: 'Boletim Semanal Digital' },
-      { id: 'access_email', label: 'Webmail Integrado Eclesiástico' },
-      { id: 'access_ia', label: 'Assistente Pastoral IA (Copilot)' },
-      { id: 'access_inteligencia_pastoral', label: 'Inteligência Pastoral AI' },
-      { id: 'access_automacao_whatsapp', label: 'Automação WhatsApp & Escalas' },
-      { id: 'access_interativo', label: 'Módulo Interativo & Gamificação' },
-      { id: 'access_vendas', label: 'Vendas, Propostas Comercial & Mkt' },
-      { id: 'access_command_palette', label: 'Busca Global (Ctrl+K)' },
-      { id: 'access_ergonomia_designer', label: 'Ergonomia Visual (UI/UX)' }
+      { id: 'access_docs_editor', label: 'GIPP DOCs (Editor de Documentos)' },
+      { id: 'access_sheets_editor', label: 'GIPP Planilhas (Editor de Tabelas)' },
+      { id: 'access_boletim', label: 'Boletim Informativo Semanal' },
+      { id: 'access_email', label: 'Webmail Direto Integrado' },
+      { id: 'access_ia', label: 'Assistente Pastoral IA & Sermões' },
+      { id: 'access_interativo', label: 'Módulo Interativo & Gamificação' }
     ]
   },
   {
-    titulo: "Configurações Globais & Proteção",
-    desc: "Ajustes de sistema, temas, backup completo, auditoria, lixeira, amparo constitucional e registro de licença",
+    titulo: "Configurações Globais, Proteção & Governança",
+    desc: "Ajustes de sistema, backup, auditoria, lixeira e amparo jurídico",
     icon: Lock,
     opcoes: [
       { id: 'access_config_sistema', label: 'Configurações Gerais do Sistema' },
       { id: 'access_config_visual', label: 'Personalização Visual & Temas' },
-      { id: 'access_config_backup', label: 'Central de Backups (Local e Nuvem)' },
+      { id: 'access_config_backup', label: 'Backup Geral de Dados (Local/Nuvem)' },
       { id: 'access_auditoria', label: 'Auditoria & Logs de Segurança' },
-      { id: 'access_lixeira', label: 'Lixeira Virtual de Recuperação' },
+      { id: 'access_lixeira', label: 'Lixeira Virtual do Sistema' },
+      { id: 'access_manual', label: 'Manual do Usuário GIPP' },
       { id: 'access_amparo_legal', label: 'Amparo Constitucional & Jurídico' },
-      { id: 'access_registro_software', label: 'Registro de Software & Licença' },
-      { id: 'access_manual', label: 'Manual do Usuário GIPP & E-books' },
-      { id: 'access_acessos_portal', label: 'Gestão de Acessos do Portal' }
-    ]
-  },
-  {
-    titulo: "Dev, Suporte & Módulos Avançados",
-    desc: "Telemetria APM, Feature Flags, Webhooks, Sync Offline PWA, Audit Logs Imutáveis e Painel de Suporte",
-    icon: Shield,
-    opcoes: [
-      { id: 'access_telemetria_health', label: 'Telemetria & APM Health Monitor' },
-      { id: 'access_feature_flags', label: 'Feature Flags (Tenant Manager)' },
-      { id: 'access_webhooks_api_keys', label: 'API Keys & Webhooks Integrados' },
-      { id: 'access_offline_sync', label: 'Sync Offline-First (PWA)' },
-      { id: 'access_audit_logs', label: 'Audit Logs Imutáveis de Segurança' },
-      { id: 'access_suporte_dev', label: 'Operações de Suporte & Atendimento' },
-      { id: 'access_marketing_social', label: 'Marketing SaaS & Divulgação Redes' }
+      { id: 'access_registro_software', label: 'Registro do Software & Licença' }
     ]
   }
 ];
@@ -257,17 +237,43 @@ const ModuleUsuarios = memo(() => {
   const handleFuncaoChange = (val: string) => {
     let perms = [...(formData.permissoes || [])];
     if (val === 'PASTOR PRESIDENTE' || val === 'PASTOR AUXILIAR') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 'access_interativo'];
+      perms = [
+        'access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 
+        'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia',
+        'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote',
+        'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_biblia', 'access_ia', 'access_boletim', 
+        'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 
+        'access_interativo', 'access_docs_editor', 'access_sheets_editor', 'access_midia', 'access_email'
+      ];
     } else if (val === 'SECRETARIO') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_interativo'];
+      perms = [
+        'access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 
+        'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote',
+        'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_biblia', 'access_boletim', 
+        'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_interativo',
+        'access_docs_editor', 'access_sheets_editor', 'access_email'
+      ];
     } else if (val === 'TESOUREIRO' || val === 'CONTADOR') {
-      perms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_sec_relatorios', 'access_manual'];
+      perms = [
+        'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_fin_carnes', 
+        'access_fin_cadastros', 'access_dp_contabilidade', 'access_patrimonio', 'access_sec_relatorios', 'access_manual',
+        'access_docs_editor', 'access_sheets_editor'
+      ];
     } else if (val === 'ADMINISTRADOR') {
-      perms = ['access_membros', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 'access_sec_agenda', 'access_sec_certificados', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_boletim', 'access_midia', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_carnes', 'access_fin_cadastros', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 'access_interativo'];
+      perms = [
+        'access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_celulas', 
+        'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia',
+        'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote',
+        'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_biblia', 'access_boletim', 'access_midia', 
+        'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 
+        'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_config_sistema', 'access_config_visual', 
+        'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software', 
+        'access_frotas', 'access_interativo', 'access_docs_editor', 'access_sheets_editor', 'access_missoes', 'access_email', 'access_ia'
+      ];
     } else if (val === 'ADVOGADO') {
-      perms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+      perms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_docs_editor'];
     } else if (val === 'LIDER DE DEPARTAMENTO') {
-      perms = ['access_ministerios', 'access_sec_agenda', 'access_manual'];
+      perms = ['access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_manual'];
     } else if (val === 'AUXILIAR') {
       perms = ['access_sec_agenda', 'access_ebd', 'access_gestao_cursos', 'access_manual', 'access_interativo'];
     }
@@ -294,17 +300,6 @@ const ModuleUsuarios = memo(() => {
     const current = formData.permissoes || [];
     const grpIds = cat.opcoes.map((o: any) => o.id);
     setFormData({ ...formData, permissoes: current.filter((id: string) => !grpIds.includes(id)) });
-  };
-
-  // Seleciona 100% de todas as permissões de todos os módulos
-  const handleSelectAllSystem = () => {
-    const allIds = CATEGORIAS_PERMISSOES.flatMap(c => c.opcoes.map(o => o.id));
-    setFormData(prev => ({ ...prev, permissoes: Array.from(new Set(allIds)) }));
-  };
-
-  // Limpa todas as permissões do sistema
-  const handleClearAllSystem = () => {
-    setFormData(prev => ({ ...prev, permissoes: [] }));
   };
 
   // Deleta usuário (Exclusão lógica marcando deleted: true!)
@@ -839,30 +834,9 @@ const ModuleUsuarios = memo(() => {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/80">
-                      <div className="flex items-center gap-2">
-                        <Lock size={18} className="text-indigo-600"/>
-                        <div>
-                          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Painel de Acesso Completo aos Módulos</h4>
-                          <p className="text-[11px] text-slate-500 font-medium">Selecione o acesso granulado para cada módulo do sistema ou use os atalhos globais:</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button 
-                          type="button" 
-                          onClick={handleSelectAllSystem}
-                          className="px-3.5 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-                        >
-                          <CheckSquare size={14} /> Selecionar TUDO (100%)
-                        </button>
-                        <button 
-                          type="button" 
-                          onClick={handleClearAllSystem}
-                          className="px-3.5 py-2 text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all cursor-pointer"
-                        >
-                          Desmarcar Tudo
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Lock size={16} className="text-indigo-500"/>
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Painel Modular de Permissões de Acesso (Todos os Módulos do Sistema)</h4>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8">

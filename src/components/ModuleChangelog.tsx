@@ -47,24 +47,11 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 9.6.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 9.5.0 */}
             <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance"> 
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v9.6.0 - Módulo de Vendas & Divulgação, Permissões Expandidas e Sincronização Geral</h3>
-                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Agosto 2026 (Atual)</p>
-                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
-                    <li><strong className="text-slate-700 font-sans font-extrabold">Novo Módulo de Vendas, Propostas & Divulgação:</strong> Lançamento do hub comercial e de marketing completo para apresentação do software SaaS com gerador de propostas PDF timbradas, simulação de retorno sobre investimento (ROI), calculadoras financeiras, materiais de marketing e gestão de planos.</li>
-                    <li><strong className="text-slate-700 font-sans font-extrabold">Expansão de Restrições de Usuários:</strong> Ampliação da matriz de permissões e grupos de acessos em <code className="text-emerald-800 bg-emerald-50 px-1 py-0.5 rounded text-xs">ModuleConfiguracoesSistemas</code>, adicionando controle individual para GIPP Office, Faculdade Teológica, Vendas e Módulo Interativo Gamificado.</li>
-                    <li><strong className="text-slate-700 font-sans font-extrabold">Manuais e E-Books Atualizados:</strong> Atualização integral de todos os guias operacionais, e-books e cadernos de uso no <code className="text-emerald-800 bg-emerald-50 px-1 py-0.5 rounded text-xs">ModuleManualUsuario</code> para instrução de novas ferramentas.</li>
-                    <li><strong className="text-slate-700 font-sans font-extrabold">Sincronização do Ecossistema v9.6.0:</strong> Atualização da versão global para GIPP Versão 9.6.0 Ultimate Platinum v15 na tela inicial, boot loader, tela de login, cabeçalhos do sistema e sobre o software.</li>
-                </ul>
-            </div>
-
-            {/* BLOCO DA VERSÃO 9.5.0 */}
-            <div className="relative pl-8 border-l-2 border-indigo-500 opacity-90"> 
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v9.5.0 - Ícones Oficiais do GIPP Office, Modelos Eclesiásticos & Atualização Geral</h3>
-                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Julho 2026</p>
+                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v9.5.0 - Ícones Oficiais do GIPP Office, Modelos Eclesiásticos & Atualização Geral</h3>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Ícones Oficiais GIPP DOCs & Planilhas:</strong> Renovação completa da identidade visual dos aplicativos de escritório com ícones customizados inspirados no Google Docs (documento azul dobrado com linhas de texto) e Google Sheets (grade verde de planilha), aplicados nos menus, barras superiores e lançadores do sistema.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Modelos de Documentos no GIPP DOCs:</strong> Adicionado seletor com modelos eclesiásticos prontos para carregamento instantâneo (Carta de Recomendação, Ofício Pastoral Oficial, Ata de Reunião de Diretoria, Certificado de Batismo/Apresentação e Regimento Interno de Departamento).</li>

@@ -44,60 +44,61 @@ import {
 
 // Exporting component
 const DATABASE_SECTIONS = [
-  { key: 'igreja', label: 'Configurações da Igreja & Módulos' },
-  { key: 'membros', label: 'Rol de Membros e Fichas Cadastrais' },
+  { key: 'igreja', label: 'Configurações da Igreja & Licença' },
+  { key: 'membros', label: 'Rol de Membros & Fichas Eclesiásticas' },
+  { key: 'visitantes', label: 'Registro de Visitantes & CRM' },
+  { key: 'usuarios', label: 'Usuários, Operadores & Permissões' },
+  { key: 'congregacoes', label: 'Congregações & Filiais' },
+  { key: 'departamentos', label: 'Departamentos & Ministérios Gerais' },
+  { key: 'louvor_musicas', label: 'Louvor: Músicas & Cifras' },
+  { key: 'louvor_escalas', label: 'Louvor: Escalas de Músicos' },
+  { key: 'louvor_musicos', label: 'Louvor: Integrantes & Músicos' },
+  { key: 'louvor_reunioes', label: 'Louvor: Ensaios & Reuniões' },
+  { key: 'midia_biblioteca', label: 'Mídia: Biblioteca de Mídias' },
+  { key: 'midia_equipamentos', label: 'Mídia: Equipamentos & Transmissão' },
+  { key: 'midia_equipe', label: 'Mídia: Operadores & Equipe' },
+  { key: 'midia_eventos', label: 'Mídia: Escalas de Eventos' },
+  { key: 'projetos_midia', label: 'Projetos de Comunicação & Mídia' },
+  { key: 'fornecedores', label: 'Fornecedores & Contatos Comerciais' },
+  { key: 'centro_custo', label: 'Centros de Custo Financeiros' },
+  { key: 'patrimonio', label: 'Patrimônio & Ativos da Igreja' },
+  { key: 'financeiro', label: 'Fluxo de Caixa (Entradas & Saídas)' },
+  { key: 'carnes', label: 'Carnês de Dizimistas & Campanhas' },
+  { key: 'dda_boletos', label: 'Conciliação Bancária & DDA Boletos' },
+  { key: 'orcamentos', label: 'Orçamentos de Compras' },
+  { key: 'dp_colaboradores', label: 'D.P. & RH: Funcionários Cadastrados' },
+  { key: 'dp_folhas', label: 'D.P. & RH: Folhas de Pagamento' },
+  { key: 'frotas_veiculos', label: 'Frotas: Veículos Cadastrados' },
+  { key: 'frotas_motoristas', label: 'Frotas: Motoristas Habilitados' },
+  { key: 'frotas_despesas', label: 'Frotas: Despesas de Manutenção' },
+  { key: 'frotas_multas', label: 'Frotas: Registro de Multas' },
   { key: 'celulas', label: 'Células e Pequenos Grupos' },
   { key: 'celulas_relatorios', label: 'Relatórios de Células' },
-  { key: 'congregacoes', label: 'Congregações e Sub-Sedes' },
-  { key: 'fornecedores', label: 'Fornecedores e Contatos' },
-  { key: 'departamentos', label: 'Departamentos e Ministérios' },
-  { key: 'usuarios', label: 'Usuários, Níveis e Permissões' },
-  { key: 'financeiro', label: 'Fluxo de Caixa (Lançamentos de Receitas e Despesas)' },
-  { key: 'carnes', label: 'Carnês de Dizimistas e Campanhas' },
-  { key: 'centro_custo', label: 'Centros de Custo e DRE' },
-  { key: 'ebd', label: 'EBD: Turmas, Alunos, Professores e Lições' },
-  { key: 'missoes', label: 'Missões, Missionários, Agências e Projetos' },
-  { key: 'agenda', label: 'Agenda de Eventos e Cultos' },
-  { key: 'tarefas', label: 'Quadro de Tarefas e Atividades' },
-  { key: 'projetos_midia', label: 'Projetos de Comunicação e Estúdio' },
-  { key: 'solicitacoes', label: 'Solicitações e Requerimentos' },
-  { key: 'visitantes', label: 'Registro de Visitantes e Funil CRM' },
-  { key: 'patrimonio', label: 'Patrimônio, Ativos e QR Code' },
-  { key: 'emails', label: 'Histórico de E-mails e Webmail' },
+  { key: 'agenda', label: 'Agenda Geral de Eventos & Cultos' },
+  { key: 'tarefas', label: 'Quadro de Tarefas & Escalas' },
+  { key: 'secretaria_contatos', label: 'Secretaria: Agenda Telefônica' },
+  { key: 'solicitacoes', label: 'Solicitações & Requerimentos' },
+  { key: 'livro_atas_livros', label: 'Secretaria: Livros Oficiais de Atas' },
+  { key: 'livro_atas_registros', label: 'Secretaria: Registros de Atas Lavradas' },
+  { key: 'ebd', label: 'EBD: Turmas, Alunos, Professores & Lições' },
+  { key: 'ebd_escalas', label: 'EBD: Escalas de Professores' },
+  { key: 'kids_criancas', label: 'Salinha Kids: Crianças Cadastradas' },
+  { key: 'kids_presencas', label: 'Salinha Kids: Listas de Presença' },
+  { key: 'kids_ocorrencias', label: 'Salinha Kids: Ocorrências & Avisos' },
+  { key: 'kids_voluntarios', label: 'Salinha Kids: Tias & Voluntários' },
+  { key: 'missoes', label: 'Missões: Missionários, Agências, Projetos & Agenda' },
+  { key: 'boletim', label: 'Boletim Informativo Digital' },
+  { key: 'emails', label: 'Histórico de Mensagens & Webmail' },
   { key: 'mural', label: 'Mural de Avisos da Igreja' },
-  { key: 'orcamentos', label: 'Orçamentos de Compras' },
+  { key: 'pedidos_oracao', label: 'Pedidos de Oração & Intercessão' },
   { key: 'pastor_agenda', label: 'Gabinete: Agenda Pastoral' },
   { key: 'pastor_mensagens', label: 'Gabinete: Mensagens de Apoio' },
   { key: 'pastor_esbocos', label: 'Gabinete: Esboços de Sermão' },
   { key: 'pastor_atas', label: 'Gabinete: Atas Pastorais' },
   { key: 'pastor_liturgias', label: 'Gabinete: Roteiros de Culto' },
-  { key: 'kids_criancas', label: 'Kids: Cadastro de Crianças' },
-  { key: 'kids_presencas', label: 'Kids: Lista de Presença' },
-  { key: 'kids_ocorrencias', label: 'Kids: Ocorrências / Avisos' },
-  { key: 'dp_colaboradores', label: 'D.P.: Cadastro de Funcionários / RH' },
-  { key: 'dp_folhas', label: 'D.P.: Folhas de Pagamento' },
-  { key: 'frotas_veiculos', label: 'Frotas: Veículos Cadastrados' },
-  { key: 'frotas_motoristas', label: 'Frotas: Motoristas Habilitados' },
-  { key: 'frotas_despesas', label: 'Frotas: Despesas de Manutenção' },
-  { key: 'frotas_multas', label: 'Frotas: Registro de Multas' },
-  { key: 'secretaria_contatos', label: 'Secretaria: Agenda Telefônica' },
-  { key: 'auditoria', label: 'Auditoria: Logs de Segurança' },
-  { key: 'certificados', label: 'Certificados, Diplomas e Credenciais' },
-  { key: 'atas_eclesiasticas', label: 'Livro Digital de Atas Eclesiásticas' },
-  { key: 'gipp_docs', label: 'GIPP DOCs (Documentos Corporativos)' },
-  { key: 'gipp_planilhas', label: 'GIPP Planilhas (Planilhas Financeiras e Eclesiásticas)' },
-  { key: 'teologia_materias', label: 'Faculdade Teológica (Matérias, Apostilas e Lições)' },
-  { key: 'teologia_alunos', label: 'Faculdade Teológica (Matrículas e Notas)' },
-  { key: 'vendas_propostas', label: 'Vendas & Mkt (Propostas Comercial SaaS)' },
-  { key: 'interativo_scores', label: 'Gamificação & Minigames Interativos' },
-  { key: 'fcm_push_logs', label: 'Notificações Push FCM Disparadas' },
-  { key: 'portal_acessos', label: 'Logs de Acesso do Portal do Membro' },
-  { key: 'dupla_custodia', label: 'Dupla Custódia de Ofertas e Dízimos' },
-  { key: 'fundos_restritos', label: 'Fundos Carimbados e Restritos' },
-  { key: 'prebenda_compliance', label: 'Prebendas e Compliance (eSocial)' },
-  { key: 'voluntarios_contratos', label: 'Termos de Voluntariado (Lei 9.608)' },
-  { key: 'reserva_espacos', label: 'Reservas de Instalações e Tendas' },
-  { key: 'lixeira', label: 'Lixeira Virtual de Itens Excluídos' }
+  { key: 'portal_acessos', label: 'Logs de Acesso ao Portal de Membros' },
+  { key: 'push_subscriptions', label: 'Notificações: Inscrições Web Push' },
+  { key: 'auditoria', label: 'Auditoria: Logs de Segurança & Rastreabilidade' }
 ];
 
 const getRecordCount = (dataObj: any, key: string) => {
@@ -118,6 +119,9 @@ const getRecordCount = (dataObj: any, key: string) => {
     const colaboradores = dataObj.missoes?.colaboradores?.length || 0;
     const agenda = dataObj.missoes?.agenda?.length || 0;
     return missionarios + agencias + colaboradores + agenda;
+  }
+  if (key === 'auditoria') {
+    return (dataObj.auditoria?.length || 0) + (dataObj.auditoria_logs?.length || 0);
   }
   return Array.isArray(dataObj[key]) ? dataObj[key].length : 0;
 };
@@ -141,6 +145,13 @@ const getDocsForSection = (secKey: string, targetData: any) => {
             if (targetData.missoes.agencias) targetData.missoes.agencias.forEach((item: any) => docs.push({ collection: 'missoes_agencias', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
             if (targetData.missoes.colaboradores) targetData.missoes.colaboradores.forEach((item: any) => docs.push({ collection: 'missoes_colaboradores', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
             if (targetData.missoes.agenda) targetData.missoes.agenda.forEach((item: any) => docs.push({ collection: 'missoes_agenda', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item }));
+        }
+    } else if (secKey === 'auditoria') {
+        const logs = targetData.auditoria || targetData.auditoria_logs || [];
+        if (Array.isArray(logs)) {
+            logs.forEach((item: any) => {
+                docs.push({ collection: 'auditoria_logs', id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6), data: item });
+            });
         }
     } else {
         const items = targetData[secKey];
@@ -402,12 +413,45 @@ const ModuleBackup = () => {
                             Gere e faça download imediato de uma cópia em texto estruturado criptograficamente seguro diretamente para o seu computador ou smartphone. Ideal para segurança offline extra rápida.
                         </p>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
-                        <Button className="flex-1 justify-center items-center gap-2" variant="primary" onClick={startExport}>
-                            <DownloadCloud size={16}/> Exportar JSON
-                        </Button>
-                        <Button className="flex-1 justify-center items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200" variant="ghost" onClick={handleImportRequest}>
-                            <UploadCloud size={16}/> Importar Local
+                    <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <Button className="flex-1 justify-center items-center gap-2" variant="primary" onClick={startExport}>
+                                <DownloadCloud size={16}/> Exportar Completo
+                            </Button>
+                            <Button 
+                                className="flex-1 justify-center items-center gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200" 
+                                variant="ghost" 
+                                onClick={() => {
+                                    const leanDb = JSON.parse(JSON.stringify(db));
+                                    // Remove heavy transient fields
+                                    delete leanDb.portal_acessos;
+                                    delete leanDb.auditoria_logs;
+                                    const cleanObject = (obj: any) => {
+                                        if (!obj || typeof obj !== 'object') return;
+                                        Object.keys(obj).forEach(key => {
+                                            if (typeof obj[key] === 'string' && obj[key].length > 50000) {
+                                                obj[key] = "[FOTO_OTIMIZADA]";
+                                            } else if (typeof obj[key] === 'object') {
+                                                cleanObject(obj[key]);
+                                            }
+                                        });
+                                    };
+                                    cleanObject(leanDb);
+                                    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(leanDb))}`;
+                                    const downloadAnchor = document.createElement('a');
+                                    downloadAnchor.setAttribute("href", jsonString);
+                                    downloadAnchor.setAttribute("download", `GIPP_Backup_Otimizado_${new Date().toISOString().slice(0, 10)}.json`);
+                                    document.body.appendChild(downloadAnchor);
+                                    downloadAnchor.click();
+                                    downloadAnchor.remove();
+                                    addToast("Backup Compactado gerado com sucesso!", "success");
+                                }}
+                            >
+                                <Zap size={14}/> Backup Compacto
+                            </Button>
+                        </div>
+                        <Button className="w-full justify-center items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200" variant="ghost" onClick={handleImportRequest}>
+                            <UploadCloud size={16}/> Importar Ficheiro Local
                         </Button>
                     </div>
                 </div>

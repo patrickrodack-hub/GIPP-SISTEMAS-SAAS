@@ -43,11 +43,8 @@ import {
 
 // Exporting component
 const ModuleCertificados = () => {
-    const { db, setPrintMode, setPrintData, setPreviewOpen, addToast } = useContext(ChurchContext); 
+    const { db, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext); 
     const [selectedType, setSelectedType] = useState(null);
-    const [activeTab, setActiveTab] = useState<'gerar' | 'validar'>('gerar');
-    const [searchHash, setSearchHash] = useState('');
-    const [validatedCert, setValidatedCert] = useState<any | null>(null);
     
     // Estado consolidado para os dados do certificado
     const [certData, setCertData] = useState({
@@ -59,23 +56,6 @@ const ModuleCertificados = () => {
         evento: 'Congresso Anual',
         turma_id: ''
     });
-
-    const handleVerifyHash = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!searchHash.trim()) return;
-      // Generate deterministic or mock valid verification result
-      const hashUpper = searchHash.toUpperCase().trim();
-      setValidatedCert({
-        hash: hashUpper,
-        aluno: 'Irmão Carlos Eduardo',
-        curso: 'Teologia Pentecostal Básica (CGADB / CPAD)',
-        dataEmissao: '12/08/2026',
-        status: 'Autêntico e Válido',
-        instituicao: 'Universidade Teológica GIPP',
-        diretor: 'Pastor Presidente e Diretoria Eclesiástica'
-      });
-      if (addToast) addToast('Certificado verificado com sucesso na base oficial!', 'success');
-    };
 
     const certTypes = [
         { id: 'cert_batismo', label: 'Batismo nas Águas', icon: Droplets, color: 'blue', desc: 'Certificação de descida às águas.' }, 
@@ -136,68 +116,11 @@ const ModuleCertificados = () => {
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-amber-50 text-amber-500 rounded-2xl shadow-sm border border-amber-100"><Award size={28}/></div>
                     <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Emissão & Validação de Certificados</h2>
-                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Formatos A4 com QR Code de Autenticidade e Verificação Pública</p>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Emissão de Certificados Oficiais</h2>
+                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Formatos A4 de alto padrão para registo legal e molduras</p>
                     </div>
-                </div>
-
-                <div className="flex items-center gap-2 bg-slate-200/80 p-1 rounded-xl">
-                    <button
-                        onClick={() => setActiveTab('gerar')}
-                        className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${activeTab === 'gerar' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-                    >
-                        Emissão de Certificados
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('validar')}
-                        className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${activeTab === 'validar' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
-                    >
-                        <QrCode size={14} /> Validador Público
-                    </button>
                 </div>
             </div>
-
-            {activeTab === 'validar' ? (
-                <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6 max-w-3xl mx-auto">
-                    <div className="text-center space-y-2">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl inline-block border border-indigo-100">
-                            <QrCode size={36} />
-                        </div>
-                        <h3 className="text-xl font-black text-slate-900">Validador de Autenticidade Teológica</h3>
-                        <p className="text-xs text-slate-500">Digite o código hash impresso no certificado para conferir sua autenticidade no sistema GIPP.</p>
-                    </div>
-
-                    <form onSubmit={handleVerifyHash} className="flex gap-2">
-                        <input
-                            type="text"
-                            value={searchHash}
-                            onChange={e => setSearchHash(e.target.value)}
-                            placeholder="Ex: GIPP-CERT-2026-X981"
-                            className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
-                        />
-                        <button
-                            type="submit"
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-lg shadow-indigo-600/20"
-                        >
-                            Verificar Hash
-                        </button>
-                    </form>
-
-                    {validatedCert && (
-                        <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3 animate-fadeIn">
-                            <div className="flex items-center gap-2 text-emerald-700 font-black text-sm">
-                                <CheckCircle size={18} /> Certificado Autêntico e Registrado
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 text-xs text-slate-700">
-                                <div><span className="text-slate-500 block">Aluno:</span> <strong>{validatedCert.aluno}</strong></div>
-                                <div><span className="text-slate-500 block">Curso:</span> <strong>{validatedCert.curso}</strong></div>
-                                <div><span className="text-slate-500 block">Data de Emissão:</span> <strong>{validatedCert.dataEmissao}</strong></div>
-                                <div><span className="text-slate-500 block">Instituição:</span> <strong>{validatedCert.instituicao}</strong></div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
 
             <div className="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden">
                 {/* Lado Esquerdo: Seleção do Modelo */}
@@ -308,7 +231,6 @@ const ModuleCertificados = () => {
                     )}
                 </div>
             </div>
-            )}
         </div>
     );
 };

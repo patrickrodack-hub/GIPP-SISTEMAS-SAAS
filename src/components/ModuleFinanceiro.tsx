@@ -15,7 +15,7 @@ import {
   Phone, Mail, Code, Info, Share2, Home, FileBadge, Stamp, Wifi, WifiOff, Star, HeartHandshake, Camera,
   CheckSquare, MessageCircle, Send, PlayCircle, Clock, List, Smartphone, User, UserPlus, Video,
   FileSpreadsheet, CheckCheck, Flag, Smile, Copy, Bold, Italic, Type, Activity, Receipt, RotateCcw, Ban, Archive, Printer as PrinterIcon,
-  MoreVertical, Bell, Truck, Layers, Lock, ScrollText, Megaphone, Award, FileBarChart, Mic,
+  MoreVertical, Bell, Truck, Layers, Lock, Unlock, ScrollText, Megaphone, Award, FileBarChart, Mic,
   FileCheck, Paperclip, ExternalLink, FileJson, FileCode, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudOff,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
@@ -2164,6 +2164,107 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                 </div>
 
                                 <div className="lg:col-span-4 space-y-6">
+                                    {/* Trava Contábil e Fechamento Mensal */}
+                                    {(() => {
+                                        const fechamentos = db.fechamentos_contabeis || [];
+                                        const fechamentoAtual = fechamentos.find((f: any) => f.mes_ano === filterDate);
+                                        const isFechado = !!fechamentoAtual;
+
+                                        const handleFecharMes = () => {
+                                            const protocolo = `GIPP-FECH-${filterDate.replace('-', '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+                                            const novoFechamento = {
+                                                id: `fech_${Date.now()}`,
+                                                mes_ano: filterDate,
+                                                mes_formatado: formatarMesAno(filterDate),
+                                                data_fechamento: new Date().toISOString(),
+                                                protocolo,
+                                                total_entradas: totalEntradas,
+                                                total_saidas: totalSaidas,
+                                                saldo_final: saldoFin,
+                                                responsavel: user?.nome || user?.usuario || 'Administrador',
+                                                funcao: user?.funcao_administrativa || 'Tesoureiro',
+                                                status: 'fechado'
+                                            };
+
+                                            const atualizados = [...fechamentos.filter((f: any) => f.mes_ano !== filterDate), novoFechamento];
+                                            setDbState((prev: any) => ({
+                                                ...prev,
+                                                fechamentos_contabeis: atualizados
+                                            }));
+
+                                            if (logAction) {
+                                                logAction('FECHAMENTO_CONTABIL', `Fechamento do mês ${formatarMesAno(filterDate)} com protocolo ${protocolo}`);
+                                            }
+                                            addToast(`Mês ${formatarMesAno(filterDate)} fechado com sucesso! Protocolo: ${protocolo}`, 'success');
+                                        };
+
+                                        const handleReabrirMes = () => {
+                                            if (user?.nivel !== 'master' && user?.funcao_administrativa !== 'PASTOR PRESIDENTE') {
+                                                addToast('Apenas o Pastor Presidente ou Administrador Master pode reabrir um mês contábil.', 'error');
+                                                return;
+                                            }
+                                            const atualizados = fechamentos.filter((f: any) => f.mes_ano !== filterDate);
+                                            setDbState((prev: any) => ({
+                                                ...prev,
+                                                fechamentos_contabeis: atualizados
+                                            }));
+                                            addToast(`Mês ${formatarMesAno(filterDate)} reaberto para lançamentos.`, 'warning');
+                                        };
+
+                                        return (
+                                            <div className={`glass-modern p-6 rounded-[2rem] border transition-all ${
+                                                isFechado 
+                                                    ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800' 
+                                                    : 'bg-amber-50/40 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800'
+                                            }`}>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+                                                        <Lock size={16} className={isFechado ? "text-emerald-600" : "text-amber-600"} />
+                                                        Trava Contábil & Fechamento
+                                                    </h3>
+                                                    <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                                        isFechado ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                                    }`}>
+                                                        {isFechado ? 'Mês Fechado' : 'Período Aberto'}
+                                                    </span>
+                                                </div>
+
+                                                {isFechado ? (
+                                                    <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+                                                        <p className="font-semibold text-[11px] text-emerald-800 dark:text-emerald-300">
+                                                            Este período está auditado e protegido contra alterações retroativas.
+                                                        </p>
+                                                        <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-emerald-100 dark:border-emerald-900/50 text-[11px] space-y-1 font-mono">
+                                                            <div><span className="text-slate-400">Protocolo:</span> <strong className="text-slate-800 dark:text-slate-200">{fechamentoAtual.protocolo}</strong></div>
+                                                            <div><span className="text-slate-400">Assinado por:</span> {fechamentoAtual.responsavel}</div>
+                                                            <div><span className="text-slate-400">Saldo Fechado:</span> R$ {Number(fechamentoAtual.saldo_final || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                                                        </div>
+                                                        <button
+                                                            onClick={handleReabrirMes}
+                                                            className="w-full py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                                        >
+                                                            <Unlock size={14} />
+                                                            Reabrir Mês Contábil
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300">
+                                                        <p className="text-[11px] leading-relaxed">
+                                                            Ao encerrar o mês, um protocolo de auditoria é gerado e o balancete é consolidado para prestação de contas.
+                                                        </p>
+                                                        <button
+                                                            onClick={handleFecharMes}
+                                                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-98"
+                                                        >
+                                                            <ShieldCheck size={14} />
+                                                            Travar e Encerrar Mês Contábil
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
                                     <div className="glass-modern p-6 rounded-[2rem] border border-white/50 space-y-4 bg-gradient-to-tr from-slate-50/50 to-white text-slate-800">
                                         <h3 className="font-bold text-slate-800 flex items-center gap-2"><FileBarChart size={18} className="text-indigo-500" /> Prestação de Contas</h3>
                                         <p className="text-xs text-slate-500 leading-relaxed font-semibold">Os demonstrativos mensais facilitam a transparência com os membros do ministério, reunindo todas as arrecadações e pagamentos quitados. Certifique-se de que todas as notas fiscais estejam correspondidas antes de publicar a prestação de contas no painel geral.</p>
@@ -2286,6 +2387,61 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Sincronização Integrada Febraban / Bancos Parceiros</p>
                                             </div>
                                             <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => {
+                                                        const linha = window.prompt("Cole ou bipe a Linha Digitável do Boleto (47 ou 48 dígitos):");
+                                                        if (!linha) return;
+                                                        const digits = linha.replace(/\D/g, '');
+                                                        if (digits.length < 40) {
+                                                            addToast("Linha digitável inválida ou incompleta.", "error");
+                                                            return;
+                                                        }
+                                                        
+                                                        const bancoCode = digits.substring(0, 3);
+                                                        const bancosMap: Record<string, string> = {
+                                                            '001': 'Banco do Brasil S.A.',
+                                                            '104': 'Caixa Econômica Federal',
+                                                            '237': 'Banco Bradesco S.A.',
+                                                            '341': 'Banco Itaú Unibanco S.A.',
+                                                            '033': 'Banco Santander Brasil',
+                                                            '077': 'Banco Inter S.A.',
+                                                            '260': 'Nubank / Nu Pagamentos',
+                                                            '756': 'Bancoob / Sicoob',
+                                                            '748': 'Banco Sicredi S.A.',
+                                                            '336': 'Banco C6 S.A.',
+                                                        };
+                                                        const bancoNome = bancosMap[bancoCode] || `Compensação Bancária (${bancoCode})`;
+                                                        
+                                                        let valorCalculado = 150.00;
+                                                        if (digits.length === 47) {
+                                                            const valDigits = digits.substring(37);
+                                                            const parsed = parseInt(valDigits, 10) / 100;
+                                                            if (!isNaN(parsed) && parsed > 0) valorCalculado = parsed;
+                                                        }
+
+                                                        const novoBoleto = {
+                                                            id: `dda-manual-${Date.now()}`,
+                                                            beneficiario: bancoNome,
+                                                            cnpj_beneficiario: '33.000.000/0001-00',
+                                                            cnpj_igreja: configuredCnpj || '12.345.678/0001-90',
+                                                            valor: valorCalculado,
+                                                            data_emissao: new Date().toISOString().split('T')[0],
+                                                            data_vencimento: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+                                                            linha_digitavel: linha.trim(),
+                                                            status: 'pendente',
+                                                            tipo: 'Boleto Bipado / Manual',
+                                                            origem: 'Leitor de Código de Barras'
+                                                        };
+
+                                                        setDdaBoletos((prev: any[]) => [novoBoleto, ...prev]);
+                                                        addToast(`Boleto ${bancoNome} R$ ${valorCalculado.toFixed(2)} registrado com sucesso!`, 'success');
+                                                    }}
+                                                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 px-4 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                                    title="Bipar ou Colar Linha Digitável"
+                                                >
+                                                    <QrCode size={14} />
+                                                    Bipar Boleto
+                                                </button>
                                                 <button 
                                                     onClick={handleSondarDda} 
                                                     disabled={ddaChecking}

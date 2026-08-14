@@ -49,18 +49,18 @@ import { useGlobalSettings } from '../hooks/useGlobalSettings';
 // Constantes de Mapeamento do Portal de Membros por Função Administrativa
 export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
     'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_frequencia', 'portal_carteirinha'],
-    'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_teologia', 'portal_office', 'portal_vendas', 'portal_interativo', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
-    'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_teologia', 'portal_office', 'portal_interativo', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
-    'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_teologia', 'portal_office', 'portal_interativo', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],
-    'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_teologia', 'portal_office', 'portal_interativo', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],
-    'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_teologia', 'portal_office', 'portal_salinha_kids', 'portal_carteirinha'],
-    'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_office', 'portal_salinha_kids', 'portal_carteirinha', 'portal_tesoureiro'],
-    'CONTADOR': ['portal_home', 'portal_mural', 'portal_financas', 'portal_office', 'portal_carteirinha', 'portal_tesoureiro'],
-    'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_teologia', 'portal_office', 'portal_vendas', 'portal_interativo', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
-    'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_office', 'portal_carteirinha'],
-    'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_interativo', 'portal_frequencia', 'portal_carteirinha'],
-    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_office', 'portal_salinha_kids', 'portal_carteirinha'],
-    'PROFESSOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_teologia', 'portal_interativo', 'portal_frequencia', 'portal_carteirinha', 'portal_professor_ebd']
+    'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
+    'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor'],
+    'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],
+    'SUPERINTENDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],
+    'SECRETARIO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_frequencia', 'portal_cursos', 'portal_salinha_kids', 'portal_carteirinha'],
+    'TESOUREIRO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_financas', 'portal_salinha_kids', 'portal_carteirinha', 'portal_tesoureiro'],
+    'CONTADOR': ['portal_home', 'portal_mural', 'portal_financas', 'portal_carteirinha', 'portal_tesoureiro'],
+    'ADMINISTRADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_tesoureiro'],
+    'ADVOGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_carteirinha'],
+    'AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha'],
+    'LIDER DE DEPARTAMENTO': ['portal_home', 'portal_mural', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_salinha_kids', 'portal_carteirinha'],
+    'PROFESSOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_ebd', 'portal_frequencia', 'portal_carteirinha', 'portal_professor_ebd']
 };
 
 export const DEFAULT_SALINHA_KIDS_LEADERSHIP_ROLES = [
@@ -100,10 +100,6 @@ export const PORTAL_MODULES = [
     { id: 'portal_financas', label: 'Dízimos & Ofertas', desc: 'Canal de autoatendimento para devoluções via PIX e consulta de comprovantes.', iconId: 'DollarSign' },
     { id: 'portal_ebd', label: 'EBD (Escola Dominical)', desc: 'Espaço interativo para chamada, relatório, dinâmicas e controle de classe.', iconId: 'BookOpenText' },
     { id: 'portal_cursos', label: 'Cursos de Formação', desc: 'Acompanhamento de apostilas, módulos cursados e notas sob supervisão.', iconId: 'GraduationCap' },
-    { id: 'portal_teologia', label: 'Faculdade Teológica (CGADB)', desc: 'Acesso às apostilas e matérias teológicas dos níveis Básico, Médio e Avançado.', iconId: 'BookOpen' },
-    { id: 'portal_office', label: 'GIPP Office (DOCs & Planilhas)', desc: 'Editores corporativos de documentos e planilhas eclesiásticas integrados.', iconId: 'FileSpreadsheet' },
-    { id: 'portal_vendas', label: 'Vendas & Divulgação SaaS', desc: 'Acesso a propostas comerciais, marketing, apresentação e planos do sistema.', iconId: 'ShoppingBag' },
-    { id: 'portal_interativo', label: 'Jogos & Gamificação', desc: 'Minigames pedagógicos e quiz bíblico Show do Cristão para a igreja.', iconId: 'Gamepad2' },
     { id: 'portal_frequencia', label: 'Minhas Presenças', desc: 'Ficha detalhada com o histórico estatístico de faltas e presenças.', iconId: 'UserCheck' },
     { id: 'portal_salinha_kids', label: 'Salinha Kids', desc: 'Controle de segurança integrado com QrCode para entrega de crianças.', iconId: 'Baby' },
     { id: 'portal_carteirinha', label: 'Cartão de Membro', desc: 'Gera a credencial digital de identificação com dados oficiais e QrCode.', iconId: 'IdCard' },
