@@ -58,7 +58,6 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
   ALL_AVAILABLE_MODULES,
 }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [activePaletteTab, setActivePaletteTab] = useState<'standard' | 'additional' | 'win32' | 'data' | 'firedac' | 'gipp'>('standard');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
@@ -417,62 +416,6 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
     }
   ];
 
-  const paletteComponents = {
-    standard: [
-      { name: 'TMainMenu', icon: FileText, desc: 'Menu Principal', action: () => setActiveMenu('arquivo') },
-      { name: 'TPopupMenu', icon: FileText, desc: 'Menu de Contexto', action: () => {} },
-      { name: 'TButton', icon: Plus, desc: 'Botão de Ação', action: handleRunModule },
-      { name: 'TEdit', icon: Search, desc: 'Campo de Texto', action: () => setSearchOpen(true) },
-      { name: 'TMemo', icon: FileText, desc: 'Editor de Texto', action: () => setView('docs_editor') },
-      { name: 'TCheckBox', icon: Check, desc: 'Caixa de Seleção', action: () => {} },
-      { name: 'TRadioButton', icon: Check, desc: 'Opção Radial', action: () => {} },
-      { name: 'TListBox', icon: LayoutDashboard, desc: 'Lista de Itens', action: () => setView('cad_membro') },
-      { name: 'TComboBox', icon: Sliders, desc: 'Seleção Suspensa', action: () => {} },
-      { name: 'TPanel', icon: Layers, desc: 'Painel VCL', action: () => {} }
-    ],
-    additional: [
-      { name: 'TBitBtn', icon: Plus, desc: 'Botão com Glifo', action: handleRunModule },
-      { name: 'TSpeedButton', icon: Play, desc: 'Botão de Barra', action: () => setView('dashboard') },
-      { name: 'TMaskEdit', icon: Search, desc: 'Campo Formatado', action: () => {} },
-      { name: 'TStringGrid', icon: FileSpreadsheet, desc: 'Grelha de Dados', action: () => setView('sheets_editor') },
-      { name: 'TImage', icon: Palette, desc: 'Controle de Imagem', action: () => setView('rede_social') },
-      { name: 'TShape', icon: Layers, desc: 'Formas Geométricas', action: () => {} },
-      { name: 'TChart', icon: LayoutDashboard, desc: 'Gráficos Estatísticos', action: () => setView('fin_dre') }
-    ],
-    win32: [
-      { name: 'TPageControl', icon: Layers, desc: 'Abas de Páginas', action: () => {} },
-      { name: 'TTabControl', icon: Layers, desc: 'Controle de Abas', action: () => {} },
-      { name: 'TTreeView', icon: FolderTree, desc: 'Árvore de Diretórios', action: () => setView('secretaria_integrada') },
-      { name: 'TListView', icon: Users, desc: 'Visualizador de Lista', action: () => setView('cad_membro') },
-      { name: 'TStatusBar', icon: Terminal, desc: 'Barra de Status', action: () => {} },
-      { name: 'TToolBar', icon: Sliders, desc: 'Barra de Ferramentas', action: () => {} },
-      { name: 'TProgressBar', icon: RefreshCw, desc: 'Barra de Progresso', action: handleRunModule }
-    ],
-    data: [
-      { name: 'TDBGrid', icon: FileSpreadsheet, desc: 'Grid Conectado ao Banco', action: () => setView('cad_membro') },
-      { name: 'TDBNavigator', icon: Play, desc: 'Navegador de Registros', action: () => {} },
-      { name: 'TDBText', icon: FileText, desc: 'Rótulo Vinculado', action: () => {} },
-      { name: 'TDBEdit', icon: Search, desc: 'Input de Coluna', action: () => {} },
-      { name: 'TDBMemo', icon: FileText, desc: 'Memo de Banco', action: () => setView('secretaria_livro_atas') },
-      { name: 'TDBImage', icon: Palette, desc: 'Imagem de Banco', action: () => setView('carteirinha_studio') }
-    ],
-    firedac: [
-      { name: 'TFDConnection', icon: Database, desc: 'Conexão FireDAC', action: () => setView('config_backup') },
-      { name: 'TFDQuery', icon: Terminal, desc: 'Consulta SQL FireDAC', action: () => setView('auditoria') },
-      { name: 'TFDTable', icon: FileSpreadsheet, desc: 'Tabela Nativa', action: () => setView('cad_membro') },
-      { name: 'TFDTransaction', icon: Lock, desc: 'Transação Segura', action: () => {} },
-      { name: 'TFDPhysSQLiteDriver', icon: HardDrive, desc: 'Driver SQLite / iDb', action: () => {} }
-    ],
-    gipp: [
-      { name: 'TGippMembros', icon: Users, desc: 'Módulo de Membros', action: () => setView('cad_membro') },
-      { name: 'TGippCaixa', icon: ArrowUpCircle, desc: 'Livro Caixa', action: () => setView('fin_entrada') },
-      { name: 'TGippEBD', icon: BookOpenText, desc: 'Escola Dominical', action: () => setView('secretaria_ebd') },
-      { name: 'TGippTeologia', icon: GraduationCap, desc: 'Univ. Teológica', action: () => setView('curso_teologia') },
-      { name: 'TGippPastoralIA', icon: Sparkles, desc: 'Pastoral IA', action: () => setView('assistente_ai') },
-      { name: 'TGippCertificados', icon: Award, action: () => setView('secretaria_certificados'), desc: 'Certificados' }
-    ]
-  };
-
   const filteredModules = ALL_AVAILABLE_MODULES.filter(m => {
     if (!isModuleAllowed(m.id)) return false;
     if (!searchQuery) return true;
@@ -614,8 +557,8 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
           })}
         </div>
 
-        {/* Quick search button on menu bar */}
-        <div className="flex items-center gap-2 pr-1">
+        {/* Right side: Quick Search, User badge & Logout */}
+        <div className="flex items-center gap-2 pr-1 ml-auto">
           <button
             onClick={() => setSearchOpen(true)}
             className={`flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-2xs cursor-pointer shadow-inner ${
@@ -623,170 +566,25 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
                 ? 'bg-black text-yellow-300 border border-yellow-400' 
                 : 'bg-white border-t border-l border-t-[#7B8794] border-l-[#7B8794] border-r border-b border-r-white border-b-white text-[#334E68]'
             }`}
+            title="Buscar Módulo [Ctrl+F]"
           >
             <Search size={11} className={isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'} />
-            <span className="font-mono text-[10px]">Buscar Módulo [Ctrl+F]</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* =========================================================================
-          3. DELPHI SPEEDBAR & ACTION TOOLBAR (TCoolBar / TToolBar)
-          ========================================================================= */}
-      <div className={`px-2 py-1 flex items-center justify-between gap-2 shrink-0 shadow-xs ${themeClasses.toolBar}`}>
-        {/* Group of Delphi SpeedButtons */}
-        <div className="flex items-center gap-1 flex-wrap">
-          {/* Main Module SpeedButtons */}
-          <button
-            onClick={() => setView('dashboard')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              view === 'dashboard'
-                ? isHighContrast 
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black' 
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Abrir Dashboard [Home]"
-          >
-            <LayoutDashboard size={13} className={isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'} />
-            <span>Dashboard</span>
+            <span className="font-mono text-[10px] hidden sm:inline">Buscar Módulo [Ctrl+F]</span>
           </button>
 
-          <button
-            onClick={() => setView('cad_membro')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              view === 'cad_membro'
-                ? isHighContrast 
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black' 
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Rol de Membros"
-          >
-            <Users size={13} className={isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'} />
-            <span>Membros</span>
-          </button>
-
-          <button
-            onClick={() => setView('fin_entrada')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              view === 'fin_entrada' || view === 'fin_saida'
-                ? isHighContrast 
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black' 
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Livro Caixa Financeiro"
-          >
-            <DollarSign size={13} className={isHighContrast ? 'text-yellow-400' : 'text-emerald-700'} />
-            <span>Financeiro</span>
-          </button>
-
-          <button
-            onClick={() => setView('secretaria_ebd')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              view === 'secretaria_ebd'
-                ? isHighContrast 
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black' 
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Escola Bíblica Dominical"
-          >
-            <BookOpenText size={13} className={isHighContrast ? 'text-yellow-400' : 'text-indigo-700'} />
-            <span>EBD</span>
-          </button>
-
-          <button
-            onClick={() => setView('curso_teologia')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              view === 'curso_teologia'
-                ? isHighContrast 
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black' 
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Universidade Teológica CGADB/CPAD"
-          >
-            <GraduationCap size={13} className={isHighContrast ? 'text-yellow-400' : 'text-teal-700'} />
-            <span>Teologia</span>
-          </button>
-
-          <button
-            onClick={() => setView('assistente_ai')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              view === 'assistente_ai'
-                ? isHighContrast 
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black' 
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Pastoral IA"
-          >
-            <Sparkles size={13} className={isHighContrast ? 'text-yellow-400' : 'text-purple-700'} />
-            <span>Pastoral IA</span>
-          </button>
-
-          {/* Vertical Bevel Divider */}
-          <div className={`h-6 w-[2px] mx-1 ${isHighContrast ? 'bg-yellow-400' : 'bg-[#BAC7D5] border-r border-white'}`} />
-
-          {/* Delphi 13 Florence RUN (Executar F9) button */}
-          <button
-            onClick={handleRunModule}
-            className={`px-2.5 py-1 text-[11px] font-black rounded-2xs flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              isRunningAnimation 
-                ? 'bg-emerald-600 text-white border-2 border-emerald-800 animate-pulse'
-                : isHighContrast
-                  ? 'bg-yellow-400 text-black border-2 border-white font-black'
-                  : 'bg-gradient-to-b from-[#EBFBEE] via-[#D3F9D8] to-[#B2F2BB] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#2B8A3E] border-b-[#2B8A3E] text-[#2B8A3E] hover:bg-[#D3F9D8]'
-            }`}
-            title="Executar Compilação e Atualizar Módulo [F9]"
-          >
-            <Play size={12} className={isHighContrast ? 'fill-black text-black' : 'fill-[#2B8A3E] text-[#2B8A3E]'} />
-            <span>Run [F9]</span>
-          </button>
-
-          {/* Pause / Clear */}
-          <button
-            onClick={() => setView('dashboard')}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1 cursor-pointer shadow-xs ${themeClasses.button3D}`}
-            title="Interromper Módulo"
-          >
-            <Square size={10} className={isHighContrast ? 'fill-yellow-400 text-yellow-400' : 'fill-[#5A6578] text-[#5A6578]'} />
-          </button>
-
-          {/* Object Inspector Toggle */}
-          <button
-            onClick={() => setShowObjectInspector(!showObjectInspector)}
-            className={`px-2 py-1 text-[11px] font-bold rounded-2xs flex items-center gap-1 cursor-pointer shadow-xs ${
-              showObjectInspector
-                ? isHighContrast
-                  ? 'bg-yellow-400 text-black border-2 border-white'
-                  : 'bg-[#CBD2DB] border-t-2 border-l-2 border-t-[#5A6578] border-l-[#5A6578] border-r-2 border-b-2 border-r-white border-b-white text-[#004E98]'
-                : themeClasses.button3D
-            }`}
-            title="Alternar Inspetor de Objetos [F11]"
-          >
-            <Sliders size={12} className={isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'} />
-            <span>F11</span>
-          </button>
-        </div>
-
-        {/* Right side: Logged user badge */}
-        <div className="flex items-center gap-2">
-          <div className={`hidden lg:flex items-center gap-2 px-2.5 py-0.5 rounded-2xs text-[11px] font-bold ${
+          <div className={`hidden md:flex items-center gap-2 px-2 py-0.5 rounded-2xs text-[11px] font-bold ${
             isHighContrast 
               ? 'bg-black border border-yellow-400 text-yellow-300' 
-              : 'bg-[#DFE3E8] border border-[#BAC7D5] text-[#102A43]'
+              : 'bg-[#ECEFF4] border border-[#BAC7D5] text-[#102A43]'
           }`}>
-            <div className="w-4.5 h-4.5 rounded-full bg-[#004E98] text-white flex items-center justify-center text-[9px] font-black overflow-hidden">
+            <div className="w-4 h-4 rounded-full bg-[#004E98] text-white flex items-center justify-center text-[9px] font-black overflow-hidden">
               {user?.fotoUrl || user?.foto ? (
                 <img src={user.fotoUrl || user.foto} alt={user?.nome} className="w-full h-full object-cover" />
               ) : (
                 user?.nome?.charAt(0) || 'U'
               )}
             </div>
-            <span className="truncate max-w-[130px]">{user?.nome || 'Operador'}</span>
+            <span className="truncate max-w-[120px]">{user?.nome || 'Operador'}</span>
             <span className={`text-[9px] font-mono uppercase ${isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'}`}>
               [{user?.funcao_administrativa || user?.cargo || 'ADMIN'}]
             </span>
@@ -797,64 +595,13 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
             className="p-1 text-rose-700 hover:bg-rose-100 border border-transparent hover:border-rose-300 rounded-2xs transition-colors cursor-pointer"
             title="Sair do Sistema [Alt+F4]"
           >
-            <LogOut size={14} />
+            <LogOut size={13} />
           </button>
         </div>
-      </div>
+      </nav>
 
       {/* =========================================================================
-          4. DELPHI VCL COMPONENT PALETTE (TPageControl / Component Toolbar)
-          ========================================================================= */}
-      <div className={`px-1 pt-0.5 flex flex-col shrink-0 ${themeClasses.paletteHeader}`}>
-        {/* Palette Tab Headers */}
-        <div className="flex items-center gap-0.5 px-1 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'standard', label: 'Standard' },
-            { id: 'additional', label: 'Additional' },
-            { id: 'win32', label: 'Win32' },
-            { id: 'data', label: 'Data Controls' },
-            { id: 'firedac', label: 'FireDAC' },
-            { id: 'gipp', label: 'Módulos GIPP' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActivePaletteTab(tab.id as any)}
-              className={`px-3 py-1 text-[10px] font-extrabold uppercase tracking-tight rounded-t-2xs border-t border-l border-r cursor-pointer transition-colors ${
-                activePaletteTab === tab.id
-                  ? isHighContrast
-                    ? 'bg-black border-yellow-400 text-yellow-400'
-                    : 'bg-[#ECEFF4] border-t-[#FFFFFF] border-l-[#FFFFFF] border-r-[#7B8794] text-[#004E98] shadow-xs'
-                  : isHighContrast
-                    ? 'bg-zinc-900 border-zinc-700 text-zinc-400'
-                    : 'bg-[#D1D7E0] border-[#BAC7D5] text-[#334E68] hover:bg-[#E2E6EA]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Palette Component Icons Row */}
-        <div className={`px-2 py-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-inner min-h-[36px] ${themeClasses.paletteContent}`}>
-          {paletteComponents[activePaletteTab]?.map((comp, idx) => {
-            const CompIcon = comp.icon;
-            return (
-              <button
-                key={`comp-${idx}`}
-                onClick={comp.action}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-2xs text-[10px] font-bold shrink-0 cursor-pointer shadow-2xs group ${themeClasses.button3D}`}
-                title={`${comp.name} (${comp.desc}) - Clique para interagir`}
-              >
-                <CompIcon size={12} className={isHighContrast ? 'text-yellow-400' : 'text-[#004E98] group-hover:scale-110 transition-transform'} />
-                <span className="font-mono text-[9px]">{comp.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* =========================================================================
-          5. MAIN MDI WORKSPACE CONTAINER (Form View Area)
+          3. MAIN MDI WORKSPACE CONTAINER (Form View Area)
           ========================================================================= */}
       <div className="flex-1 flex overflow-hidden p-2 gap-2 relative">
         {/* Optional Delphi Object Inspector Sidebar (F11) */}
