@@ -347,14 +347,23 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       accessKey: 'S',
       items: [
         { label: 'Secretaria Integrada & Agenda', shortcut: '', icon: FileText, action: () => setView('secretaria_integrada') },
-        { label: 'Escola Bíblica Dominical (EBD)', shortcut: '', icon: BookOpenText, action: () => setView('secretaria_ebd') },
-        { label: 'Universidade Teológica (CGADB/CPAD)', shortcut: '', icon: GraduationCap, action: () => setView('curso_teologia') },
-        { label: 'Formação & Capacitação de Obreiros (GIPP)', shortcut: '', icon: Award, action: () => setView('formacao_obreiros') },
         { label: 'Livro de Atas Eclesiásticas', shortcut: '', icon: FileText, action: () => setView('secretaria_livro_atas') },
         { label: 'Certificados & Diplomas', shortcut: '', icon: Award, action: () => setView('secretaria_certificados') },
         { label: 'Carteirinhas de Membros', shortcut: '', icon: Users, action: () => setView('carteirinha_studio') },
         { label: 'Credenciais de Ministros em Lote', shortcut: '', icon: ShieldCheck, action: () => setView('credencial_lote') },
         { label: 'Salinha Kids & Berçário', shortcut: '', icon: Sparkles, action: () => setView('salinha_kids') }
+      ]
+    },
+    {
+      id: 'capacitacoes',
+      label: 'Estudos e Capacitações',
+      accessKey: 'E',
+      items: [
+        { label: 'EAD Cursos de Capacitação', shortcut: '', icon: GraduationCap, action: () => setView('gestao_cursos') },
+        { label: 'Formação de Obreiros GIPP', shortcut: '', icon: Award, action: () => setView('formacao_obreiros') },
+        { label: 'Estudo de Teologia Básico GIPP', shortcut: '', icon: BookOpen, action: () => setView('curso_teologia') },
+        { type: 'separator' },
+        { label: 'Escola Bíblica Dominical (EBD)', shortcut: '', icon: BookOpenText, action: () => setView('secretaria_ebd') }
       ]
     },
     {

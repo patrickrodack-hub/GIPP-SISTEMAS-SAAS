@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 export interface GlobalSettings {
   site: string;

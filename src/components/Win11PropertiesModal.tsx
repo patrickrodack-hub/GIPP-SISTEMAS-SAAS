@@ -27,8 +27,8 @@ export const Win11PropertiesModal: React.FC<ModuleManualProps> = ({
         switch (id) {
             case 'curso_teologia':
                 return {
-                    description: "Universidade Teológica GIPP - Sistema de ensino acadêmico e dogmático integrado.",
-                    category: "Educação & Teologia",
+                    description: "Estudo de Teologia Básico GIPP - Sistema de ensino acadêmico e dogmático integrado.",
+                    category: "Estudos e Capacitações",
                     version: "v2.5",
                     permissions: "Acesso Geral / Aluno / Professor",
                     quickManual: [

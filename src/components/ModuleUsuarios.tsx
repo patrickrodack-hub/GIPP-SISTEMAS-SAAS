@@ -55,19 +55,26 @@ const CATEGORIAS_PERMISSOES = [
     ]
   },
   {
-    titulo: "Secretaria, Relatórios & Ensino",
-    desc: "Agenda, Atas, Certificados, Carteirinhas, EBD, Cursos e Teologia",
-    icon: BookOpen,
+    titulo: "Secretaria & Relatórios Oficiais",
+    desc: "Agenda, Atas, Certificados, Carteirinhas e Relatórios Oficiais",
+    icon: FileText,
     opcoes: [
       { id: 'access_sec_agenda', label: 'Secretaria & Agenda de Tarefas' },
       { id: 'access_sec_livro_atas', label: 'Livro Oficial de Atas' },
       { id: 'access_sec_certificados', label: 'Emissão de Certificados' },
       { id: 'access_carteirinha_studio', label: 'Estúdio de Carteirinhas' },
       { id: 'access_credencial_lote', label: 'Credenciais em Lote' },
-      { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' },
+      { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }
+    ]
+  },
+  {
+    titulo: "Estudos e Capacitações",
+    desc: "EAD Cursos de Capacitação, Formação de Obreiros e Teologia Básica",
+    icon: BookOpen,
+    opcoes: [
+      { id: 'access_gestao_cursos', label: 'EAD Cursos de Capacitação' },
+      { id: 'access_teologia', label: 'Estudo de Teologia Básico GIPP & Formação de Obreiros' },
       { id: 'access_ebd', label: 'Escola Bíblica (EBD) - Turmas/Chamadas' },
-      { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos Online)' },
-      { id: 'access_teologia', label: 'Universidade Teológica GIPP' },
       { id: 'access_biblia', label: 'Bíblia de Estudos & Comentários' }
     ]
   },

@@ -39,6 +39,18 @@ import {
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
 import { GippDocsIcon, GippSheetsIcon } from './components/GippOfficeIcons';
+import { ChurchContext } from './context/ChurchContext';
+export { ChurchContext };
+export { 
+    Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
+    isValidCPF, formatCPF, copyToClipboard, resizeImageAndCompress, 
+    playMenuSound, playNotificationSound 
+} from './utils/sharedHelpers';
+import { 
+    Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
+    isValidCPF, formatCPF, copyToClipboard, resizeImageAndCompress, 
+    playMenuSound, playNotificationSound 
+} from './utils/sharedHelpers';
 
 // --- MODULARIZED IMPORTS ---
 import { Win11PropertiesModal } from './components/Win11PropertiesModal';
@@ -46,7 +58,7 @@ import { InteractiveWindow } from './components/InteractiveWindow';
 import { DelphiFlorenceLayout } from './components/DelphiFlorenceLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
-import { DEFAULT_PORTAL_PERMISSIONS } from './components/ModuleConfiguracoesSistemas';
+import { DEFAULT_PORTAL_PERMISSIONS } from './constants/portalPermissions';
 
 const ModuleEmailAdmin = lazy(() => import('./components/ModuleEmailAdmin'));
 const ModuleEmailMember = lazy(() => import('./components/ModuleEmailMember'));
@@ -171,37 +183,8 @@ export const CachedImage = memo(({ src, cacheKey, className, alt = "", referrerP
 export const callGeminiAI = async (prompt, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
 
-  // Verifica se há chave de API cadastrada localmente para hospedagem estática
-  const clientApiKey = localStorage.getItem('VITE_GEMINI_API_KEY') || 
-                       localStorage.getItem('GEMINI_API_KEY') ||
-                       ((import.meta as any).env ? ((import.meta as any).env.VITE_GEMINI_API_KEY || "") : "");
-
   for (let i = 0; i < retries; i++) {
     try {
-      // Se tivermos chave de API no cliente, chamamos diretamente a API do Gemini
-      if (clientApiKey && clientApiKey.trim() !== "") {
-        try {
-          const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${clientApiKey.trim()}`;
-          const response = await fetch(directUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: String(prompt) }] }]
-            })
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (generatedText) {
-              return generatedText;
-            }
-          }
-        } catch (directErr) {
-          console.warn("Falha ao chamar Gemini diretamente pelo cliente, tentando rota de servidor...", directErr);
-        }
-      }
-
       const response = await fetch("/api/gemini/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,71 +203,6 @@ export const callGeminiAI = async (prompt, retries = 5) => {
       await new Promise(resolve => setTimeout(resolve, delays[i]));
     }
   }
-};
-
-export const resizeImageAndCompress = (dataUrl: string, maxWidth = 200, maxHeight = 200, quality = 0.75): Promise<string> => {
-  return new Promise((resolve) => {
-    if (!dataUrl) {
-      resolve("");
-      return;
-    }
-    
-    // Se não for um data URL, resolve de imediato (ex: links do unsplash)
-    if (!dataUrl.startsWith("data:")) {
-      resolve(dataUrl);
-      return;
-    }
-
-    // Corrige tipo de stream se for lido incorretamente como octet-stream para permitir renderização em Image
-    let processedDataUrl = dataUrl;
-    if (dataUrl.startsWith("data:application/octet-stream")) {
-      processedDataUrl = dataUrl.replace("data:application/octet-stream", "data:image/jpeg");
-    }
-
-    const img = new window.Image();
-    
-    // Configura os eventos corretos ANTES de atribuir img.src para evitar corrida de threads do browser
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        // Comprime mantendo proporção ideal dentro dos limites de largura/altura
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        if (ratio < 1) {
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(processedDataUrl);
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        const result = canvas.toDataURL('image/jpeg', quality);
-        
-        // Se a string ainda for absurdamente grande, faz compressão recursiva incremental de segurança
-        if (result.length > 100000 && quality > 0.3) {
-          resizeImageAndCompress(processedDataUrl, maxWidth, maxHeight, quality - 0.25).then(resolve);
-        } else {
-          resolve(result);
-        }
-      } catch (err) {
-        resolve(processedDataUrl);
-      }
-    };
-
-    img.onerror = () => {
-      resolve(processedDataUrl);
-    };
-
-    img.src = processedDataUrl;
-  });
 };
 
 const fallbackConfig = {
@@ -1911,34 +1829,6 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     );
 };
 
-export const ChurchContext = createContext();
-
-export const playMenuSound = () => {
-    try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        osc.connect(gainNode); gainNode.connect(ctx.destination);
-        osc.type = 'square'; osc.frequency.setValueAtTime(400, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.02);
-        gainNode.gain.setValueAtTime(0.05, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.02);
-        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.02);
-    } catch (e) { }
-};
-
-export const playNotificationSound = () => {
-    try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
-        osc1.type = 'sine'; osc1.frequency.setValueAtTime(783.99, ctx.currentTime); 
-        gain1.gain.setValueAtTime(0, ctx.currentTime); gain1.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.02); gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-        osc1.connect(gain1); gain1.connect(ctx.destination); osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.2);
-    } catch(e) { }
-};
-
 class ErrorBoundary extends React.Component<any, any> {
   state: any;
   props: any;
@@ -1959,51 +1849,6 @@ class ErrorBoundary extends React.Component<any, any> {
     return this.props.children;
   }
 }
-
-export const getTodayDate = () => { const date = new Date(); const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; };
-export const formatDateLocal = (dateString) => { 
-    if (!dateString) return '---'; 
-    try { if (typeof dateString !== 'string') return '---'; const [year, month, day] = dateString.split('-'); return `${day}/${month}/${year}`; } catch(e) { return dateString; } 
-};
-
-export const isValidCPF = (cpf: string): boolean => {
-    if (!cpf) return false;
-    const cleanCPF = cpf.replace(/\D/g, '');
-    if (cleanCPF.length !== 11) return false;
-    if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
-    let sum = 0;
-    for (let i = 0; i < 9; i++) {
-        sum += parseInt(cleanCPF.charAt(i)) * (10 - i);
-    }
-    let rev = 11 - (sum % 11);
-    if (rev === 10 || rev === 11) rev = 0;
-    if (rev !== parseInt(cleanCPF.charAt(9))) return false;
-    sum = 0;
-    for (let i = 0; i < 10; i++) {
-        sum += parseInt(cleanCPF.charAt(i)) * (11 - i);
-    }
-    rev = 11 - (sum % 11);
-    if (rev === 10 || rev === 11) rev = 0;
-    if (rev !== parseInt(cleanCPF.charAt(10))) return false;
-    return true;
-};
-
-export const formatCPF = (v: string): string => {
-    if (!v) return '';
-    const clean = v.replace(/\D/g, '');
-    if (clean.length <= 3) return clean;
-    if (clean.length <= 6) return `${clean.slice(0, 3)}.${clean.slice(3)}`;
-    if (clean.length <= 9) return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6)}`;
-    return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9, 11)}`;
-};
-
-export const copyToClipboard = (text) => {
-    const textArea = document.createElement("textarea");
-    textArea.value = text; textArea.style.top = "0"; textArea.style.left = "0"; textArea.style.position = "fixed";
-    document.body.appendChild(textArea); textArea.focus(); textArea.select();
-    try { document.execCommand('copy'); } catch (err) {}
-    document.body.removeChild(textArea);
-};
 
 export const generatePixPayload = (pixKey, name = 'Igreja', city = 'Cidade', amount = null) => {
     if (!pixKey) return '';
@@ -2355,55 +2200,6 @@ const ToastContainer = ({ toasts, removeToast }) => {
       })} 
     </div>
   );
-};
-
-export const Button = ({ children, onClick, variant = 'primary', className = '', ...props }: { children: React.ReactNode, onClick?: (e: any) => void, variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'ghost', className?: string, [x: string]: any }) => { 
-  const variants = { 
-    primary: "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 border-0 hover:-translate-y-1 hover:scale-105 bg-[length:200%_auto] hover:bg-right transition-all duration-500", 
-    secondary: "bg-white/80 backdrop-blur-md text-slate-700 border-white hover:bg-white hover:border-indigo-200 shadow-sm border hover:shadow-md hover:-translate-y-0.5", 
-    danger: "bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 border-0 hover:-translate-y-1 hover:scale-105", 
-    success: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 border-0 hover:-translate-y-1 hover:scale-105", 
-    ghost: "bg-transparent text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50 border-transparent hover:backdrop-blur-sm" 
-  }; 
-  return (<button className={`relative overflow-hidden px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 ${variants[variant]} ${className}`} onClick={onClick} {...props}>{children}</button>); 
-};
-
-export const FormInput = ({ label, value, onChange, type = "text", required = false, className="", placeholder="", preserveCase = false, ...props }: { label: any; value: any; onChange: any; type?: string; required?: boolean; className?: string; placeholder?: string; preserveCase?: boolean; [key: string]: any }) => {
-    const safeVal = (typeof value === 'object' && value !== null) ? (value.value || value.label || '') : (value || '');
-    return ( 
-      <div className={`mb-6 group ${className}`}>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label} {required && <span className="text-rose-500">*</span>}</label>
-        <input type={type} className={`input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm ${!preserveCase && type !== 'password' && type !== 'email' ? 'uppercase' : 'normal-case'}`} value={safeVal} onChange={e => {
-          let val = e.target.value;
-          if (!preserveCase && (type === 'text' || type === 'search' || !type)) {
-             val = typeof val === 'string' ? val.toUpperCase() : val;
-          }
-          onChange(val);
-        }} required={required} placeholder={placeholder} {...props}/>
-      </div> 
-    );
-};
-
-export const FormSelect = ({ label, value, onChange, options, className="", ...props }: { label: any; value: any; onChange: any; options: any; className?: string; [key: string]: any }) => {
-    const safeVal = (typeof value === 'object' && value !== null) ? (value.value || '') : (value || '');
-    return ( 
-      <div className={`mb-6 group ${className}`}>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label}</label>
-        <div className="relative">
-          <select className="input-futuristic w-full rounded-2xl p-4 text-sm bg-white/50 appearance-none cursor-pointer text-slate-700 shadow-sm pr-10 backdrop-blur-sm" value={safeVal} onChange={e => onChange(e.target.value)} {...props}>
-            <option value="">Selecione...</option>
-            {options.map((opt, idx) => {
-                const isObj = typeof opt === 'object' && opt !== null;
-                const val = isObj ? (opt.value || opt) : opt;
-                let lab = isObj ? (opt.label || opt.nome || opt.titulo || opt.value) : opt;
-                if (typeof lab === 'object') lab = JSON.stringify(lab);
-                return <option key={idx} value={val}>{lab}</option>;
-            })}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 group-hover:text-indigo-500 transition-colors"><ChevronDown size={18} /></div>
-        </div>
-      </div> 
-    );
 };
 
 export const BackupModal = ({ backupState, onConfirm, onCancel }) => {
@@ -4057,7 +3853,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                              { id: 'access_sec_relatorios', label: 'Central de Relatórios Oficiais (PDF)' }, 
                              { id: 'access_ebd', label: 'Gestão EBD (Turmas & Chamadas)' }, 
                              { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos Online)' }, 
-                             { id: 'access_teologia', label: 'Universidade Teológica GIPP' }, 
+                             { id: 'access_teologia', label: 'Estudo de Teologia Básico GIPP & Formação' }, 
                              { id: 'access_biblia', label: 'Bíblia de Estudos & Comentários' } 
                          ] 
                      },
@@ -10521,11 +10317,17 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_livro_atas') && <MenuItem id="secretaria_livro_atas" icon={BookOpen} label="Livro Digital de Atas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
-                    {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
-                    {hasPermission('access_teologia') && checkPlan('curso_teologia') && <MenuItem id="curso_teologia" icon={BookOpen} label="Universidade Teológica GIPP" />}
-                    {hasPermission('access_teologia') && checkPlan('formacao_obreiros') && <MenuItem id="formacao_obreiros" icon={GraduationCap} label="Formação de Obreiros GIPP" />}
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
                 </div>
+
+                {((hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos')) || (hasPermission('access_teologia') && (checkPlan('formacao_obreiros') || checkPlan('curso_teologia')))) && (
+                    <div>
+                        <MenuGroup label="Estudos e Capacitações" />
+                        {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
+                        {hasPermission('access_teologia') && checkPlan('formacao_obreiros') && <MenuItem id="formacao_obreiros" icon={Award} label="Formação de Obreiros GIPP" />}
+                        {hasPermission('access_teologia') && checkPlan('curso_teologia') && <MenuItem id="curso_teologia" icon={BookOpen} label="Estudo de Teologia Básico GIPP" />}
+                    </div>
+                )}
 
                 {(hasPermission('access_sec_certificados') || hasPermission('access_midia') || hasPermission('access_interativo') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
                     <div>
@@ -17161,8 +16963,9 @@ const AppLayout = () => {
 
     const ALL_AVAILABLE_MODULES = [
         { id: 'dashboard', icon: LayoutDashboard, label: "Visão Geral", color: 'text-blue-500', bg: 'bg-blue-500/10' },
-        { id: 'curso_teologia', icon: BookOpen, label: "Universidade Teológica GIPP", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { id: 'formacao_obreiros', icon: GraduationCap, label: "Formação de Obreiros", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
+        { id: 'curso_teologia', icon: BookOpen, label: "Estudo de Teologia Básico GIPP", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'formacao_obreiros', icon: Award, label: "Formação de Obreiros GIPP", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
+        { id: 'gestao_cursos', icon: GraduationCap, label: "EAD Cursos de Capacitação", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
         { id: 'secretaria_ebd', icon: GraduationCap, label: "Gestão EBD (Escola)", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
         { id: 'cad_membro', icon: Users, label: "Membros & Acessos", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
         { id: 'visitantes', icon: HeartHandshake, label: "Visitantes & CRM", color: 'text-rose-500', bg: 'bg-rose-500/10' },
@@ -19785,9 +19588,10 @@ export default function App() {
           { label: "Membros (Rol Eclesiástico)", view: "cad_membro", category: "Navegação", icon: Users },
           { label: "Financeiro: Entradas e Dízimos", view: "fin_entrada", category: "Navegação", icon: ArrowUpCircle },
           { label: "Financeiro: Saídas e Contas", view: "fin_saida", category: "Navegação", icon: ArrowDownCircle },
-          { label: "Conciliação Bancária DDA", view: "fin_conciliacao", category: "Navegação", icon: CreditCard },
-          { label: "Curso de Teologia / Faculdade", view: "curso_teologia", category: "Navegação", icon: GraduationCap },
-          { label: "Formação e Capacitação de Obreiros (GIPP)", view: "formacao_obreiros", category: "Navegação", icon: GraduationCap },
+          { label: "Conciliação Bancária DDA", view: "fin_conciliacao", category: "Financeiro", icon: CreditCard },
+          { label: "Estudo de Teologia Básico GIPP", view: "curso_teologia", category: "Estudos e Capacitações", icon: BookOpen },
+          { label: "Formação de Obreiros GIPP", view: "formacao_obreiros", category: "Estudos e Capacitações", icon: Award },
+          { label: "EAD Cursos de Capacitação", view: "gestao_cursos", category: "Estudos e Capacitações", icon: GraduationCap },
           { label: "Escola Bíblica Dominical (EBD)", view: "secretaria_ebd", category: "Navegação", icon: BookOpenText },
           { label: "Células e Pequenos Grupos", view: "cad_celula", category: "Navegação", icon: Home },
           { label: "Secretaria Integrada & Agenda", view: "secretaria_integrada", category: "Navegação", icon: FileText },

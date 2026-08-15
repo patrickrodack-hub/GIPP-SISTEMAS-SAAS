@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { ChurchContext, Button, playMenuSound, playNotificationSound } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
+import { Button, playMenuSound, playNotificationSound } from '../utils/sharedHelpers';
 import { 
     BookOpen, GraduationCap, ChevronRight, ChevronLeft, CheckCircle, Lock, Award, ArrowLeft, 
     Shield, Printer, Sparkles, Brain, Trash2, Download, Plus, Search, 
@@ -8,12 +9,23 @@ import {
 } from 'lucide-react';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
+import { BibleReferenceModal } from './BibleReferenceModal';
 
 export default function ModuleTeologia() {
     const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog, callGeminiAI } = useContext(ChurchContext);
     const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
     const [activeLesson, setActiveLesson] = useState<number | null>(null);
     const [quizActive, setQuizActive] = useState<boolean>(false);
+    
+    // Interactive Bible Reference Reader Modal
+    const [bibleModalOpen, setBibleModalOpen] = useState<boolean>(false);
+    const [bibleModalQuery, setBibleModalQuery] = useState<string>('');
+
+    const handleOpenBibleReference = (query: string) => {
+        playMenuSound();
+        setBibleModalQuery(query);
+        setBibleModalOpen(true);
+    };
     
     // Real persistent progress tracking (Melhoria 1)
     const [courseProgress, setCourseProgress] = useState<Record<string, number>>(() => {
@@ -1836,19 +1848,50 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
 
                                         {currentPage === 2 && (
                                             <div className="space-y-4">
+                                                <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40 rounded-2xl flex items-center justify-between text-xs">
+                                                    <span className="font-sans font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                                                        <BookOpen size={14} className="text-indigo-600" />
+                                                        Clique em qualquer versículo para abrir o texto bíblico e a exegese teológica oficial:
+                                                    </span>
+                                                </div>
+
                                                 {Array.isArray(booklet.biblicalReferences) ? (
-                                                    <div className="space-y-4 font-sans text-sm">
+                                                    <div className="space-y-3 font-sans text-sm">
                                                         {booklet.biblicalReferences.map((ref: string, idx: number) => (
-                                                            <div key={idx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/10 text-slate-700 leading-relaxed font-serif text-base space-y-2">
-                                                                <span className="font-sans font-black text-xs text-indigo-600 block uppercase">Passagem Bíblica #{idx+1}</span>
-                                                                <p className="italic font-medium">{ref}</p>
+                                                            <div 
+                                                                key={idx} 
+                                                                onClick={() => handleOpenBibleReference(ref)}
+                                                                className="p-4 rounded-2xl border border-indigo-200/80 dark:border-indigo-900/60 bg-white/70 dark:bg-slate-900/60 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 hover:border-indigo-400 text-slate-800 dark:text-slate-100 leading-relaxed font-serif text-base space-y-2 cursor-pointer transition-all shadow-xs group"
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-sans font-black text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                                        <BookOpen size={14} className="group-hover:scale-110 transition-transform" />
+                                                                        Passagem Bíblica #{idx+1}
+                                                                    </span>
+                                                                    <span className="text-[11px] font-sans font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60 px-2.5 py-1 rounded-lg flex items-center gap-1 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                                                        📖 Abrir Texto & Explicação
+                                                                    </span>
+                                                                </div>
+                                                                <p className="italic font-medium text-slate-800 dark:text-slate-200">{ref}</p>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : typeof booklet.biblicalReferences === 'string' ? (
-                                                    booklet.biblicalReferences.split('\n\n').map((para: string, idx: number) => (
-                                                        <p key={idx}>{para}</p>
-                                                    ))
+                                                    <div className="space-y-3">
+                                                        {booklet.biblicalReferences.split('\n\n').map((para: string, idx: number) => (
+                                                            <div 
+                                                                key={idx}
+                                                                onClick={() => handleOpenBibleReference(para)}
+                                                                className="p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900 bg-white/80 dark:bg-slate-900/80 hover:border-indigo-400 cursor-pointer transition-all space-y-1.5"
+                                                            >
+                                                                <div className="flex items-center justify-between text-xs">
+                                                                    <span className="font-black text-indigo-600 uppercase">Referência Dogmática #{idx+1}</span>
+                                                                    <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Ver Exegese</span>
+                                                                </div>
+                                                                <p className="italic font-medium">{para}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 ) : <p>Processando referências bíblicas...</p>}
                                             </div>
                                         )}
@@ -2384,7 +2427,7 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 <div className="relative z-10">
                     <h1 className="text-3xl md:text-5xl font-black flex items-center gap-4 tracking-tight">
                         <GraduationCap className="text-indigo-400 animate-bounce" size={48} />
-                        Universidade Teológica
+                        Estudo de Teologia Básico GIPP
                     </h1>
                     <p className="text-indigo-200 font-medium mt-4 text-xs sm:text-lg max-w-2xl leading-relaxed">
                         Formação teológica sólida e profissionalizante. Mergulhe nas profundezas da Palavra de Deus com material didático premium gerado exclusivamente para nossos alunos, preparado para a jornada pastoral.
@@ -3742,6 +3785,13 @@ ${generatedLessonPlan.perguntasDebate.map((q: string, i: number) => `${i + 1}. $
                     </div>
                 </div>
             )}
+
+            {/* Modal Interativo de Referência e Exegese Bíblica */}
+            <BibleReferenceModal
+                isOpen={bibleModalOpen}
+                referenceQuery={bibleModalQuery}
+                onClose={() => setBibleModalOpen(false)}
+            />
         </div>
     );
 }

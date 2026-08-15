@@ -1832,7 +1832,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
 
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
               <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-1">
-                <GraduationCap size={16} className="text-indigo-500" /> Universidade Teológica CGADB
+                <GraduationCap size={16} className="text-indigo-500" /> Estudo de Teologia Básico GIPP
               </span>
               <p className="text-[10px] text-slate-500 leading-snug font-bold">
                 Ensino sistemático canônico de acordo com a Declaração de Fé da CGADB. Dividido em níveis Básico, Médio e Avançado com quizzes, gabarito inteligente e caderno de anotações persistentes.
@@ -1853,7 +1853,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
           <div className="bg-indigo-50 border border-indigo-150 rounded-2xl p-4 flex gap-3 text-indigo-950">
             <GraduationCap className="text-indigo-600 shrink-0 mt-0.5" size={20} />
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wide">Universidade Teológica GIPP & Declaração de Fé CGADB</h4>
+              <h4 className="text-xs font-black uppercase tracking-wide">Estudo de Teologia Básico GIPP & Declaração de Fé CGADB</h4>
               <p className="text-xs text-indigo-800 mt-1 leading-relaxed">
                 Desenvolvido em total consonância com as diretrizes e os 24 capítulos da Declaração de Fé das Assembleias de Deus (CGADB). Os alunos contam com módulos teológicos estruturados que cobrem Bibliologia, Teontologia, Cristologia, Pneumatologia, Hamartiologia, Soteriologia, Eclesiologia, Distintivos Pentecostais, Cura Divina, Escatologia Pré-Tribulacionista e Família. O sistema inclui questionários de fixação doutrinária de 2 questões ao final de cada lição, correção de gabarito em tempo real, além de um Caderno de Anotações integrado com salvamento em disco e exportador TXT imediato para consulta segura no púlpito.
               </p>

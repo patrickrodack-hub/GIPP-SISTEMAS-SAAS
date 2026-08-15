@@ -1,15 +1,19 @@
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { 
-    ChurchContext, Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
-    resizeImageAndCompress, copyToClipboard
-} from '../App';
+    Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
+    resizeImageAndCompress, copyToClipboard, playMenuSound, playNotificationSound
+} from '../utils/sharedHelpers';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
     GraduationCap, BookOpen, CheckCircle, Clock, Award, Shield, 
     Users, FileText, CheckCircle2, XCircle, AlertCircle, Plus, 
     Search, Filter, ChevronRight, ChevronLeft, Upload, Camera, 
     Printer, Sparkles, HelpCircle, Star, MessageSquare, Send,
     UserCheck, BookCheck, ShieldAlert, FileCheck, Check, 
-    RefreshCw, Layers, ArrowLeft, Eye, Edit3, Trash2, Smartphone
+    RefreshCw, Layers, ArrowLeft, Eye, Edit3, Trash2, Smartphone,
+    Calendar, DollarSign, QrCode, Bell, BarChart2, CheckSquare,
+    MessageCircle, UserPlus, FileDown, Download, Share2, ClipboardList,
+    TrendingUp, AlertTriangle, Play, Pause, ListFilter
 } from 'lucide-react';
 import { 
     collection, doc, setDoc, addDoc, getDocs, onSnapshot, query, updateDoc 
@@ -19,9 +23,26 @@ import {
     NIVEIS_MINISTERIAIS, DISCIPLINAS_CURRICULARES, 
     MOCK_CANDIDATOS_INICIAIS, MOCK_REGISTROS_ESTAGIO, 
     MOCK_TRABALHOS_ACADEMICOS, MOCK_SESSOES_MENTORIA,
+    MOCK_TURMAS_INICIAIS, MOCK_TUTORES_INICIAIS,
+    MOCK_ENCONTROS_INICIAIS, MOCK_FINANCEIRO_INICIAIS,
+    MOCK_AVISOS_INICIAIS, MOCK_BANCO_QUESTOES_INICIAIS,
+    MOCK_PROVAS_CUSTOMIZADAS_INICIAIS,
     CandidatoObreiro, RegistroEstagio, TrabalhoAcademico, SessaoMentoria,
-    DisciplinaObreiro, LicaoObreiro
+    DisciplinaObreiro, LicaoObreiro, TurmaFormacao, TutorFormacao,
+    EncontroAula, FinanceiroCandidato, AvisoTurma, QuestaoBanco,
+    ProvaCustomizada
 } from '../data/ModuleFormacaoObreirosData';
+import { TabTurmasCronograma } from './formacao/TabTurmasCronograma';
+import { TabTutoresDocentes } from './formacao/TabTutoresDocentes';
+import { TabFrequenciaEncontros } from './formacao/TabFrequenciaEncontros';
+import { TabFinanceiroFormacao } from './formacao/TabFinanceiroFormacao';
+import { TabAvisosLembretes } from './formacao/TabAvisosLembretes';
+import { TabAnalyticsAtaTurma } from './formacao/TabAnalyticsAtaTurma';
+import { TabBancoQuestoesProvas } from './formacao/TabBancoQuestoesProvas';
+import { TabDossiePastoral } from './formacao/TabDossiePastoral';
+import { TabDocumentosOficiais } from './formacao/TabDocumentosOficiais';
+import { TabEstagioSupervisionado } from './formacao/TabEstagioSupervisionado';
+import { BibleReferenceModal } from './BibleReferenceModal';
 
 interface ModuleFormacaoObreirosProps {
     initialViewMode?: 'coordenador' | 'candidato';
@@ -35,12 +56,49 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
     } = useContext(ChurchContext);
 
     // ==========================================
+    // ESTADO DA JANELA / MODAL DE REFERÊNCIA BÍBLICA
+    // ==========================================
+    const [bibleModalOpen, setBibleModalOpen] = useState(false);
+    const [bibleModalQuery, setBibleModalQuery] = useState('');
+
+    const handleOpenBibleRef = (refQuery: string) => {
+        setBibleModalQuery(refQuery);
+        setBibleModalOpen(true);
+    };
+
+    // ==========================================
     // ESTADOS PRINCIPAIS DE NAVEGAÇÃO & VISÃO
     // ==========================================
     const [viewMode, setViewMode] = useState<'coordenador' | 'candidato'>(initialViewMode || (candidateUser ? 'candidato' : 'coordenador'));
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'teoria' | 'provas' | 'trabalhos' | 'estagio' | 'mentoria' | 'workflow'>('dashboard');
+    const [activeTab, setActiveTab] = useState<
+        | 'dashboard' 
+        | 'dossie'
+        | 'documentos'
+        | 'turmas' 
+        | 'tutores' 
+        | 'frequencia' 
+        | 'financeiro' 
+        | 'avisos' 
+        | 'relatorios_lms' 
+        | 'banco_questoes' 
+        | 'teoria' 
+        | 'provas' 
+        | 'trabalhos' 
+        | 'estagio' 
+        | 'mentoria' 
+        | 'workflow'
+    >('dashboard');
     const [selectedNivelId, setSelectedNivelId] = useState<'auxiliar' | 'diacono' | 'presbitero' | 'evangelista' | 'pastor'>('diacono');
     const [selectedCandidatoId, setSelectedCandidatoId] = useState<string>('cand_001');
+
+    // Ref e rolagem suave das abas
+    const tabsScrollRef = useRef<HTMLDivElement>(null);
+    const scrollTabs = (direction: 'left' | 'right') => {
+        if (tabsScrollRef.current) {
+            const scrollAmount = direction === 'left' ? -280 : 280;
+            tabsScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+    };
 
     // Estados de Leitura Teórica e Apostilas Paginadas (5 páginas)
     const [selectedDisciplina, setSelectedDisciplina] = useState<DisciplinaObreiro | null>(null);
@@ -79,6 +137,18 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
 
     // Estados de Mentoria
     const [showNovaMentoriaModal, setShowNovaMentoriaModal] = useState(false);
+    const [showNovoCandidatoModal, setShowNovoCandidatoModal] = useState(false);
+    const [selectedMembroCandidatoId, setSelectedMembroCandidatoId] = useState('');
+    const [formNovoCandidato, setFormNovoCandidato] = useState({
+        nome: '',
+        cpf: '',
+        telefone: '',
+        email: '',
+        cargoAtual: 'Membro',
+        congregacaoNome: 'Sede Principal',
+        nivelPretendido: 'diacono' as 'auxiliar' | 'diacono' | 'presbitero' | 'evangelista' | 'pastor',
+        mentorNome: 'Pr. Carlos Eduardo'
+    });
     const [mentoriaForm, setMentoriaForm] = useState({
         temaAbordado: '',
         pontosFortes: '',
@@ -129,6 +199,15 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
     const [estagios, setEstagios] = useState<RegistroEstagio[]>(MOCK_REGISTROS_ESTAGIO);
     const [trabalhos, setTrabalhos] = useState<TrabalhoAcademico[]>(MOCK_TRABALHOS_ACADEMICOS);
     const [mentorias, setMentorias] = useState<SessaoMentoria[]>(MOCK_SESSOES_MENTORIA);
+    
+    // Estados LMS (Melhorias 1 a 7)
+    const [turmas, setTurmas] = useState<TurmaFormacao[]>(MOCK_TURMAS_INICIAIS);
+    const [tutores, setTutores] = useState<TutorFormacao[]>(MOCK_TUTORES_INICIAIS);
+    const [encontros, setEncontros] = useState<EncontroAula[]>(MOCK_ENCONTROS_INICIAIS);
+    const [financeiroList, setFinanceiroList] = useState<FinanceiroCandidato[]>(MOCK_FINANCEIRO_INICIAIS);
+    const [avisos, setAvisos] = useState<AvisoTurma[]>(MOCK_AVISOS_INICIAIS);
+    const [bancoQuestoes, setBancoQuestoes] = useState<QuestaoBanco[]>(MOCK_BANCO_QUESTOES_INICIAIS);
+    const [provasCustomizadas, setProvasCustomizadas] = useState<ProvaCustomizada[]>(MOCK_PROVAS_CUSTOMIZADAS_INICIAIS);
     const [loadingData, setLoadingData] = useState(false);
 
     // Carregar do Firestore com sanitização estrita
@@ -189,11 +268,81 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             }
         });
 
+        // Turmas LMS
+        const unsubTurmas = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_turmas'), (snap) => {
+            if (!snap.empty) {
+                const list: TurmaFormacao[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as TurmaFormacao));
+                if (list.length > 0) setTurmas(list);
+            }
+        });
+
+        // Tutores LMS
+        const unsubTutores = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_tutores'), (snap) => {
+            if (!snap.empty) {
+                const list: TutorFormacao[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as TutorFormacao));
+                if (list.length > 0) setTutores(list);
+            }
+        });
+
+        // Encontros LMS
+        const unsubEnc = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_encontros'), (snap) => {
+            if (!snap.empty) {
+                const list: EncontroAula[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as EncontroAula));
+                if (list.length > 0) setEncontros(list);
+            }
+        });
+
+        // Financeiro LMS
+        const unsubFin = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_financeiro'), (snap) => {
+            if (!snap.empty) {
+                const list: FinanceiroCandidato[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as FinanceiroCandidato));
+                if (list.length > 0) setFinanceiroList(list);
+            }
+        });
+
+        // Avisos LMS
+        const unsubAvisos = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_avisos'), (snap) => {
+            if (!snap.empty) {
+                const list: AvisoTurma[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as AvisoTurma));
+                if (list.length > 0) setAvisos(list);
+            }
+        });
+
+        // Banco de Questões
+        const unsubQuestoes = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_banco_questoes'), (snap) => {
+            if (!snap.empty) {
+                const list: QuestaoBanco[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as QuestaoBanco));
+                if (list.length > 0) setBancoQuestoes(list);
+            }
+        });
+
+        // Provas Customizadas
+        const unsubProvas = onSnapshot(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_provas_customizadas'), (snap) => {
+            if (!snap.empty) {
+                const list: ProvaCustomizada[] = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() } as ProvaCustomizada));
+                if (list.length > 0) setProvasCustomizadas(list);
+            }
+        });
+
         return () => {
             unsubCand();
             unsubEst();
             unsubTrab();
             unsubMent();
+            unsubTurmas();
+            unsubTutores();
+            unsubEnc();
+            unsubFin();
+            unsubAvisos();
+            unsubQuestoes();
+            unsubProvas();
         };
     }, [dbFirestore, appId, DEFAULT_CANDIDATO]);
 
@@ -469,6 +618,152 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
         }
     };
 
+    // Salvar Dossiê Canônico de Idoneidade (1 Tm 3 e Tito 1)
+    const handleSalvarDossieCanonico = async (candidatoId: string, dossieData: CandidatoObreiro['dossieCanonico']) => {
+        try {
+            const updated = {
+                dossieCanonico: dossieData
+            };
+
+            if (dbFirestore && appId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_candidatos', candidatoId), updated, { merge: true });
+            }
+
+            setCandidatos(prev => prev.map(c => c.id === candidatoId ? { ...c, ...updated } : c));
+            addToast("Dossiê Canônico de Idoneidade Ministerial salvo com sucesso!", "success");
+            logAction('DOSSIE_CANONICO', `Pastor salvou parecer e dossiê pastoral para ${candidatoAtivo.nome}`, 'formacao_candidatos', candidatoId);
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao salvar dossiê canônico.", "error");
+        }
+    };
+
+    // Efetivar Consagração Oficial no Cadastro de Membros da Igreja
+    const handleEfetivarConsagracaoNoCadastro = async (candidato: CandidatoObreiro) => {
+        try {
+            const novoCargo = nivelAtivo.nome.toUpperCase();
+            const dataHoje = getTodayDate();
+
+            // 1. Atualizar o candidato na formação de obreiros para "consagrado"
+            const updatedCand: Partial<CandidatoObreiro> = {
+                statusTrilha: 'consagrado',
+                workflowStatus: {
+                    teoriaConcluida: true,
+                    provasAprovadas: true,
+                    trabalhosAprovados: true,
+                    estagioHomologado: true,
+                    mentoriaAprovada: true,
+                    entrevistaPastor: true,
+                    aprovadoAssembleia: true
+                },
+                dossieCanonico: {
+                    ...(candidato.dossieCanonico || {} as any),
+                    dataConsagracaoOficial: dataHoje,
+                    aprovadoPresbiterio: true
+                }
+            };
+
+            if (dbFirestore && appId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_candidatos', candidato.id), updatedCand, { merge: true });
+            }
+            setCandidatos(prev => prev.map(c => c.id === candidato.id ? { ...c, ...updatedCand } : c));
+
+            // 2. Se houver vínculo de membroId ou correspondência na base de membros da igreja
+            let targetMembroId = candidato.membroId;
+            if (!targetMembroId && db?.membros && db.membros.length > 0) {
+                const match = db.membros.find((m: any) => 
+                    (candidato.cpf && m.cpf && m.cpf === candidato.cpf) ||
+                    (m.nome && m.nome.toLowerCase().trim() === candidato.nome.toLowerCase().trim())
+                );
+                if (match) {
+                    targetMembroId = match.id;
+                }
+            }
+
+            if (targetMembroId && dbFirestore && appId) {
+                const updatedMembro = {
+                    cargo: novoCargo,
+                    data_consagracao: dataHoje,
+                    ultima_atualizacao: new Date().toISOString()
+                };
+
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros', targetMembroId), updatedMembro, { merge: true });
+            }
+
+            addToast(`Obreiro(a) ${candidato.nome} CONSAGRADO(A) com sucesso! Cargo atualizado para ${novoCargo} no rol de membros.`, "success");
+            logAction('CONSAGRACAO_EFETIVADA', `Consagração solene de ${candidato.nome} para ${novoCargo} homologada no sistema`, 'membros', targetMembroId || candidato.id);
+        } catch (err) {
+            console.error("Erro ao efetivar consagração:", err);
+            addToast("Erro ao atualizar o rol de membros.", "error");
+        }
+    };
+
+    // Criar / Matricular Novo Candidato a partir da base real de membros
+    const handleCriarCandidato = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formNovoCandidato.nome.trim()) {
+            addToast("Informe o nome do candidato a obreiro.", "error");
+            return;
+        }
+
+        try {
+            const novoCandidato: CandidatoObreiro = {
+                id: `cand_${Date.now()}`,
+                membroId: selectedMembroCandidatoId || undefined,
+                nome: formNovoCandidato.nome,
+                cpf: formNovoCandidato.cpf || '000.000.000-00',
+                telefone: formNovoCandidato.telefone || '(11) 99999-9999',
+                email: formNovoCandidato.email || 'obreiro@igreja.org.br',
+                cargoAtual: formNovoCandidato.cargoAtual || 'Membro',
+                congregacaoNome: formNovoCandidato.congregacaoNome || db?.igreja?.nome || 'Sede Principal',
+                nivelAtual: formNovoCandidato.cargoAtual || 'Membro',
+                nivelPretendido: formNovoCandidato.nivelPretendido,
+                mentorNome: formNovoCandidato.mentorNome || 'Pr. Carlos Eduardo',
+                dataIngresso: getTodayDate(),
+                statusTrilha: 'cursando',
+                progressoTeorico: 0,
+                mediaProvas: 8.0,
+                horasEstagioCumpridas: 0,
+                trabalhosEntregues: 0,
+                totalTrabalhosExigidos: 4,
+                workflowStatus: {
+                    teoriaConcluida: false,
+                    provasAprovadas: false,
+                    trabalhosAprovados: false,
+                    estagioHomologado: false,
+                    mentoriaAprovada: false,
+                    entrevistaPastor: false,
+                    aprovadoAssembleia: false
+                }
+            };
+
+            if (dbFirestore && appId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_candidatos', novoCandidato.id), novoCandidato);
+            }
+
+            setCandidatos(prev => [novoCandidato, ...prev]);
+            setSelectedCandidatoId(novoCandidato.id);
+            setSelectedNivelId(novoCandidato.nivelPretendido);
+            setShowNovoCandidatoModal(false);
+            setFormNovoCandidato({
+                nome: '',
+                cpf: '',
+                telefone: '',
+                email: '',
+                cargoAtual: 'Membro',
+                congregacaoNome: db?.igreja?.nome || 'Sede Principal',
+                nivelPretendido: 'diacono',
+                mentorNome: 'Pr. Carlos Eduardo'
+            });
+            setSelectedMembroCandidatoId('');
+            addToast(`Obreiro(a) ${novoCandidato.nome} matriculado com sucesso na Formação de Obreiros!`, "success");
+            logAction('MATRICULA_OBREIRO', `Membro ${novoCandidato.nome} ingressou na formação para ${novoCandidato.nivelPretendido}`, 'formacao_candidatos', novoCandidato.id);
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao matricular candidato.", "error");
+        }
+    };
+
     // Upload de Foto de Comprovante de Estágio com Compressão
     const handleUploadFotoEstagio = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -719,25 +1014,241 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
         }
     };
 
-    // Gerar e Imprimir Certificado Oficial de Consagração / Diploma Formativo
-    const handleImprimirCertificadoOuAta = (tipo: 'certificado' | 'ata') => {
+    // Gerar e Imprimir Certificado Oficial de Consagração / Diploma Formativo / Credencial Oficial
+    const handleImprimirCertificadoOuAta = (tipo: 'certificado' | 'ata' | 'credencial') => {
         const docHash = `GIPP-ORD-${candidatoAtivo.nivelPretendido.toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${new Date().getFullYear()}`;
+        const membroVinculado = (db.membros || []).find(m => m.id === candidatoAtivo.membroId || m.nome?.toLowerCase() === candidatoAtivo.nome?.toLowerCase()) || {};
         
         const finalData = {
-            igreja: db.igreja || {},
+            igreja: db.igreja || {
+                nome: 'Assembleia de Deus — Ministério do Belém',
+                cidade: 'São Paulo',
+                uf: 'SP',
+                pastor: db.igreja?.pastor_presidente || user?.nome || 'Pastor Presidente',
+                pastor_presidente: db.igreja?.pastor_presidente || user?.nome || 'Pastor Presidente'
+            },
+            membro: { 
+                id: candidatoAtivo.membroId || candidatoAtivo.id,
+                nome: candidatoAtivo.nome, 
+                cargo: nivelAtivo.nome.toUpperCase(),
+                cpf: candidatoAtivo.cpf || membroVinculado.cpf || '---',
+                numero_registro: membroVinculado.numero_registro || `OBR-${candidatoAtivo.id.substring(candidatoAtivo.id.length - 4).toUpperCase()}`,
+                data_nascimento: (candidatoAtivo as any).dataNascimento || membroVinculado.data_nascimento || '',
+                data_batismo: membroVinculado.data_batismo || '',
+                data_admissao: membroVinculado.data_admissao || '',
+                nome_pai: membroVinculado.nome_pai || '',
+                nome_mae: membroVinculado.nome_mae || '',
+                foto: candidatoAtivo.foto || membroVinculado.foto || '',
+                congregacao: candidatoAtivo.congregacaoNome || membroVinculado.congregacao || db.igreja?.nome || 'Sede'
+            },
+            membros: [{
+                id: candidatoAtivo.membroId || candidatoAtivo.id,
+                nome: candidatoAtivo.nome, 
+                cargo: nivelAtivo.nome.toUpperCase(),
+                cpf: candidatoAtivo.cpf || membroVinculado.cpf || '---',
+                numero_registro: membroVinculado.numero_registro || `OBR-${candidatoAtivo.id.substring(candidatoAtivo.id.length - 4).toUpperCase()}`,
+                data_nascimento: (candidatoAtivo as any).dataNascimento || membroVinculado.data_nascimento || '',
+                data_batismo: membroVinculado.data_batismo || '',
+                data_admissao: membroVinculado.data_admissao || '',
+                nome_pai: membroVinculado.nome_pai || '',
+                nome_mae: membroVinculado.nome_mae || '',
+                foto: candidatoAtivo.foto || membroVinculado.foto || '',
+                congregacao: candidatoAtivo.congregacaoNome || membroVinculado.congregacao || db.igreja?.nome || 'Sede'
+            }],
             candidato: candidatoAtivo,
             nivel: nivelAtivo,
+            extra: { 
+                cargo: nivelAtivo.nome.toUpperCase(), 
+                nivel: nivelAtivo.nome,
+                curso: `Escola de Formação de Obreiros - Nível ${nivelAtivo.nome}`,
+                nome_curso: `Curso de Formação Ministerial (${nivelAtivo.sigla})`,
+                titular: candidatoAtivo.nome,
+                cpf: candidatoAtivo.cpf || membroVinculado.cpf || '---',
+                numero_registro: membroVinculado.numero_registro || `OBR-${candidatoAtivo.id.substring(candidatoAtivo.id.length - 4).toUpperCase()}`,
+                docHash: docHash,
+                horasEstagio: totalHorasAprovadas,
+                mediaFinal: (candidatoAtivo.mediaProvas || 9.0).toFixed(1)
+            },
             dataConsagracao: formatDateLocal(getTodayDate()),
-            pastorPresidente: db.igreja?.pastor_presidente || user?.nome || 'Pastor Presidente',
+            pastorPresidente: db.igreja?.pastor_presidente || db.igreja?.pastor || user?.nome || 'Pastor Presidente',
             docHash: docHash,
             horasEstagio: totalHorasAprovadas,
             mediaFinal: candidatoAtivo.mediaProvas || 9.0
         };
 
         setPrintData(finalData);
-        setPrintMode(tipo === 'certificado' ? 'cert_consagracao' : 'secretaria_livro_atas');
+        if (tipo === 'certificado') {
+            setPrintMode('cert_consagracao');
+        } else if (tipo === 'credencial') {
+            setPrintMode('carteirinha');
+        } else {
+            setPrintMode('secretaria_livro_atas');
+        }
         setPreviewOpen(true);
         logAction('EMISSÃO', `Gerou documento de ${tipo} para o candidato ${candidatoAtivo.nome}`, 'formacao_obreiros', docHash);
+    };
+
+    // ==========================================
+    // HANDLERS LMS (GESTÃO DE CURSOS 1 A 7)
+    // ==========================================
+    const handleSalvarTurma = async (turmaData: Partial<TurmaFormacao>) => {
+        if (!turmaData.id) return;
+        const exists = turmas.some(t => t.id === turmaData.id);
+        const updatedList = exists 
+            ? turmas.map(t => t.id === turmaData.id ? { ...t, ...turmaData } as TurmaFormacao : t)
+            : [...turmas, turmaData as TurmaFormacao];
+        setTurmas(updatedList);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_turmas', turmaData.id), turmaData, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar turma:", err);
+            }
+        }
+    };
+
+    const handleExcluirTurma = async (turmaId: string) => {
+        setTurmas(prev => prev.filter(t => t.id !== turmaId));
+    };
+
+    const handleMatricularAluno = async (turmaId: string, candidatoId: string) => {
+        const turma = turmas.find(t => t.id === turmaId);
+        if (!turma) return;
+        const jaMatriculado = turma.alunosIds?.includes(candidatoId);
+        const newAlunos = jaMatriculado 
+            ? (turma.alunosIds || []).filter(id => id !== candidatoId)
+            : [...(turma.alunosIds || []), candidatoId];
+        
+        await handleSalvarTurma({ ...turma, alunosIds: newAlunos });
+        addToast(jaMatriculado ? "Matrícula desvinculada." : "Aluno matriculado com sucesso na turma!", "success");
+    };
+
+    const handleSalvarTutor = async (tutor: TutorFormacao) => {
+        const exists = tutores.some(t => t.id === tutor.id);
+        const updatedList = exists
+            ? tutores.map(t => t.id === tutor.id ? tutor : t)
+            : [...tutores, tutor];
+        setTutores(updatedList);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_tutores', tutor.id), tutor, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar tutor:", err);
+            }
+        }
+    };
+
+    const handleAvaliarTrabalhoRapido = async (trabalhoId: string, nota: number, feedback: string) => {
+        const updatedTrabs = trabalhos.map(t => {
+            if (t.id === trabalhoId) {
+                return {
+                    ...t,
+                    status: (nota >= 7 ? 'aprovado' : 'reprovado') as any,
+                    nota,
+                    feedbackTutor: feedback,
+                    dataAvaliacao: getTodayDate()
+                };
+            }
+            return t;
+        });
+        setTrabalhos(updatedTrabs);
+        addToast(`Trabalho avaliado com nota ${nota.toFixed(1)}!`, "success");
+    };
+
+    const handleAprovarEstagioRapido = async (estagioId: string, status: 'aprovado' | 'rejeitado') => {
+        const updated = estagios.map(e => e.id === estagioId ? { ...e, status } : e);
+        setEstagios(updated);
+        addToast(status === 'aprovado' ? "Horas de estágio aprovadas no diário!" : "Estágio devolvido para ajuste.", "info");
+    };
+
+    const handleSalvarEncontro = async (encontro: EncontroAula) => {
+        const exists = encontros.some(e => e.id === encontro.id);
+        const updated = exists ? encontros.map(e => e.id === encontro.id ? encontro : e) : [...encontros, encontro];
+        setEncontros(updated);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_encontros', encontro.id), encontro, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar encontro:", err);
+            }
+        }
+    };
+
+    const handleAtualizarPresenca = async (encontroId: string, alunoId: string, presente: boolean) => {
+        const updated = encontros.map(enc => {
+            if (enc.id === encontroId) {
+                const lista = enc.presencas || [];
+                const existPres = lista.find(p => p.candidatoId === alunoId);
+                let novaLista;
+                if (existPres) {
+                    novaLista = lista.map(p => p.candidatoId === alunoId ? { ...p, presente } : p);
+                } else {
+                    novaLista = [...lista, { candidatoId: alunoId, presente }];
+                }
+                return { ...enc, presencas: novaLista };
+            }
+            return enc;
+        });
+        setEncontros(updated);
+    };
+
+    const handleSalvarRegistroFinanceiro = async (reg: FinanceiroCandidato) => {
+        const exists = financeiroList.some(f => f.id === reg.id);
+        const updated = exists ? financeiroList.map(f => f.id === reg.id ? reg : f) : [...financeiroList, reg];
+        setFinanceiroList(updated);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_financeiro', reg.id), reg, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar registro financeiro:", err);
+            }
+        }
+    };
+
+    const handleSalvarAviso = async (aviso: AvisoTurma) => {
+        const exists = avisos.some(a => a.id === aviso.id);
+        const updated = exists ? avisos.map(a => a.id === aviso.id ? aviso : a) : [aviso, ...avisos];
+        setAvisos(updated);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_avisos', aviso.id), aviso, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar aviso:", err);
+            }
+        }
+    };
+
+    const handleSalvarQuestao = async (questao: QuestaoBanco) => {
+        const exists = bancoQuestoes.some(q => q.id === questao.id);
+        const updated = exists ? bancoQuestoes.map(q => q.id === questao.id ? questao : q) : [...bancoQuestoes, questao];
+        setBancoQuestoes(updated);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_banco_questoes', questao.id), questao, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar questão:", err);
+            }
+        }
+    };
+
+    const handleSalvarProva = async (prova: ProvaCustomizada) => {
+        const exists = provasCustomizadas.some(p => p.id === prova.id);
+        const updated = exists ? provasCustomizadas.map(p => p.id === prova.id ? prova : p) : [...provasCustomizadas, prova];
+        setProvasCustomizadas(updated);
+
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_provas_customizadas', prova.id), prova, { merge: true });
+            } catch (err) {
+                console.error("Erro ao salvar prova:", err);
+            }
+        }
     };
 
     return (
@@ -754,14 +1265,14 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                                Formação & Capacitação de Obreiros
+                                Universidade Teológica & Formação de Obreiros
                             </h1>
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                CGADB / CPAD
+                                CGADB / CPAD • LMS GIPP
                             </span>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                            Trilha ministerial hierárquica baseada na Declaração de Fé e no manual "O Obreiro Aprovado".
+                            Gestão de turmas, cronogramas, tutores, frequência presencial, financeiro, banco dogmático e emissão de atas.
                         </p>
                     </div>
                 </div>
@@ -777,7 +1288,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                         }`}
                     >
                         <Award size={14} />
-                        <span>Visão Pastoral / Coordenador</span>
+                        <span>Visão Pastoral / Gestão LMS</span>
                     </button>
                     <button
                         onClick={() => setViewMode('candidato')}
@@ -788,7 +1299,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                         }`}
                     >
                         <Users size={14} />
-                        <span>Visão do Candidato</span>
+                        <span>Visão do Aluno / Obreiro</span>
                     </button>
                 </div>
             </div>
@@ -831,39 +1342,78 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             </div>
 
             {/* ========================================== */}
-            {/* BARRA DE NAVEGAÇÃO POR ABAS (MOBILE FIRST) */}
+            {/* BARRA DE NAVEGAÇÃO POR ABAS COM ROLAGEM    */}
             {/* ========================================== */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                {[
-                    { id: 'dashboard', label: 'Painel & Ficha', icon: Layers },
-                    { id: 'teoria', label: 'Apostilas & Aulas', icon: BookOpen },
-                    { id: 'provas', label: 'Provas & Notas', icon: Award },
-                    { id: 'trabalhos', label: 'Trabalhos Acadêmicos', icon: FileText },
-                    { id: 'estagio', label: 'Estágio Prático', icon: Clock },
-                    { id: 'mentoria', label: 'Mentoria Pastoral', icon: UserCheck },
-                    { id: 'workflow', label: 'Workflow de Consagração', icon: CheckCircle2 }
-                ].map(tab => {
-                    const IconComp = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => {
-                                setActiveTab(tab.id as any);
-                                setSelectedDisciplina(null);
-                                setSelectedLicao(null);
-                            }}
-                            className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${
-                                isActive
-                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                            }`}
-                        >
-                            <IconComp size={15} />
-                            <span>{tab.label}</span>
-                        </button>
-                    );
-                })}
+            <div className="relative flex items-center bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-3xl border border-slate-200/80 dark:border-slate-800">
+                {/* Botão de Rolar para a Esquerda */}
+                <button
+                    type="button"
+                    onClick={() => scrollTabs('left')}
+                    className="shrink-0 p-2 mr-1 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-xs transition-all hover:scale-105 active:scale-95 z-10 flex items-center justify-center cursor-pointer"
+                    title="Rolar abas para a esquerda"
+                    aria-label="Rolar abas para a esquerda"
+                >
+                    <ChevronLeft size={16} />
+                </button>
+
+                {/* Container de Abas com Rolagem Horizontal Visível */}
+                <div 
+                    ref={tabsScrollRef}
+                    className="flex-1 flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar scroll-smooth focus:outline-none"
+                    style={{ scrollbarWidth: 'thin' }}
+                >
+                    {[
+                        { id: 'dashboard', label: 'Painel Geral', icon: Layers },
+                        { id: 'dossie', label: 'Dossiê Canônico (1 Tm 3)', icon: Shield },
+                        { id: 'documentos', label: 'Diplomas & Atas Oficiais', icon: Award },
+                        { id: 'estagio', label: 'Estágio do Altar', icon: Clock },
+                        { id: 'turmas', label: '1. Turmas & Cronograma', icon: Calendar },
+                        { id: 'tutores', label: '2. Docentes & Fila Correção', icon: BookCheck },
+                        { id: 'frequencia', label: '3. Diário & QR Code', icon: QrCode },
+                        { id: 'financeiro', label: '4. Financeiro & Taxas', icon: DollarSign },
+                        { id: 'avisos', label: '5. Mural & WhatsApp', icon: Bell },
+                        { id: 'relatorios_lms', label: '6. Analytics & Ata PDF', icon: BarChart2 },
+                        { id: 'banco_questoes', label: '7. Banco & Provas', icon: HelpCircle },
+                        { id: 'teoria', label: 'Apostilas & Aulas', icon: BookOpen },
+                        { id: 'provas', label: 'Provas & Notas', icon: CheckSquare },
+                        { id: 'trabalhos', label: 'Trabalhos Acadêmicos', icon: FileText },
+                        { id: 'mentoria', label: 'Mentoria Pastoral', icon: UserCheck },
+                        { id: 'workflow', label: 'Consagração Final', icon: CheckCircle2 }
+                    ].map(tab => {
+                        const IconComp = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={(e) => {
+                                    setActiveTab(tab.id as any);
+                                    setSelectedDisciplina(null);
+                                    setSelectedLicao(null);
+                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                                }}
+                                className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${
+                                    isActive
+                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-600/20'
+                                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                                }`}
+                            >
+                                <IconComp size={15} />
+                                <span>{tab.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Botão de Rolar para a Direita */}
+                <button
+                    type="button"
+                    onClick={() => scrollTabs('right')}
+                    className="shrink-0 p-2 ml-1 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-xs transition-all hover:scale-105 active:scale-95 z-10 flex items-center justify-center cursor-pointer"
+                    title="Rolar abas para a direita"
+                    aria-label="Rolar abas para a direita"
+                >
+                    <ChevronRight size={16} />
+                </button>
             </div>
 
             {/* ========================================== */}
@@ -899,6 +1449,162 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                                 </option>
                             ))}
                         </select>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================== */}
+            {/* CONTEÚDO DINÂMICO DAS ABAS LMS & TRILHA    */}
+            {/* ========================================== */}
+
+            {/* --- MELHORIA 1: TURMAS & CRONOGRAMAS --- */}
+            {activeTab === 'turmas' && (
+                <TabTurmasCronograma
+                    turmas={turmas}
+                    candidatos={candidatos}
+                    tutores={tutores}
+                    onSalvarTurma={handleSalvarTurma}
+                    onExcluirTurma={handleExcluirTurma}
+                    onMatricularAluno={handleMatricularAluno}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- MELHORIA 2: TUTORES & FILA DE CORREÇÃO --- */}
+            {activeTab === 'tutores' && (
+                <TabTutoresDocentes
+                    tutores={tutores}
+                    trabalhos={trabalhos}
+                    trabalhosPendentes={trabalhos}
+                    estagios={estagios}
+                    estagiosPendentes={estagios}
+                    candidatos={candidatos}
+                    disciplinas={DISCIPLINAS_CURRICULARES}
+                    onSalvarTutor={handleSalvarTutor}
+                    onAvaliarTrabalho={handleAvaliarTrabalhoRapido}
+                    onAvaliarTrabalhoRapido={handleAvaliarTrabalhoRapido}
+                    onAprovarEstagio={handleAprovarEstagioRapido}
+                    onAprovarEstagioRapido={handleAprovarEstagioRapido}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- MELHORIA 3: FREQUÊNCIA & QR CODE --- */}
+            {activeTab === 'frequencia' && (
+                <TabFrequenciaEncontros
+                    turmas={turmas}
+                    encontros={encontros}
+                    candidatos={candidatos}
+                    disciplinas={DISCIPLINAS_CURRICULARES}
+                    onSalvarEncontro={handleSalvarEncontro}
+                    onAtualizarPresenca={handleAtualizarPresenca}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- MELHORIA 4: FINANCEIRO & TAXAS --- */}
+            {activeTab === 'financeiro' && (
+                <TabFinanceiroFormacao
+                    financeiroList={financeiroList}
+                    candidatos={candidatos}
+                    turmas={turmas}
+                    onSalvarRegistro={handleSalvarRegistroFinanceiro}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- MELHORIA 5: MURAL DE AVISOS & WHATSAPP --- */}
+            {activeTab === 'avisos' && (
+                <TabAvisosLembretes
+                    avisos={avisos}
+                    turmas={turmas}
+                    candidatos={candidatos}
+                    userLogado={user}
+                    onSalvarAviso={handleSalvarAviso}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- MELHORIA 6: ANALYTICS & ATA DA TURMA --- */}
+            {activeTab === 'relatorios_lms' && (
+                <TabAnalyticsAtaTurma
+                    turmas={turmas}
+                    candidatos={candidatos}
+                    disciplinas={DISCIPLINAS_CURRICULARES}
+                    dbIgreja={db?.igreja}
+                    userLogado={user}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- MELHORIA 7: BANCO DE QUESTÕES & PROVAS --- */}
+            {activeTab === 'banco_questoes' && (
+                <TabBancoQuestoesProvas
+                    bancoQuestoes={bancoQuestoes}
+                    provasCustomizadas={provasCustomizadas}
+                    onSalvarQuestao={handleSalvarQuestao}
+                    onSalvarProva={handleSalvarProva}
+                    dbIgreja={db?.igreja}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* ========================================== */}
+            {/* SELETOR RÁPIDO DE CANDIDATO ATIVO          */}
+            {/* ========================================== */}
+            {viewMode === 'coordenador' && (
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                            {(candidatoAtivo?.nome || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-slate-900 dark:text-white">{candidatoAtivo?.nome || 'Candidato'}</span>
+                                <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold uppercase">
+                                    Candidato a {(candidatoAtivo?.nivelPretendido || 'diacono').toUpperCase()}
+                                </span>
+                                {candidatoAtivo?.membroId && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold">
+                                        Membro Vinculado
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-slate-500">Mentor: {candidatoAtivo?.mentorNome || 'Não atribuído'} • {candidatoAtivo?.congregacaoNome || db?.igreja?.nome || 'Igreja Sede'}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-slate-500">Candidato Ativo:</span>
+                            <select
+                                value={selectedCandidatoId}
+                                onChange={(e) => {
+                                    const cId = e.target.value;
+                                    setSelectedCandidatoId(cId);
+                                    const cand = (candidatos || []).find(c => c.id === cId);
+                                    if (cand?.nivelPretendido) {
+                                        setSelectedNivelId(cand.nivelPretendido);
+                                    }
+                                }}
+                                className="text-xs font-bold py-1.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none text-slate-800 dark:text-slate-100 max-w-[220px] truncate"
+                            >
+                                {(candidatos || []).map(c => (
+                                    <option key={c?.id || Math.random()} value={c?.id}>
+                                        {c?.nome || 'Candidato'} ({(c?.nivelPretendido || 'diacono').toUpperCase()})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <button
+                            onClick={() => setShowNovoCandidatoModal(true)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                            title="Inscrever Membro da Igreja na Formação"
+                        >
+                            <Plus size={14} />
+                            <span>Novo Obreiro / Membro</span>
+                        </button>
                     </div>
                 </div>
             )}
@@ -1389,14 +2095,27 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
 
                                 {/* Referências Bíblicas Exegéticas */}
                                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                                        Textos Bíblicos Exegéticos Fundamentais:
-                                    </span>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                                            Textos Bíblicos Exegéticos Fundamentais:
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                            Clique para ler o texto sagrado e exegese
+                                        </span>
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                         {selectedLicao.referenciasBiblicas.map((ref, idx) => (
-                                            <span key={idx} className="px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
-                                                📖 {ref}
-                                            </span>
+                                            <button 
+                                                key={idx} 
+                                                onClick={() => handleOpenBibleRef(ref)}
+                                                className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-1.5 cursor-pointer transition-all shadow-xs group"
+                                            >
+                                                <BookOpen size={13} className="text-emerald-600 group-hover:scale-110 transition-transform" />
+                                                <span>{ref}</span>
+                                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded ml-1 font-semibold">
+                                                    Abrir Texto & Exegese
+                                                </span>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -1717,110 +2436,46 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                 </div>
             )}
 
-            {/* --- ABA 5: ESTÁGIO PRÁTICO MINISTERIAL (CHECK-IN) --- */}
+            {/* --- ABA: DOSSIÊ CANÔNICO & PARECER DE IDONEIDADE (1 TM 3 E TITO 1) --- */}
+            {activeTab === 'dossie' && (
+                <TabDossiePastoral
+                    candidato={candidatoAtivo}
+                    nivel={nivelAtivo}
+                    onSalvarDossie={handleSalvarDossieCanonico}
+                    onEfetivarConsagracaoNoCadastro={handleEfetivarConsagracaoNoCadastro}
+                    pastorNome={db?.igreja?.pastorPresidente || user?.nome || 'Pastor Presidente'}
+                    isCoordenador={viewMode === 'coordenador'}
+                />
+            )}
+
+            {/* --- ABA: DOCUMENTOS OFICIAIS, DIPLOMAS, HISTÓRICO & ATAS --- */}
+            {activeTab === 'documentos' && (
+                <TabDocumentosOficiais
+                    candidato={candidatoAtivo}
+                    nivel={nivelAtivo}
+                    disciplinas={disciplinasDoNivel}
+                    estagios={estagios}
+                    trabalhos={trabalhos}
+                    turma={turmas[0]}
+                    igrejaNome={db?.igreja?.nome || 'Assembleia de Deus — Ministério do Belém'}
+                    pastorPresidenteNome={db?.igreja?.pastorPresidente || user?.nome || 'Pastor Presidente'}
+                    onImprimirCertificado={() => handleImprimirCertificadoOuAta('certificado')}
+                    onImprimirCredencial={() => handleImprimirCertificadoOuAta('credencial')}
+                    onImprimirAta={() => handleImprimirCertificadoOuAta('ata')}
+                    addToast={addToast}
+                />
+            )}
+
+            {/* --- ABA 5: ESTÁGIO PRÁTICO MINISTERIAL & CHECKLIST DO ALTAR --- */}
             {activeTab === 'estagio' && (
-                <div className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h3 className="text-base font-black text-slate-900 dark:text-white">
-                                Controle de Estágio Prático na Igreja Local
-                            </h3>
-                            <p className="text-xs text-slate-500">
-                                Registro de atividades na Santa Ceia, portaria, visitações e cultos.
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => setShowNovoEstagioModal(true)}
-                            className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-                        >
-                            <Plus size={16} />
-                            <span>Registrar Nova Atividade</span>
-                        </button>
-                    </div>
-
-                    {/* Barra de Progresso de Horas */}
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400">Total Homologado</span>
-                            <h4 className="text-xl font-black text-slate-900 dark:text-white">
-                                {totalHorasAprovadas} de {nivelAtivo.horasEstagioObrigatorias} horas cumpridas
-                            </h4>
-                        </div>
-                        <div className="w-full md:w-64 bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                            <div
-                                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                                style={{ width: `${Math.min(100, (totalHorasAprovadas / nivelAtivo.horasEstagioObrigatorias) * 100)}%` }}
-                            ></div>
-                        </div>
-                    </div>
-
-                    {/* Lista de Registros */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {estagiosDoCandidato.length === 0 ? (
-                            <div className="col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 text-center text-slate-400 text-xs">
-                                Nenhuma atividade de estágio prático registrada.
-                            </div>
-                        ) : (
-                            estagiosDoCandidato.map((est) => (
-                                <div
-                                    key={est.id}
-                                    className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3"
-                                >
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                                {formatDateLocal(est.dataAtividade)} • {est.horas}h
-                                            </span>
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                                                est.status === 'aprovado'
-                                                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                                                    : est.status === 'rejeitado'
-                                                        ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                                                        : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                                            }`}>
-                                                {est.status}
-                                            </span>
-                                        </div>
-                                        <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                                            {est.titulo}
-                                        </h4>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                                            {est.descricao}
-                                        </p>
-                                        <p className="text-[11px] font-bold text-slate-400 mt-2">
-                                            📍 Local: {est.local}
-                                        </p>
-                                    </div>
-
-                                    {/* Parecer do Avaliador se Houver */}
-                                    {est.parecerAvaliador && (
-                                        <div className="text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 p-2.5 rounded-xl">
-                                            <strong>Parecer:</strong> {est.parecerAvaliador}
-                                        </div>
-                                    )}
-
-                                    {/* Ações de Aprovação Manual (Coordenador) */}
-                                    {viewMode === 'coordenador' && est.status === 'pendente' && (
-                                        <div className="border-t pt-3 border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => handleAprovarEstagio(est.id, 'rejeitado')}
-                                                className="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 text-xs font-bold transition-all cursor-pointer"
-                                            >
-                                                Rejeitar
-                                            </button>
-                                            <button
-                                                onClick={() => handleAprovarEstagio(est.id, 'aprovado')}
-                                                className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
-                                            >
-                                                Aprovar Horas
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                <TabEstagioSupervisionado
+                    candidato={candidatoAtivo}
+                    nivel={nivelAtivo}
+                    estagios={estagios}
+                    onAbrirNovoEstagioModal={() => setShowNovoEstagioModal(true)}
+                    onAprovarEstagio={handleAprovarEstagio}
+                    isCoordenador={viewMode === 'coordenador'}
+                />
             )}
 
             {/* --- ABA 6: MENTORIA MINISTERIAL & CARÁTER --- */}
@@ -2263,6 +2918,170 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                     </div>
                 </div>
             )}
+
+            {/* Modal: Matricular Novo Obreiro / Membro da Igreja */}
+            {showNovoCandidatoModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b pb-3 border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                                    Matricular Membro na Formação de Obreiros
+                                </h3>
+                                <p className="text-[11px] text-slate-500">
+                                    Integração direta com o cadastro de membros e histórico da igreja.
+                                </p>
+                            </div>
+                            <button onClick={() => setShowNovoCandidatoModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                        </div>
+
+                        <form onSubmit={handleCriarCandidato} className="space-y-3.5 text-xs">
+                            {/* Seleção do Membro Real */}
+                            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                                <label className="font-black text-emerald-800 dark:text-emerald-300 block">
+                                    1. Selecione o Membro na Base Geral da Igreja:
+                                </label>
+                                <select
+                                    value={selectedMembroCandidatoId}
+                                    onChange={(e) => {
+                                        const mId = e.target.value;
+                                        setSelectedMembroCandidatoId(mId);
+                                        if (!mId) return;
+                                        const membro = (db?.membros || []).find((m: any) => m.id === mId);
+                                        if (membro) {
+                                            setFormNovoCandidato({
+                                                nome: membro.nome || '',
+                                                cpf: membro.cpf || '',
+                                                telefone: membro.telefone || '',
+                                                email: membro.email || '',
+                                                cargoAtual: membro.cargo || 'Membro',
+                                                congregacaoNome: membro.congregacao || db?.igreja?.nome || 'Sede Principal',
+                                                nivelPretendido: 'diacono',
+                                                mentorNome: 'Pr. Carlos Eduardo'
+                                            });
+                                        }
+                                    }}
+                                    className="w-full p-2.5 rounded-xl border border-emerald-500/30 bg-white dark:bg-slate-800 font-bold outline-none text-slate-800 dark:text-slate-100 text-xs"
+                                >
+                                    <option value="">-- Selecione o membro cadastrado ou preencha avulso --</option>
+                                    {(db?.membros || []).map((m: any) => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.nome} — {m.cargo || 'Membro'} ({m.congregacao || 'Sede'} • {m.telefone || 'S/ Tel'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="col-span-2">
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">Nome Completo do Candidato</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ex: Irmão Samuel Barbosa"
+                                        value={formNovoCandidato.nome}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, nome: e.target.value }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-bold text-slate-800 dark:text-slate-100"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">CPF</label>
+                                    <input
+                                        type="text"
+                                        placeholder="000.000.000-00"
+                                        value={formNovoCandidato.cpf}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, cpf: e.target.value }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">Telefone / WhatsApp</label>
+                                    <input
+                                        type="text"
+                                        placeholder="(11) 99999-9999"
+                                        value={formNovoCandidato.telefone}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, telefone: e.target.value }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">Cargo Atual na Igreja</label>
+                                    <input
+                                        type="text"
+                                        value={formNovoCandidato.cargoAtual}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, cargoAtual: e.target.value }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">Nível Pretendido na Formação</label>
+                                    <select
+                                        value={formNovoCandidato.nivelPretendido}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, nivelPretendido: e.target.value as any }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold outline-none"
+                                    >
+                                        {NIVEIS_MINISTERIAIS.map(n => (
+                                            <option key={n.id} value={n.id}>{n.nome}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">Congregação / Polo</label>
+                                    <input
+                                        type="text"
+                                        value={formNovoCandidato.congregacaoNome}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, congregacaoNome: e.target.value }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-600 dark:text-slate-400 block mb-1">Pastor / Mentor Responsável</label>
+                                    <input
+                                        type="text"
+                                        list="listaMentoresSugestao"
+                                        value={formNovoCandidato.mentorNome}
+                                        onChange={(e) => setFormNovoCandidato(p => ({ ...p, mentorNome: e.target.value }))}
+                                        className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-bold"
+                                    />
+                                    <datalist id="listaMentoresSugestao">
+                                        {(tutores || []).map(t => (
+                                            <option key={t.id} value={t.nome}>{t.cargo}</option>
+                                        ))}
+                                        {(db?.membros || []).filter((m: any) => m.cargo && m.cargo.includes('Pastor')).map((m: any) => (
+                                            <option key={m.id} value={m.nome}>{m.cargo}</option>
+                                        ))}
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-md mt-4 cursor-pointer flex items-center justify-center gap-2"
+                            >
+                                <GraduationCap size={16} />
+                                <span>Efetivar Matrícula do Obreiro</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Texto Bíblico Sagrado e Exegese */}
+            <BibleReferenceModal
+                isOpen={bibleModalOpen}
+                referenceQuery={bibleModalQuery}
+                onClose={() => setBibleModalOpen(false)}
+            />
 
         </div>
     );

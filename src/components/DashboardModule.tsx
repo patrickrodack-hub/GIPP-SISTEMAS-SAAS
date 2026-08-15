@@ -32,8 +32,10 @@ import {
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from '../lib/indexedDbService';
 
+import { ChurchContext } from '../context/ChurchContext';
+
 import {
-  ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
+  CachedImage, callGeminiAI, resizeImageAndCompress,
   Button, FormInput, FormSelect, BackupModal, ConfirmModal,
   GenericTable, GenericModal, PageBoundaryIndicators, DocumentPreviewModal, PrintSystem,
   AutocompleteRecipient, SharedEmailModule,

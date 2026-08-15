@@ -347,7 +347,7 @@ app.post("/api/gemini/generate", async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-3.7-flash",
             contents: String(prompt || ''),
             config: config
         });
@@ -362,7 +362,7 @@ app.post("/api/gemini/generate", async (req, res) => {
         const respTokens = Math.ceil(responseText.length / 4);
         const estimatedCost = (promptTokens * 0.075 / 1000000) + (respTokens * 0.30 / 1000000);
 
-        trackApiCall("gemini", "Assistente Pastoral IA", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.5-flash)`);
+        trackApiCall("gemini", "Assistente Pastoral IA", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.7-flash)`);
 
         res.json({ text: responseText });
     } catch (error: any) {
@@ -485,7 +485,7 @@ ATENÇÃO: Retorne APENAS um JSON válido no formato abaixo, sem delimitadores m
         });
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-3.7-flash",
             contents: prompt,
             config: {
                 systemInstruction: "Você é um Professor e Doutor de Teologia Pentecostal Clássica, especialista na Declaração de Fé da CGADB/CPAD. Responda exclusivamente em formato JSON válido e parseável.",
@@ -579,7 +579,7 @@ Retorne em formato JSON estruturado:
         });
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-3.7-flash",
             contents: prompt,
             config: {
                 systemInstruction: "Você é um Professor Doutor em Teologia Bíblica e Sistemática da CGADB. Retorne exclusivamente JSON estruturado e válido.",
@@ -738,7 +738,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-3.7-flash",
             contents: contents,
             config: {
                 systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
@@ -757,7 +757,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         const respTokens = Math.ceil(responseText.length / 4);
         const estimatedCost = (promptTokens * 0.075 / 1000000) + (respTokens * 0.30 / 1000000);
 
-        trackApiCall("gemini", "Análise de EBD (PDF da Revista)", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.5-flash)`);
+        trackApiCall("gemini", "Análise de EBD (PDF da Revista)", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.7-flash)`);
 
         res.json({ text: responseText });
     } catch (error: any) {
