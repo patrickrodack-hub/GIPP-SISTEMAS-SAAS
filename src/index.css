@@ -416,4 +416,25 @@ tbody tr:nth-child(odd) {
   border: 1px solid black !important;
 }
 
+/* Animations for Minhas Escalas / Tarefas Table */
+@keyframes rsvpSlideInSuccess {
+  0% {
+    opacity: 0.6;
+    transform: translateX(-12px);
+    background-color: rgba(236, 253, 245, 0.9);
+  }
+  50% {
+    background-color: rgba(209, 250, 229, 0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    background-color: transparent;
+  }
+}
+
+.animate-row-slide-in-confirmed {
+  animation: rsvpSlideInSuccess 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 

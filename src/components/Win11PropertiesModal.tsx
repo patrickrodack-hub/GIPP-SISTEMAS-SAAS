@@ -39,6 +39,20 @@ export const Win11PropertiesModal: React.FC<ModuleManualProps> = ({
                     ],
                     doctrinalNote: "Bibliologia (Cap. 1), Trindade (Cap. 2/3), Pneumatologia (Cap. 6) e Distintivos Pentecostais com evidência de falar em línguas (Cap. 19/20)."
                 };
+            case 'formacao_obreiros':
+                return {
+                    description: "Módulo de Formação e Capacitação de Obreiros - Matriz curricular ministerial (Auxiliares, Diáconos, Presbíteros, Evangelistas e Pastores).",
+                    category: "Ministério & Capacitação",
+                    version: "v3.0",
+                    permissions: "Coordenador de Ensino / Pastor Presidente / Candidato",
+                    quickManual: [
+                        "Trilhas Ministeriais: Disciplinas específicas para cada grau ministerial (Auxiliar, Diácono, Presbítero, Evangelista, Pastor).",
+                        "Aulas Teóricas e Quizzes: Lições de liturgia eclesiástica, ética pastoral, administração e doutrina pentecostal.",
+                        "Estágio Prático e Mentoria: Registro de horas em celebração de Ceia, visitas hospitalares, unção de enfermos e aconselhamento.",
+                        "Emissão de Certificados e Parecer: Emissão automática de certificado de aprovação e credenciamento oficial."
+                    ],
+                    doctrinalNote: "Eclesiologia (Cap. 11), Dons Espirituais e Ministeriais (Cap. 20) e Ordenação Pastoral (Cap. 14)."
+                };
             case 'fin_entrada':
             case 'fin_saida':
             case 'fin_dre':

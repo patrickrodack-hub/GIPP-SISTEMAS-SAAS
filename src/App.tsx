@@ -69,6 +69,7 @@ const ModuleCertificados = lazy(() => import('./components/ModuleCertificados'))
 const ModuleEBD = lazy(() => import('./components/ModuleEBD'));
 const ModuleGestaoCursos = lazy(() => import('./components/ModuleGestaoCursos'));
 const ModuleTeologia = lazy(() => import('./components/ModuleTeologia'));
+const ModuleFormacaoObreiros = lazy(() => import('./components/ModuleFormacaoObreiros'));
 const ModuleRedeSocial = lazy(() => import('./components/ModuleRedeSocial'));
 const ModuleGippDocs = lazy(() => import('./components/ModuleGippDocs'));
 const ModuleGippPlanilhas = lazy(() => import('./components/ModuleGippPlanilhas'));
@@ -1101,6 +1102,25 @@ const OsThemeStyles = () => (
             text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5) !important;
         }
 
+        /* Delphi Florence Form Workspace Watermark Branding */
+        body[data-os-theme="gipp_retro"] .delphi-form-workspace {
+            position: relative;
+            min-height: 100%;
+        }
+
+        body[data-os-theme="gipp_retro"] .delphi-florence-watermark {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            pointer-events: none;
+            user-select: none;
+            opacity: 0.05;
+            z-index: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+        }
     `}</style>
 );
 
@@ -1734,12 +1754,55 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                             0%, 100% { transform: translateY(0px); }
                             50% { transform: translateY(-8px); }
                         }
+                        @keyframes delphi-watermark-pulse {
+                            0%, 100% { opacity: 0.07; transform: translate(-50%, -50%) scale(1); }
+                            50% { opacity: 0.11; transform: translate(-50%, -50%) scale(1.02); }
+                        }
                     `}</style>
                     <div className="absolute inset-0 bg-[#E2E6EA]" style={{ 
                         backgroundImage: 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)',
                         backgroundSize: '8px 8px'
                     }}></div>
                     <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#004E98] via-[#1D65A6] to-[#004E98] shadow-sm"></div>
+
+                    {/* Delphi 13 Florence GIPP Watermark Branding Logo */}
+                    <div 
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none flex flex-col items-center justify-center text-center z-0"
+                        style={{ animation: 'delphi-watermark-pulse 12s infinite ease-in-out' }}
+                    >
+                        {/* Florence Geometric Seal & Delphi Emblem */}
+                        <div className="relative mb-3 flex items-center justify-center">
+                            <svg className="w-56 h-56 text-[#004E98] stroke-current" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                {/* Outer Technical CAD Calibration Rings */}
+                                <circle cx="100" cy="100" r="92" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.6" />
+                                <circle cx="100" cy="100" r="84" strokeWidth="0.8" opacity="0.8" />
+                                <circle cx="100" cy="100" r="76" strokeWidth="1.2" opacity="0.5" />
+                                
+                                {/* Precision Crosshairs */}
+                                <line x1="100" y1="4" x2="100" y2="196" strokeWidth="0.75" strokeDasharray="3 3" opacity="0.4" />
+                                <line x1="4" y1="100" x2="196" y2="100" strokeWidth="0.75" strokeDasharray="3 3" opacity="0.4" />
+                                
+                                {/* Inner Florence Hexagon / Shield */}
+                                <polygon points="100,24 168,58 168,142 100,176 32,142 32,58" strokeWidth="1.5" opacity="0.7" />
+                                
+                                {/* GIPP Monogram Iconography */}
+                                <path d="M70 70 L100 45 L130 70 L130 130 L100 155 L70 130 Z" strokeWidth="1.2" opacity="0.6" />
+                                <path d="M100 60 L100 140 M80 90 L120 90" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+                            </svg>
+                        </div>
+
+                        {/* GIPP Engraved Chiseled Wordmark */}
+                        <div className="tracking-[0.35em] font-black text-6xl md:text-7xl font-sans text-[#004E98] drop-shadow-[0_1px_0_rgba(255,255,255,0.9)] opacity-90 uppercase ml-[0.35em]">
+                            GIPP
+                        </div>
+                        <div className="text-[11px] md:text-xs font-mono font-bold tracking-[0.25em] text-[#243B53] mt-1 uppercase">
+                            Gestão Integrada de Portais Pastorais
+                        </div>
+                        <div className="text-[9px] font-mono tracking-[0.18em] text-[#486581] mt-0.5 uppercase">
+                            Delphi 13 Florence VCL • Enterprise Edition
+                        </div>
+                    </div>
+
                     {/* Delphi Florence VCL floating designer badges */}
                     <div className="absolute top-12 right-16 opacity-30 select-none pointer-events-none text-[10px] font-mono font-bold bg-[#ECEFF4] border border-[#7B8794] px-2 py-1 shadow-xs text-[#004E98] rounded-xs" style={{ animation: 'delphi-badge-float 8s infinite ease-in-out' }}>
                         TFDConnection: FDConnGIPP [Connected]
@@ -5783,20 +5846,38 @@ export const PrintSystem = ({
             </div>
         );
 
-        const Assinaturas = () => (
-            <div className="mt-auto w-full flex justify-between px-10 pt-4 gap-16 relative z-20">
-                <div className="text-center flex-1">
-                    <div className="border-b border-black mb-1 mx-auto w-full"></div>
-                    <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
-                    <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Pastor Presidente</p>
+        const Assinaturas = ({ showQR = true }: { showQR?: boolean }) => {
+            const hash = data.extra?.docHash || (data.membro?.id ? `GIPP-${data.membro.id.substring(0,6).toUpperCase()}-${new Date().getFullYear()}` : `GIPP-DOC-${Math.random().toString(36).substring(2,8).toUpperCase()}`);
+            const validUrl = `https://gipp.app/validar?doc=${hash}&org=${encodeURIComponent(data.igreja?.nome || 'GIPP')}`;
+
+            return (
+                <div className="mt-auto w-full flex justify-between items-end px-8 pt-4 gap-6 relative z-20">
+                    <div className="text-center flex-1">
+                        <div className="border-b border-black mb-1 mx-auto w-full"></div>
+                        <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
+                        <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Pastor Presidente</p>
+                    </div>
+
+                    {showQR && (
+                        <div className="flex flex-col items-center bg-white/95 p-1 rounded-lg border border-slate-300 shadow-2xs shrink-0">
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(validUrl)}&color=0f172a&bgcolor=ffffff`}
+                                alt="QR Code Autenticidade"
+                                className="w-8 h-8 object-contain"
+                            />
+                            <span className="text-[5px] font-mono font-black text-slate-700 mt-0.5 tracking-tighter">CÓD. {hash}</span>
+                            <span className="text-[5px] font-black text-emerald-700 uppercase tracking-widest leading-none">AUTENTICIDADE</span>
+                        </div>
+                    )}
+
+                    <div className="text-center flex-1">
+                        <div className="border-b border-black mb-1 mx-auto w-full"></div>
+                        <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.secretario1 || "Secretário(a) Geral"}</p>
+                        <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Secretaria Eclesiástica</p>
+                    </div>
                 </div>
-                <div className="text-center flex-1">
-                    <div className="border-b border-black mb-1 mx-auto w-full"></div>
-                    <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.secretario1 || "Secretário(a) Geral"}</p>
-                    <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Secretaria Eclesiástica</p>
-                </div>
-            </div>
-        );
+            );
+        };
 
         const Watermark = () => (
             data.igreja?.logo ? (
@@ -10237,8 +10318,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
         const defaultPlanos = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -10260,6 +10341,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     }
                     if ((pKey === 'avancado' || pKey === 'standard') && !PLAN_MODULES[pKey].includes('curso_teologia')) {
                         PLAN_MODULES[pKey].push('curso_teologia');
+                    }
+                    if ((pKey === 'avancado' || pKey === 'standard') && !PLAN_MODULES[pKey].includes('formacao_obreiros')) {
+                        PLAN_MODULES[pKey].push('formacao_obreiros');
                     }
                 }
             });
@@ -10313,6 +10397,8 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         config_backup: 'group-hover:text-emerald-500',
         auditoria: 'group-hover:text-slate-500',
         lixeira: 'group-hover:text-rose-500',
+        curso_teologia: 'group-hover:text-emerald-500',
+        formacao_obreiros: 'group-hover:text-emerald-600',
         desenvolvedor: 'group-hover:text-emerald-400',
         config_sistema: 'group-hover:text-indigo-600',
         config_visual: 'group-hover:text-purple-500'
@@ -10437,6 +10523,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
                     {hasPermission('access_gestao_cursos') && checkPlan('gestao_cursos') && <MenuItem id="gestao_cursos" icon={GraduationCap} label="EAD Cursos de Capacitação" />}
                     {hasPermission('access_teologia') && checkPlan('curso_teologia') && <MenuItem id="curso_teologia" icon={BookOpen} label="Universidade Teológica GIPP" />}
+                    {hasPermission('access_teologia') && checkPlan('formacao_obreiros') && <MenuItem id="formacao_obreiros" icon={GraduationCap} label="Formação de Obreiros GIPP" />}
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
                 </div>
 
@@ -12075,37 +12162,44 @@ const PortalHome = ({ user, db, setView }) => {
             </div>
 
             {/* AÇÕES RÁPIDAS (NOVO LAYOUT ESTILO FINTECH) */}
-            <div className={`grid grid-cols-2 gap-4 ${isProfessor ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+            <div className={`grid grid-cols-2 gap-4 ${isProfessor ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
                 {allowedModulesHome.includes('portal_financas') && (
-                    <button onClick={() => setView('portal_financas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group">
+                    <button onClick={() => setView('portal_financas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group cursor-pointer">
                         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Dízimos</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ofertar agora</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_carteirinha') && (
-                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group">
+                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group cursor-pointer">
                         <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><QrCode size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Credencial</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
                     </button>
                 )}
+                {allowedModulesHome.includes('portal_candidato') && (
+                    <button onClick={() => setView('portal_candidato')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all flex flex-col items-start group cursor-pointer">
+                        <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-teal-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Award size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Candidatura</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Apostilas & Aulas</span>
+                    </button>
+                )}
                 {allowedModulesHome.includes('portal_tarefas') && (
-                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group">
+                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group cursor-pointer">
                         <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:rotate-6"><CheckSquare size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Escalas</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minhas tarefas</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_ebd') && (
-                    <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group">
+                    <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group cursor-pointer">
                         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Estudo EBD</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
                     </button>
                 )}
                 {isProfessor && (
-                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1">
+                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1 cursor-pointer">
                         <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
                         <span className="font-black text-slate-800 text-base mb-1">Sala do Professor</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">EBD Painel</span>
@@ -13994,6 +14088,7 @@ const PortalTarefas = ({ user, db }) => {
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedTaskForHistory, setSelectedTaskForHistory] = useState<any>(null);
     const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
+    const [recentlyConfirmedTaskId, setRecentlyConfirmedTaskId] = useState<string | null>(null);
 
     // States for Configurar Lembrete modal
     const [reminderModalOpen, setReminderModalOpen] = useState(false);
@@ -14021,6 +14116,12 @@ const PortalTarefas = ({ user, db }) => {
         
         try {
             await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas', taskId), { equipe: novaEquipe }, { merge: true });
+            if (status === 'confirmado') {
+                setRecentlyConfirmedTaskId(taskId);
+                setTimeout(() => {
+                    setRecentlyConfirmedTaskId((curr) => (curr === taskId ? null : curr));
+                }, 1200);
+            }
             addToast(status === 'confirmado' ? "Presença confirmada na escala!" : "Ausência na escala informada.", "success");
         } catch (e) {
             addToast("Erro ao atualizar a confirmation.", "error");
@@ -14401,10 +14502,11 @@ const PortalTarefas = ({ user, db }) => {
                                     const isDueToday = isToday(t.data);
                                     const taskAlarms = activeAlarms.filter(a => a.taskId === t.id && !a.triggered);
                                     const isFocused = focusedTaskId === t.id;
+                                    const isRecentlyConfirmed = recentlyConfirmedTaskId === t.id;
 
                                     return (
                                         <React.Fragment key={t.id || i}>
-                                            <tr className={`hover:bg-slate-50/50 transition-all ${isFocused ? 'bg-indigo-50/20 border-l-4 border-indigo-500 shadow-xs' : ''}`}>
+                                            <tr className={`transition-all duration-300 ${isRecentlyConfirmed ? 'animate-row-slide-in-confirmed bg-emerald-50/70 border-l-4 border-emerald-500' : isFocused ? 'bg-indigo-50/20 border-l-4 border-indigo-500 shadow-xs' : 'hover:bg-slate-50/50'}`}>
                                                 {/* Tarefa / Categoria */}
                                                 <td className="p-4">
                                                     <div className="flex flex-col gap-1">
@@ -16133,6 +16235,7 @@ const MemberPortalLayout = () => {
         { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
         { id: 'portal_mural', icon: MessageSquare, label: 'Mural', hoverColor: 'group-hover:text-rose-500' },
         { id: 'portal_informativo', icon: Newspaper, label: 'Informativo', hoverColor: 'group-hover:text-orange-500' },
+        { id: 'portal_candidato', icon: Award, label: 'Área do Candidato', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_biblia', icon: BookOpen, label: 'Bíblia', hoverColor: 'group-hover:text-amber-500' },
         { id: 'portal_email', icon: Mail, label: 'Mensagens', hoverColor: 'group-hover:text-emerald-500' },
         { id: 'portal_agenda', icon: Calendar, label: 'Agenda', hoverColor: 'group-hover:text-indigo-500' },
@@ -16202,6 +16305,11 @@ const MemberPortalLayout = () => {
             case 'portal_salinha_kids': return <ModuleSalinhaKids mode="portal" />;
             case 'portal_agenda': return <PortalAgenda user={user} db={db} />;
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
+            case 'portal_candidato': return (
+                <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin text-emerald-600 mx-auto" size={32}/></div>}>
+                    <ModuleFormacaoObreiros initialViewMode="candidato" candidateUser={user} />
+                </Suspense>
+            );
             case 'portal_cursos': return <PortalCursos user={user} />;
             case 'portal_informativo': return <ModuleBoletim />;
             case 'portal_interativo': return <ModuleInterativo onClose={() => setView('portal_home')} />;
@@ -16235,13 +16343,13 @@ const MemberPortalLayout = () => {
                         <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-xs">
                             <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold overflow-hidden shrink-0">
                               {user?.fotoUrl || user?.foto ? (
-                                <img src={user.fotoUrl || user.foto} alt={user.nome} className="w-full h-full object-cover" />
+                                <img src={user.fotoUrl || user.foto} alt={user?.nome || 'Usuário'} className="w-full h-full object-cover" />
                               ) : (
-                                user.nome.charAt(0)
+                                (user?.nome || '?').charAt(0).toUpperCase()
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-slate-800 truncate">{user.nome.split(' ')[0]}</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{(user?.nome || 'Usuário').split(' ')[0]}</p>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase truncate">
                                     {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro')}
                                 </p>
@@ -16383,13 +16491,13 @@ const MemberPortalLayout = () => {
                             <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-500/5 border border-slate-200/20">
                                 <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold font-mono overflow-hidden shrink-0">
                                   {user?.fotoUrl || user?.foto ? (
-                                    <img src={user.fotoUrl || user.foto} alt={user.nome} className="w-full h-full object-cover" />
+                                    <img src={user.fotoUrl || user.foto} alt={user?.nome || 'Usuário'} className="w-full h-full object-cover" />
                                   ) : (
-                                    user.nome.charAt(0)
+                                    (user?.nome || '?').charAt(0).toUpperCase()
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 truncate">{user.nome}</p>
+                                    <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 truncate">{user?.nome || 'Usuário'}</p>
                                     <p className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5">
                                         {user.funcao_administrativa && user.funcao_administrativa !== 'NENHUMA' ? user.funcao_administrativa : (user.cargo || 'Membro')}
                                     </p>
@@ -16676,8 +16784,9 @@ const AppLayout = () => {
         { id: 'lixeira', label: "Lixeira Virtual", x: 2, y: 16 },
         { id: 'assistente_ai', label: "Pastoral IA", x: 2, y: 29 },
         { id: 'curso_teologia', label: "Univ. Teológica", x: 2, y: 42 },
-        { id: 'fin_entrada', label: "Painel Financeiro", x: 2, y: 55 },
-        { id: 'config_sistema', label: "Configurações", x: 2, y: 68 },
+        { id: 'formacao_obreiros', label: "Formação Obreiros", x: 2, y: 55 },
+        { id: 'fin_entrada', label: "Painel Financeiro", x: 2, y: 68 },
+        { id: 'config_sistema', label: "Configurações", x: 2, y: 81 },
     ], []);
 
     const [userShortcuts, setUserShortcuts] = useState<{ id: string, label: string, x: number, y: number }[]>([]);
@@ -17007,12 +17116,8 @@ const AppLayout = () => {
 
     useEffect(() => {
         if ((osTheme === 'linux' || osTheme === 'win11') && view) {
-            if (!openedModules.includes(view)) {
-                setOpenedModules(prev => [...prev, view]);
-            }
-            if (minimizedModules.includes(view)) {
-                setMinimizedModules(prev => prev.filter(m => m !== view));
-            }
+            setOpenedModules(prev => prev.includes(view) ? prev : [...prev, view]);
+            setMinimizedModules(prev => prev.includes(view) ? prev.filter(m => m !== view) : prev);
         }
     }, [view, osTheme]);
 
@@ -17057,6 +17162,7 @@ const AppLayout = () => {
     const ALL_AVAILABLE_MODULES = [
         { id: 'dashboard', icon: LayoutDashboard, label: "Visão Geral", color: 'text-blue-500', bg: 'bg-blue-500/10' },
         { id: 'curso_teologia', icon: BookOpen, label: "Universidade Teológica GIPP", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'formacao_obreiros', icon: GraduationCap, label: "Formação de Obreiros", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
         { id: 'secretaria_ebd', icon: GraduationCap, label: "Gestão EBD (Escola)", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
         { id: 'cad_membro', icon: Users, label: "Membros & Acessos", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
         { id: 'visitantes', icon: HeartHandshake, label: "Visitantes & CRM", color: 'text-rose-500', bg: 'bg-rose-500/10' },
@@ -17122,8 +17228,8 @@ const AppLayout = () => {
 
         const defaultPlanos: Record<string, string[]> = {
             basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor']
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -17172,6 +17278,7 @@ const AppLayout = () => {
             'credencial_lote': 'access_credencial_lote',
             'gestao_cursos': 'access_gestao_cursos',
             'curso_teologia': 'access_teologia',
+            'formacao_obreiros': 'access_teologia',
             'relatorios': 'access_sec_relatorios',
             'docs_editor': 'access_docs_editor',
             'sheets_editor': 'access_sheets_editor',
@@ -17212,6 +17319,7 @@ const AppLayout = () => {
         const desktopShortcuts = [
             { id: 'dashboard', label: "Visão Geral", icon: LayoutDashboard, color: 'text-blue-400' },
             { id: 'curso_teologia', label: "Univ. Teológica", icon: BookOpen, color: 'text-emerald-400' },
+            { id: 'formacao_obreiros', label: "Formação Obreiros", icon: GraduationCap, color: 'text-teal-400' },
             { id: 'secretaria_ebd', label: "Escola Dominical", icon: GraduationCap, color: 'text-indigo-400' },
             { id: 'assistente_ai', label: "Pastoral IA", icon: Sparkles, color: 'text-purple-400' },
             { id: 'rede_social', label: "Estúdio de Artes", icon: ImagePlus, color: 'text-rose-400' },
@@ -17526,6 +17634,7 @@ const AppLayout = () => {
         'salinha_kids': { component: ModuleSalinhaKids, access: 'access_salinha_kids' },
         'gestao_cursos': { component: ModuleGestaoCursos, access: 'access_gestao_cursos' },
         'curso_teologia': { component: ModuleTeologia, access: 'access_teologia' },
+        'formacao_obreiros': { component: ModuleFormacaoObreiros, access: 'access_teologia' },
         'missoes_painel': { component: ModuleMissoes, access: 'access_missoes' },
         'rede_social': { component: ModuleRedeSocial, access: 'access_midia' },
         'interativo': { component: ModuleInterativo, access: 'access_interativo' },
@@ -17601,6 +17710,7 @@ const AppLayout = () => {
         const dockApps = [
             { id: 'dashboard', label: 'Finder', icon: LayoutDashboard, color: 'from-blue-400 to-blue-600' },
             { id: 'curso_teologia', label: 'Universidade', icon: BookOpen, color: 'from-teal-400 to-emerald-600' },
+            { id: 'formacao_obreiros', label: 'Obreiros', icon: GraduationCap, color: 'from-emerald-500 to-teal-700' },
             { id: 'secretaria_ebd', label: 'EBD', icon: GraduationCap, color: 'from-violet-400 to-indigo-600' },
             { id: 'assistente_ai', label: 'Pastoral IA', icon: Sparkles, color: 'from-purple-500 to-pink-500' },
             { id: 'rede_social', label: 'Artes', icon: ImagePlus, color: 'from-orange-400 to-rose-500' },
@@ -18813,7 +18923,7 @@ const AppLayout = () => {
                                                            m.id.toLowerCase().includes(win11Search.toLowerCase());
                                                 }
                                                 // Default pinned list
-                                                return ['dashboard', 'curso_teologia', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai'].includes(m.id);
+                                                return ['dashboard', 'curso_teologia', 'formacao_obreiros', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai'].includes(m.id);
                                             }).length === 0 ? (
                                                 <div className="text-center py-8 opacity-50 text-xs">
                                                     Nenhum aplicativo encontrado
@@ -18826,7 +18936,7 @@ const AppLayout = () => {
                                                             return m.label.toLowerCase().includes(win11Search.toLowerCase()) || 
                                                                    m.id.toLowerCase().includes(win11Search.toLowerCase());
                                                         }
-                                                        return ['dashboard', 'curso_teologia', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai'].includes(m.id);
+                                                        return ['dashboard', 'curso_teologia', 'formacao_obreiros', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai'].includes(m.id);
                                                     }).map(m => {
                                                         const IconComp = m.icon;
                                                         return (
@@ -19487,6 +19597,56 @@ const getUserModule = (u: any) => {
     return u.nivel.toUpperCase();
 };
 
+// --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
+const MobilePushCompatibilityCheck = () => {
+    const [status, setStatus] = useState<'ok' | 'unsupported_pwa' | 'blocked'>('ok');
+    const [dismissed, setDismissed] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const hasSW = 'serviceWorker' in navigator;
+            const hasPush = 'PushManager' in window;
+            const hasNotif = 'Notification' in window;
+            
+            if (!hasSW || !hasPush || !hasNotif) {
+                setStatus('unsupported_pwa');
+            } else if (Notification.permission === 'denied') {
+                setStatus('blocked');
+            }
+        }
+    }, []);
+
+    if (status === 'ok' || dismissed) return null;
+
+    return (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl mb-6 flex gap-3 animate-entrance relative">
+            <AlertTriangle className="text-amber-600 shrink-0 mt-0.5 animate-bounce" size={18} />
+            <div className="flex-1">
+                <h4 className="text-[10px] font-black text-amber-950 uppercase tracking-wider">Aviso de Compatibilidade de Alertas</h4>
+                <p className="text-[11px] text-amber-800 font-bold mt-1 leading-relaxed pr-6">
+                    {status === 'unsupported_pwa' ? (
+                        <span>
+                            Seu navegador móvel atual limita as notificações push. <strong className="font-black underline">No iOS (iPhone) ou Android, adicione este aplicativo à sua Tela de Início (Compartilhar &gt; Tela de Início)</strong> para habilitar as notificações nativas!
+                        </span>
+                    ) : (
+                        <span>
+                            A permissão de notificações deste site está bloqueada. <strong className="font-black underline">Por favor, libere os alertas nas configurações do navegador</strong> para continuar recebendo avisos.
+                        </span>
+                    )}
+                </p>
+                <button 
+                    type="button" 
+                    onClick={() => setDismissed(true)} 
+                    className="absolute top-3 right-3 text-amber-500 hover:text-amber-800 transition-colors p-1"
+                    title="Fechar aviso"
+                >
+                    <X size={14} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
   if (firebaseSetupError) {
     return (
@@ -19627,6 +19787,7 @@ export default function App() {
           { label: "Financeiro: Saídas e Contas", view: "fin_saida", category: "Navegação", icon: ArrowDownCircle },
           { label: "Conciliação Bancária DDA", view: "fin_conciliacao", category: "Navegação", icon: CreditCard },
           { label: "Curso de Teologia / Faculdade", view: "curso_teologia", category: "Navegação", icon: GraduationCap },
+          { label: "Formação e Capacitação de Obreiros (GIPP)", view: "formacao_obreiros", category: "Navegação", icon: GraduationCap },
           { label: "Escola Bíblica Dominical (EBD)", view: "secretaria_ebd", category: "Navegação", icon: BookOpenText },
           { label: "Células e Pequenos Grupos", view: "cad_celula", category: "Navegação", icon: Home },
           { label: "Secretaria Integrada & Agenda", view: "secretaria_integrada", category: "Navegação", icon: FileText },
@@ -22104,56 +22265,6 @@ export default function App() {
   };
 
   const ctxValues = useMemo(() => ({ db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission, globalOpenFile, setGlobalOpenFile, isScreenLocked, setIsScreenLocked, lockScreen: () => setIsScreenLocked(true) }), [db, user, view, showHelpHub, sidebarOpen, dismissedAnnouncement, modalOpen, modalType, formData, printMode, printData, toasts, editingItem, authUser, theme, isOnline, osTheme, animBgEnabled, printPalette, printMarginType, printOrientation, printContentScale, notifications, clearedNotifications, fcmToken, fcmStatus, fcmPermission, globalOpenFile, isScreenLocked]);
-
-  // --- VERIFICAÇÃO DE COMPATIBILIDADE PUSH MÓVEL ---
-  const MobilePushCompatibilityCheck = () => {
-      const [status, setStatus] = useState<'ok' | 'unsupported_pwa' | 'blocked'>('ok');
-      const [dismissed, setDismissed] = useState(false);
-
-      useEffect(() => {
-          if (typeof window !== 'undefined') {
-              const hasSW = 'serviceWorker' in navigator;
-              const hasPush = 'PushManager' in window;
-              const hasNotif = 'Notification' in window;
-              
-              if (!hasSW || !hasPush || !hasNotif) {
-                  setStatus('unsupported_pwa');
-              } else if (Notification.permission === 'denied') {
-                  setStatus('blocked');
-              }
-          }
-      }, []);
-
-      if (status === 'ok' || dismissed) return null;
-
-      return (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl mb-6 flex gap-3 animate-entrance relative">
-              <AlertTriangle className="text-amber-600 shrink-0 mt-0.5 animate-bounce" size={18} />
-              <div className="flex-1">
-                  <h4 className="text-[10px] font-black text-amber-950 uppercase tracking-wider">Aviso de Compatibilidade de Alertas</h4>
-                  <p className="text-[11px] text-amber-800 font-bold mt-1 leading-relaxed pr-6">
-                      {status === 'unsupported_pwa' ? (
-                          <span>
-                              Seu navegador móvel atual limita as notificações push. <strong className="font-black underline">No iOS (iPhone) ou Android, adicione este aplicativo à sua Tela de Início (Compartilhar &gt; Tela de Início)</strong> para habilitar as notificações nativas!
-                          </span>
-                      ) : (
-                          <span>
-                              A permissão de notificações deste site está bloqueada. <strong className="font-black underline">Por favor, libere os alertas nas configurações do navegador</strong> para continuar recebendo avisos.
-                          </span>
-                      )}
-                  </p>
-                  <button 
-                      type="button" 
-                      onClick={() => setDismissed(true)} 
-                      className="absolute top-3 right-3 text-amber-500 hover:text-amber-800 transition-colors p-1"
-                      title="Fechar aviso"
-                  >
-                      <X size={14} />
-                  </button>
-              </div>
-          </div>
-      );
-  };
 
   if (isHalted) {
     return (

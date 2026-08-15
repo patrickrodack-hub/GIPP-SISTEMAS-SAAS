@@ -63,12 +63,31 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [isFormMaximized, setIsFormMaximized] = useState(true);
+  const [isFormMinimized, setIsFormMinimized] = useState(false);
+  const [isFormClosed, setIsFormClosed] = useState(false);
+  const [windowScale, setWindowScale] = useState<'normal' | 'compact' | 'wide'>('normal');
   const [showObjectInspector, setShowObjectInspector] = useState(false);
   const [isRunningAnimation, setIsRunningAnimation] = useState(false);
   const [delphiSubTheme, setDelphiSubTheme] = useState<'gipp_retro' | 'delphi_classic' | 'high_contrast'>(() => {
     return (localStorage.getItem('gipp_delphi_subtheme') as any) || 'gipp_retro';
   });
   const menuBarRef = useRef<HTMLDivElement>(null);
+
+  // When view changes, automatically reopen and unminimize the active form
+  useEffect(() => {
+    setIsFormMinimized(false);
+    setIsFormClosed(false);
+  }, [view]);
+
+  const handleCloseForm = () => {
+    if (view !== 'dashboard') {
+      setView('dashboard');
+      setIsFormMinimized(false);
+      setIsFormClosed(false);
+    } else {
+      setIsFormClosed(true);
+    }
+  };
 
   const handleSetDelphiSubTheme = (sub: 'gipp_retro' | 'delphi_classic' | 'high_contrast') => {
     setDelphiSubTheme(sub);
@@ -330,6 +349,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
         { label: 'Secretaria Integrada & Agenda', shortcut: '', icon: FileText, action: () => setView('secretaria_integrada') },
         { label: 'Escola Bíblica Dominical (EBD)', shortcut: '', icon: BookOpenText, action: () => setView('secretaria_ebd') },
         { label: 'Universidade Teológica (CGADB/CPAD)', shortcut: '', icon: GraduationCap, action: () => setView('curso_teologia') },
+        { label: 'Formação & Capacitação de Obreiros (GIPP)', shortcut: '', icon: Award, action: () => setView('formacao_obreiros') },
         { label: 'Livro de Atas Eclesiásticas', shortcut: '', icon: FileText, action: () => setView('secretaria_livro_atas') },
         { label: 'Certificados & Diplomas', shortcut: '', icon: Award, action: () => setView('secretaria_certificados') },
         { label: 'Carteirinhas de Membros', shortcut: '', icon: Users, action: () => setView('carteirinha_studio') },
@@ -628,7 +648,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
                   <tr className="border-b border-[#CBD5E1]"><td className="p-1 font-bold text-[#334E68] bg-[#E2E6EA]">DataSet</td><td className="p-1">qry_{view}</td></tr>
                   <tr className="border-b border-[#CBD5E1]"><td className="p-1 font-bold text-[#334E68] bg-[#E2E6EA]">AutoCommit</td><td className="p-1 text-blue-700">True</td></tr>
                   <tr className="border-b border-[#CBD5E1]"><td className="p-1 font-bold text-[#334E68] bg-[#E2E6EA]">Position</td><td className="p-1">poScreenCenter</td></tr>
-                  <tr className="border-b border-[#CBD5E1]"><td className="p-1 font-bold text-[#334E68] bg-[#E2E6EA]">WindowState</td><td className="p-1">{isFormMaximized ? 'wsMaximized' : 'wsNormal'}</td></tr>
+                  <tr className="border-b border-[#CBD5E1]"><td className="p-1 font-bold text-[#334E68] bg-[#E2E6EA]">WindowState</td><td className="p-1">{isFormMinimized ? 'wsMinimized' : isFormMaximized ? 'wsMaximized' : 'wsNormal'}</td></tr>
                   <tr className="border-b border-[#CBD5E1]"><td className="p-1 font-bold text-[#334E68] bg-[#E2E6EA]">FireDAC</td><td className="p-1 text-emerald-700">FDConnGIPP [Active]</td></tr>
                 </tbody>
               </table>
@@ -636,96 +656,271 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
           </div>
         )}
 
-        {/* Active Delphi Form Window */}
-        <div className={`flex-1 flex flex-col rounded-xs overflow-hidden min-h-0 relative ${themeClasses.formWorkspace}`}>
-          {/* Form Title Bar */}
-          <div className={`px-3 py-1.5 flex items-center justify-between select-none shrink-0 shadow-xs border-b ${
-            isHighContrast 
-              ? 'bg-black text-yellow-300 border-yellow-400' 
-              : isClassic 
-                ? 'bg-[#000080] text-white border-[#000040]' 
-                : 'bg-gradient-to-r from-[#004E98] via-[#1D65A6] to-[#004E98] text-white border-[#003366]'
-          }`}>
-            <div className="flex items-center gap-2 font-bold text-xs">
-              <WindowIcon size={14} className={isHighContrast ? 'text-yellow-400' : 'text-sky-200'} />
-              <span className="tracking-wide">
-                Form_{view}: TForm ({mMeta.label})
-              </span>
+        {/* Empty Workspace / Closed Form State */}
+        {isFormClosed && (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative z-10 animate-fadeIn">
+            <div className={`p-6 max-w-md rounded-xs border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] shadow-2xl ${
+              isHighContrast ? 'bg-black text-yellow-300' : 'bg-[#ECEFF4] text-[#102A43]'
+            }`}>
+              <div className="w-12 h-12 rounded-xs bg-[#004E98] text-white mx-auto flex items-center justify-center mb-3 shadow-md">
+                <WindowIcon size={24} />
+              </div>
+              <h3 className="text-base font-black mb-1">MDI Desktop (Delphi 13 Florence)</h3>
+              <p className="text-xs text-[#334E68] mb-4">
+                O formulário <strong>Form_{view} ({mMeta.label})</strong> foi fechado.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFormClosed(false);
+                    setIsFormMinimized(false);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold cursor-pointer ${themeClasses.button3D}`}
+                >
+                  Reabrir Form_{view}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('dashboard');
+                    setIsFormClosed(false);
+                    setIsFormMinimized(false);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold cursor-pointer ${themeClasses.button3D}`}
+                >
+                  Abrir Painel Principal
+                </button>
+              </div>
             </div>
+          </div>
+        )}
 
-            <div className="flex items-center gap-1">
-              <span className={`hidden sm:inline-block text-[10px] font-mono font-normal px-2 py-0.5 rounded-2xs mr-2 ${
-                isHighContrast ? 'bg-yellow-950 text-yellow-300 border border-yellow-400' : 'bg-black/20 text-sky-200'
+        {/* Minimized Workspace State Notice */}
+        {isFormMinimized && !isFormClosed && (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative z-10 animate-fadeIn select-none pointer-events-none">
+            <div className="opacity-40 flex flex-col items-center">
+              <WindowIcon size={40} className="text-[#004E98] mb-2" />
+              <p className="text-xs font-mono font-bold text-[#102A43]">
+                Formulário Minimizado • Clique na barra abaixo ou no botão restaurar
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Active Delphi Form Window (Maximized or Windowed MDI) */}
+        {!isFormClosed && !isFormMinimized && (
+          <div className={`flex-1 flex flex-col min-h-0 w-full h-full relative ${
+            isFormMaximized 
+              ? '' 
+              : 'items-center justify-center p-1 sm:p-2.5 overflow-hidden'
+          }`}>
+            <div className={`flex flex-col rounded-xs overflow-hidden relative transition-all duration-150 ${themeClasses.formWorkspace} ${
+              isFormMaximized 
+                ? 'flex-1 min-h-0 w-full h-full' 
+                : `${windowScale === 'compact' ? 'w-[88%] max-w-4xl h-[82%]' : windowScale === 'wide' ? 'w-[98%] max-w-7xl h-[95%]' : 'w-[94%] max-w-6xl h-[88%]'} shadow-2xl my-auto`
+            }`}>
+              {/* Form Title Bar */}
+              <div 
+                onDoubleClick={() => setIsFormMaximized(!isFormMaximized)}
+                className={`px-3 py-1.5 flex items-center justify-between select-none shrink-0 shadow-xs border-b cursor-default ${
+                  isHighContrast 
+                    ? 'bg-black text-yellow-300 border-yellow-400' 
+                    : isClassic 
+                      ? 'bg-[#000080] text-white border-[#000040]' 
+                      : 'bg-gradient-to-r from-[#003B73] via-[#004E98] to-[#1D65A6] text-white border-[#003366]'
+                }`}
+                title="Clique duplo para Maximizar / Restaurar formulário"
+              >
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  <WindowIcon size={14} className={isHighContrast ? 'text-yellow-400' : 'text-sky-200'} />
+                  <span className="tracking-wide">
+                    Form_{view}: TForm ({mMeta.label})
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className={`hidden sm:inline-block text-[10px] font-mono font-normal px-2 py-0.5 rounded-2xs mr-1 ${
+                    isHighContrast ? 'bg-yellow-950 text-yellow-300 border border-yellow-400' : 'bg-black/20 text-sky-200'
+                  }`}>
+                    DataSet: qry{view} [dsBrowse]
+                  </span>
+
+                  {/* Form Window Controls */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFormMinimized(true);
+                    }}
+                    className={`w-5 h-4.5 text-[9px] font-black flex items-center justify-center cursor-pointer active:translate-y-0.5 transition-transform ${themeClasses.button3D}`}
+                    title="Minimizar Formulário [_]"
+                  >
+                    _
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFormMaximized(!isFormMaximized);
+                    }}
+                    className={`w-5 h-4.5 text-[9px] font-black flex items-center justify-center cursor-pointer active:translate-y-0.5 transition-transform ${themeClasses.button3D}`}
+                    title={isFormMaximized ? "Restaurar Janela [❐]" : "Maximizar Janela [▢]"}
+                  >
+                    {isFormMaximized ? '❐' : '▢'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCloseForm();
+                    }}
+                    className="w-5 h-4.5 bg-[#E63946] hover:bg-[#D62828] active:bg-[#B71C1C] border-t border-l border-t-rose-300 border-l-rose-300 border-r border-b border-r-[#780000] border-b-[#780000] text-[9px] font-black text-white flex items-center justify-center cursor-pointer active:translate-y-0.5 transition-transform"
+                    title="Fechar Formulário [✕]"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Form Toolbar / Sub-ribbon */}
+              <div className={`px-3 py-1 flex items-center justify-between text-[10px] font-mono shrink-0 border-b ${
+                isHighContrast ? 'bg-black border-yellow-400 text-yellow-300' : isClassic ? 'bg-[#ECE9D8] border-[#ACA899] text-black' : 'bg-[#DFE3E8] border-[#BAC7D5] text-[#334E68]'
               }`}>
-                DataSet: qry{view} [dsBrowse]
-              </span>
+                <div className="flex items-center gap-3">
+                  <span className={`flex items-center gap-1 font-bold ${isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'}`}>
+                    <Database size={11} />
+                    <span>FDTable: tb_{view}</span>
+                  </span>
+                  <span>•</span>
+                  <span>State: <strong className={isHighContrast ? 'text-yellow-300 font-bold' : 'text-emerald-700 font-bold'}>dsBrowse</strong></span>
+                  <span>•</span>
+                  <span>Trans: <strong>InTransaction=False</strong></span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Resize presets when in windowed mode */}
+                  {!isFormMaximized && (
+                    <div className="hidden md:flex items-center gap-1 bg-white/60 px-1.5 py-0.5 rounded border border-[#BAC7D5] text-[9px]">
+                      <span className="font-bold text-[#004E98]">Redimensionar:</span>
+                      <button
+                        type="button"
+                        onClick={() => setWindowScale('compact')}
+                        className={`px-1 rounded cursor-pointer ${windowScale === 'compact' ? 'bg-[#004E98] text-white font-bold' : 'hover:bg-slate-200'}`}
+                        title="Tamanho Compacto"
+                      >
+                        80%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWindowScale('normal')}
+                        className={`px-1 rounded cursor-pointer ${windowScale === 'normal' ? 'bg-[#004E98] text-white font-bold' : 'hover:bg-slate-200'}`}
+                        title="Tamanho Normal"
+                      >
+                        90%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWindowScale('wide')}
+                        className={`px-1 rounded cursor-pointer ${windowScale === 'wide' ? 'bg-[#004E98] text-white font-bold' : 'hover:bg-slate-200'}`}
+                        title="Tamanho Expandido"
+                      >
+                        98%
+                      </button>
+                    </div>
+                  )}
+                  <span className="hidden sm:inline-block text-[9px] opacity-75 font-sans">Delphi VCL Florence 64-bit Engine</span>
+                </div>
+              </div>
 
-              {/* Form Window Controls */}
+              {/* Actual Module Content */}
+              <div className={`flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar relative ${
+                isHighContrast ? 'bg-black text-yellow-300' : isClassic ? 'bg-[#ECE9D8] text-black' : 'bg-[#ECEFF4] text-[#102A43]'
+              }`}>
+                {/* Subtle Delphi Florence GIPP Watermark across all modules */}
+                <div className="absolute bottom-6 right-8 pointer-events-none select-none z-0 opacity-[0.06] flex flex-col items-end text-right">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-16 h-16 text-[#004E98] stroke-current" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="50,10 88,28 88,72 50,90 12,72 12,28" strokeWidth="2" />
+                      <circle cx="50" cy="50" r="32" strokeWidth="1.5" strokeDasharray="4 2" />
+                      <path d="M50 22 L50 78 M35 45 L65 45" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <span className="font-black text-5xl tracking-[0.25em] text-[#004E98] font-sans">GIPP</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold tracking-[0.2em] text-[#102A43] uppercase mt-1">
+                    Delphi 13 Florence VCL Architecture
+                  </span>
+                </div>
+
+                {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'marketing_social' && view !== 'changelog' && view !== 'sobre') ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-12 relative z-10">
+                    <Lock size={48} className="text-rose-600 mb-4 animate-bounce"/>
+                    <h2 className="text-2xl font-black mb-1">Acesso Inativo</h2>
+                    <p className="text-xs opacity-75">Este módulo está inativo para a conta de Assistente Virtual Mary.</p>
+                  </div>
+                ) : hasPermission(access) ? (
+                  <div className="delphi-form-workspace relative z-10">
+                    <CurrentModule {...currentProps} />
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-12 relative z-10">
+                    <Lock size={48} className="text-rose-600 mb-4"/>
+                    <h2 className="text-2xl font-black">Acesso Restrito [Access Denied]</h2>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delphi VCL Minimized Form Dock Bar at Bottom-Left */}
+        {isFormMinimized && !isFormClosed && (
+          <div 
+            onClick={() => setIsFormMinimized(false)}
+            className={`absolute bottom-3 left-3 z-30 flex items-center justify-between gap-2 px-3 py-1.5 rounded-xs shadow-2xl cursor-pointer hover:brightness-105 border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] animate-slideUp ${
+              isHighContrast ? 'bg-black text-yellow-300 border-yellow-400' : 'bg-gradient-to-r from-[#003B73] via-[#004E98] to-[#1D65A6] text-white'
+            }`}
+            style={{ width: '290px' }}
+            title="Clique para Restaurar Formulário"
+          >
+            <div className="flex items-center gap-2 min-w-0 font-bold text-xs">
+              <WindowIcon size={14} className={isHighContrast ? 'text-yellow-400' : 'text-sky-200'} />
+              <span className="truncate">Form_{view}: TForm</span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               <button
-                onClick={() => setIsFormMaximized(false)}
+                type="button"
+                onClick={() => {
+                  setIsFormMinimized(false);
+                  setIsFormMaximized(false);
+                }}
                 className={`w-4.5 h-4 text-[8px] font-black flex items-center justify-center cursor-pointer ${themeClasses.button3D}`}
-                title="Minimizar Form"
+                title="Restaurar Janela Normal"
               >
-                _
+                ❐
               </button>
               <button
-                onClick={() => setIsFormMaximized(!isFormMaximized)}
+                type="button"
+                onClick={() => {
+                  setIsFormMinimized(false);
+                  setIsFormMaximized(true);
+                }}
                 className={`w-4.5 h-4 text-[8px] font-black flex items-center justify-center cursor-pointer ${themeClasses.button3D}`}
-                title={isFormMaximized ? "Restaurar" : "Maximizar"}
+                title="Maximizar Janela"
               >
-                {isFormMaximized ? '❐' : '▢'}
+                ▢
               </button>
               <button
-                onClick={() => setView('dashboard')}
+                type="button"
+                onClick={handleCloseForm}
                 className="w-4.5 h-4 bg-[#E63946] hover:bg-[#D62828] border-t border-l border-t-rose-300 border-l-rose-300 border-r border-b border-r-[#780000] border-b-[#780000] text-[8px] font-black text-white flex items-center justify-center cursor-pointer"
-                title="Fechar Módulo"
+                title="Fechar Janela"
               >
                 ✕
               </button>
             </div>
           </div>
-
-          {/* Form Toolbar / Sub-ribbon */}
-          <div className={`px-3 py-1 flex items-center justify-between text-[10px] font-mono shrink-0 border-b ${
-            isHighContrast ? 'bg-black border-yellow-400 text-yellow-300' : isClassic ? 'bg-[#ECE9D8] border-[#ACA899] text-black' : 'bg-[#DFE3E8] border-[#BAC7D5] text-[#334E68]'
-          }`}>
-            <div className="flex items-center gap-3">
-              <span className={`flex items-center gap-1 font-bold ${isHighContrast ? 'text-yellow-400' : 'text-[#004E98]'}`}>
-                <Database size={11} />
-                <span>FDTable: tb_{view}</span>
-              </span>
-              <span>•</span>
-              <span>State: <strong className={isHighContrast ? 'text-yellow-300 font-bold' : 'text-emerald-700 font-bold'}>dsBrowse</strong></span>
-              <span>•</span>
-              <span>Trans: <strong>InTransaction=False</strong></span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-[9px] opacity-75 font-sans">Delphi VCL Florence 64-bit Engine</span>
-            </div>
-          </div>
-
-          {/* Actual Module Content */}
-          <div className={`flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar relative ${
-            isHighContrast ? 'bg-black text-yellow-300' : isClassic ? 'bg-[#ECE9D8] text-black' : 'bg-[#ECEFF4] text-[#102A43]'
-          }`}>
-            {(user?.usuario?.toLowerCase() === 'mary' && view !== 'suporte_dev' && view !== 'marketing_social' && view !== 'changelog' && view !== 'sobre') ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-12">
-                <Lock size={48} className="text-rose-600 mb-4 animate-bounce"/>
-                <h2 className="text-2xl font-black mb-1">Acesso Inativo</h2>
-                <p className="text-xs opacity-75">Este módulo está inativo para a conta de Assistente Virtual Mary.</p>
-              </div>
-            ) : hasPermission(access) ? (
-              <div className="delphi-form-workspace">
-                <CurrentModule {...currentProps} />
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-12">
-                <Lock size={48} className="text-rose-600 mb-4"/>
-                <h2 className="text-2xl font-black">Acesso Restrito [Access Denied]</h2>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* =========================================================================

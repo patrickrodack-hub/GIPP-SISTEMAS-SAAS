@@ -398,6 +398,230 @@ app.post("/api/gemini/generate", async (req, res) => {
     }
 });
 
+// ==================== ROTAS DE GERAÇÃO E EXPANSÃO TEOLÓGICA (CGADB / CPAD) ====================
+
+app.post("/api/gemini/gerar-grau-teologia", async (req, res) => {
+    const start = Date.now();
+    try {
+        const { tema, grau, nivel, nivelMinisterial } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+            return res.json({
+                success: false,
+                message: "⚠️ A chave de API do Gemini não está configurada.",
+                isQuotaExhausted: false
+            });
+        }
+
+        const resolvedGrau = grau || nivelMinisterial || "Auxiliar";
+        const resolvedNivel = nivel || "Avançado";
+        const resolvedTema = tema || `Formação Teológica e Ministerial para ${resolvedGrau}`;
+
+        const prompt = `Você atua sob a persona de Professor e Doutor de Teologia da CGADB (Convenção Geral das Assembleias de Deus no Brasil) e CPAD.
+Gere uma apostila completa estruturada rigorosamente em 5 MÓDULOS DE ESTUDO PADRONIZADOS para o grau ministerial "${resolvedGrau}" (Nível Acadêmico: ${resolvedNivel}) sobre o TEMA: "${resolvedTema}".
+
+BASE DOUTRINÁRIA OBRIGATÓRIA: Os 24 Capítulos da Declaração de Fé da CGADB / CPAD.
+Cada um dos 5 módulos deve conter:
+- Número do módulo (1 a 5)
+- Título acadêmico e reverente
+- Capítulo da Declaração de Fé CGADB correspondente (Cap. 1 a 24)
+- Carga horária sugerida (ex: 20 a 32 horas)
+- Ementa detalhada
+- Trabalho acadêmico sugerido
+- 5 Lições / Páginas completas com:
+  * Subtítulo descritivo
+  * Conteúdo teológico denso e aprofundado
+  * Destaque exegético com termos originais em Hebraico/Grego transliterados
+  * Pontos-chave em lista
+- Referências bíblicas exegéticas ricas (com livro, capítulo e versículo comentados)
+- Aplicação pastoral prática na vida e no altar do obreiro
+- 2 Questões de quiz com 4 opções cada, índice da resposta correta (0 a 3) e explicação teológica.
+
+ATENÇÃO: Retorne APENAS um JSON válido no formato abaixo, sem delimitadores markdown ou comentários externos:
+{
+  "grau": "${resolvedGrau}",
+  "temaGeral": "${resolvedTema}",
+  "nivel": "${resolvedNivel}",
+  "modulos": [
+    {
+      "moduloNumero": 1,
+      "titulo": "Nome do Módulo 1",
+      "capituloCGADB": "Capítulo X - Nome do Capítulo",
+      "cargaHoraria": 24,
+      "ementa": "Ementa teológica...",
+      "trabalhoSugerido": "Descrição da atividade prática...",
+      "licao": {
+        "titulo": "Título da Lição",
+        "introducao": "Introdução histórica e panorâmica...",
+        "fundamentacaoDoutrinaria": "Fundamentação dogmática oficial...",
+        "referenciasBiblicas": ["Referência 1 comentada", "Referência 2 comentada", "Referência 3 comentada"],
+        "aplicacaoPratica": "Instruções pastorais práticas...",
+        "paginas": [
+          {
+            "numero": 1,
+            "subtitulo": "Subtítulo da Página 1",
+            "conteudo": "Texto teológico denso...",
+            "destaqueExegese": "Termo original e significado teológico",
+            "pontosChave": ["Ponto 1", "Ponto 2", "Ponto 3"]
+          }
+        ],
+        "quiz": [
+          {
+            "pergunta": "Pergunta avaliativa?",
+            "opcoes": ["Opção A", "Opção B", "Opção C", "Opção D"],
+            "respostaCorreta": 0,
+            "explicacao": "Justificativa doutrinária..."
+          }
+        ]
+      }
+    }
+  ]
+}`;
+
+        const ai = new GoogleGenAI({
+            apiKey: apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+        });
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3.5-flash",
+            contents: prompt,
+            config: {
+                systemInstruction: "Você é um Professor e Doutor de Teologia Pentecostal Clássica, especialista na Declaração de Fé da CGADB/CPAD. Responda exclusivamente em formato JSON válido e parseável.",
+                temperature: 0.2
+            }
+        });
+
+        const responseText = response.text || "";
+        let cleanJSON = responseText.trim();
+        if (cleanJSON.startsWith('```json')) cleanJSON = cleanJSON.substring(7);
+        else if (cleanJSON.startsWith('```')) cleanJSON = cleanJSON.substring(3);
+        if (cleanJSON.endsWith('```')) cleanJSON = cleanJSON.substring(0, cleanJSON.length - 3);
+        cleanJSON = cleanJSON.trim();
+
+        const match = cleanJSON.match(/\{[\s\S]*\}/);
+        if (match) cleanJSON = match[0];
+
+        let parsed = null;
+        try {
+            parsed = JSON.parse(cleanJSON);
+        } catch (parseErr) {
+            // Repair quotes and trailing commas
+            const repaired = cleanJSON.replace(/,\s*([\]}])/g, '$1');
+            try {
+                parsed = JSON.parse(repaired);
+            } catch (e) {
+                console.warn("[Gemini API] Falha no parse de JSON completo, retornando texto formatado:", parseErr);
+            }
+        }
+
+        const latency = Date.now() - start;
+        trackApiCall("gemini", "Gerador de Grau Teológico 5 Módulos", "success", latency, 0.0005, `Grau: ${resolvedGrau}, Tema: ${resolvedTema}`);
+
+        res.json({
+            success: true,
+            data: parsed,
+            rawText: responseText
+        });
+    } catch (error: any) {
+        console.error("[Gemini API] Erro ao gerar grau teológico:", error);
+        res.status(500).json({ success: false, error: error.message || String(error) });
+    }
+});
+
+app.post("/api/gemini/expandir-teologia", async (req, res) => {
+    const start = Date.now();
+    try {
+        const { titulo, capituloCGADB, conteudoAtual, destaqueExegese, nivel } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+            return res.json({
+                success: false,
+                message: "⚠️ Chave de API do Gemini não configurada."
+            });
+        }
+
+        const prompt = `Você é um erudito em Teologia Bíblica e Sistemática alinhado à Declaração de Fé da CGADB (Convenção Geral das Assembleias de Deus no Brasil).
+Expanda e aprofunde com altíssimo rigor acadêmico, erudição exegética e zelo pastoral o seguinte conteúdo teológico:
+
+TÍTULO DA DISCIPLINA/LIÇÃO: "${titulo || 'Teologia Bíblica'}"
+CAPÍTULO CGADB RELACIONADO: "${capituloCGADB || 'Declaração de Fé CGADB'}"
+NÍVEL: "${nivel || 'Avançado'}"
+DESTAQUE ATUAL: "${destaqueExegese || ''}"
+CONTEÚDO BASE PARA EXPANSÃO:
+${conteudoAtual || ''}
+
+A EXPANSÃO DEVE CONTER OBRIGATORIAMENTE:
+1. EXEGESE FILOLÓGICA APROFUNDADA: Análise dos termos em Hebraico (Tanakh) e Grego Koiné (Novo Testamento) transliterados, com etimologia, morfologia e contexto histórico-cultural.
+2. CONTEXTO PATRÍSTICO E HISTÓRICO: Como os Pais da Igreja (ex: Irineu, Tertuliano, Atanásio, Agostinho) ou os Reformadores e pioneiros pentecostais (Daniel Berg, Gunnar Vingren) defenderam essa verdade.
+3. HARMONIA DOUTRINÁRIA CGADB: Alinhamento minucioso com os 24 capítulos da Declaração de Fé da CGADB/CPAD, refutando heresias modernas (como relativismo moral, cessacionismo, liberalismo teológico e sincretismo).
+4. CORPUS BÍBLICO EXEGÉTICO EXPANDIDO: Mínimo de 4 referências bíblicas com análise minuciosa de cada versículo.
+5. APLICAÇÃO PASTORAL E MINISTERIAL: Diretrizes práticas para a liderança da igreja local, aconselhamento, ministração dos sacramentos e púlpito.
+
+Retorne em formato JSON estruturado:
+{
+  "titulo": "${titulo}",
+  "exegeseFilologica": "Texto com análise dos radicais em hebraico/grego...",
+  "contextoHistoricoPatristico": "Texto histórico patrístico e da tradição pentecostal...",
+  "fundamentacaoCGADB": "Conexão formal com a Declaração de Fé da CGADB...",
+  "referenciasBiblicasDetalhadas": [
+    { "versiculo": "Livro C:V", "comentarioExegetico": "Análise profunda..." }
+  ],
+  "aplicacaoPastoral": "Diretrizes práticas para o ministério...",
+  "pontosChaveExpandidos": ["Ponto 1", "Ponto 2", "Ponto 3", "Ponto 4"]
+}`;
+
+        const ai = new GoogleGenAI({
+            apiKey: apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+        });
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3.5-flash",
+            contents: prompt,
+            config: {
+                systemInstruction: "Você é um Professor Doutor em Teologia Bíblica e Sistemática da CGADB. Retorne exclusivamente JSON estruturado e válido.",
+                temperature: 0.2
+            }
+        });
+
+        const responseText = response.text || "";
+        let cleanJSON = responseText.trim();
+        if (cleanJSON.startsWith('```json')) cleanJSON = cleanJSON.substring(7);
+        else if (cleanJSON.startsWith('```')) cleanJSON = cleanJSON.substring(3);
+        if (cleanJSON.endsWith('```')) cleanJSON = cleanJSON.substring(0, cleanJSON.length - 3);
+        cleanJSON = cleanJSON.trim();
+
+        const match = cleanJSON.match(/\{[\s\S]*\}/);
+        if (match) cleanJSON = match[0];
+
+        let parsed = null;
+        try {
+            parsed = JSON.parse(cleanJSON);
+        } catch (e) {
+            parsed = {
+                titulo: titulo,
+                exegeseFilologica: responseText,
+                pontosChaveExpandidos: ["Expansão teológica gerada com sucesso."]
+            };
+        }
+
+        const latency = Date.now() - start;
+        trackApiCall("gemini", "Expansão Teológica Exegética", "success", latency, 0.0003, `Disciplina: ${titulo}`);
+
+        res.json({
+            success: true,
+            data: parsed,
+            rawText: responseText
+        });
+    } catch (error: any) {
+        console.error("[Gemini API] Erro ao expandir teologia:", error);
+        res.status(500).json({ success: false, error: error.message || String(error) });
+    }
+});
+
 
 async function slicePdfIfTooLarge(base64Data: string): Promise<{ data: string; originalPages: number; slicedPages: number; wasSliced: boolean }> {
     try {
@@ -1593,24 +1817,34 @@ app.post("/api/admin/trigger-agenda-reminders", async (req, res) => {
 let viteMiddleware: any = null;
 
 async function start() {
-    // Registra o middleware dinâmico após todas as rotas de API.
-    // Isso garante que requisições de front-end sejam delegadas ao Vite ou servidas como estáticas.
-    app.use((req, res, next) => {
-        if (viteMiddleware) {
-            viteMiddleware(req, res, next);
-        } else {
-            if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV === "production") {
+        const distPath = path.join(process.cwd(), "dist");
+        app.use(express.static(distPath));
+        app.get("*", (req, res, next) => {
+            if (req.path.startsWith("/api")) return next();
+            const indexPath = path.join(distPath, "index.html");
+            if (fs.existsSync(indexPath)) {
+                res.sendFile(indexPath);
+            } else {
+                res.status(404).send("Build artifact index.html not found. Please run npm run build.");
+            }
+        });
+        console.log("[Server] Arquivos estáticos de produção configurados com sucesso.");
+    } else {
+        // Registra o middleware dinâmico após todas as rotas de API em dev
+        app.use((req, res, next) => {
+            if (viteMiddleware) {
+                viteMiddleware(req, res, next);
+            } else {
                 if (req.path.startsWith("/api")) {
                     next();
                 } else {
                     res.setHeader("Content-Type", "text/html; charset=utf-8");
                     res.send("<html><head><meta charset='utf-8'></head><body><h3>Iniciando o servidor de desenvolvimento, por favor aguarde alguns segundos e recarregue a página...</h3></body></html>");
                 }
-            } else {
-                next();
             }
-        }
-    });
+        });
+    }
 
     // 1. Iniciamos o escuta da porta imediatamente para liberar as sondagens de saúde (health check)
     app.listen(PORT, "0.0.0.0", async () => {
@@ -1629,13 +1863,6 @@ async function start() {
             } catch (err) {
                 console.error("[Vite] Falha crítica ao inicializar o Vite:", err);
             }
-        } else {
-            const distPath = path.join(process.cwd(), 'dist');
-            app.use(express.static(distPath));
-            app.get('*', (req, res) => {
-                res.sendFile(path.join(distPath, 'index.html'));
-            });
-            console.log("[Server] Arquivos estáticos de produção configurados.");
         }
 
         // 3. Iniciar serviços de segundo plano de forma assíncrona com tempos seguros

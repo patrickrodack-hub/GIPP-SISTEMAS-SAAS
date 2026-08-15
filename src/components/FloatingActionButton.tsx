@@ -427,6 +427,7 @@ export function FloatingActionButton() {
         ];
 
       case 'curso_teologia':
+      case 'formacao_obreiros':
       case 'gestao_cursos':
         return [
           {
@@ -577,6 +578,7 @@ export function FloatingActionButton() {
       case 'cad_celula': return 'Células / Grupos';
       case 'secretaria_ebd': return 'EBD Escola Bíblica';
       case 'curso_teologia': return 'Universidade Teológica';
+      case 'formacao_obreiros': return 'Formação de Obreiros';
       case 'assistente_ai': return 'Pastoral IA';
       case 'salinha_kids': return 'Salinha Kids';
       default: return 'GIPP Atalhos';

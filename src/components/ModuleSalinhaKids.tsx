@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Baby, Heart, ShieldAlert, FileText, UserPlus, Search, Plus, Trash2, Edit, Calendar, Clock, Phone, AlertTriangle, Check, CheckCircle2, Volume2, Share2, HelpCircle, Activity, HeartHandshake, Eye, Users, FileBarChart, Bell, Sparkles, Send, MapPin, Smile, Key, Lock, Printer, QrCode, ShieldCheck, RefreshCw, BarChart2, Award, User,
-  Download, Layers
+  Download, Layers, Tv, Radio, Megaphone
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
@@ -105,6 +105,13 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
   // Badge/Tag Modal Visualizer
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [badgeChild, setBadgeChild] = useState<Crianca | null>(null);
+
+  // Panic / Call Parents Modal States
+  const [panicModalOpen, setPanicModalOpen] = useState(false);
+  const [panicChild, setPanicChild] = useState<Crianca | null>(null);
+  const [panicReason, setPanicReason] = useState('Choro inconsolável / Necessidade dos pais');
+  const [telaoModalOpen, setTelaoModalOpen] = useState(false);
+  const [activeTelaoPin, setActiveTelaoPin] = useState<string | null>(null);
   
   // Custom ConfirmModal for deletion confirmation
   const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ type: 'volunteer' | 'child'; id: string } | null>(null);
@@ -1170,6 +1177,13 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               >
                 <Users size={14} /> Equipe & Escala Voluntários
               </button>
+              <button 
+                onClick={() => setTelaoModalOpen(true)} 
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-all whitespace-nowrap bg-amber-500/10 text-amber-800 hover:bg-amber-500 hover:text-white border border-amber-300/40 cursor-pointer shadow-2xs"
+                title="Projetar Chamada de Pais no Telão da Igreja"
+              >
+                <Tv size={14} /> Telão Kids
+              </button>
             </div>
 
             {tab === 2 && (
@@ -1573,19 +1587,28 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
                                 </div>
                               </div>
 
-                              <div className="flex gap-2 pt-2 border-t border-slate-100 justify-between items-center">
-                                <button 
-                                  onClick={() => { setBadgeChild(kid); setBadgeModalOpen(true); }}
-                                  className="text-slate-600 hover:text-slate-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-205"
-                                >
-                                  <Printer size={12} /> Prt Crachá
-                                </button>
+                              <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 justify-between items-center">
+                                <div className="flex gap-1.5">
+                                  <button 
+                                    onClick={() => { setBadgeChild(kid); setBadgeModalOpen(true); }}
+                                    className="text-slate-600 hover:text-slate-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-205 cursor-pointer"
+                                  >
+                                    <Printer size={12} /> Crachá
+                                  </button>
+                                  <button 
+                                    onClick={() => { setPanicChild(kid); setPanicModalOpen(true); }}
+                                    className="text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-rose-200 transition-all cursor-pointer shadow-2xs"
+                                    title="Chamar Pais via WhatsApp ou Projetar no Telão"
+                                  >
+                                    <Bell size={12} className="animate-bounce" /> Chamar Pais
+                                  </button>
+                                </div>
                                 
                                 <button 
                                   onClick={() => triggerCheckoutFlow(kid)}
-                                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
+                                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  <Lock size={12} /> Saída Segura
+                                  <Lock size={12} /> Saída
                                 </button>
                               </div>
                             </div>
@@ -2663,6 +2686,161 @@ const ModuleSalinhaKids: React.FC<ModuleSalinhaKidsProps> = ({ mode = 'admin' })
               </div>
 
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL 5: ALERTA DE PÂNICO / CHAMADA DE PAIS (WHATSAPP + TELÃO) */}
+      {panicModalOpen && panicChild && createPortal(
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-[12500] animate-entrance">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-rose-200">
+            {/* Header */}
+            <div className="p-5 bg-gradient-to-r from-rose-600 to-rose-800 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-white/20 rounded-2xl animate-pulse">
+                  <Megaphone size={22} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-wide">Chamar Pais / Alerta Kids</h3>
+                  <p className="text-xs text-rose-100 font-bold">Criança: {panicChild.nome}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setPanicModalOpen(false); setPanicChild(null); }}
+                className="text-white/80 hover:text-white p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-5 bg-slate-50/50">
+              {/* PIN Highlight Banner */}
+              <div className="bg-amber-500 text-slate-950 p-4 rounded-2xl flex items-center justify-between border-2 border-amber-400 shadow-md">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest block opacity-90">PIN de Identificação da Criança</span>
+                  <span className="text-2xl font-black font-mono tracking-widest">{panicChild.pin_retirada || '----'}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveTelaoPin(panicChild.pin_retirada || '0000');
+                    setTelaoModalOpen(true);
+                  }}
+                  className="bg-slate-950 text-amber-400 hover:bg-slate-900 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                >
+                  <Tv size={14} /> Projetar no Telão
+                </button>
+              </div>
+
+              {/* Motivo da Chamada */}
+              <div>
+                <label className="text-xs font-black uppercase text-slate-700 block mb-2">Motivo do Chamado</label>
+                <select
+                  value={panicReason}
+                  onChange={e => setPanicReason(e.target.value)}
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer shadow-xs"
+                >
+                  <option value="Choro inconsolável / Sentindo falta dos pais">😭 Choro inconsolável / Sentindo falta dos pais</option>
+                  <option value="Necessidade de troca de fralda ou higiene">🧷 Troca de fralda / Higiene</option>
+                  <option value="Mal-estar / Febre ou dor">🤒 Mal-estar / Sintoma de dor ou febre</option>
+                  <option value="Recusa de alimentação / Mamadeira">🍼 Alimentação / Mamadeira</option>
+                  <option value="Solicitação geral da equipe">📢 Solicitação geral dos tios da salinha</option>
+                </select>
+              </div>
+
+              {/* Contatos dos Pais */}
+              {(() => {
+                const parent = db.membros?.find((m: any) => m.id === panicChild.responsavel_membro_id);
+                const parentName = parent?.nome || 'Responsável';
+                const parentPhone = parent?.telefone || '';
+                const igrejaNome = db.igreja?.nome || 'nossa Igreja';
+                const urgentMsg = `🚨 *COMUNICADO URGENTE DA SALINHA KIDS* - ${igrejaNome}\n\nOlá, ${parentName}!\n\nOs tios do Ministério Infantil solicitam com gentileza o seu comparecimento à Salinha Kids para atender seu(sua) filho(a) *${panicChild.nome}*.\n\n*Motivo:* ${panicReason}\n*PIN de Retirada:* ${panicChild.pin_retirada || '----'}\n\nAgradecemos a colaboração e compreensão! 🙏`;
+
+                return (
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-slate-400 block">Responsável Cadastrado</span>
+                        <strong className="text-sm text-slate-800">{parentName}</strong>
+                        {parentPhone && <span className="block text-xs font-mono text-slate-500">{parentPhone}</span>}
+                      </div>
+                      {parentPhone ? (
+                        <a
+                          href={`https://wa.me/${parentPhone.replace(/\D/g, '').length <= 11 ? '55' + parentPhone.replace(/\D/g, '') : parentPhone.replace(/\D/g, '')}?text=${encodeURIComponent(urgentMsg)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all"
+                        >
+                          <Send size={14} /> Chamar no WhatsApp
+                        </a>
+                      ) : (
+                        <span className="text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100">
+                          Sem WhatsApp
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-white border-t border-slate-200 flex justify-end gap-2">
+              <button
+                onClick={() => { setPanicModalOpen(false); setPanicChild(null); }}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL 6: MODO PROJEÇÃO TELÃO KIDS (PARA SOM/MÍDIA) */}
+      {telaoModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black flex flex-col items-center justify-center p-8 z-[13000] select-none">
+          {/* Top control bar */}
+          <div className="absolute top-6 left-8 right-8 flex justify-between items-center text-white/50 hover:text-white transition-opacity">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-rose-500 animate-ping"></div>
+              <span className="text-xs font-black uppercase tracking-widest text-rose-400">PROJEÇÃO TEMPLO • SALINHA KIDS</span>
+            </div>
+            <button
+              onClick={() => { setTelaoModalOpen(false); }}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer"
+            >
+              Sair do Modo Telão [ESC]
+            </button>
+          </div>
+
+          {/* Main Stage Display */}
+          <div className="text-center max-w-4xl w-full space-y-8 animate-entrance">
+            <div className="inline-block bg-rose-600 text-white px-6 py-2 rounded-full font-black text-sm uppercase tracking-[0.3em] shadow-lg animate-pulse">
+              🚨 COMUNICADO MINISTÉRIO INFANTIL
+            </div>
+
+            <h1 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight">
+              PAIS OU RESPONSÁVEIS
+            </h1>
+
+            <p className="text-lg md:text-2xl text-slate-300 font-medium">
+              Favor comparecer à Salinha Kids para o atendimento do:
+            </p>
+
+            {/* PIN Big Box */}
+            <div className="my-8 py-8 px-12 bg-amber-500 text-slate-950 rounded-3xl shadow-2xl border-4 border-amber-300 inline-block">
+              <span className="text-xs font-black uppercase tracking-[0.4em] block opacity-90 mb-2">CÓDIGO PIN DA CRIANÇA</span>
+              <span className="text-7xl md:text-9xl font-black font-mono tracking-wider">
+                {activeTelaoPin || '----'}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 uppercase tracking-widest font-mono">
+              Apresente o seu comprovante digital de retirada na recepção kids.
+            </p>
           </div>
         </div>,
         document.body
