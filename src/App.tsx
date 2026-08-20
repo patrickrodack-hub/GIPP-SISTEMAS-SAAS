@@ -82,6 +82,10 @@ const ModuleEBD = lazy(() => import('./components/ModuleEBD'));
 const ModuleGestaoCursos = lazy(() => import('./components/ModuleGestaoCursos'));
 const ModuleTeologia = lazy(() => import('./components/ModuleTeologia'));
 const ModuleFormacaoObreiros = lazy(() => import('./components/ModuleFormacaoObreiros'));
+const ModuleGoogleMeet = lazy(() => import('./components/ModuleGoogleMeet'));
+const ModuleGoogleSheets = lazy(() => import('./components/ModuleGoogleSheets'));
+const ModuleGoogleDocs = lazy(() => import('./components/ModuleGoogleDocs'));
+const ModuleGoogleTasks = lazy(() => import('./components/ModuleGoogleTasks'));
 const ModuleRedeSocial = lazy(() => import('./components/ModuleRedeSocial'));
 const ModuleGippDocs = lazy(() => import('./components/ModuleGippDocs'));
 const ModuleGippPlanilhas = lazy(() => import('./components/ModuleGippPlanilhas'));
@@ -10231,6 +10235,14 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         boletim: 'group-hover:text-orange-500',
         biblia: 'group-hover:text-amber-600',
         assistente_ai: 'group-hover:text-violet-500',
+        google_meet: 'group-hover:text-emerald-500',
+        portal_meet: 'group-hover:text-emerald-500',
+        google_sheets: 'group-hover:text-emerald-600',
+        portal_sheets: 'group-hover:text-emerald-600',
+        google_docs: 'group-hover:text-blue-600',
+        portal_docs: 'group-hover:text-blue-600',
+        google_tasks: 'group-hover:text-sky-600',
+        portal_google_tasks: 'group-hover:text-sky-600',
         email_interno: 'group-hover:text-emerald-500',
         secretaria_integrada: 'group-hover:text-blue-500',
         secretaria_certificados: 'group-hover:text-amber-500',
@@ -10388,6 +10400,10 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                         {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={GippDocsIcon} label="GIPP DOCs" />}
                         {hasPermission('access_midia') && checkPlan('sheets_editor') && <MenuItem id="sheets_editor" icon={GippSheetsIcon} label="GIPP Planilhas" />}
+                        {checkPlan('google_sheets') && <MenuItem id="google_sheets" icon={FileSpreadsheet} label="Google Sheets (Planilhas)" />}
+                        {checkPlan('google_docs') && <MenuItem id="google_docs" icon={FileText} label="Google Docs (Documentos)" />}
+                        {checkPlan('google_tasks') && <MenuItem id="google_tasks" icon={CheckSquare} label="Google Tasks (Tarefas)" />}
+                        {checkPlan('google_meet') && <MenuItem id="google_meet" icon={Video} label="Google Meet (Salas)" />}
                         {hasPermission('access_interativo') && checkPlan('interativo') && <MenuItem id="interativo" icon={Gamepad2} label="Módulo Interativo & Gamificação" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
                     </div>
@@ -12089,6 +12105,14 @@ const PortalHome = ({ user, db, setView }) => {
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
                     </button>
                 )}
+                <button onClick={() => setView('portal_meet')} className="bg-gradient-to-br from-white to-emerald-50/60 p-6 rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
+                    <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
+                        Google Meet
+                    </div>
+                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Video size={24}/></div>
+                    <span className="font-black text-slate-800 text-base mb-1">Google Meet</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Videoconferências</span>
+                </button>
                 {isProfessor && (
                     <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1 cursor-pointer">
                         <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
@@ -16199,6 +16223,7 @@ const MemberPortalLayout = () => {
         { id: 'portal_cursos', icon: GraduationCap, label: 'Cursos', hoverColor: 'group-hover:text-purple-500' },
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
+        { id: 'portal_meet', icon: Video, label: 'Google Meet', hoverColor: 'group-hover:text-emerald-500' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
         { id: 'portal_interativo', icon: Gamepad2, label: 'Interatividade', hoverColor: 'group-hover:text-indigo-400' },
     ];
@@ -16259,6 +16284,10 @@ const MemberPortalLayout = () => {
             case 'portal_professor_ebd': return <ModuleEBD isProfessorOnly={true} />;
             case 'portal_frequencia': return <PortalFrequencia user={user} db={db} />;
             case 'portal_salinha_kids': return <ModuleSalinhaKids mode="portal" />;
+            case 'portal_meet': return <ModuleGoogleMeet />;
+            case 'portal_sheets': return <ModuleGoogleSheets />;
+            case 'portal_docs': return <ModuleGoogleDocs />;
+            case 'portal_google_tasks': return <ModuleGoogleTasks />;
             case 'portal_agenda': return <PortalAgenda user={user} db={db} />;
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_candidato': return (
@@ -17153,6 +17182,10 @@ const AppLayout = () => {
         { id: 'interativo', icon: Gamepad2, label: "Interativo & Gamificação", color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
         { id: 'docs_editor', icon: GippDocsIcon, label: "GIPP DOCs", color: 'text-blue-500', bg: 'bg-blue-500/10' },
         { id: 'sheets_editor', icon: GippSheetsIcon, label: "GIPP Planilhas", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { id: 'google_sheets', icon: FileSpreadsheet, label: "Google Sheets", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
+        { id: 'google_docs', icon: FileText, label: "Google Docs", color: 'text-blue-600', bg: 'bg-blue-600/10' },
+        { id: 'google_tasks', icon: CheckSquare, label: "Google Tasks", color: 'text-sky-600', bg: 'bg-sky-600/10' },
+        { id: 'google_meet', icon: Video, label: "Google Meet Videoconferências", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         { id: 'credencial_lote', icon: Badge, label: "Credencial em Lote", color: 'text-violet-500', bg: 'bg-violet-500/10' },
         { id: 'assistente_ai', icon: Sparkles, label: "Pastoral IA", color: 'text-purple-500', bg: 'bg-purple-500/10' },
         { id: 'config_sistema', icon: Settings, label: "Configurações Gerais", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
@@ -17184,9 +17217,9 @@ const AppLayout = () => {
         const plano = (db.igreja?.plano || 'avancado').toLowerCase();
 
         const defaultPlanos: Record<string, string[]> = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -17275,6 +17308,7 @@ const AppLayout = () => {
     const LinuxDesktop = () => {
         const desktopShortcuts = [
             { id: 'dashboard', label: "Visão Geral", icon: LayoutDashboard, color: 'text-blue-400' },
+            { id: 'google_meet', label: "Google Meet", icon: Video, color: 'text-emerald-400' },
             { id: 'curso_teologia', label: "Univ. Teológica", icon: BookOpen, color: 'text-emerald-400' },
             { id: 'formacao_obreiros', label: "Formação Obreiros", icon: GraduationCap, color: 'text-teal-400' },
             { id: 'secretaria_ebd', label: "Escola Dominical", icon: GraduationCap, color: 'text-indigo-400' },
@@ -17597,6 +17631,10 @@ const AppLayout = () => {
         'interativo': { component: ModuleInterativo, access: 'access_interativo' },
         'docs_editor': { component: ModuleGippDocs, access: 'access_midia' },
         'sheets_editor': { component: ModuleGippPlanilhas, access: 'access_midia' },
+        'google_sheets': { component: ModuleGoogleSheets, access: 'public' },
+        'google_docs': { component: ModuleGoogleDocs, access: 'public' },
+        'google_tasks': { component: ModuleGoogleTasks, access: 'public' },
+        'google_meet': { component: ModuleGoogleMeet, access: 'public' },
         'relatorios': { component: ModuleRelatorios, access: 'access_sec_relatorios' },
         'assistente_ai': { component: ModuleAssistenteAI, access: 'access_ia' },
         'dp_contabilidade': { component: ModuleDPContabilidade, access: 'access_fin_saidas' },
@@ -17666,6 +17704,7 @@ const AppLayout = () => {
         // Dock application list (macOS standard set of apps)
         const dockApps = [
             { id: 'dashboard', label: 'Finder', icon: LayoutDashboard, color: 'from-blue-400 to-blue-600' },
+            { id: 'google_meet', label: 'Meet', icon: Video, color: 'from-emerald-400 to-teal-600' },
             { id: 'curso_teologia', label: 'Universidade', icon: BookOpen, color: 'from-teal-400 to-emerald-600' },
             { id: 'formacao_obreiros', label: 'Obreiros', icon: GraduationCap, color: 'from-emerald-500 to-teal-700' },
             { id: 'secretaria_ebd', label: 'EBD', icon: GraduationCap, color: 'from-violet-400 to-indigo-600' },
@@ -19739,6 +19778,10 @@ export default function App() {
       const modules = [
           { label: "Visão Geral (Dashboard)", view: "dashboard", category: "Navegação", icon: LayoutDashboard },
           { label: "Bíblia de Estudos Offline", view: "biblia", category: "Navegação", icon: BookOpen },
+          { label: "Google Meet Videoconferências", view: "google_meet", category: "Comunicação & Mídia", icon: Video },
+          { label: "Google Sheets (Planilhas Integradas)", view: "google_sheets", category: "Escritório & Mídia", icon: FileSpreadsheet },
+          { label: "Google Docs (Documentos e Ofícios)", view: "google_docs", category: "Escritório & Mídia", icon: FileText },
+          { label: "Google Tasks (Tarefas & Checklists)", view: "google_tasks", category: "Escritório & Mídia", icon: CheckSquare },
           { label: "Membros (Rol Eclesiástico)", view: "cad_membro", category: "Navegação", icon: Users },
           { label: "Financeiro: Entradas e Dízimos", view: "fin_entrada", category: "Navegação", icon: ArrowUpCircle },
           { label: "Financeiro: Saídas e Contas", view: "fin_saida", category: "Navegação", icon: ArrowDownCircle },

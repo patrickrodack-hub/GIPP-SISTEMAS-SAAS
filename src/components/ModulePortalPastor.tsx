@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore';
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from '../lib/indexedDbService';
+import ModuleGoogleMeet from './ModuleGoogleMeet';
 
 import {
   ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
@@ -665,6 +666,9 @@ const ModulePortalPastor = () => {
                 <button onClick={() => setActiveTab('agenda')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'agenda' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Calendar size={16}/> Minha Agenda
                 </button>
+                <button onClick={() => setActiveTab('meet')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'meet' ? 'bg-emerald-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Video size={16}/> Gabinete & Reuniões Meet
+                </button>
                 {isPastorPresidente && (
                     <button onClick={() => setActiveTab('financeiro_pastor')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'financeiro_pastor' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                         <DollarSign size={16}/> Lançamento Rápido
@@ -729,6 +733,12 @@ const ModulePortalPastor = () => {
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'meet' && (
+                <div className="animate-scale-in">
+                    <ModuleGoogleMeet />
                 </div>
             )}
 
