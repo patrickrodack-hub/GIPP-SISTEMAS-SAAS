@@ -622,6 +622,147 @@ Retorne em formato JSON estruturado:
     }
 });
 
+// ==================== ROTA DE GERAÇÃO INTELIGENTE DE REVISTAS DA EBD (CPAD / CGADB) ====================
+app.post("/api/gemini/gerar-revista-ebd", async (req, res) => {
+    const start = Date.now();
+    try {
+        const { revista, licaoNum, tema, textoBiblico, faixaEtaria, capaExistente } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+        const resolvedRevista = revista || "Lições Bíblicas Adultos CPAD";
+        const resolvedLicaoNum = licaoNum || "1";
+        const resolvedTema = tema || "";
+        const resolvedTextoBiblico = textoBiblico || "";
+        const resolvedFaixa = faixaEtaria || "Adultos / Jovens";
+
+        const cacheKey = `ebd_rev:${resolvedRevista}:${resolvedLicaoNum}:${resolvedTema}`;
+        if (apiCache.has(cacheKey)) {
+            const cached = apiCache.get(cacheKey);
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Gerador Inteligente EBD CPAD", "cached", latency, 0.0000, `Cache Hit! Revista EBD ${resolvedRevista} Lição ${resolvedLicaoNum}`);
+            return res.json({
+                success: true,
+                text: cached.response,
+                revista: resolvedRevista,
+                licao: resolvedLicaoNum,
+                fromCache: true
+            });
+        }
+
+        const prompt = `Atue como um Professor, Comentarista e Doutor em Teologia da CPAD (Casa Publicadora das Assembleias de Deus) e CGADB.
+Sua missão é gerar a Revista de Estudo Oficial da EBD (Escola Bíblica Dominical) completa para a seguinte aula:
+
+- Revista / Trimestre: "${resolvedRevista}"
+- Número da Lição: Lição ${resolvedLicaoNum}
+${resolvedTema ? `- Tema da Aula: "${resolvedTema}"` : ''}
+${resolvedTextoBiblico ? `- Texto Bíblico Base: "${resolvedTextoBiblico}"` : ''}
+- Faixa Etária / Público: ${resolvedFaixa}
+
+DIRETRIZES FUNDAMENTAIS:
+1. PESQUISA NA WEB / CPAD: Busque as informações mais compatíveis com o tema oficial das Lições Bíblicas da CPAD e os 24 Capítulos da Declaração de Fé da CGADB / CPAD.
+2. ESTRUTURAÇÃO OBRIGATÓRIA:
+   - # 1. Título do Módulo e Tema Oficial da Lição
+   - # 2. Introdução (Visão geral, contexto histórico e doutrinário)
+   - **Texto Áureo:** Citação bíblica exata (versão Almeida Revista e Corrigida - ARC).
+   - **Verdade Prática:** A declaração prática oficial do comentarista da CPAD.
+   - **Leitura Bíblica em Classe:** O texto bíblico principal da lição lido versículo a versículo.
+   - # 3. Fundamentação Doutrinária: Conexão direta com um dos 24 Capítulos da Declaração de Fé da CGADB (ex: Cap. 1 Bibliologia, Cap. 2-3 Teontologia/Trindade, Cap. 4-5 Cristologia, Cap. 6 Pneumatologia, Cap. 10 Soteriologia, Cap. 19-20 Distintivos Pentecostais, Cap. 21 Cura Divina, Cap. 22-23 Escatologia, Cap. 24 Família).
+   - # 4. Referências Bíblicas e Exegese dos Tópicos (Tópico I, Tópico II e Tópico III com rica exegese, termos em hebraico/grego explicados e versículos bíblicos comentados).
+   - # 5. Aplicação Prática (Diretrizes práticas para o crente, professor e liderança no cotidiano e na igreja local).
+   - # 6. Validação: 2 perguntas de fixação para os alunos no final com o Gabarito Teológico Comentado.
+${!capaExistente ? '3. No final da resposta, sugira uma URL de capa oficial no formato URL_CAPA=[url_da_imagem] ou URL_CAPA=null se não encontrar.' : ''}
+
+Retorne o texto formatado em Markdown com alta elegância, reverência teológica e profundidade didática.`;
+
+        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+            // Fallback canônico e estruturado
+            const fallbackText = `# 1. ${resolvedRevista} - Lição ${resolvedLicaoNum}: ${resolvedTema || 'Fundamentos da Fé e Prática Cristã'}
+
+# 2. Introdução
+O estudo sistemático da Palavra de Deus na Escola Bíblica Dominical constitui o alicerce pedagógico e doutrinário que molda a vida cristã e sustenta a igreja local na sã doutrina.
+
+**Texto Áureo:**
+"Lâmpada para os meus pés é tua palavra, e luz para o meu caminho." (Salmos 119:105 - ARC)
+
+**Verdade Prática:**
+O estudo contínuo das Sagradas Escrituras ilumina nosso entendimento, preserva a pureza da fé pentecostal e capacita a família para o testemunho cristão no mundo.
+
+**Leitura Bíblica em Classe:**
+${resolvedTextoBiblico || '2 Timóteo 3:14-17; Hebreus 4:12'}
+14 Tu, porém, permanece naquilo que aprendeste, e de que foste inteirado, sabendo de quem o tens aprendido,
+15 E que desde a tua meninice sabes as sagradas Letras, que podem fazer-te sábio para a salvação, pela fé que há em Cristo Jesus.
+16 Toda a Escritura é divinamente inspirada, e proveitosa para ensinar, para redargüir, para corrigir, para instruir em justiça;
+17 Para que o homem de Deus seja perfeito, e perfeitamente instruído para toda a boa obra.
+
+# 3. Fundamentação Doutrinária
+Conforme preconizado no **Capítulo 1 da Declaração de Fé das Assembleias de Deus (CGADB/CPAD)** - *Sobre as Sagradas Escrituras*, cremos na inspiração verbal e plenária da Bíblia Sagrada como a única regra infalível de fé e conduta para a Igreja de Cristo.
+
+# 4. Referências Bíblicas e Exegese dos Tópicos
+
+## I - A Revelação Divina e a Autoridade da Palavra
+A Bíblia não apenas contém a Palavra de Deus, mas é em sua totalidade a revelação inspirada pelo Espírito Santo (*theopneustos* - 2 Tm 3:16). Ela transcende épocas e culturas, mantendo sua eficácia transformadora inalterada.
+
+## II - A Aplicação dos Preceitos na Vida Diária
+O conhecimento doutrinário deve traduzir-se em piedade prática (*eusebeia*). A sã doutrina combate o relativismo moderno e fortalece a vida devocional, a oração e o jejum.
+
+## III - O Testemunho Pentecostal e o Poder Espiritual
+O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com sinais, prodígios e dons espirituais em plena vigência (Atos 1:8; 1 Coríntios 12:7-11).
+
+# 5. Aplicação Prática
+1. Dedique tempo diário à meditação bíblica e oração fervorosa.
+2. Transmita o ensino bíblico com fidelidade e amor aos seus alunos e familiares.
+3. Viva de modo santo e irrepreensível na sociedade, demonstrando o fruto do Espírito.
+
+# 6. Validação (Perguntas de Fixação)
+**Questão 1:** O que significa a inspiração plenária e verbal das Sagradas Escrituras?
+*Gabarito Comentado:* Significa que cada palavra e o conjunto total dos textos canônicos foram inspirados pelo Espírito Santo aos autores bíblicos originais, sendo totalmente fidedignos e isentos de erro em sua mensagem redentora.
+
+**Questão 2:** Como a Verdade Bíblica deve refletir-se no testemunho da família cristã?
+*Gabarito Comentado:* Reflete-se mediante a submissão a Cristo, o amor sacrificial no lar, a instrução dos filhos no temor do Senhor e a retidão moral diante da sociedade.`;
+
+            return res.json({
+                success: true,
+                text: fallbackText,
+                revista: resolvedRevista,
+                licao: resolvedLicaoNum,
+                fromCache: false,
+                isFallback: true
+            });
+        }
+
+        const ai = new GoogleGenAI({
+            apiKey: apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+        });
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3.7-flash",
+            contents: prompt,
+            config: {
+                systemInstruction: "Você é um Comentarista Oficial das Lições Bíblicas CPAD e Professor de Teologia da CGADB. Gere o material didático completo com a máxima erudição e fidelidade dogmática.",
+                tools: [{ googleSearch: {} }]
+            }
+        });
+
+        const responseText = response.text || "";
+        apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
+
+        const latency = Date.now() - start;
+        trackApiCall("gemini", "Gerador Inteligente EBD CPAD", "success", latency, 0.0008, `Revista: ${resolvedRevista}, Lição: ${resolvedLicaoNum}`);
+
+        res.json({
+            success: true,
+            text: responseText,
+            revista: resolvedRevista,
+            licao: resolvedLicaoNum,
+            fromCache: false
+        });
+    } catch (error: any) {
+        console.error("[Gemini API] Erro ao gerar revista EBD:", error);
+        res.status(500).json({ success: false, error: error.message || String(error) });
+    }
+});
+
 
 async function slicePdfIfTooLarge(base64Data: string): Promise<{ data: string; originalPages: number; slicedPages: number; wasSliced: boolean }> {
     try {

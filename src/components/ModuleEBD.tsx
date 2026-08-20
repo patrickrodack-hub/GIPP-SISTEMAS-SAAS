@@ -1286,7 +1286,37 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
         
         try {
             const hasCapaExistente = !!initialCapa;
-            const prompt = `Atue como um Professor e Teólogo especialista no material pedagógico e editorial oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
+            
+            // Chamar endpoint especializado de geração de revistas de EBD com IA
+            let texto = '';
+            let capaUrl = initialCapa;
+
+            try {
+                const response = await fetch('/api/gemini/gerar-revista-ebd', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        revista: licao.revista,
+                        licaoNum: licao.licao_numero || '1',
+                        tema: licao.titulo_licao || '',
+                        textoBiblico: licao.leitura_biblica || '',
+                        faixaEtaria: licao.faixa_etaria || 'Adultos',
+                        capaExistente: hasCapaExistente
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.text) {
+                        texto = data.text;
+                    }
+                }
+            } catch (apiErr) {
+                console.warn("[ModuleEBD] Falha na chamada da rota dedicada /api/gemini/gerar-revista-ebd, usando fallback:", apiErr);
+            }
+
+            if (!texto) {
+                const prompt = `Atue como um Professor e Teólogo especialista no material pedagógico e editorial oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
 UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e portais de Lições Bíblicas CPAD) antes de gerar a resposta. 
 É MÁXIMA EXIGÊNCIA que o material seja 100% fiel à doutrina oficial das Assembleias de Deus e embasado nos 24 Capítulos da Declaração de Fé da CGADB / CPAD.
 
@@ -1320,17 +1350,15 @@ Estruture a Lição utilizando rigorosamente a seguinte arquitetura didática em
 - Apresente 2 perguntas de fixação para os alunos testarem o conhecimento no final da lição, acompanhadas do Gabarito Comentado.
 
 Utilize formatação Markdown bem estruturada, profissional e rica.`;
+                
+                texto = await callGeminiAI(prompt, 5);
+            }
             
-            const result = await callGeminiAI(prompt, 5);
-            
-            let texto = result;
-            let capaUrl = initialCapa;
-            
-            if (!hasCapaExistente) {
-                const match = result.match(/URL_CAPA=\[?(.*?)\]?/);
+            if (!hasCapaExistente && texto) {
+                const match = texto.match(/URL_CAPA=\[?(.*?)\]?/);
                 if (match && match[1] && match[1] !== 'null') {
                     capaUrl = match[1].trim();
-                    texto = result.replace(match[0], ''); // Remove a URL do texto final para não aparecer no UI
+                    texto = texto.replace(match[0], ''); // Remove a URL do texto final para não aparecer no UI
                 } else {
                     capaUrl = manualCapa || null;
                 }

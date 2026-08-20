@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   BookOpen, Sparkles, BookOpenText, Layers, Share2, Award, 
-  MapPin, Clock, Calendar, Check, Info, ArrowRight, Quote, Scroll, Image as ImageIcon, Volume2, HelpCircle
+  MapPin, Clock, Calendar, Check, Info, ArrowRight, Quote, Scroll, Image as ImageIcon, Volume2, HelpCircle, Search
 } from 'lucide-react';
+import { BibleReferenceModal } from './BibleReferenceModal';
 
 interface InteractiveMagazineViewProps {
   lessonText: string;
@@ -182,6 +183,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 }) => {
   const [activeTab, setActiveTab] = useState<'reading' | 'magazine'>('magazine');
   const [customNotes, setCustomNotes] = useState<string>('');
+  const [selectedBibleRef, setSelectedBibleRef] = useState<string | null>(null);
 
   // Local state to simulate loading/rendering transition when lessonText or licaoNum changes
   const [isLocalLoading, setIsLocalLoading] = useState(true);
@@ -484,8 +486,19 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                   <Quote size={80} className="stroke-[1.5]" />
                 </div>
                 <div className="relative z-10 space-y-4">
-                  <div className="inline-flex items-center gap-2 bg-amber-500/10 text-amber-800 text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-full border border-amber-300/30">
-                    <Sparkles size={12} className="text-amber-600 fill-amber-600" /> texto áureo
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 bg-amber-500/10 text-amber-800 text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-full border border-amber-300/30">
+                      <Sparkles size={12} className="text-amber-600 fill-amber-600" /> texto áureo
+                    </div>
+                    {parsedMagazine.goldenText && (
+                      <button
+                        onClick={() => setSelectedBibleRef(parsedMagazine.goldenText)}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Ver exegese e explicação do versículo"
+                      >
+                        <BookOpen size={12} /> Explicar Versículo
+                      </button>
+                    )}
                   </div>
                   <blockquote className="font-serif italic text-base sm:text-lg text-amber-950 leading-relaxed font-semibold">
                     {parsedMagazine.goldenText}
@@ -519,6 +532,17 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               <div className="prose prose-stone max-w-none text-serif text-[#4A3C31] text-xs sm:text-sm md:text-base whitespace-pre-wrap leading-loose font-serif font-medium bg-[url('https://www.transparenttextures.com/patterns/notebook.png')] p-4 md:p-6 rounded-2xl border border-[#EBE3D3] shadow-inner">
                 {parsedMagazine.bibleReading}
               </div>
+
+              {parsedMagazine.bibleReading && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => setSelectedBibleRef(parsedMagazine.bibleReading.slice(0, 80))}
+                    className="px-3 py-1.5 rounded-xl bg-[#8B5A2B]/10 hover:bg-[#8B5A2B]/20 text-[#8B5A2B] text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <BookOpen size={14} /> Abrir Exegese e Fundamentação Bíblica
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Illustration Banner 1 */}
@@ -646,6 +670,13 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
           </div>
         )}
       </div>
+
+      {/* Modal de Explicação e Exegese Bíblica Integrado */}
+      <BibleReferenceModal
+        isOpen={!!selectedBibleRef}
+        referenceQuery={selectedBibleRef || ''}
+        onClose={() => setSelectedBibleRef(null)}
+      />
     </div>
   );
 };

@@ -13,7 +13,8 @@ import {
     RefreshCw, Layers, ArrowLeft, Eye, Edit3, Trash2, Smartphone,
     Calendar, DollarSign, QrCode, Bell, BarChart2, CheckSquare,
     MessageCircle, UserPlus, FileDown, Download, Share2, ClipboardList,
-    TrendingUp, AlertTriangle, Play, Pause, ListFilter
+    TrendingUp, AlertTriangle, Play, Pause, ListFilter,
+    Maximize2, Minimize2, X
 } from 'lucide-react';
 import { 
     collection, doc, setDoc, addDoc, getDocs, onSnapshot, query, updateDoc 
@@ -47,9 +48,10 @@ import { BibleReferenceModal } from './BibleReferenceModal';
 interface ModuleFormacaoObreirosProps {
     initialViewMode?: 'coordenador' | 'candidato';
     candidateUser?: any;
+    onClose?: () => void;
 }
 
-export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador', candidateUser }: ModuleFormacaoObreirosProps) {
+export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador', candidateUser, onClose }: ModuleFormacaoObreirosProps) {
     const { 
         db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, 
         dbFirestore, appId, logAction 
@@ -70,6 +72,8 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
     // ESTADOS PRINCIPAIS DE NAVEGAÇÃO & VISÃO
     // ==========================================
     const [viewMode, setViewMode] = useState<'coordenador' | 'candidato'>(initialViewMode || (candidateUser ? 'candidato' : 'coordenador'));
+    const [isHubMaximized, setIsHubMaximized] = useState(false);
+    const [showWelcomeScreen, setShowWelcomeScreen] = useState(true);
     const [activeTab, setActiveTab] = useState<
         | 'dashboard' 
         | 'dossie'
@@ -1252,8 +1256,256 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
     };
 
     return (
-        <div className="h-full flex flex-col space-y-4 font-sans animate-fadeIn select-none text-slate-800 dark:text-slate-100">
-            
+        <div 
+            id="module-formacao-obreiros-container"
+            className={`w-full flex flex-col font-sans select-none transition-all duration-300 ${
+                isHubMaximized 
+                    ? 'fixed inset-0 z-[99999] w-screen h-screen overflow-y-auto custom-scrollbar bg-slate-950 text-slate-100 p-4 md:p-6' 
+                    : 'h-full space-y-4 text-slate-800 dark:text-slate-100'
+            }`}
+        >
+            {/* ========================================== */}
+            {/* BARRA SUPERIOR DE CONTROLE E MAXIMIZAÇÃO   */}
+            {/* ========================================== */}
+            <div className="w-full bg-slate-900 text-white border border-slate-800 rounded-3xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-xl shrink-0 backdrop-blur-md sticky top-0 z-30">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold shadow-lg shadow-emerald-500/20">
+                        <GraduationCap size={22} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h2 className="font-extrabold text-sm md:text-base text-white tracking-wide uppercase flex items-center gap-2">
+                                Formação de Obreiros GIPP
+                            </h2>
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                CGADB • CPAD
+                            </span>
+                            {isHubMaximized && (
+                                <span className="hidden sm:inline-block text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                    Campus Virtual Full Screen
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-medium">
+                            Universidade Teológica & Escola de Liderança Ministerial Oficial
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                    {/* Botão de Alternar Recepção/Boas-Vindas */}
+                    <button
+                        onClick={() => setShowWelcomeScreen(!showWelcomeScreen)}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all border cursor-pointer active:scale-95 ${
+                            showWelcomeScreen 
+                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' 
+                                : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border-slate-700'
+                        }`}
+                        title="Ver Apresentação e Boas-Vindas do Campus"
+                    >
+                        <Sparkles size={14} className={showWelcomeScreen ? 'text-amber-300 animate-spin' : 'text-emerald-400'} />
+                        <span className="hidden sm:inline">{showWelcomeScreen ? 'Sala de Estudos' : 'Apresentação / Recepção'}</span>
+                        <span className="sm:hidden">{showWelcomeScreen ? 'Estudos' : 'Boas-Vindas'}</span>
+                    </button>
+
+                    {/* Botão Maximizar / Restaurar Layout */}
+                    <button
+                        onClick={() => setIsHubMaximized(!isHubMaximized)}
+                        className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-extrabold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer shadow-sm active:scale-95"
+                        title={isHubMaximized ? "Restaurar layout do portal" : "Maximizar tela sobrepondo menus (Sistema Independente)"}
+                    >
+                        {isHubMaximized ? (
+                            <>
+                                <Minimize2 size={14} className="text-amber-400" />
+                                <span className="hidden sm:inline">Restaurar</span>
+                            </>
+                        ) : (
+                            <>
+                                <Maximize2 size={14} className="text-emerald-400" />
+                                <span className="hidden sm:inline">Tela Cheia</span>
+                            </>
+                        )}
+                    </button>
+
+                    {/* Botão Fechar / Voltar ao Portal */}
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 hover:text-white text-xs font-black flex items-center gap-1.5 transition-all border border-rose-500/30 cursor-pointer shadow-sm active:scale-95"
+                            title="Fechar Formação e Voltar ao Portal de Membros"
+                        >
+                            <X size={15} className="text-rose-400" />
+                            <span className="hidden sm:inline">Voltar ao Portal</span>
+                            <span className="sm:hidden">Fechar</span>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* ========================================== */}
+            {/* TELA & ANIMAÇÃO INICIAL DE BOAS-VINDAS     */}
+            {/* ========================================== */}
+            {showWelcomeScreen && (
+                <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 p-6 md:p-10 text-white shadow-2xl relative overflow-hidden animate-fadeIn">
+                    {/* Efeitos visuais de iluminação acadêmica */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div className="relative z-10 max-w-5xl mx-auto">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-800">
+                            <div className="flex items-center gap-4 text-center md:text-left">
+                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-xl shadow-emerald-900/40 shrink-0 border border-emerald-400/30">
+                                    {candidatoAtivo.foto ? (
+                                        <img src={candidatoAtivo.foto} alt={candidatoAtivo.nome} className="w-full h-full object-cover rounded-2xl" />
+                                    ) : (
+                                        <GraduationCap size={42} className="text-emerald-200" />
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 justify-center md:justify-start flex-wrap">
+                                        <span className="text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                            Grau Ministerial: {nivelAtivo.nome.toUpperCase()} ({nivelAtivo.sigla})
+                                        </span>
+                                        <span className="text-[11px] font-bold text-slate-400">
+                                            Polo: {candidatoAtivo.congregacaoNome || db?.igreja?.nome || 'Sede Principal'}
+                                        </span>
+                                    </div>
+                                    <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white mt-1">
+                                        Paz do Senhor, {candidatoAtivo.nome.split(' ')[0]}!
+                                    </h1>
+                                    <p className="text-xs md:text-sm text-slate-300 font-medium mt-1">
+                                        Bem-vindo ao seu ambiente acadêmico da Universidade Teológica & Liderança GIPP.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setShowWelcomeScreen(false)}
+                                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-sm transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2 cursor-pointer active:scale-95 group shrink-0"
+                            >
+                                <span>Acessar Sala de Estudos</span>
+                                <ChevronRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
+
+                        {/* Versículo Lema */}
+                        <div className="my-6 p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 backdrop-blur-sm flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0">
+                                <BookOpen size={20} />
+                            </div>
+                            <div className="text-xs md:text-sm text-slate-300 italic">
+                                &ldquo;Procura apresentar-te a Deus aprovado, como obreiro que não tem de que se envergonhar, que maneja bem a palavra da verdade.&rdquo; <strong className="text-amber-300 font-bold not-italic">— 2 Timóteo 2:15</strong>
+                            </div>
+                        </div>
+
+                        {/* 4 Cards de Métricas Acadêmicas do Aluno */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                            {/* 1. Teoria & Apostilas */}
+                            <div 
+                                onClick={() => { setActiveTab('teoria'); setShowWelcomeScreen(false); }}
+                                className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 hover:border-emerald-500 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                                        <BookOpen size={16} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Apostilas</span>
+                                </div>
+                                <div className="text-2xl font-black text-white">{candidatoAtivo.progressoTeorico || 0}%</div>
+                                <p className="text-[11px] text-slate-400 mt-1">Conclusão Teórica (CGADB)</p>
+                            </div>
+
+                            {/* 2. Provas & Simulados */}
+                            <div 
+                                onClick={() => { setActiveTab('provas'); setShowWelcomeScreen(false); }}
+                                className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 hover:border-teal-500 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold">
+                                        <CheckSquare size={16} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-teal-400 uppercase tracking-wider">Avaliações</span>
+                                </div>
+                                <div className="text-2xl font-black text-white">{(candidatoAtivo.mediaProvas || 8.5).toFixed(1)} / 10</div>
+                                <p className="text-[11px] text-slate-400 mt-1">Média das Provas & Quizzes</p>
+                            </div>
+
+                            {/* 3. Estágio Supervisionado */}
+                            <div 
+                                onClick={() => { setActiveTab('estagio'); setShowWelcomeScreen(false); }}
+                                className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 hover:border-amber-500 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                                        <Clock size={16} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">Altar</span>
+                                </div>
+                                <div className="text-2xl font-black text-white">{totalHorasAprovadas}h / {nivelAtivo.horasEstagioObrigatorias}h</div>
+                                <p className="text-[11px] text-slate-400 mt-1">Estágio Pastoral Homologado</p>
+                            </div>
+
+                            {/* 4. Financeiro & Taxas */}
+                            <div 
+                                onClick={() => { setActiveTab('financeiro'); setShowWelcomeScreen(false); }}
+                                className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 hover:border-blue-500 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                                        <DollarSign size={16} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider">Financeiro</span>
+                                </div>
+                                <div className="text-xl font-black text-white">Regular</div>
+                                <p className="text-[11px] text-slate-400 mt-1">Mensalidades & Taxas do Curso</p>
+                            </div>
+                        </div>
+
+                        {/* Atalhos Rápidos para o Aluno */}
+                        <div className="mt-8 pt-6 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acesso Rápido do Candidato:</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                    onClick={() => { setActiveTab('teoria'); setShowWelcomeScreen(false); }}
+                                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                                >
+                                    <BookOpen size={13} className="text-emerald-400" />
+                                    <span>Estudar Apostilas</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('provas'); setShowWelcomeScreen(false); }}
+                                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                                >
+                                    <CheckSquare size={13} className="text-teal-400" />
+                                    <span>Fazer Provas</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('financeiro'); setShowWelcomeScreen(false); }}
+                                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                                >
+                                    <DollarSign size={13} className="text-blue-400" />
+                                    <span>Consultar Financeiro</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('estagio'); setShowWelcomeScreen(false); }}
+                                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                                >
+                                    <Clock size={13} className="text-amber-400" />
+                                    <span>Lançar Estágio</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('turmas'); setShowWelcomeScreen(false); }}
+                                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                                >
+                                    <Calendar size={13} className="text-violet-400" />
+                                    <span>Agenda & Turmas</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ========================================== */}
             {/* HEADER PRINCIPAL & CHANGER DE VISÃO        */}
             {/* ========================================== */}

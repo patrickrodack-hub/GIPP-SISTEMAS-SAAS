@@ -6821,6 +6821,58 @@ export const PrintSystem = ({
         );
     }
 
+    // 2.1 - EBD IMPRIMIR RESUMO / LIÇÃO
+    if (mode === 'rel_ebd_imprimir') {
+        const { licao, revista, licao_numero, conteudo_estudo, titulo_licao, data_licao, turma_nome } = data || {};
+        const activeLicao = licao || data;
+        const textoCompleto = conteudo_estudo || activeLicao?.conteudo_estudo || activeLicao?.text || '';
+        const tituloFinal = titulo_licao || activeLicao?.titulo_licao || activeLicao?.title || `Lição ${licao_numero || activeLicao?.licao_numero || '1'}`;
+        const revistaFinal = revista || activeLicao?.revista || 'Lições Bíblicas CPAD';
+        const numeroFinal = licao_numero || activeLicao?.licao_numero || activeLicao?.licao || '1';
+
+        return (
+            <PageContainer title={`Escola Bíblica Dominical - Lição ${numeroFinal}`} subtitle={`${revistaFinal} • Subsídio para Estudo e Impressão`}>
+                {/* Cabeçalho informativo do Estudo */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6 avoid-break">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                Material de Apoio ao Aluno & Professor
+                            </span>
+                            <h2 className="text-xl font-black text-slate-900 mt-1.5">{tituloFinal}</h2>
+                            <p className="text-xs font-semibold text-slate-600 mt-0.5">{revistaFinal}</p>
+                        </div>
+                        <div className="text-left sm:text-right">
+                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">Lição Número</span>
+                            <span className="text-2xl font-black text-slate-800 font-mono">#{numeroFinal}</span>
+                            {data_licao && <p className="text-[10px] text-slate-500 font-mono mt-0.5">{formatDateLocal(data_licao)}</p>}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Conteúdo Didático Formatado em Folha Limpa */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 space-y-6 text-slate-800">
+                    {textoCompleto ? (
+                        <div className="prose prose-slate max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-serif">
+                            {textoCompleto}
+                        </div>
+                    ) : (
+                        <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                            <p className="text-sm font-semibold text-slate-600">Nenhum texto de estudo gerado para esta lição ainda.</p>
+                            <p className="text-xs text-slate-400 mt-1">Gere o conteúdo da revista com a IA no portal de EBD para visualizá-lo e imprimi-lo.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Bloco de Anotações do Aluno para a Aula */}
+                <div className="mt-6 p-4 rounded-2xl border border-slate-200 bg-slate-50/70 avoid-break">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">Anotações do Aluno / Dúvidas para a Classe:</h4>
+                    <div className="h-20 border-b border-dashed border-slate-300"></div>
+                </div>
+            </PageContainer>
+        );
+    }
+
     // 3 - MISSÕES
     if (mode === 'rel_missoes') {
         const { missionarios, agencias, financeiro, data_inicio, data_fim, congregacao_id } = data;
@@ -11567,6 +11619,40 @@ const PortalHome = ({ user, db, setView }) => {
                         (currentUser.funcao_administrativa || '').toLowerCase().includes('professor') || 
                         currentUser.nivel === 'master' ||
                         (db.ebd?.turmas || []).some((t: any) => t.prof1_id === currentUser.id || t.prof2_id === currentUser.id || t.prof3_id === currentUser.id);
+
+    const isPastorHome = (currentUser.cargo || '').toLowerCase().includes('pastor') || 
+                         (currentUser.cargo || '').toLowerCase().includes('evangelista') || 
+                         (currentUser.funcao || '').toLowerCase().includes('pastor') || 
+                         currentUser.funcao_administrativa === 'PASTOR PRESIDENTE' || 
+                         currentUser.funcao_administrativa === 'PASTOR AUXILIAR' || 
+                         currentUser.nivel === 'master';
+
+    const isPresbiteroHome = (currentUser.cargo || '').toLowerCase().includes('presb') || 
+                            (currentUser.cargo || '').toLowerCase().includes('pb.') || 
+                            (currentUser.funcao || '').toLowerCase().includes('presb') || 
+                            (currentUser.funcao_administrativa || '').toUpperCase().includes('PRESBITERO');
+
+    const isAlunoOuCandidatoHome = Boolean(
+        currentUser.is_candidato_obreiro || 
+        currentUser.aluno_formacao || 
+        (currentUser.cargo || '').toLowerCase().includes('candidat') || 
+        (currentUser.cargo || '').toLowerCase().includes('aluno form') || 
+        (currentUser.funcao || '').toLowerCase().includes('candidat') || 
+        (db.candidatos_obreiros || []).some((c: any) => 
+            (c.id && (c.id === currentUser.id || c.membroId === currentUser.id || c.membro_id === currentUser.id)) ||
+            (c.cpf && currentUser.cpf && c.cpf === currentUser.cpf) ||
+            (c.email && currentUser.email && c.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+            (c.nome && currentUser.nome && c.nome.toLowerCase().trim() === currentUser.nome.toLowerCase().trim())
+        ) ||
+        (db.formacao_candidatos || []).some((c: any) => 
+            (c.id && (c.id === currentUser.id || c.membroId === currentUser.id || c.membro_id === currentUser.id)) ||
+            (c.cpf && currentUser.cpf && c.cpf === currentUser.cpf) ||
+            (c.email && currentUser.email && c.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+            (c.nome && currentUser.nome && c.nome.toLowerCase().trim() === currentUser.nome.toLowerCase().trim())
+        )
+    );
+
+    const canAccessFormacaoHome = isAlunoOuCandidatoHome || isPastorHome || isPresbiteroHome || isProfessor || currentUser.nivel === 'master' || (currentUser.funcao_administrativa && ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(currentUser.funcao_administrativa.toUpperCase()));
     
     const [devocional, setDevocional] = useState('');
     const [loadingDev, setLoadingDev] = useState(false);
@@ -11979,11 +12065,14 @@ const PortalHome = ({ user, db, setView }) => {
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
                     </button>
                 )}
-                {allowedModulesHome.includes('portal_candidato') && (
-                    <button onClick={() => setView('portal_candidato')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-teal-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Award size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Candidatura</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Apostilas & Aulas</span>
+                {canAccessFormacaoHome && allowedModulesHome.includes('portal_candidato') && (
+                    <button onClick={() => setView('portal_candidato')} className="bg-gradient-to-br from-white to-emerald-50/50 p-6 rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
+                        <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
+                            CGADB
+                        </div>
+                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
+                        <span className="font-black text-slate-800 text-base mb-1">Formação GIPP</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus & Provas</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_tarefas') && (
@@ -14753,7 +14842,7 @@ const PortalTarefas = ({ user, db }) => {
 };
 
 const PortalEBD = ({ user, db }) => {
-    const { addToast, setDoc, doc, dbFirestore, appId, isOnline, callGeminiAI } = useContext(ChurchContext);
+    const { addToast, setDoc, doc, dbFirestore, appId, isOnline, callGeminiAI, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
     const [aiLesson, setAiLesson] = useState<any>(null);
     const [downloadedLessons, setDownloadedLessons] = useState<string[]>([]);
     const [downloadingIds, setDownloadingIds] = useState<string[]>([]);
@@ -15077,7 +15166,42 @@ const PortalEBD = ({ user, db }) => {
             )}
 
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-                <h4 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><List size={18} className="text-emerald-500"/> {minhaTurma ? 'Últimas Lições Ministradas' : 'Biblioteca de Lições (Estudo Livre)'}</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                        <List size={18} className="text-emerald-500"/> {minhaTurma ? 'Últimas Lições Ministradas' : 'Biblioteca de Lições (Estudo Livre)'}
+                    </h4>
+                    <button
+                        onClick={() => {
+                            const selectedLesson = aiLesson ? {
+                                revista: aiLesson.revista,
+                                licao_numero: aiLesson.licao,
+                                titulo_licao: aiLesson.title,
+                                conteudo_estudo: aiLesson.text,
+                                capa: aiLesson.capa
+                            } : (licoesDisponiveis.length > 0 ? {
+                                revista: licoesDisponiveis[0].revista,
+                                licao_numero: licoesDisponiveis[0].licao_numero,
+                                titulo_licao: licoesDisponiveis[0].titulo_licao,
+                                conteudo_estudo: licoesDisponiveis[0].conteudo_estudo,
+                                capa: licoesDisponiveis[0].capa,
+                                data_licao: licoesDisponiveis[0].data
+                            } : {
+                                revista: 'Lições Bíblicas CPAD',
+                                licao_numero: '1',
+                                titulo_licao: 'Estudo Geral de EBD'
+                            });
+
+                            setPrintData(selectedLesson);
+                            setPrintMode('rel_ebd_imprimir');
+                            setPreviewOpen(true);
+                            addToast("Visualização de impressão da Lição EBD aberta!", "info");
+                        }}
+                        className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-2xs self-start sm:self-auto shrink-0"
+                        title="Imprimir resumo didático limpo em PDF da lição selecionada"
+                    >
+                        <Printer size={15} /> Imprimir Resumo
+                    </button>
+                </div>
                 {loadingList ? (
                     <div className="space-y-4">
                         {[1, 2, 3].map((num) => (
@@ -16033,11 +16157,38 @@ const MemberPortalLayout = () => {
                         user?.nivel === 'master' ||
                         (db.ebd?.turmas || []).some((t: any) => t.prof1_id === user?.id || t.prof2_id === user?.id || t.prof3_id === user?.id);
 
+    const isPresbitero = (user?.cargo || '').toLowerCase().includes('presb') || 
+                         (user?.cargo || '').toLowerCase().includes('pb.') || 
+                         (user?.funcao || '').toLowerCase().includes('presb') || 
+                         (user?.funcao_administrativa || '').toUpperCase().includes('PRESBITERO');
+
+    const isAlunoOuCandidato = Boolean(
+        user?.is_candidato_obreiro || 
+        user?.aluno_formacao || 
+        (user?.cargo || '').toLowerCase().includes('candidat') || 
+        (user?.cargo || '').toLowerCase().includes('aluno form') || 
+        (user?.funcao || '').toLowerCase().includes('candidat') || 
+        (db?.candidatos_obreiros || []).some((c: any) => 
+            (c.id && (c.id === user?.id || c.membroId === user?.id || c.membro_id === user?.id)) ||
+            (c.cpf && user?.cpf && c.cpf === user?.cpf) ||
+            (c.email && user?.email && c.email.toLowerCase() === user?.email.toLowerCase()) ||
+            (c.nome && user?.nome && c.nome.toLowerCase().trim() === user?.nome.toLowerCase().trim())
+        ) ||
+        (db?.formacao_candidatos || []).some((c: any) => 
+            (c.id && (c.id === user?.id || c.membroId === user?.id || c.membro_id === user?.id)) ||
+            (c.cpf && user?.cpf && c.cpf === user?.cpf) ||
+            (c.email && user?.email && c.email.toLowerCase() === user?.email.toLowerCase()) ||
+            (c.nome && user?.nome && c.nome.toLowerCase().trim() === user?.nome.toLowerCase().trim())
+        )
+    );
+
+    const canAccessFormacao = isAlunoOuCandidato || isPastor || isPresbitero || isProfessor || user?.nivel === 'master' || (user?.funcao_administrativa && ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(user.funcao_administrativa.toUpperCase()));
+
     const baseNavItems = [
         { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
         { id: 'portal_mural', icon: MessageSquare, label: 'Mural', hoverColor: 'group-hover:text-rose-500' },
         { id: 'portal_informativo', icon: Newspaper, label: 'Informativo', hoverColor: 'group-hover:text-orange-500' },
-        { id: 'portal_candidato', icon: Award, label: 'Área do Candidato', hoverColor: 'group-hover:text-teal-500' },
+        { id: 'portal_candidato', icon: GraduationCap, label: 'Formação GIPP', hoverColor: 'group-hover:text-emerald-500' },
         { id: 'portal_biblia', icon: BookOpen, label: 'Bíblia', hoverColor: 'group-hover:text-amber-500' },
         { id: 'portal_email', icon: Mail, label: 'Mensagens', hoverColor: 'group-hover:text-emerald-500' },
         { id: 'portal_agenda', icon: Calendar, label: 'Agenda', hoverColor: 'group-hover:text-indigo-500' },
@@ -16056,6 +16207,9 @@ const MemberPortalLayout = () => {
         if (item.id === 'portal_home' || item.id === 'portal_interativo') return true;
         if (item.id === 'portal_professor_ebd') {
             return isProfessor;
+        }
+        if (item.id === 'portal_candidato') {
+            return canAccessFormacao;
         }
         return allowedModules.includes(item.id);
     });
@@ -16109,7 +16263,7 @@ const MemberPortalLayout = () => {
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_candidato': return (
                 <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin text-emerald-600 mx-auto" size={32}/></div>}>
-                    <ModuleFormacaoObreiros initialViewMode="candidato" candidateUser={user} />
+                    <ModuleFormacaoObreiros initialViewMode="candidato" candidateUser={user} onClose={() => setView('portal_home')} />
                 </Suspense>
             );
             case 'portal_cursos': return <PortalCursos user={user} />;
