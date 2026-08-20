@@ -86,6 +86,10 @@ const ModuleGoogleMeet = lazy(() => import('./components/ModuleGoogleMeet'));
 const ModuleGoogleSheets = lazy(() => import('./components/ModuleGoogleSheets'));
 const ModuleGoogleDocs = lazy(() => import('./components/ModuleGoogleDocs'));
 const ModuleGoogleTasks = lazy(() => import('./components/ModuleGoogleTasks'));
+const ModuleGoogleCalendar = lazy(() => import('./components/ModuleGoogleCalendar'));
+const ModuleGmail = lazy(() => import('./components/ModuleGmail'));
+const ModuleGoogleForms = lazy(() => import('./components/ModuleGoogleForms'));
+const ModuleGoogleClassroom = lazy(() => import('./components/ModuleGoogleClassroom'));
 const ModuleRedeSocial = lazy(() => import('./components/ModuleRedeSocial'));
 const ModuleGippDocs = lazy(() => import('./components/ModuleGippDocs'));
 const ModuleGippPlanilhas = lazy(() => import('./components/ModuleGippPlanilhas'));
@@ -10243,6 +10247,14 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         portal_docs: 'group-hover:text-blue-600',
         google_tasks: 'group-hover:text-sky-600',
         portal_google_tasks: 'group-hover:text-sky-600',
+        google_calendar: 'group-hover:text-blue-500',
+        portal_calendar: 'group-hover:text-blue-500',
+        gmail_oficial: 'group-hover:text-red-500',
+        portal_gmail: 'group-hover:text-red-500',
+        google_forms: 'group-hover:text-purple-600',
+        portal_forms: 'group-hover:text-purple-600',
+        google_classroom: 'group-hover:text-emerald-600',
+        portal_classroom: 'group-hover:text-emerald-600',
         email_interno: 'group-hover:text-emerald-500',
         secretaria_integrada: 'group-hover:text-blue-500',
         secretaria_certificados: 'group-hover:text-amber-500',
@@ -10403,6 +10415,10 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {checkPlan('google_sheets') && <MenuItem id="google_sheets" icon={FileSpreadsheet} label="Google Sheets (Planilhas)" />}
                         {checkPlan('google_docs') && <MenuItem id="google_docs" icon={FileText} label="Google Docs (Documentos)" />}
                         {checkPlan('google_tasks') && <MenuItem id="google_tasks" icon={CheckSquare} label="Google Tasks (Tarefas)" />}
+                        {checkPlan('google_calendar') && <MenuItem id="google_calendar" icon={Calendar} label="Google Calendar (Agenda)" />}
+                        {checkPlan('gmail_oficial') && <MenuItem id="gmail_oficial" icon={Mail} label="Gmail Eclesiástico" />}
+                        {checkPlan('google_forms') && <MenuItem id="google_forms" icon={ClipboardList} label="Google Forms (Inscrições)" />}
+                        {checkPlan('google_classroom') && <MenuItem id="google_classroom" icon={GraduationCap} label="Google Classroom (Turmas)" />}
                         {checkPlan('google_meet') && <MenuItem id="google_meet" icon={Video} label="Google Meet (Salas)" />}
                         {hasPermission('access_interativo') && checkPlan('interativo') && <MenuItem id="interativo" icon={Gamepad2} label="Módulo Interativo & Gamificação" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
@@ -16288,6 +16304,10 @@ const MemberPortalLayout = () => {
             case 'portal_sheets': return <ModuleGoogleSheets />;
             case 'portal_docs': return <ModuleGoogleDocs />;
             case 'portal_google_tasks': return <ModuleGoogleTasks />;
+            case 'portal_calendar': return <ModuleGoogleCalendar />;
+            case 'portal_gmail': return <ModuleGmail />;
+            case 'portal_forms': return <ModuleGoogleForms />;
+            case 'portal_classroom': return <ModuleGoogleClassroom />;
             case 'portal_agenda': return <PortalAgenda user={user} db={db} />;
             case 'portal_tarefas': return <PortalTarefas user={user} db={db} />;
             case 'portal_candidato': return (
@@ -17185,6 +17205,10 @@ const AppLayout = () => {
         { id: 'google_sheets', icon: FileSpreadsheet, label: "Google Sheets", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
         { id: 'google_docs', icon: FileText, label: "Google Docs", color: 'text-blue-600', bg: 'bg-blue-600/10' },
         { id: 'google_tasks', icon: CheckSquare, label: "Google Tasks", color: 'text-sky-600', bg: 'bg-sky-600/10' },
+        { id: 'google_calendar', icon: Calendar, label: "Google Calendar", color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { id: 'gmail_oficial', icon: Mail, label: "Gmail Eclesiástico", color: 'text-red-500', bg: 'bg-red-500/10' },
+        { id: 'google_forms', icon: ClipboardList, label: "Google Forms", color: 'text-purple-600', bg: 'bg-purple-600/10' },
+        { id: 'google_classroom', icon: GraduationCap, label: "Google Classroom", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
         { id: 'google_meet', icon: Video, label: "Google Meet Videoconferências", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         { id: 'credencial_lote', icon: Badge, label: "Credencial em Lote", color: 'text-violet-500', bg: 'bg-violet-500/10' },
         { id: 'assistente_ai', icon: Sparkles, label: "Pastoral IA", color: 'text-purple-500', bg: 'bg-purple-500/10' },
@@ -17217,9 +17241,9 @@ const AppLayout = () => {
         const plano = (db.igreja?.plano || 'avancado').toLowerCase();
 
         const defaultPlanos: Record<string, string[]> = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -17634,6 +17658,10 @@ const AppLayout = () => {
         'google_sheets': { component: ModuleGoogleSheets, access: 'public' },
         'google_docs': { component: ModuleGoogleDocs, access: 'public' },
         'google_tasks': { component: ModuleGoogleTasks, access: 'public' },
+        'google_calendar': { component: ModuleGoogleCalendar, access: 'public' },
+        'gmail_oficial': { component: ModuleGmail, access: 'public' },
+        'google_forms': { component: ModuleGoogleForms, access: 'public' },
+        'google_classroom': { component: ModuleGoogleClassroom, access: 'public' },
         'google_meet': { component: ModuleGoogleMeet, access: 'public' },
         'relatorios': { component: ModuleRelatorios, access: 'access_sec_relatorios' },
         'assistente_ai': { component: ModuleAssistenteAI, access: 'access_ia' },
@@ -19782,6 +19810,10 @@ export default function App() {
           { label: "Google Sheets (Planilhas Integradas)", view: "google_sheets", category: "Escritório & Mídia", icon: FileSpreadsheet },
           { label: "Google Docs (Documentos e Ofícios)", view: "google_docs", category: "Escritório & Mídia", icon: FileText },
           { label: "Google Tasks (Tarefas & Checklists)", view: "google_tasks", category: "Escritório & Mídia", icon: CheckSquare },
+          { label: "Google Calendar (Agenda Eclesiástica)", view: "google_calendar", category: "Escritório & Mídia", icon: Calendar },
+          { label: "Gmail Eclesiástico Oficial", view: "gmail_oficial", category: "Escritório & Mídia", icon: Mail },
+          { label: "Google Forms (Formulários & Inscrições)", view: "google_forms", category: "Escritório & Mídia", icon: ClipboardList },
+          { label: "Google Classroom (Turmas & Ensino)", view: "google_classroom", category: "Estudos e Capacitações", icon: GraduationCap },
           { label: "Membros (Rol Eclesiástico)", view: "cad_membro", category: "Navegação", icon: Users },
           { label: "Financeiro: Entradas e Dízimos", view: "fin_entrada", category: "Navegação", icon: ArrowUpCircle },
           { label: "Financeiro: Saídas e Contas", view: "fin_saida", category: "Navegação", icon: ArrowDownCircle },
