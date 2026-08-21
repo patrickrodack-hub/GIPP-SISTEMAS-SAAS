@@ -13,6 +13,7 @@ import { ChurchContext, playNotificationSound, playMenuSound } from '../App';
 import { validateEmail, validateWhatsApp, formatWhatsApp } from '../utils/validation';
 import { GlobalFooter } from './GlobalFooter';
 import { GALLERY_WALLPAPERS, ANIMATION_OPTIONS } from './ModuleRedeSocial';
+import { GoogleIntegrationsPanel } from './GoogleIntegrationsPanel';
 
 // Constantes de Mapeamento do Portal de Membros por Função Administrativa
 import { 
@@ -38,7 +39,7 @@ const ModuleConfiguracoesGerais = () => {
     } = context;
 
     // Active tab state
-    const [activeTab, setActiveTab] = useState<'global' | 'visual' | 'backup' | 'portal' | 'notificacoes' | 'performance' | 'auditoria' | 'impressora' | 'suporte'>('global');
+    const [activeTab, setActiveTab] = useState<'global' | 'google' | 'visual' | 'backup' | 'portal' | 'notificacoes' | 'performance' | 'auditoria' | 'impressora' | 'suporte'>('global');
 
     // TAB 1: Global Settings
     const [globalSite, setGlobalSite] = useState(db.igreja?.site || db.igreja?.saas_site || '');
@@ -1066,6 +1067,12 @@ const ModuleConfiguracoesGerais = () => {
                     <Building2 size={13}/> Sede & Igreja
                 </button>
                 <button 
+                    onClick={() => setActiveTab('google')}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'google' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                >
+                    <Globe size={13}/> Integrações Google
+                </button>
+                <button 
                     onClick={() => setActiveTab('visual')}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'visual' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
                 >
@@ -1117,6 +1124,11 @@ const ModuleConfiguracoesGerais = () => {
 
             {/* TAB CONTENTS */}
             <div className="flex-1">
+                {/* GOOGLE WORKSPACE INTEGRATIONS PANEL */}
+                {activeTab === 'google' && (
+                    <GoogleIntegrationsPanel user={user} db={db} addToast={addToast} />
+                )}
+
                 {/* GLOBAL INSTITUTIONAL SETTINGS */}
                 {activeTab === 'global' && (
                     <div className="space-y-6 animate-entrance">

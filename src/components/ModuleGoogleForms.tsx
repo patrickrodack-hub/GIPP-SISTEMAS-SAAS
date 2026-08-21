@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   FileCheck2,
   Plus,
@@ -17,7 +17,12 @@ import {
   Clock,
   Layers,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  UserCheck,
+  UserPlus,
+  Download,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
 import {
   getWorkspaceAccessToken,
@@ -27,9 +32,13 @@ import {
   createGoogleForm,
   getGoogleForm,
   getGoogleFormResponses,
+  parseGoogleFormResponses,
   GoogleDriveFile,
-  GoogleFormInfo
+  GoogleFormInfo,
+  ParsedFormResponse
 } from '../services/googleWorkspaceService';
+import { ChurchContext } from '../App';
+import { collection, addDoc } from 'firebase/firestore';
 
 interface ModuleGoogleFormsProps {
   user?: any;
@@ -259,7 +268,14 @@ const FORM_TEMPLATES = [
   }
 ];
 
-export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db }) => {
+export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db: propDb, user: propUser }) => {
+  const churchCtx = useContext(ChurchContext);
+  const db = propDb || churchCtx?.db || {};
+  const user = propUser || churchCtx?.user || {};
+  const dbFirestore = churchCtx?.dbFirestore;
+  const appId = churchCtx?.appId;
+  const addToast = churchCtx?.addToast || (() => {});
+
   const [accessToken, setAccessToken] = useState<string | null>(getWorkspaceAccessToken());
   const [forms, setForms] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -272,9 +288,17 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db }) => {
   const [formDescription, setFormDescription] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Responses viewer
-  const [selectedFormResponses, setSelectedFormResponses] = useState<{ formId: string; title: string; responses: any[] } | null>(null);
+  // Responses viewer & parser
+  const [selectedFormResponses, setSelectedFormResponses] = useState<{
+    formId: string;
+    title: string;
+    rawResponses: any[];
+    parsedResponses: ParsedFormResponse[];
+  } | null>(null);
   const [loadingResponses, setLoadingResponses] = useState(false);
+  const [activeResponsesTab, setActiveResponsesTab] = useState<'parsed' | 'raw'>('parsed');
+  const [importingState, setImportingState] = useState<Record<string, 'importing' | 'imported_visitante' | 'imported_membro'>>({});
+  const [batchImporting, setBatchImporting] = useState(false);
 
   useEffect(() => {
     if (accessToken) {
@@ -416,11 +440,23 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db }) => {
     if (!accessToken) return;
     try {
       setLoadingResponses(true);
-      const responses = await getGoogleFormResponses(accessToken, form.id);
+      const [formDetails, responses] = await Promise.all([
+        getGoogleForm(accessToken, form.id).catch(() => null),
+        getGoogleFormResponses(accessToken, form.id)
+      ]);
+
+      const parsed = parseGoogleFormResponses(
+        formDetails || { formId: form.id, info: { title: form.name } },
+        responses,
+        db.membros || [],
+        db.visitantes || []
+      );
+
       setSelectedFormResponses({
         formId: form.id,
         title: form.name,
-        responses
+        rawResponses: responses,
+        parsedResponses: parsed
       });
     } catch (err: any) {
       setStatusMessage({
@@ -429,6 +465,119 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db }) => {
       });
     } finally {
       setLoadingResponses(false);
+    }
+  };
+
+  const handleImportSingle = async (
+    item: ParsedFormResponse,
+    targetType: 'visitantes' | 'membros'
+  ) => {
+    if (!dbFirestore || !appId) {
+      addToast('Conexão ao banco de dados indisponível.', 'error');
+      return;
+    }
+
+    try {
+      setImportingState(prev => ({ ...prev, [item.responseId]: 'importing' }));
+
+      const baseData = {
+        nome: item.nome || 'Pessoa sem nome',
+        telefone: item.telefone || '',
+        email: item.email || '',
+        endereco: item.endereco || '',
+        bairro: item.bairro || '',
+        cidade: item.cidade || '',
+        congregacao_id: user?.congregacao_id || 'sede',
+        origem: `Google Forms (${selectedFormResponses?.title || 'Formulário'})`,
+        observacoes: [
+          item.pedidoOracao ? `Pedido de Oração: ${item.pedidoOracao}` : '',
+          item.comoConheceu ? `Como conheceu: ${item.comoConheceu}` : '',
+          item.classeDesejada ? `Classe EBD: ${item.classeDesejada}` : ''
+        ].filter(Boolean).join(' | '),
+        created_at: new Date().toISOString()
+      };
+
+      if (targetType === 'visitantes') {
+        const visitanteDoc = {
+          ...baseData,
+          data_visita: item.submittedAt.split('T')[0] || new Date().toISOString().split('T')[0],
+          status_consolidacao: 'pendente'
+        };
+        await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'visitantes'), visitanteDoc);
+        setImportingState(prev => ({ ...prev, [item.responseId]: 'imported_visitante' }));
+        addToast(`"${item.nome}" importado(a) como Visitante!`, 'success');
+      } else {
+        const membroDoc = {
+          ...baseData,
+          cargo_ministerial: 'Membro',
+          estado_civil: item.estadoCivil || 'Solteiro(a)',
+          batizado_aguas: item.jaBatizado || 'Não informado',
+          status: 'ativo'
+        };
+        await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros'), membroDoc);
+        setImportingState(prev => ({ ...prev, [item.responseId]: 'imported_membro' }));
+        addToast(`"${item.nome}" cadastrado(a) como Membro!`, 'success');
+      }
+    } catch (err: any) {
+      addToast('Erro ao importar: ' + err.message, 'error');
+      setImportingState(prev => {
+        const cp = { ...prev };
+        delete cp[item.responseId];
+        return cp;
+      });
+    }
+  };
+
+  const handleBatchImport = async (targetType: 'visitantes' | 'membros') => {
+    if (!selectedFormResponses || !dbFirestore || !appId) return;
+
+    try {
+      setBatchImporting(true);
+      let count = 0;
+
+      for (const item of selectedFormResponses.parsedResponses) {
+        if (importingState[item.responseId]) continue;
+
+        const baseData = {
+          nome: item.nome || 'Pessoa sem nome',
+          telefone: item.telefone || '',
+          email: item.email || '',
+          endereco: item.endereco || '',
+          bairro: item.bairro || '',
+          cidade: item.cidade || '',
+          congregacao_id: user?.congregacao_id || 'sede',
+          origem: `Google Forms (${selectedFormResponses.title})`,
+          observacoes: [
+            item.pedidoOracao ? `Pedido de Oração: ${item.pedidoOracao}` : '',
+            item.comoConheceu ? `Como conheceu: ${item.comoConheceu}` : ''
+          ].filter(Boolean).join(' | '),
+          created_at: new Date().toISOString()
+        };
+
+        if (targetType === 'visitantes') {
+          await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'visitantes'), {
+            ...baseData,
+            data_visita: item.submittedAt.split('T')[0] || new Date().toISOString().split('T')[0],
+            status_consolidacao: 'pendente'
+          });
+          setImportingState(prev => ({ ...prev, [item.responseId]: 'imported_visitante' }));
+        } else {
+          await addDoc(collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'membros'), {
+            ...baseData,
+            cargo_ministerial: 'Membro',
+            estado_civil: item.estadoCivil || 'Solteiro(a)',
+            status: 'ativo'
+          });
+          setImportingState(prev => ({ ...prev, [item.responseId]: 'imported_membro' }));
+        }
+        count++;
+      }
+
+      addToast(`${count} registros importados para ${targetType === 'visitantes' ? 'Visitantes' : 'Membros'} com sucesso!`, 'success');
+    } catch (err: any) {
+      addToast('Erro na importação em lote: ' + err.message, 'error');
+    } finally {
+      setBatchImporting(false);
     }
   };
 
@@ -675,65 +824,171 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db }) => {
         </div>
       )}
 
-      {/* Responses Modal */}
+      {/* Responses & Import Modal */}
       {selectedFormResponses && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[85vh] flex flex-col">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="p-5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                  Respostas Recebidas
-                </h3>
-                <p className="text-xs text-slate-500">{selectedFormResponses.title}</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded-xl">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                    Respostas do Formulário & Importação
+                  </h3>
+                  <p className="text-xs text-slate-500">{selectedFormResponses.title}</p>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedFormResponses(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 text-base font-bold p-1 rounded-lg"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
-              <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/30 rounded-xl text-purple-700 dark:text-purple-300 text-xs font-semibold">
-                <span>Total de Respostas: {selectedFormResponses.responses.length}</span>
+            {/* Header Actions & Stats */}
+            <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-4">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  Total de Envios: <strong>{selectedFormResponses.parsedResponses.length}</strong>
+                </span>
+                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Duplicatas: {selectedFormResponses.parsedResponses.filter(p => p.isDuplicate).length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={batchImporting || selectedFormResponses.parsedResponses.length === 0}
+                  onClick={() => handleBatchImport('visitantes')}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Importar Todos como Visitantes</span>
+                </button>
+                <button
+                  disabled={batchImporting || selectedFormResponses.parsedResponses.length === 0}
+                  onClick={() => handleBatchImport('membros')}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Importar Todos como Membros</span>
+                </button>
                 <a
                   href={`https://docs.google.com/forms/d/${selectedFormResponses.formId}/edit#responses`}
                   target="_blank"
                   rel="noreferrer"
-                  className="underline flex items-center gap-1"
+                  className="px-3 py-1.5 bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl font-semibold flex items-center gap-1 transition"
                 >
-                  Abrir no Google Forms &rarr;
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Google Forms</span>
                 </a>
               </div>
+            </div>
 
-              {selectedFormResponses.responses.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">
-                  Nenhuma resposta foi enviada ainda para este formulário.
+            {/* List */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {selectedFormResponses.parsedResponses.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-sm">
+                  Nenhuma resposta enviada até o momento.
                 </div>
               ) : (
-                selectedFormResponses.responses.map((resp, idx) => (
-                  <div
-                    key={resp.responseId || idx}
-                    className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-2"
-                  >
-                    <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                      <span>Envio #{idx + 1}</span>
-                      <span className="text-[10px] text-slate-400">
-                        {resp.createTime ? new Date(resp.createTime).toLocaleString('pt-BR') : ''}
-                      </span>
-                    </div>
-                    {resp.answers && Object.keys(resp.answers).map(key => {
-                      const answerObj = resp.answers[key];
-                      const val = answerObj?.textAnswers?.answers?.map((a: any) => a.value).join(', ');
-                      return (
-                        <div key={key} className="text-slate-600 dark:text-slate-400">
-                          <strong>Resposta:</strong> {val || '-'}
+                selectedFormResponses.parsedResponses.map((item, idx) => {
+                  const state = importingState[item.responseId];
+                  return (
+                    <div
+                      key={item.responseId || idx}
+                      className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-purple-300"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm">
+                            {item.nome || `Respondente #${idx + 1}`}
+                          </h4>
+                          {item.isDuplicate && (
+                            <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              {item.duplicateReason || 'Já cadastrado no sistema'}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400">
+                            {item.submittedAt ? new Date(item.submittedAt).toLocaleString('pt-BR') : ''}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                ))
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300 pt-1">
+                          {item.telefone && (
+                            <div>
+                              <span className="text-slate-400">WhatsApp:</span> <strong>{item.telefone}</strong>
+                            </div>
+                          )}
+                          {item.email && (
+                            <div>
+                              <span className="text-slate-400">E-mail:</span> <strong>{item.email}</strong>
+                            </div>
+                          )}
+                          {item.endereco && (
+                            <div>
+                              <span className="text-slate-400">Endereço:</span> <strong>{item.endereco}</strong>
+                            </div>
+                          )}
+                          {item.classeDesejada && (
+                            <div>
+                              <span className="text-slate-400">Classe EBD:</span> <strong>{item.classeDesejada}</strong>
+                            </div>
+                          )}
+                          {item.comoConheceu && (
+                            <div>
+                              <span className="text-slate-400">Como conheceu:</span> <strong>{item.comoConheceu}</strong>
+                            </div>
+                          )}
+                          {item.pedidoOracao && (
+                            <div className="col-span-full">
+                              <span className="text-slate-400">Oração:</span> <em>"{item.pedidoOracao}"</em>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {state === 'imported_visitante' ? (
+                          <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Visitante Importado
+                          </span>
+                        ) : state === 'imported_membro' ? (
+                          <span className="px-3 py-1.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Membro Cadastrado
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              disabled={state === 'importing'}
+                              onClick={() => handleImportSingle(item, 'visitantes')}
+                              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition border border-emerald-200 dark:border-emerald-800"
+                              title="Importar para o cadastro de Visitantes"
+                            >
+                              <UserPlus className="w-3.5 h-3.5" />
+                              <span>Como Visitante</span>
+                            </button>
+                            <button
+                              disabled={state === 'importing'}
+                              onClick={() => handleImportSingle(item, 'membros')}
+                              className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition border border-indigo-200 dark:border-indigo-800"
+                              title="Cadastrar como Membro no Rol Oficial"
+                            >
+                              <Users className="w-3.5 h-3.5" />
+                              <span>Como Membro</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

@@ -44,6 +44,7 @@ import {
 
 import { InteractiveMagazineView } from './InteractiveMagazineView';
 import { InteractiveWindow } from './InteractiveWindow';
+import { EBDClassroomIntegration } from './EBDClassroomIntegration';
 
 interface ModuleEBDProps {
     isProfessorOnly?: boolean;
@@ -1193,7 +1194,7 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
             .slice(0, 5); // sugerir até 5 membros
     }, [db.ebd?.alunos, db.membros, congregacaoFilter]);
 
-    const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}, {id: 7, label: 'Escala de Professores', icon: Calendar}, {id: 6, label: 'Área do Professor', icon: GraduationCap}];
+    const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}, {id: 7, label: 'Escala de Professores', icon: Calendar}, {id: 8, label: 'Google Classroom', icon: Globe}, {id: 6, label: 'Área do Professor', icon: GraduationCap}];
     const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
 
     useEffect(() => {
@@ -3713,6 +3714,21 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                )}
+
+                {tab === 8 && (
+                    <div className="h-full overflow-y-auto custom-scrollbar p-1">
+                        <EBDClassroomIntegration
+                            db={db}
+                            dbFirestore={dbFirestore}
+                            appId={appId}
+                            user={user}
+                            addToast={addToast}
+                            turmas={turmasFiltradas}
+                            alunos={alunosFiltrados}
+                            licoes={licoesFiltradasTotal}
+                        />
                     </div>
                 )}
             </div>

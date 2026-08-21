@@ -1105,22 +1105,35 @@ export interface ClassroomCourseWork {
 
 export const listClassroomCourses = async (
   accessToken: string,
-  courseStates: string[] = ['ACTIVE']
+  courseStates: string[] = ['ACTIVE', 'PROVISIONED']
 ): Promise<ClassroomCourse[]> => {
-  const statesQuery = courseStates.map(s => `courseStates=${s}`).join('&');
-  const url = `https://classroom.googleapis.com/v1/courses?${statesQuery}&pageSize=30`;
+  try {
+    const statesQuery = courseStates.map(s => `courseStates=${s}`).join('&');
+    const url = `https://classroom.googleapis.com/v1/courses?${statesQuery}&pageSize=50`;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Erro ${res.status}: Falha ao listar turmas do Google Classroom.`);
+    if (!res.ok) {
+      // Fallback query without filtering parameters
+      const fallbackRes = await fetch('https://classroom.googleapis.com/v1/courses?pageSize=50', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (fallbackRes.ok) {
+        const fbData = await fallbackRes.json();
+        return fbData.courses || [];
+      }
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Erro ${res.status}: Falha ao listar turmas do Google Classroom.`);
+    }
+
+    const data = await res.json();
+    return data.courses || [];
+  } catch (e: any) {
+    console.error('Erro ao listar turmas do Classroom:', e);
+    throw e;
   }
-
-  const data = await res.json();
-  return data.courses || [];
 };
 
 export const createClassroomCourse = async (
@@ -1133,7 +1146,8 @@ export const createClassroomCourse = async (
     room?: string;
   }
 ): Promise<ClassroomCourse> => {
-  const res = await fetch('https://classroom.googleapis.com/v1/courses', {
+  // Strategy 1: Create in PROVISIONED state (Standard behavior for user-level / @gmail.com accounts in Google Classroom API)
+  let res = await fetch('https://classroom.googleapis.com/v1/courses', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -1142,13 +1156,40 @@ export const createClassroomCourse = async (
     body: JSON.stringify({
       ...course,
       ownerId: 'me',
-      courseState: 'ACTIVE'
+      courseState: 'PROVISIONED'
     })
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Erro ${res.status}: Falha ao criar turma no Google Classroom.`);
+    
+    // Strategy 2: If PROVISIONED fails or returns specific error, try without explicit courseState
+    const retryRes = await fetch('https://classroom.googleapis.com/v1/courses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...course,
+        ownerId: 'me'
+      })
+    });
+
+    if (retryRes.ok) {
+      return await retryRes.json();
+    }
+
+    const retryErr = await retryRes.json().catch(() => ({}));
+    const rawMsg = retryErr?.error?.message || err?.error?.message || `Erro ${res.status}: Falha ao criar turma no Google Classroom.`;
+
+    if (rawMsg.includes('CourseStateDenied') || rawMsg.includes('cannot create or transition')) {
+      throw new Error(
+        'Sua conta do Google não possui privilégios de Professor/Administrador do Google Workspace for Education para provisionar salas ativas diretamente via API. Para criar turmas, acesse classroom.google.com ou utilize uma conta com perfil de instrutor.'
+      );
+    }
+
+    throw new Error(rawMsg);
   }
 
   return await res.json();
@@ -1260,3 +1301,437 @@ export const listClassroomStudents = async (
   const data = await res.json();
   return data.students || [];
 };
+
+export interface ClassroomStudentSubmission {
+  id: string;
+  courseId: string;
+  courseWorkId: string;
+  userId: string;
+  state: 'NEW' | 'CREATED' | 'TURNED_IN' | 'RETURNED' | 'RECLAIMED_BY_STUDENT';
+  assignedGrade?: number;
+  draftGrade?: number;
+  alternateLink?: string;
+  updateTime?: string;
+  studentName?: string;
+  studentEmail?: string;
+  submissionHistory?: any[];
+}
+
+export const listClassroomStudentSubmissions = async (
+  accessToken: string,
+  courseId: string,
+  courseWorkId: string
+): Promise<ClassroomStudentSubmission[]> => {
+  const res = await fetch(`https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return [];
+  }
+
+  const data = await res.json();
+  return data.studentSubmissions || [];
+};
+
+export const patchClassroomStudentSubmission = async (
+  accessToken: string,
+  courseId: string,
+  courseWorkId: string,
+  submissionId: string,
+  grade: number
+): Promise<any> => {
+  const res = await fetch(`https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions/${submissionId}?updateMask=assignedGrade,draftGrade`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      assignedGrade: grade,
+      draftGrade: grade
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Erro ${res.status}: Falha ao atualizar nota no Google Classroom.`);
+  }
+
+  return await res.json();
+};
+
+/* ==========================================================================
+   GOOGLE FORMS RESPONSES IMPORT SERVICE (Visitantes & Membros)
+   ========================================================================== */
+
+export interface ParsedFormImportItem {
+  id: string;
+  sourceResponseId: string;
+  responseId: string;
+  timestamp: string;
+  submittedAt: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  dataNascimento?: string;
+  estadoCivil?: string;
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  classeDesejada?: string;
+  comoConheceu?: string;
+  pedidoOracao?: string;
+  jaBatizado?: string;
+  rawAnswers: Record<string, string>;
+  isDuplicate?: boolean;
+  duplicateReason?: string;
+  status: 'pending' | 'imported' | 'skipped';
+}
+
+export type ParsedFormResponse = ParsedFormImportItem;
+
+export const parseGoogleFormResponses = (
+  formInfo: GoogleFormInfo,
+  responses: any[],
+  existingMembers: any[] = [],
+  existingVisitors: any[] = []
+): ParsedFormImportItem[] => {
+  // Build a lookup map of item question IDs to question titles
+  const questionMap: Record<string, string> = {};
+  if (formInfo.items) {
+    formInfo.items.forEach(item => {
+      const qId = item.questionItem?.question?.questionId || item.itemId;
+      if (qId && item.title) {
+        questionMap[qId] = item.title.trim();
+      }
+    });
+  }
+
+  const parsedItems: ParsedFormImportItem[] = [];
+
+  responses.forEach((resp: any, idx: number) => {
+    const rawAnswers: Record<string, string> = {};
+    let nome = '';
+    let telefone = '';
+    let email = '';
+    let dataNascimento = '';
+    let estadoCivil = '';
+    let endereco = '';
+    let bairro = '';
+    let cidade = '';
+    let classeDesejada = '';
+    let comoConheceu = '';
+    let pedidoOracao = '';
+    let jaBatizado = '';
+
+    if (resp.answers) {
+      Object.entries(resp.answers).forEach(([qId, ansObj]: [string, any]) => {
+        const title = questionMap[qId] || `Pergunta_${qId}`;
+        const val = ansObj?.textAnswers?.answers?.map((a: any) => a.value).join(', ') || '';
+        rawAnswers[title] = val;
+
+        const lowerTitle = title.toLowerCase();
+        if (lowerTitle.includes('nome') && !lowerTitle.includes('dirigente') && !lowerTitle.includes('indic') && !lowerTitle.includes('igreja')) {
+          if (!nome) nome = val;
+        } else if (lowerTitle.includes('telefone') || lowerTitle.includes('whatsapp') || lowerTitle.includes('celular') || lowerTitle.includes('fone')) {
+          if (!telefone) telefone = val;
+        } else if (lowerTitle.includes('email') || lowerTitle.includes('e-mail')) {
+          if (!email) email = val;
+        } else if (lowerTitle.includes('nascimento') || lowerTitle.includes('data de nasc') || lowerTitle.includes('idade')) {
+          if (!dataNascimento) dataNascimento = val;
+        } else if (lowerTitle.includes('civil') || lowerTitle.includes('casado') || lowerTitle.includes('solteiro')) {
+          if (!estadoCivil) estadoCivil = val;
+        } else if (lowerTitle.includes('endereço') || lowerTitle.includes('rua') || lowerTitle.includes('logradouro')) {
+          if (!endereco) endereco = val;
+        } else if (lowerTitle.includes('bairro')) {
+          if (!bairro) bairro = val;
+        } else if (lowerTitle.includes('cidade') || lowerTitle.includes('município')) {
+          if (!cidade) cidade = val;
+        } else if (lowerTitle.includes('classe') || lowerTitle.includes('turma') || lowerTitle.includes('ebd')) {
+          if (!classeDesejada) classeDesejada = val;
+        } else if (lowerTitle.includes('conheceu') || lowerTitle.includes('convidou') || lowerTitle.includes('indica')) {
+          if (!comoConheceu) comoConheceu = val;
+        } else if (lowerTitle.includes('oração') || lowerTitle.includes('aconselhamento') || lowerTitle.includes('motivo')) {
+          if (!pedidoOracao) pedidoOracao = val;
+        } else if (lowerTitle.includes('batismo') || lowerTitle.includes('batizado') || lowerTitle.includes('águas')) {
+          if (!jaBatizado) jaBatizado = val;
+        }
+      });
+    }
+
+    if (!nome) {
+      nome = `Participante #${idx + 1}`;
+    }
+
+    // Check for duplicate in existing members / visitors
+    let isDuplicate = false;
+    let duplicateReason = '';
+
+    const cleanTel = telefone.replace(/\D/g, '');
+    const cleanNome = nome.toLowerCase().trim();
+
+    if (existingMembers.length > 0) {
+      const matchMember = existingMembers.find((m: any) => {
+        const mTel = (m.telefone || m.whatsapp || '').replace(/\D/g, '');
+        const mNome = (m.nome || '').toLowerCase().trim();
+        const mEmail = (m.email || '').toLowerCase().trim();
+        return (
+          (cleanTel && mTel && cleanTel.length >= 8 && mTel.includes(cleanTel)) ||
+          (email && mEmail && email.toLowerCase() === mEmail) ||
+          (cleanNome && mNome && cleanNome === mNome)
+        );
+      });
+      if (matchMember) {
+        isDuplicate = true;
+        duplicateReason = `Já cadastrado no Rol de Membros (${matchMember.nome})`;
+      }
+    }
+
+    if (!isDuplicate && existingVisitors.length > 0) {
+      const matchVisitor = existingVisitors.find((v: any) => {
+        const vTel = (v.telefone || v.whatsapp || '').replace(/\D/g, '');
+        const vNome = (v.nome || '').toLowerCase().trim();
+        return (
+          (cleanTel && vTel && cleanTel.length >= 8 && vTel.includes(cleanTel)) ||
+          (cleanNome && vNome && cleanNome === vNome)
+        );
+      });
+      if (matchVisitor) {
+        isDuplicate = true;
+        duplicateReason = `Já cadastrado como Visitante (${matchVisitor.nome})`;
+      }
+    }
+
+    parsedItems.push({
+      id: resp.responseId || `resp-${idx}-${Date.now()}`,
+      sourceResponseId: resp.responseId || `r-${idx}`,
+      responseId: resp.responseId || `r-${idx}`,
+      timestamp: resp.createTime || new Date().toISOString(),
+      submittedAt: resp.createTime || new Date().toISOString(),
+      nome,
+      telefone,
+      email,
+      dataNascimento,
+      estadoCivil,
+      endereco,
+      bairro,
+      cidade,
+      classeDesejada,
+      comoConheceu,
+      pedidoOracao,
+      jaBatizado,
+      rawAnswers,
+      isDuplicate,
+      duplicateReason,
+      status: 'pending'
+    });
+  });
+
+  return parsedItems;
+};
+
+/* ==========================================================================
+   EMAIL ESCALAS & NOTIFICAÇÕES VIA GMAIL SERVICE
+   ========================================================================== */
+
+export interface EscalaEmailParams {
+  toEmail: string;
+  toName: string;
+  escalaTipo: 'louvor' | 'portaria' | 'ebd' | 'obreiros' | 'midia' | 'recepcao' | 'culto_geral';
+  dataEscala: string;
+  horario: string;
+  funcao: string;
+  igrejaNome?: string;
+  pastorNome?: string;
+  observacoes?: string;
+}
+
+export const sendEscalaConfirmationEmail = async (
+  accessToken: string,
+  params: EscalaEmailParams
+): Promise<any> => {
+  const tipoLabelMap: Record<string, string> = {
+    louvor: 'Ministério de Louvor & Adoração',
+    portaria: 'Escala de Portaria & Acolhimento',
+    ebd: 'Escola Bíblica Dominical (EBD)',
+    obreiros: 'Escala Ministerial de Obreiros e Diaconato',
+    midia: 'Comunicação, Mídia e Transmissão',
+    recepcao: 'Recepção e Consolidação de Visitantes',
+    culto_geral: 'Escala Oficial de Culto Eclesiástico'
+  };
+
+  const tipoLabel = tipoLabelMap[params.escalaTipo] || 'Escala Ministerial';
+  const dataFormatada = params.dataEscala.split('-').reverse().join('/');
+  const subject = `🕊️ Confirmação de Escala: ${tipoLabel} - ${dataFormatada}`;
+
+  const bodyHtml = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #1e1b4b, #4338ca); color: #ffffff; padding: 30px 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { margin: 6px 0 0; font-size: 13px; color: #c7d2fe; }
+    .content { padding: 28px 24px; }
+    .card-info { background: #f1f5f9; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #4f46e5; }
+    .card-item { margin-bottom: 10px; font-size: 14px; }
+    .card-item:last-child { margin-bottom: 0; }
+    .label { font-weight: 700; color: #475569; }
+    .value { font-weight: 800; color: #0f172a; }
+    .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+    .badge { display: inline-block; padding: 4px 12px; background: #e0e7ff; color: #3730a3; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Aviso de Escala Ministerial</span>
+      <h1 style="margin-top: 12px;">Paz do Senhor, ${params.toName}!</h1>
+      <p>${params.igrejaNome || 'GIPP • Sistema de Gestão Eclesiástica'}</p>
+    </div>
+    <div class="content">
+      <p style="font-size: 14px; line-height: 1.6; color: #334155;">
+        Você foi escalado(a) oficialmente para servir no Reino de Deus no seguinte compromisso:
+      </p>
+      
+      <div class="card-info">
+        <div class="card-item">
+          <span class="label">📅 Data:</span> <span class="value">${dataFormatada}</span>
+        </div>
+        <div class="card-item">
+          <span class="label">⏰ Horário:</span> <span class="value">${params.horario || 'Conforme início do culto'}</span>
+        </div>
+        <div class="card-item">
+          <span class="label">🏛️ Ministério / Setor:</span> <span class="value">${tipoLabel}</span>
+        </div>
+        <div class="card-item">
+          <span class="label">🎯 Sua Função / Atribuição:</span> <span class="value">${params.funcao}</span>
+        </div>
+        ${params.observacoes ? `
+        <div class="card-item" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+          <span class="label">📝 Observações Pastorais:</span> <span class="value" style="font-weight: 500;">${params.observacoes}</span>
+        </div>` : ''}
+      </div>
+
+      <p style="font-size: 13px; line-height: 1.5; color: #64748b;">
+        <em>"Tudo o que fizerem, façam de todo o coração, como para o Senhor, e não para os homens." (Colossenses 3:23)</em>
+      </p>
+      <p style="font-size: 13px; color: #334155; margin-top: 20px;">
+        Em caso de impossibilidade ou necessidade de troca, favor comunicar a liderança com a máxima antecedência.
+      </p>
+    </div>
+    <div class="footer">
+      <p style="margin: 0;"><strong>${params.igrejaNome || 'Igreja Evangélica Assembleia de Deus'}</strong></p>
+      <p style="margin: 4px 0 0;">Mensagem gerada e sincronizada via Google Workspace • GIPP</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  return await sendGmailMessage(accessToken, {
+    to: params.toEmail,
+    subject,
+    bodyHtml
+  });
+};
+
+/* ==========================================================================
+   GOOGLE CALENDAR & TASKS BULK SYNC HELPERS
+   ========================================================================== */
+
+export const syncGippEventsToGoogleCalendar = async (
+  accessToken: string,
+  events: Array<{
+    title: string;
+    description?: string;
+    date: string; // YYYY-MM-DD
+    timeStart?: string; // HH:mm
+    timeEnd?: string; // HH:mm
+    location?: string;
+  }>,
+  calendarId: string = 'primary'
+): Promise<{ successCount: number; errors: any[] }> => {
+  let successCount = 0;
+  const errors: any[] = [];
+
+  for (const ev of events) {
+    try {
+      const startDateTime = ev.timeStart
+        ? `${ev.date}T${ev.timeStart}:00-03:00`
+        : undefined;
+      const endDateTime = ev.timeEnd
+        ? `${ev.date}T${ev.timeEnd}:00-03:00`
+        : ev.timeStart
+        ? `${ev.date}T${Number(ev.timeStart.split(':')[0]) + 2}:00:00-03:00`
+        : undefined;
+
+      const eventPayload: GoogleCalendarEvent = {
+        summary: ev.title,
+        description: ev.description || 'Evento eclesiástico sincronizado automaticamente pelo GIPP.',
+        location: ev.location || '',
+        start: startDateTime
+          ? { dateTime: startDateTime, timeZone: 'America/Sao_Paulo' }
+          : { date: ev.date },
+        end: endDateTime
+          ? { dateTime: endDateTime, timeZone: 'America/Sao_Paulo' }
+          : { date: ev.date }
+      };
+
+      await createGoogleCalendarEvent(accessToken, eventPayload, calendarId);
+      successCount++;
+    } catch (err: any) {
+      errors.push({ title: ev.title, error: err.message || err });
+    }
+  }
+
+  return { successCount, errors };
+};
+
+export const syncGippTasksToGoogleTasks = async (
+  accessToken: string,
+  tasks: Array<{
+    title: string;
+    description?: string;
+    dueDate?: string; // YYYY-MM-DD
+    completed?: boolean;
+  }>,
+  taskListId?: string
+): Promise<{ successCount: number; errors: any[] }> => {
+  let successCount = 0;
+  const errors: any[] = [];
+
+  // If no taskListId provided, fetch the primary list
+  let targetListId = taskListId;
+  if (!targetListId) {
+    const lists = await listGoogleTaskLists(accessToken);
+    targetListId = lists[0]?.id;
+    if (!targetListId) {
+      const newList = await createGoogleTaskList(accessToken, 'GIPP • Tarefas da Igreja');
+      targetListId = newList.id;
+    }
+  }
+
+  for (const t of tasks) {
+    try {
+      const dueTimestamp = t.dueDate ? `${t.dueDate}T23:59:59.000Z` : undefined;
+      await createGoogleTask(accessToken, targetListId, {
+        title: t.title,
+        notes: t.description || 'Tarefa ministerial sincronizada pelo GIPP',
+        status: t.completed ? 'completed' : 'needsAction',
+        due: dueTimestamp
+      });
+      successCount++;
+    } catch (err: any) {
+      errors.push({ title: t.title, error: err.message || err });
+    }
+  }
+
+  return { successCount, errors };
+};
+
