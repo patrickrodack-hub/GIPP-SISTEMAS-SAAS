@@ -6,8 +6,9 @@ import {
   AlertTriangle, Lightbulb, Phone, Mail, FileText, FileBarChart, Award, 
   Sparkles, Layers, Cpu, CheckSquare, RefreshCw, Printer, Trash2, Heart,
   Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database,
-  Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2, Table
+  Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2, Table, Video, Globe
 } from 'lucide-react';
+import { GoogleGLogo, GoogleAuthorizedBadge } from './GoogleIcons';
 import { jsPDF } from 'jspdf';
 
 export default function ModuleManualUsuario() {
@@ -313,6 +314,33 @@ export default function ModuleManualUsuario() {
       tips = [
         `Combine o esboçador de sermões com o módulo de recomendação inteligente de louvores para uma liturgia totalmente integrada.`,
         `Use o conversor automático de atas por áudio do GIPP para registrar assembleias de obreiros sem cansar o secretário.`
+      ];
+    } else if (cat === 'google' || ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'].includes(code)) {
+      introTexts = [
+        `A Suíte Google Integração Eclesiástica (GIPP-${idStr}) integra os serviços oficiais da Google Cloud e Google Workspace com autorização nativa OAuth 2.0 e certificação criptográfica avançada.`,
+        `Com o recurso "${name}", a igreja opera: ${desc}. Todas as sincronizações respeitam os padrões mundiais de segurança do Google e mantêm os dados administrativos e pastorais centralizados e seguros.`
+      ];
+      steps = [
+        `Acesse a seção "Google Integração" no menu lateral principal ou no Portal do Membro.`,
+        `Localize o aplicativo correspondente (${name}) com seu ícone oficial Google Workspace.`,
+        `Conecte-se com sua conta Google com certificação segura OAuth 2.0 ou utilize os recursos integrados diretamente.`,
+        `Execute a criação, edição ou gerenciamento dos registros com sincronização automática em nuvem.`
+      ];
+      securityLevel = "Liderança Ministerial / Secretaria / Administrador";
+      securityText = `Todas as chamadas de API do Google utilizam tokens seguros OAuth 2.0 com criptografia TLS 1.3 de ponta a ponta. O selo de autorização ativo certifica a autenticidade da conexão e auditoria dos dados.`;
+      faqs = [
+        {
+          q: `Como é garantida a segurança ao acessar ferramentas Google pelo GIPP?`,
+          a: `O sistema opera em conformidade estrita com as políticas do Google Cloud, sem armazenar senhas do usuário e utilizando tokens transitórios protegidos por criptografia de nível bancário.`
+        },
+        {
+          q: `Como excluir um formulário do Google Forms indesejado?`,
+          a: `No módulo Google Forms Eclesiástico, utilize o botão com ícone de lixeira em cada cartão de formulário para excluí-lo permanentemente do Google Drive com confirmação de segurança.`
+        }
+      ];
+      tips = [
+        `Utilize contas Google institucionais (@suaigreja.com.br ou @gmail.com) para melhor organização dos arquivos.`,
+        `Acompanhe o selo verde com pulso ativo na barra do sistema para certificar a conexão segura contínua.`
       ];
     } else {
       introTexts = [
@@ -747,6 +775,8 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       );
     } else if (chapterId === 'recursos_expandidos') {
       modules = ALL_GIPP_MODULES.filter(m => ['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(m.id));
+    } else if (chapterId === 'google_integracao' || chapterId === 'google') {
+      modules = ALL_GIPP_MODULES.filter(m => m.category === 'google');
     } else {
       modules = ALL_GIPP_MODULES.filter(m => m.category === chapterId);
     }
@@ -1186,7 +1216,16 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     { id: 'k3', name: 'Notificações Ativas de Incidentes - Portal Kids', category: 'seguranca', desc: 'Disparo de alertas e som de notificações no Portal do Membro para avisar aos pais.' },
     { id: 'ebd1', name: 'Lançamento de Frequência Interativo - EBD', category: 'secretaria', desc: 'Controle de chamada dominical completo integrando registro de Bíblia, revista e ofertas.' },
     { id: 'ead1', name: 'Cursos EAD & Mentoria Acadêmica', category: 'secretaria', desc: 'Trilhas pedagógicas interativas com suporte a quizes doutrinários e certificados salvos em alta definição.' },
-    { id: 'lit1', name: 'Agendamento Litúrgico & Séries de Sermões', category: 'secretaria', desc: 'Planeamento completo de rituais de cultos, cânticos congregacionais e pregações homiléticas pastorais.' }
+    { id: 'lit1', name: 'Agendamento Litúrgico & Séries de Sermões', category: 'secretaria', desc: 'Planeamento completo de rituais de cultos, cânticos congregacionais e pregações homiléticas pastorais.' },
+    // GOOGLE WORKSPACE EXPANDED (v10.0.0)
+    { id: 'g1', name: 'Google Meet - Videoconferências e Salas Ministeriais', category: 'google', desc: 'Salas oficiais de reuniões virtuais, ensaios e reuniões de diretoria integradas.' },
+    { id: 'g2', name: 'Google Sheets - Planilhas Eclesiásticas na Nuvem', category: 'google', desc: 'Planilhas oficiais em nuvem sincronizadas com o ecossistema eclesiástico.' },
+    { id: 'g3', name: 'Google Docs - Documentos e Ofícios Pastorais', category: 'google', desc: 'Editor oficial Google Docs para atas, convocações e cartas ministeriais na nuvem.' },
+    { id: 'g4', name: 'Google Tasks - Gestão de Metas e Tarefas da Igreja', category: 'google', desc: 'Organização de pendências, checklists de eventos e metas da congregação.' },
+    { id: 'g5', name: 'Google Calendar - Agenda Eclesiástica Unificada', category: 'google', desc: 'Sincronização de cultos, vigílias, conferências e eventos do ministério.' },
+    { id: 'g6', name: 'Gmail Eclesiástico - Comunicação Ministerial Oficial', category: 'google', desc: 'Envio e recebimento de comunicados oficiais pelo correio do Google.' },
+    { id: 'g7', name: 'Google Forms - Inscrições, Enquetes & Gestão na Nuvem', category: 'google', desc: 'Criação, gestão e exclusão definitiva de formulários do Google Drive.' },
+    { id: 'g8', name: 'Google Classroom - Discipulado e Salas de Aula Teológicas', category: 'google', desc: 'Classes digitais para EBD, formação ministerial e cursos teológicos.' }
   ], []);
 
   const filteredDirectory = useMemo(() => {
@@ -1225,7 +1264,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                   <span className="w-3 h-3 rounded-full bg-amber-500 block" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500 block" />
                 </div>
-                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v9.5.0</span>
+                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v10.0.0 Ultimate Platinum v15</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1788,7 +1827,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 9.5.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral.
+            O GIPP Versão 10.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral.
           </p>
 
           <div className="bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200/80 rounded-2xl p-4 space-y-3 text-slate-900 shadow-xs">
@@ -1873,8 +1912,85 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       )
     },
     {
+      id: 'google_integracao',
+      title: '12. Suíte Google Integração Eclesiástica (Workspace Oficial)',
+      shortTitle: 'Google Integração',
+      icon: Globe,
+      category: 'google',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-3xl p-6 shadow-xs relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-250/60 pb-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-white rounded-2xl shadow-xs border border-emerald-150">
+                  <GoogleGLogo size={28} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight">Divisão Oficial Google Integração</h3>
+                  <p className="text-xs text-emerald-800 font-semibold">Conectividade Segura via Google OAuth 2.0 & APIs Oficiais Google Cloud</p>
+                </div>
+              </div>
+              <GoogleAuthorizedBadge />
+            </div>
+
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">
+              O GIPP v10.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Google Meet (Videoconferências)
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Criação e agendamento instantâneo de reuniões virtuais de diretoria, aconselhamentos pastorais remotos e ensaios de louvor com links diretos seguros.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Google Sheets & Docs (Nuvem)
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Acesso direto a planilhas contábeis e ofícios oficiais armazenados em sua conta Google Drive, permitindo colaboração simultânea em tempo real com diáconos e secretários.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Google Forms & Gestão no Drive
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Criação e gerenciamento completo de formulários para retiros, conferências e pesquisas. Permite visualização de respostas e exclusão definitiva de formulários indesejados diretamente no Drive.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Google Calendar, Tasks, Gmail & Classroom
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Sincronização de agendas litúrgicas, gestão de metas departamentais, disparo de emails corporativos e administração de turmas virtuais para discipulado.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 text-slate-100 rounded-3xl p-6 shadow-lg border border-slate-800 space-y-3">
+            <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+              <Shield size={16} className="text-emerald-400" />
+              Selo de Autorização e Garantia de Ambiente Seguro
+            </h4>
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              O selo <span className="text-emerald-300 font-bold">Google Autorizado</span> com pulso verde ativo presente nos menus e painéis certifica que o sistema opera dentro das mais rigorosas diretrizes de segurança da Google Cloud. Nenhuma senha de e-mail é armazenada localmente; a comunicação ocorre via tokens criptografados OAuth 2.0, garantindo confidencialidade absoluta para a tesouraria e secretaria eclesiástica.
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
       id: 'amparo_legal',
-      title: '12. Proteção Constitucional & Liberdade Religiosa (Amparo Legal)',
+      title: '13. Proteção Constitucional & Liberdade Religiosa (Amparo Legal)',
       shortTitle: 'Amparo Constitucional',
       icon: ShieldAlert,
       category: 'Geral',
@@ -1943,7 +2059,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     },
     {
       id: 'faq_geral',
-      title: '8. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
+      title: '14. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
       shortTitle: 'Perguntas Frequentes (FAQ)',
       icon: HelpCircle,
       category: 'Suporte',
@@ -2621,7 +2737,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
               <div className="space-y-6 text-left">
                 {activeContent.content}
                 
-                {['membros', 'financeiro', 'celulas', 'secretaria', 'ai', 'seguranca', 'credenciais'].includes(activeContent.id) && (
+                {['membros', 'financeiro', 'celulas', 'secretaria', 'ai', 'seguranca', 'credenciais', 'google_integracao'].includes(activeContent.id) && (
                   renderCategorySubModules(activeContent.id)
                 )}
               </div>
@@ -2737,7 +2853,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                 <div className="space-y-6 text-left">
                   {activeContent.content}
                   
-                  {['membros', 'financeiro', 'celulas', 'secretaria', 'ai', 'seguranca', 'credenciais'].includes(activeContent.id) && (
+                  {['membros', 'financeiro', 'celulas', 'secretaria', 'ai', 'seguranca', 'credenciais', 'google_integracao'].includes(activeContent.id) && (
                     renderCategorySubModules(activeContent.id)
                   )}
                 </div>

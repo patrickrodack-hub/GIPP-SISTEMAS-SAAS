@@ -6,8 +6,21 @@ import {
   CheckCircle2, Minus, Maximize2, FileSpreadsheet, Lock, AlertTriangle,
   Play, Square, Terminal, Cpu, HardDrive, HelpCircle, Layers, Sliders,
   QrCode, BookOpenText, DollarSign, ArrowUpCircle, ArrowDownCircle, Briefcase,
-  History, ShieldCheck, Newspaper, Award, Calendar, FolderTree, Check
+  History, ShieldCheck, Newspaper, Award, Calendar, FolderTree, Check,
+  Gamepad2, Music, Video, Heart, Globe, Baby, Car, Package, Share2, HeartHandshake, Book, MessageCircle, Badge,
+  CheckSquare, Activity, FileCheck, ImagePlus, UserCheck
 } from 'lucide-react';
+import {
+  GoogleGLogo,
+  GoogleMeetIcon,
+  GoogleSheetsIcon,
+  GoogleDocsIcon,
+  GoogleTasksIcon,
+  GoogleCalendarIcon,
+  GoogleGmailIcon,
+  GoogleFormsIcon,
+  GoogleClassroomIcon
+} from './GoogleIcons';
 
 interface DelphiFlorenceLayoutProps {
   view: string;
@@ -58,6 +71,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
   ALL_AVAILABLE_MODULES,
 }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [paletteTab, setPaletteTab] = useState<string>('google');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
@@ -67,6 +81,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
   const [isFormClosed, setIsFormClosed] = useState(false);
   const [windowScale, setWindowScale] = useState<'normal' | 'compact' | 'wide'>('normal');
   const [showObjectInspector, setShowObjectInspector] = useState(false);
+  const [showComponentPalette, setShowComponentPalette] = useState(true);
   const [isRunningAnimation, setIsRunningAnimation] = useState(false);
   const [delphiSubTheme, setDelphiSubTheme] = useState<'gipp_retro' | 'delphi_classic' | 'high_contrast'>(() => {
     return (localStorage.getItem('gipp_delphi_subtheme') as any) || 'gipp_retro';
@@ -192,7 +207,6 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       // Global Ctrl+N: Novo Registro / Novo Módulo
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n' && !e.shiftKey && !e.altKey) {
         e.preventDefault();
-        // Dispara clique no botão Novo da tela se existir ou abre tela de cadastro
         const newBtn = document.querySelector('button[title*="Novo"], button[title*="novo"], button:has(svg.lucide-plus), button:has(svg.lucide-user-plus)') as HTMLButtonElement | null;
         if (newBtn && typeof newBtn.click === 'function') {
           newBtn.click();
@@ -268,7 +282,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
           } 
         },
         { label: 'Novo / Visão Geral (Dashboard)', shortcut: 'Ctrl+H', icon: LayoutDashboard, action: () => setView('dashboard') },
-        { label: 'Secretaria Integrada', shortcut: 'Ctrl+S', icon: FileText, action: () => setView('secretaria_integrada') },
+        { label: 'Secretaria Integrada & Agenda', shortcut: 'Ctrl+S', icon: FileText, action: () => setView('secretaria_integrada') },
         { label: 'Cadastro Geral de Membros', shortcut: 'Ctrl+M', icon: Users, action: () => setView('cad_membro') },
         { type: 'separator' },
         { 
@@ -284,7 +298,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
             }
           } 
         },
-        { label: 'Financeiro: Livro Caixa', shortcut: 'Ctrl+E', icon: ArrowUpCircle, action: () => setView('fin_entrada') },
+        { label: 'Financeiro: Livro Caixa (Entradas)', shortcut: 'Ctrl+E', icon: ArrowUpCircle, action: () => setView('fin_entrada') },
         { label: 'Financeiro: Despesas & Saídas', shortcut: 'Ctrl+D', icon: ArrowDownCircle, action: () => setView('fin_saida') },
         { type: 'separator' },
         { label: 'Bloquear Estação de Trabalho', shortcut: 'Alt+L', icon: Lock, action: () => setIsScreenLocked(true) },
@@ -318,9 +332,15 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
           action: () => setShowObjectInspector(!showObjectInspector),
           checked: showObjectInspector
         },
-        { label: 'Paleta de Componentes VCL', shortcut: 'Ctrl+Alt+P', icon: Layers, action: () => {} },
+        { 
+          label: `Paleta de Componentes VCL (${showComponentPalette ? 'Ocultar' : 'Exibir'})`, 
+          shortcut: 'Ctrl+Alt+P', 
+          icon: Layers, 
+          action: () => setShowComponentPalette(!showComponentPalette),
+          checked: showComponentPalette 
+        },
         { label: 'Gerenciador de Estrutura FireDAC', shortcut: 'F12', icon: Database, action: () => setView('config_backup') },
-        { label: 'Auditoria de Logs & Acessos', shortcut: 'Ctrl+L', icon: Shield, action: () => setView('auditoria') },
+        { label: 'Auditoria de Logs & Acessos', shortcut: 'Ctrl+L', icon: ShieldCheck, action: () => setView('auditoria') },
         { type: 'separator' },
         { label: 'Maximizar/Restaurar Janela', shortcut: 'Alt+Enter', icon: Maximize2, action: () => setIsFormMaximized(!isFormMaximized) }
       ]
@@ -333,10 +353,16 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
         { label: 'Rol de Membros & Obreiros', shortcut: 'F2', icon: Users, action: () => setView('cad_membro') },
         { label: 'Dados da Igreja & Congregações', shortcut: '', icon: Building2, action: () => setView('cad_igreja') },
         { label: 'Células & Pequenos Grupos', shortcut: '', icon: Home, action: () => setView('cad_celula') },
-        { label: 'Patrimônio & Bens Tombados', shortcut: '', icon: Award, action: () => setView('cad_patrimonio') },
-        { label: 'Controle de Frotas & Veículos', shortcut: '', icon: Sliders, action: () => setView('controle_frotas') },
-        { label: 'Departamentos & Ministérios', shortcut: '', icon: FolderTree, action: () => setView('cad_departamento') },
-        { label: 'Visitantes & Novos Convertidos', shortcut: '', icon: Users, action: () => setView('visitantes') },
+        { label: 'Patrimônio & Bens Tombados', shortcut: '', icon: Package, action: () => setView('cad_patrimonio') },
+        { label: 'Controle de Frotas & Veículos', shortcut: '', icon: Car, action: () => setView('controle_frotas') },
+        { label: 'Departamentos & Ministérios Gerais', shortcut: '', icon: FolderTree, action: () => setView('cad_departamento') },
+        { type: 'separator' },
+        { label: 'Ministério de Louvor & Músicos', shortcut: '', icon: Music, action: () => setView('ministerio_louvor') },
+        { label: 'Ministério de Mídia & Transmissão', shortcut: '', icon: Video, action: () => setView('ministerio_midia') },
+        { label: 'Ministério da Família & Casais', shortcut: '', icon: Heart, action: () => setView('ministerio_familia') },
+        { label: 'Salinha Kids & Berçário', shortcut: '', icon: Baby, action: () => setView('salinha_kids') },
+        { label: 'Departamento de Missões', shortcut: '', icon: Globe, action: () => setView('missoes_painel') },
+        { label: 'Visitantes & Novos Convertidos / CRM', shortcut: '', icon: HeartHandshake, action: () => setView('visitantes') },
         { type: 'separator' },
         { label: 'Gestão de Usuários (Acessos)', shortcut: 'Ctrl+U', icon: Lock, action: () => setView('cad_usuario') }
       ]
@@ -347,11 +373,15 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       accessKey: 'S',
       items: [
         { label: 'Secretaria Integrada & Agenda', shortcut: '', icon: FileText, action: () => setView('secretaria_integrada') },
-        { label: 'Livro de Atas Eclesiásticas', shortcut: '', icon: FileText, action: () => setView('secretaria_livro_atas') },
+        { label: 'Livro Digital de Atas', shortcut: '', icon: BookOpen, action: () => setView('secretaria_livro_atas') },
         { label: 'Certificados & Diplomas', shortcut: '', icon: Award, action: () => setView('secretaria_certificados') },
-        { label: 'Carteirinhas de Membros', shortcut: '', icon: Users, action: () => setView('carteirinha_studio') },
-        { label: 'Credenciais de Ministros em Lote', shortcut: '', icon: ShieldCheck, action: () => setView('credencial_lote') },
-        { label: 'Salinha Kids & Berçário', shortcut: '', icon: Sparkles, action: () => setView('salinha_kids') }
+        { label: 'Estúdio de Carteirinhas de Membro', shortcut: '', icon: Users, action: () => setView('carteirinha_studio') },
+        { label: 'Credenciais de Ministros em Lote', shortcut: '', icon: Badge, action: () => setView('credencial_lote') },
+        { label: 'Terminal de Check-in QR Code', shortcut: '', icon: QrCode, action: () => setView('qr_checkin') },
+        { type: 'separator' },
+        { label: 'Boletim Digital Informativo', shortcut: '', icon: Newspaper, action: () => setView('boletim') },
+        { label: 'Relatórios Eclesiásticos em PDF', shortcut: '', icon: FileText, action: () => setView('relatorios') },
+        { label: 'Webmail / Mensagens Internas', shortcut: '', icon: Mail, action: () => setView('email_interno') }
       ]
     },
     {
@@ -362,8 +392,28 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
         { label: 'EAD Cursos de Capacitação', shortcut: '', icon: GraduationCap, action: () => setView('gestao_cursos') },
         { label: 'Formação de Obreiros GIPP', shortcut: '', icon: Award, action: () => setView('formacao_obreiros') },
         { label: 'Estudo de Teologia Básico GIPP', shortcut: '', icon: BookOpen, action: () => setView('curso_teologia') },
+        { label: 'Escola Bíblica Dominical (EBD)', shortcut: '', icon: BookOpenText, action: () => setView('secretaria_ebd') },
         { type: 'separator' },
-        { label: 'Escola Bíblica Dominical (EBD)', shortcut: '', icon: BookOpenText, action: () => setView('secretaria_ebd') }
+        { label: 'Módulo Interativo & Gamificação', shortcut: 'Ctrl+I', icon: Gamepad2, action: () => setView('interativo') }
+      ]
+    },
+    {
+      id: 'google_interatividade',
+      label: 'Google Interatividade',
+      accessKey: 'G',
+      items: [
+        { label: 'Google Meet (Salas & Videoconferências)', shortcut: 'Ctrl+G+M', icon: GoogleMeetIcon, action: () => setView('google_meet') },
+        { label: 'Google Sheets (Planilhas Google)', shortcut: '', icon: GoogleSheetsIcon, action: () => setView('google_sheets') },
+        { label: 'Google Docs (Documentos Google)', shortcut: '', icon: GoogleDocsIcon, action: () => setView('google_docs') },
+        { label: 'Google Tasks (Tarefas & Metas)', shortcut: '', icon: GoogleTasksIcon, action: () => setView('google_tasks') },
+        { label: 'Google Calendar (Agenda Ministerial)', shortcut: '', icon: GoogleCalendarIcon, action: () => setView('google_calendar') },
+        { label: 'Gmail Eclesiástico (Oficial Google)', shortcut: '', icon: GoogleGmailIcon, action: () => setView('gmail_oficial') },
+        { label: 'Google Forms (Inscrições & Eventos)', shortcut: '', icon: GoogleFormsIcon, action: () => setView('google_forms') },
+        { label: 'Google Classroom (Turmas & Aulas)', shortcut: '', icon: GoogleClassroomIcon, action: () => setView('google_classroom') },
+        { type: 'separator' },
+        { label: 'Módulo Interativo & Gamificação', shortcut: 'Ctrl+I', icon: Gamepad2, action: () => setView('interativo') },
+        { label: 'GIPP DOCs (Processador de Textos)', shortcut: '', icon: FileText, action: () => setView('docs_editor') },
+        { label: 'GIPP Planilhas (Spreadsheets Nativas)', shortcut: '', icon: FileSpreadsheet, action: () => setView('sheets_editor') }
       ]
     },
     {
@@ -371,13 +421,29 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       label: 'Financeiro',
       accessKey: 'F',
       items: [
-        { label: 'Livro Caixa: Entradas & Dízimos', shortcut: '', icon: ArrowUpCircle, action: () => setView('fin_entrada') },
-        { label: 'Livro Caixa: Saídas & Despesas', shortcut: '', icon: ArrowDownCircle, action: () => setView('fin_saida') },
-        { label: 'Demonstrativo de Resultado (DRE)', shortcut: '', icon: FileSpreadsheet, action: () => setView('fin_dre') },
-        { label: 'Conciliação Bancária DDA', shortcut: '', icon: CreditCard, action: () => setView('fin_conciliacao') },
-        { label: 'Carnês de Contribuição & Dízimo', shortcut: '', icon: DollarSign, action: () => setView('fin_carnes') },
-        { label: 'D.P. & Contabilidade eSocial', shortcut: '', icon: Briefcase, action: () => setView('dp_contabilidade') },
-        { label: 'Utilitários & Balancetes Fiscais', shortcut: '', icon: Sliders, action: () => setView('fin_utilitarios') }
+        { label: 'Livro Caixa: Entradas & Dízimos', shortcut: 'Ctrl+E', icon: ArrowUpCircle, action: () => setView('fin_entrada') },
+        { label: 'Livro Caixa: Saídas & Despesas', shortcut: 'Ctrl+D', icon: ArrowDownCircle, action: () => setView('fin_saida') },
+        { label: 'Demonstrativo de Resultado (DRE)', shortcut: '', icon: Activity, action: () => setView('fin_dre') },
+        { label: 'Conciliação Bancária DDA', shortcut: '', icon: FileCheck, action: () => setView('fin_conciliacao') },
+        { label: 'Carnês de Contribuição & Dízimo', shortcut: '', icon: CreditCard, action: () => setView('fin_carnes') },
+        { label: 'D.P. & Contabilidade eSocial / RH', shortcut: '', icon: Briefcase, action: () => setView('dp_contabilidade') },
+        { label: 'Utilitários & Balancetes Fiscais', shortcut: '', icon: Sliders, action: () => setView('fin_utilitarios') },
+        { type: 'separator' },
+        { label: 'Portal do Tesoureiro', shortcut: '', icon: DollarSign, action: () => setView('portal_tesoureiro') }
+      ]
+    },
+    {
+      id: 'pastoral',
+      label: 'Pastoral',
+      accessKey: 'P',
+      items: [
+        { label: 'Portal do Pastor & Gabinete', shortcut: '', icon: BookOpenText, action: () => setView('portal_pastor') },
+        { label: 'Pastoral IA (Inteligência Artificial)', shortcut: 'Ctrl+Shift+I', icon: Sparkles, action: () => setView('assistente_ai') },
+        { label: 'Bíblia Sagrada de Estudos', shortcut: 'Ctrl+B', icon: Book, action: () => setView('biblia') },
+        { type: 'separator' },
+        { label: 'Boletim Digital Informativo', shortcut: '', icon: Newspaper, action: () => setView('boletim') },
+        { label: 'Departamento de Missões', shortcut: '', icon: Globe, action: () => setView('missoes_painel') },
+        { label: 'Ministério da Família', shortcut: '', icon: Heart, action: () => setView('ministerio_familia') }
       ]
     },
     {
@@ -387,7 +453,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       items: [
         { label: 'TFDConnection: FDConnGIPP [Conectado]', shortcut: '', icon: Database, action: () => {} },
         { label: 'Backup e Restauração de Dados', shortcut: '', icon: Save, action: () => setView('config_backup') },
-        { label: 'Auditoria de Transações e SQL', shortcut: '', icon: Shield, action: () => setView('auditoria') },
+        { label: 'Auditoria de Transações e SQL', shortcut: '', icon: ShieldCheck, action: () => setView('auditoria') },
         { label: 'Lixeira de Registros Excluídos', shortcut: '', icon: Trash2, action: () => setView('lixeira') }
       ]
     },
@@ -399,8 +465,9 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
         { label: 'Pastoral IA (Inteligência Artificial)', shortcut: '', icon: Sparkles, action: () => setView('assistente_ai') },
         { label: 'GIPP Docs (Processador de Textos)', shortcut: '', icon: FileText, action: () => setView('docs_editor') },
         { label: 'GIPP Planilhas (Spreadsheets)', shortcut: '', icon: FileSpreadsheet, action: () => setView('sheets_editor') },
-        { label: 'Estúdio de Artes & Mídias Sociais', shortcut: '', icon: Palette, action: () => setView('rede_social') },
-        { label: 'Disparo de Mensagens em Lote', shortcut: '', icon: Mail, action: () => setView('mensagens_lote') },
+        { label: 'Estúdio de Artes & Mídias Sociais', shortcut: '', icon: ImagePlus, action: () => setView('rede_social') },
+        { label: 'Disparo de Mensagens em Lote WhatsApp', shortcut: '', icon: MessageCircle, action: () => setView('mensagens_lote') },
+        { label: 'Módulo Interativo & Gamificação', shortcut: '', icon: Gamepad2, action: () => setView('interativo') },
         { type: 'separator' },
         { label: 'Configurações do Sistema GIPP', shortcut: '', icon: Settings, action: () => setView('config_sistema') },
         { label: 'Personalização Visual & Temas', shortcut: '', icon: Palette, action: () => setView('config_visual') },
@@ -434,21 +501,136 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       accessKey: 'J',
       items: [
         { label: 'Manual Completo do Usuário', shortcut: 'F1', icon: HelpCircle, action: () => setView('manual') },
-        { label: 'Bíblia Sagrada de Estudos Offline', shortcut: '', icon: BookOpen, action: () => setView('biblia') },
+        { label: 'Bíblia Sagrada de Estudos Offline', shortcut: '', icon: Book, action: () => setView('biblia') },
         { label: 'Amparo Legal & Conformidade', shortcut: '', icon: ShieldCheck, action: () => setView('amparo_legal') },
         { label: 'Registro Oficial de Software', shortcut: '', icon: Award, action: () => setView('registro_software') },
         { label: 'Histórico de Versões (Changelog)', shortcut: '', icon: History, action: () => setView('changelog') },
         { type: 'separator' },
         { label: 'Sobre o GIPP Delphi 13 Florence...', shortcut: '', icon: Info, action: () => setView('sobre') },
-        { label: 'Suporte Direto com o Desenvolvedor', shortcut: '', icon: Code, action: () => setView('suporte_dev') }
+        { label: 'Suporte Direto com o Desenvolvedor', shortcut: '', icon: Code, action: () => setView('suporte_dev') },
+        ...(user?.id === 'dev' ? [
+          { label: 'Painel Master SaaS (Dev)', shortcut: '', icon: Code, action: () => setView('desenvolvedor') }
+        ] : []),
+        ...(user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' ? [
+          { label: 'Marketing & Divulgação', shortcut: '', icon: Share2, action: () => setView('marketing_social') }
+        ] : [])
       ]
     }
   ];
 
+  // Palette components definitions
+  const paletteTabs = [
+    { id: 'google', label: 'Google & Interatividade' },
+    { id: 'standard', label: 'Standard' },
+    { id: 'cadastros', label: 'Cadastros' },
+    { id: 'secretaria', label: 'Secretaria' },
+    { id: 'financeiro', label: 'Financeiro' },
+    { id: 'capacitacoes', label: 'Capacitações' },
+    { id: 'pastoral', label: 'Pastoral & IA' },
+    { id: 'ferramentas', label: 'Ferramentas' }
+  ];
+
+  const paletteComponents: Record<string, Array<{ id: string; label: string; icon: any; isGoogle?: boolean }>> = {
+    google: [
+      { id: 'google_meet', label: 'Meet', icon: GoogleMeetIcon, isGoogle: true },
+      { id: 'google_sheets', label: 'Sheets', icon: GoogleSheetsIcon, isGoogle: true },
+      { id: 'google_docs', label: 'Docs', icon: GoogleDocsIcon, isGoogle: true },
+      { id: 'google_tasks', label: 'Tasks', icon: GoogleTasksIcon, isGoogle: true },
+      { id: 'google_calendar', label: 'Calendar', icon: GoogleCalendarIcon, isGoogle: true },
+      { id: 'gmail_oficial', label: 'Gmail', icon: GoogleGmailIcon, isGoogle: true },
+      { id: 'google_forms', label: 'Forms', icon: GoogleFormsIcon, isGoogle: true },
+      { id: 'google_classroom', label: 'Classroom', icon: GoogleClassroomIcon, isGoogle: true },
+      { id: 'interativo', label: 'Interativo', icon: Gamepad2 },
+      { id: 'docs_editor', label: 'GIPP Docs', icon: FileText },
+      { id: 'sheets_editor', label: 'GIPP Planilhas', icon: FileSpreadsheet },
+    ],
+    standard: [
+      { id: 'dashboard', label: 'TFormMain', icon: LayoutDashboard },
+      { id: 'cad_membro', label: 'TMembers', icon: Users },
+      { id: 'fin_entrada', label: 'TBookCaixa', icon: ArrowUpCircle },
+      { id: 'fin_saida', label: 'TDespesas', icon: ArrowDownCircle },
+      { id: 'secretaria_integrada', label: 'TSecAgenda', icon: FileText },
+      { id: 'carteirinha_studio', label: 'TCardsStudio', icon: Users },
+      { id: 'manual', label: 'TUserManual', icon: HelpCircle },
+    ],
+    cadastros: [
+      { id: 'cad_membro', label: 'Membros', icon: Users },
+      { id: 'cad_igreja', label: 'Igreja Sede', icon: Building2 },
+      { id: 'cad_celula', label: 'Células', icon: Home },
+      { id: 'cad_patrimonio', label: 'Patrimônio', icon: Package },
+      { id: 'controle_frotas', label: 'Frotas', icon: Car },
+      { id: 'cad_departamento', label: 'Departamentos', icon: FolderTree },
+      { id: 'ministerio_louvor', label: 'Louvor', icon: Music },
+      { id: 'ministerio_midia', label: 'Mídia', icon: Video },
+      { id: 'ministerio_familia', label: 'Família', icon: Heart },
+      { id: 'salinha_kids', label: 'Kids', icon: Baby },
+      { id: 'missoes_painel', label: 'Missões', icon: Globe },
+      { id: 'visitantes', label: 'Visitantes', icon: HeartHandshake },
+      { id: 'cad_usuario', label: 'Usuários', icon: Lock },
+    ],
+    secretaria: [
+      { id: 'secretaria_integrada', label: 'Secretaria', icon: FileText },
+      { id: 'secretaria_livro_atas', label: 'Atas', icon: BookOpen },
+      { id: 'secretaria_certificados', label: 'Certificados', icon: Award },
+      { id: 'carteirinha_studio', label: 'Carteirinhas', icon: Users },
+      { id: 'credencial_lote', label: 'Credenciais', icon: Badge },
+      { id: 'qr_checkin', label: 'QR Check-in', icon: QrCode },
+      { id: 'relatorios', label: 'Relatórios', icon: FileText },
+      { id: 'boletim', label: 'Boletim', icon: Newspaper },
+      { id: 'email_interno', label: 'Webmail', icon: Mail },
+    ],
+    financeiro: [
+      { id: 'fin_entrada', label: 'Entradas', icon: ArrowUpCircle },
+      { id: 'fin_saida', label: 'Despesas', icon: ArrowDownCircle },
+      { id: 'fin_dre', label: 'DRE', icon: Activity },
+      { id: 'fin_conciliacao', label: 'Conciliação', icon: FileCheck },
+      { id: 'fin_carnes', label: 'Carnês', icon: CreditCard },
+      { id: 'dp_contabilidade', label: 'D.P. / RH', icon: Briefcase },
+      { id: 'fin_utilitarios', label: 'Utilitários', icon: Sliders },
+      { id: 'portal_tesoureiro', label: 'Tesouraria', icon: DollarSign },
+    ],
+    capacitacoes: [
+      { id: 'gestao_cursos', label: 'Cursos EAD', icon: GraduationCap },
+      { id: 'formacao_obreiros', label: 'Obreiros', icon: Award },
+      { id: 'curso_teologia', label: 'Teologia', icon: BookOpen },
+      { id: 'secretaria_ebd', label: 'EBD', icon: BookOpenText },
+      { id: 'interativo', label: 'Interativo', icon: Gamepad2 },
+    ],
+    pastoral: [
+      { id: 'portal_pastor', label: 'Portal Pastor', icon: BookOpenText },
+      { id: 'assistente_ai', label: 'Pastoral IA', icon: Sparkles },
+      { id: 'biblia', label: 'Bíblia', icon: Book },
+      { id: 'boletim', label: 'Boletim', icon: Newspaper },
+      { id: 'missoes_painel', label: 'Missões', icon: Globe },
+      { id: 'ministerio_familia', label: 'Família', icon: Heart },
+    ],
+    ferramentas: [
+      { id: 'assistente_ai', label: 'Pastoral IA', icon: Sparkles },
+      { id: 'docs_editor', label: 'GIPP Docs', icon: FileText },
+      { id: 'sheets_editor', label: 'Planilhas', icon: FileSpreadsheet },
+      { id: 'rede_social', label: 'Estúdio Artes', icon: ImagePlus },
+      { id: 'mensagens_lote', label: 'Whats Lote', icon: MessageCircle },
+      { id: 'config_backup', label: 'Backup DB', icon: Database },
+      { id: 'auditoria', label: 'Auditoria', icon: ShieldCheck },
+      { id: 'lixeira', label: 'Lixeira', icon: Trash2 },
+      { id: 'config_sistema', label: 'Configurações', icon: Settings },
+      { id: 'config_visual', label: 'Visual', icon: Palette },
+    ]
+  };
+
   const filteredModules = ALL_AVAILABLE_MODULES.filter(m => {
     if (!isModuleAllowed(m.id)) return false;
     if (!searchQuery) return true;
-    return m.label.toLowerCase().includes(searchQuery.toLowerCase()) || m.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    return (
+      m.label.toLowerCase().includes(query) || 
+      m.id.toLowerCase().includes(query) ||
+      (m.id.startsWith('google_') && 'google'.includes(query)) ||
+      (m.id.includes('meet') && 'meet'.includes(query)) ||
+      (m.id.includes('sheets') && 'planilha'.includes(query)) ||
+      (m.id.includes('docs') && 'documento'.includes(query)) ||
+      (m.id.includes('interativo') && 'gamificacao interatividade quiz'.includes(query))
+    );
   });
 
   const WindowIcon = mMeta.icon || LayoutDashboard;
@@ -521,6 +703,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
         <div className="flex items-center flex-wrap">
           {menuStructure.map(menu => {
             const isOpen = activeMenu === menu.id;
+            const isGoogleMenu = menu.id === 'google_interatividade';
             return (
               <div key={menu.id} className="relative">
                 <button
@@ -528,19 +711,26 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
                   onMouseEnter={() => {
                     if (activeMenu) setActiveMenu(menu.id);
                   }}
-                  className={`px-2.5 py-1 rounded-2xs text-[11px] font-bold cursor-pointer transition-all duration-150 ${
+                  className={`px-2.5 py-1 rounded-2xs text-[11px] font-bold cursor-pointer transition-all duration-150 flex items-center gap-1.5 ${
                     isOpen 
                       ? isHighContrast ? 'bg-yellow-400 text-black font-black border-2 border-white' : 'bg-[#004E98] text-white border border-[#003366]' 
-                      : isHighContrast ? 'hover:bg-yellow-950 text-yellow-300' : 'hover:bg-[#CBD5E1] text-inherit'
+                      : isHighContrast 
+                        ? 'hover:bg-yellow-950 text-yellow-300' 
+                        : isGoogleMenu 
+                          ? 'hover:bg-blue-100 text-[#004E98] font-black' 
+                          : 'hover:bg-[#CBD5E1] text-inherit'
                   }`}
                 >
-                  <span className={`underline decoration-1 ${isHighContrast ? 'decoration-yellow-400' : 'decoration-[#004E98]'}`}>{menu.label.charAt(0)}</span>
-                  {menu.label.slice(1)}
+                  {isGoogleMenu && <GoogleGLogo size={12} />}
+                  <span>
+                    <span className={`underline decoration-1 ${isHighContrast ? 'decoration-yellow-400' : 'decoration-[#004E98]'}`}>{menu.label.charAt(0)}</span>
+                    {menu.label.slice(1)}
+                  </span>
                 </button>
 
                 {/* Dropdown Menu (Delphi Florence VCL Menu Style com transição suave) */}
                 {isOpen && (
-                  <div className={`absolute left-0 top-full mt-0.5 w-68 py-1 z-50 text-[11px] font-semibold transition-all duration-150 animate-fadeIn ${themeClasses.menuDropdown}`}>
+                  <div className={`absolute left-0 top-full mt-0.5 w-76 py-1 z-50 text-[11px] font-semibold transition-all duration-150 animate-fadeIn ${themeClasses.menuDropdown}`}>
                     {menu.items.map((item: any, idx: number) => {
                       if (item.type === 'separator') {
                         return <div key={`sep-${idx}`} className={`my-1 border-t ${isHighContrast ? 'border-yellow-400' : 'border-[#BAC7D5] border-b border-white'}`} />;
@@ -562,17 +752,17 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                            <span className="w-4.5 h-4.5 flex items-center justify-center shrink-0">
                               {item.checked ? (
                                 <Check size={13} className={isHighContrast ? 'text-yellow-400 group-hover:text-black' : 'text-[#004E98] group-hover:text-white'} />
                               ) : ItemIcon ? (
-                                <ItemIcon size={13} className={isHighContrast ? 'text-yellow-300 group-hover:text-black' : 'text-[#334E68] group-hover:text-white'} />
+                                <ItemIcon size={14} className={isHighContrast ? 'text-yellow-300 group-hover:text-black' : 'group-hover:text-white'} />
                               ) : null}
                             </span>
                             <span className="truncate">{item.label}</span>
                           </div>
                           {item.shortcut && (
-                            <span className={`text-[10px] opacity-75 font-mono ml-3 shrink-0 ${isHighContrast ? 'group-hover:text-black text-yellow-200' : 'group-hover:text-white'}`}>
+                            <span className={`text-[10px] opacity-75 font-mono ml-2 shrink-0 ${isHighContrast ? 'group-hover:text-black text-yellow-200' : 'group-hover:text-white'}`}>
                               {item.shortcut}
                             </span>
                           )}
@@ -628,6 +818,77 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
           </button>
         </div>
       </nav>
+
+      {/* =========================================================================
+          2.1. DELPHI VCL COMPONENT PALETTE & TOOLBAR (TComponentPalette / TToolBar)
+          ========================================================================= */}
+      {showComponentPalette && (
+        <div className={`border-b select-none shrink-0 ${themeClasses.toolBar} shadow-xs`}>
+          {/* Palette Tabs */}
+          <div className="flex items-center gap-0.5 px-2 pt-1 border-b border-[#BAC7D5] overflow-x-auto no-scrollbar bg-[#DFE3E8]">
+            {paletteTabs.map(tab => {
+              const isSelected = paletteTab === tab.id;
+              const isGoogleTab = tab.id === 'google';
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setPaletteTab(tab.id)}
+                  className={`px-2.5 py-0.5 text-[10px] font-bold rounded-t-xs border-t border-l border-r transition-colors cursor-pointer flex items-center gap-1 shrink-0 ${
+                    isSelected
+                      ? isHighContrast
+                        ? 'bg-black text-yellow-300 border-yellow-400'
+                        : 'bg-[#ECEFF4] text-[#004E98] border-[#BAC7D5] border-b-0 -mb-px font-black shadow-xs'
+                      : isHighContrast
+                        ? 'bg-black text-slate-400 border-transparent hover:text-yellow-200'
+                        : 'bg-[#D2D7DF] text-[#334E68] border-transparent hover:bg-[#E2E6EA]'
+                  }`}
+                >
+                  {isGoogleTab && <GoogleGLogo size={10} />}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+            <div className="ml-auto flex items-center gap-1 pl-2">
+              <button
+                onClick={() => setShowComponentPalette(false)}
+                className="text-[10px] text-slate-500 hover:text-slate-800 px-1"
+                title="Ocultar Paleta de Componentes"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Palette Component Icons */}
+          <div className="flex items-center gap-1 px-2 py-1 overflow-x-auto no-scrollbar min-h-[38px] bg-[#ECEFF4]">
+            {paletteComponents[paletteTab]?.map((comp) => {
+              const CompIcon = comp.icon;
+              const isActive = view === comp.id;
+              return (
+                <button
+                  key={comp.id}
+                  onClick={() => setView(comp.id)}
+                  title={`${comp.label} (Abrir Form_${comp.id})`}
+                  className={`flex flex-col items-center justify-center px-2 py-1 min-w-[54px] rounded-xs cursor-pointer transition-all ${
+                    isActive
+                      ? isHighContrast
+                        ? 'bg-yellow-400 text-black border border-white'
+                        : 'bg-[#004E98] text-white border-t-2 border-l-2 border-t-[#003366] border-l-[#003366] border-r-2 border-b-2 border-r-white border-b-white shadow-inner font-bold'
+                      : themeClasses.button3D
+                  }`}
+                >
+                  <div className="w-4.5 h-4.5 flex items-center justify-center mb-0.5">
+                    <CompIcon size={14} className={isActive ? 'text-white' : comp.isGoogle ? '' : 'text-[#004E98]'} />
+                  </div>
+                  <span className={`text-[9px] font-mono leading-none truncate max-w-[62px] ${isActive ? 'text-white' : 'text-[#102A43]'}`}>
+                    {comp.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           3. MAIN MDI WORKSPACE CONTAINER (Form View Area)
@@ -1018,7 +1279,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Ex: membros, caixa, teologia, ebd..."
+                    placeholder="Ex: google meet, planilhas, teologia, dízimos, louvor..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full px-3 py-2 bg-white border-t-2 border-l-2 border-t-[#6E7A8A] border-l-[#6E7A8A] border-r border-b border-r-[#CBD5E1] border-b-[#CBD5E1] text-xs font-bold text-[#0F172A] rounded-2xs focus:outline-none focus:border-[#004E98]"

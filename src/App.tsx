@@ -8739,7 +8739,7 @@ export const PrintSystem = ({
                     <div className="space-y-4">
                         <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-250 pb-2 flex justify-between items-center">
                             <span>Demonstrativo Contábil • Folha Analítica Consolidada de Pessoal</span>
-                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 9.5.0 Ultimate Platinum v14</span>
+                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 10.0.0 Ultimate Platinum v15</span>
                         </h2>
                         
                         {/* Parameters summary description */}
@@ -10431,9 +10431,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                                         Google Integração
                                     </span>
                                 </div>
-                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-xs">
-                                    Autorizado
-                                </span>
+                                <GoogleAuthorizedBadge compact={true} showIcon={false} label="Autorizado" />
                             </div>
                         ) : (
                             <div className="my-4 border-t border-blue-200/60 w-8 mx-auto rounded-full flex justify-center py-1">
@@ -16406,9 +16404,7 @@ const MemberPortalLayout = () => {
                                             Google Integração
                                         </span>
                                     </div>
-                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        Autorizado
-                                    </span>
+                                    <GoogleAuthorizedBadge compact={true} showIcon={false} label="Autorizado" />
                                 </div>
                                 <div className="space-y-1.5">
                                     {filteredGoogleNavItems.map(item => (
@@ -16584,9 +16580,7 @@ const MemberPortalLayout = () => {
                                             Google Integração
                                         </span>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                        Autorizado
-                                    </span>
+                                    <GoogleAuthorizedBadge compact={true} showIcon={false} label="Autorizado" />
                                 </div>
                                 <div className="grid grid-cols-3 gap-3">
                                     {filteredGoogleNavItems.map(item => {
@@ -17308,7 +17302,6 @@ const AppLayout = () => {
         { id: 'secretaria_integrada', icon: ClipboardList, label: "Secretaria & Tarefas", color: 'text-blue-500', bg: 'bg-blue-500/10' },
         { id: 'secretaria_livro_atas', icon: BookOpen, label: "Livro de Atas", color: 'text-amber-500', bg: 'bg-amber-500/10' },
         { id: 'secretaria_certificados', icon: Award, label: "Certificados", color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-        { id: 'gestao_cursos', icon: GraduationCap, label: "Cursos EAD", color: 'text-green-500', bg: 'bg-green-500/10' },
         { id: 'relatorios', icon: FileText, label: "Relatórios PDF", color: 'text-slate-600', bg: 'bg-slate-600/10' },
         { id: 'carteirinha_studio', icon: IdCard, label: "Estúdio Carteirinhas", color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'rede_social', icon: ImagePlus, label: "Estúdio de Artes", color: 'text-rose-500', bg: 'bg-rose-500/10' },
@@ -19600,7 +19593,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
                         <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>{saasSettings?.saas_versao_sistema || "Versão 9.5.0 Ultimate Platinum v14"}</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 10.0.0 Ultimate Platinum v15"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -22520,7 +22513,7 @@ export default function App() {
                             </div>
                             <div className="text-center lg:text-left">
                                 <h2 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1">{db.igreja?.nome || "Igreja Local"}</h2>
-                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 9.5.0 Ultimate Platinum v14</p>
+                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 10.0.0 Ultimate Platinum v15</p>
                             </div>
                         </div>
                         <div>

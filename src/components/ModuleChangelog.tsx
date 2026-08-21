@@ -47,11 +47,25 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 9.5.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 10.0.0 */}
             <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance"> 
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v9.5.0 - Ícones Oficiais do GIPP Office, Modelos Eclesiásticos & Atualização Geral</h3>
-                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Julho 2026 (Atual)</p>
+                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v10.0.0 - Divisão Oficial Google Integração, Ícones Oficiais do Google Workspace, Selo com Pulso Ativo & Gestão de Formulários</h3>
+                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Agosto 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Divisão Exclusiva "Google Integração":</strong> Criação de uma seção dedicada e proeminente no menu lateral administrativo, painel desktop e Portal do Membro com a logo oficial do Google (G multicolor) e badge "Autorizado", agrupando de forma harmoniosa e clara os 8 serviços integrados da suíte Google Workspace.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Ícones Oficiais do Google Workspace:</strong> Implementação de componentes de ícones vetoriais multi-cor de alta fidelidade para Google Meet, Google Sheets, Google Docs, Google Tasks, Google Calendar, Gmail Eclesiástico, Google Forms e Google Classroom em todo o sistema.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Selo de Autorização Interativo com Pulso & Tooltip:</strong> Evolução do selo <code className="text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded text-xs">.google-authorized-badge</code> com iluminação suave, efeito hover glow, animação radial de pulso verde ativa e tooltip informativo sobre autenticação certificada via Google OAuth 2.0 e criptografia de ponta a ponta.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Exclusão e Gestão no Google Forms Eclesiástico:</strong> Integração com a API do Google Drive para exclusão definitiva de formulários diretamente pelo painel administrativo, com modal de confirmação e sincronização em tempo real da listagem.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Atualização Geral de Pacotes, Planos & Versão:</strong> Homologação dos novos módulos de integração em todos os pacotes SaaS (Básico, Standard e Avançado), atualização da matriz de permissões no Módulo Desenvolvedor e elevação do ecossistema para GIPP v10.0.0 Ultimate Platinum v15.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO DA VERSÃO 9.5.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300 opacity-90"> 
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-extrabold text-lg text-slate-800 font-[Outfit]">v9.5.0 - Ícones Oficiais do GIPP Office, Modelos Eclesiásticos & Atualização Geral</h3>
+                <p className="text-xs text-slate-500 font-black uppercase mb-3 tracking-wider">Julho 2026</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Ícones Oficiais GIPP DOCs & Planilhas:</strong> Renovação completa da identidade visual dos aplicativos de escritório com ícones customizados inspirados no Google Docs (documento azul dobrado com linhas de texto) e Google Sheets (grade verde de planilha), aplicados nos menus, barras superiores e lançadores do sistema.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Modelos de Documentos no GIPP DOCs:</strong> Adicionado seletor com modelos eclesiásticos prontos para carregamento instantâneo (Carta de Recomendação, Ofício Pastoral Oficial, Ata de Reunião de Diretoria, Certificado de Batismo/Apresentação e Regimento Interno de Departamento).</li>

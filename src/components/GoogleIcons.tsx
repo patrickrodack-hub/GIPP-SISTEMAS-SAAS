@@ -217,21 +217,98 @@ export const GoogleClassroomIcon: React.FC<IconProps> = ({ size = 20, className 
 /**
  * Badge de Autorização Oficial Google
  */
-export const GoogleAuthorizedBadge: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
+export const GoogleAuthorizedBadge: React.FC<{ 
+  compact?: boolean;
+  className?: string;
+  showIcon?: boolean;
+  label?: string;
+}> = ({ 
+  compact = false, 
+  className = "",
+  showIcon = true,
+  label = "Autorizado"
+}) => {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const tooltipText = "Ambiente Autorizado: Conexão segura e certificada via Google OAuth 2.0";
+
   if (compact) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-wider">
-        <GoogleGLogo size={10} />
-        Oficial
-      </span>
+      <div className="relative inline-flex items-center">
+        <button
+          type="button"
+          onClick={() => setShowTooltip(!showTooltip)}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          onFocus={() => setShowTooltip(true)}
+          onBlur={() => setShowTooltip(false)}
+          title={tooltipText}
+          aria-label={tooltipText}
+          className={`google-authorized-badge group relative inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-500/40 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-200 text-[9px] font-black uppercase tracking-wider shadow-xs hover:shadow-md hover:shadow-emerald-500/20 hover:border-emerald-500 hover:bg-emerald-100/90 dark:hover:bg-emerald-900/90 transition-all duration-200 cursor-pointer select-none ${className}`}
+        >
+          {/* Indicador de Pulso Verde Ativo */}
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+          </span>
+          {showIcon && <GoogleGLogo size={10} />}
+          <span>{label}</span>
+        </button>
+
+        {/* Tooltip informativo */}
+        {showTooltip && (
+          <div 
+            role="tooltip"
+            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-52 p-2 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-[10px] font-medium leading-tight shadow-xl border border-emerald-500/30 backdrop-blur-md text-center pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-center gap-1 text-emerald-400 font-bold mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              {tooltipText}
+            </div>
+            <div className="text-[9px] text-slate-300">Criptografia de ponta a ponta e conformidade total com APIs Google.</div>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+          </div>
+        )}
+      </div>
     );
   }
+
   return (
-    <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/40 text-blue-800 dark:text-blue-200">
-      <GoogleGLogo size={14} />
-      <span className="text-[10px] font-bold tracking-wide">
-        Google Workspace Integrado
-      </span>
+    <div className="relative inline-flex items-center">
+      <button
+        type="button"
+        onClick={() => setShowTooltip(!showTooltip)}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onFocus={() => setShowTooltip(true)}
+        onBlur={() => setShowTooltip(false)}
+        title={tooltipText}
+        aria-label={tooltipText}
+        className={`google-authorized-badge group relative flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50/90 dark:bg-emerald-950/80 border border-emerald-500/40 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-200 text-[10px] font-extrabold tracking-wide shadow-xs hover:shadow-lg hover:shadow-emerald-500/25 hover:border-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-all duration-200 cursor-pointer select-none ${className}`}
+      >
+        {/* Indicador de Pulso Verde Ativo */}
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        {showIcon && <GoogleGLogo size={13} />}
+        <span className="font-black uppercase tracking-wider">{label}</span>
+      </button>
+
+      {/* Tooltip informativo */}
+      {showTooltip && (
+        <div 
+          role="tooltip"
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-56 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-[11px] font-medium leading-snug shadow-xl border border-emerald-500/40 backdrop-blur-md text-center pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            {tooltipText}
+          </div>
+          <div className="text-[9.5px] text-slate-300">Ambiente seguro verificado com autenticação oficial OAuth 2.0.</div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+        </div>
+      )}
     </div>
   );
 };
+
