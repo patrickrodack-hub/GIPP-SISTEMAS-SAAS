@@ -39,6 +39,11 @@ import {
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
 import { GippDocsIcon, GippSheetsIcon } from './components/GippOfficeIcons';
+import { 
+    GoogleGLogo, GoogleMeetIcon, GoogleSheetsIcon, GoogleDocsIcon, 
+    GoogleTasksIcon, GoogleCalendarIcon, GoogleGmailIcon, GoogleFormsIcon, 
+    GoogleClassroomIcon, GoogleAuthorizedBadge 
+} from './components/GoogleIcons';
 import { ChurchContext } from './context/ChurchContext';
 export { ChurchContext };
 export { 
@@ -2071,6 +2076,16 @@ const THREED_COLORS = {
 };
 
 export const SystemIcon = ({ id, icon: Icon, active, size = 18 }) => {
+    // Se for módulo Google Workspace, renderiza com fidelidade o vetor oficial multi-cor do Google
+    if (id === 'google_meet' || id === 'portal_meet') return <GoogleMeetIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'google_sheets' || id === 'portal_sheets') return <GoogleSheetsIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'google_docs' || id === 'portal_docs') return <GoogleDocsIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'google_tasks' || id === 'portal_google_tasks') return <GoogleTasksIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'google_calendar' || id === 'portal_calendar') return <GoogleCalendarIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'gmail_oficial' || id === 'portal_gmail') return <GoogleGmailIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'google_forms' || id === 'portal_forms') return <GoogleFormsIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+    if (id === 'google_classroom' || id === 'portal_classroom') return <GoogleClassroomIcon size={size + 2} className={`shrink-0 ${active ? "drop-shadow-md scale-110" : "hover:scale-105"}`} />;
+
     const context = useContext(ChurchContext);
     const pack = context?.db?.igreja?.pacote_icones || 'gipp';
     
@@ -10405,6 +10420,37 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     </div>
                 )}
 
+                {/* Divisão Oficial Google Integração */}
+                {(checkPlan('google_meet') || checkPlan('google_sheets') || checkPlan('google_docs') || checkPlan('google_tasks') || checkPlan('google_calendar') || checkPlan('gmail_oficial') || checkPlan('google_forms') || checkPlan('google_classroom')) && (
+                    <div className="pt-1">
+                        {open ? (
+                            <div className="flex items-center justify-between px-2 mt-7 mb-3 pt-1">
+                                <div className="flex items-center gap-2">
+                                    <GoogleGLogo size={16} />
+                                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-[0.14em] flex items-center gap-1.5">
+                                        Google Integração
+                                    </span>
+                                </div>
+                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-xs">
+                                    Autorizado
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="my-4 border-t border-blue-200/60 w-8 mx-auto rounded-full flex justify-center py-1">
+                                <GoogleGLogo size={16} />
+                            </div>
+                        )}
+                        {checkPlan('google_meet') && <MenuItem id="google_meet" icon={GoogleMeetIcon} label="Google Meet (Salas)" />}
+                        {checkPlan('google_sheets') && <MenuItem id="google_sheets" icon={GoogleSheetsIcon} label="Google Sheets (Planilhas)" />}
+                        {checkPlan('google_docs') && <MenuItem id="google_docs" icon={GoogleDocsIcon} label="Google Docs (Documentos)" />}
+                        {checkPlan('google_tasks') && <MenuItem id="google_tasks" icon={GoogleTasksIcon} label="Google Tasks (Tarefas)" />}
+                        {checkPlan('google_calendar') && <MenuItem id="google_calendar" icon={GoogleCalendarIcon} label="Google Calendar (Agenda)" />}
+                        {checkPlan('gmail_oficial') && <MenuItem id="gmail_oficial" icon={GoogleGmailIcon} label="Gmail Eclesiástico" />}
+                        {checkPlan('google_forms') && <MenuItem id="google_forms" icon={GoogleFormsIcon} label="Google Forms (Inscrições)" />}
+                        {checkPlan('google_classroom') && <MenuItem id="google_classroom" icon={GoogleClassroomIcon} label="Google Classroom (Turmas)" />}
+                    </div>
+                )}
+
                 {(hasPermission('access_sec_certificados') || hasPermission('access_midia') || hasPermission('access_interativo') || user?.id === 'dev' || user?.usuario?.toLowerCase() === 'mary' || hasPermission('master')) && (
                     <div>
                         <MenuGroup label="GIPP Escritório & Mídia" />
@@ -10412,14 +10458,6 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_midia') && checkPlan('rede_social') && <MenuItem id="rede_social" icon={ImagePlus} label="Estúdio de Artes" />}
                         {hasPermission('access_midia') && checkPlan('docs_editor') && <MenuItem id="docs_editor" icon={GippDocsIcon} label="GIPP DOCs" />}
                         {hasPermission('access_midia') && checkPlan('sheets_editor') && <MenuItem id="sheets_editor" icon={GippSheetsIcon} label="GIPP Planilhas" />}
-                        {checkPlan('google_sheets') && <MenuItem id="google_sheets" icon={FileSpreadsheet} label="Google Sheets (Planilhas)" />}
-                        {checkPlan('google_docs') && <MenuItem id="google_docs" icon={FileText} label="Google Docs (Documentos)" />}
-                        {checkPlan('google_tasks') && <MenuItem id="google_tasks" icon={CheckSquare} label="Google Tasks (Tarefas)" />}
-                        {checkPlan('google_calendar') && <MenuItem id="google_calendar" icon={Calendar} label="Google Calendar (Agenda)" />}
-                        {checkPlan('gmail_oficial') && <MenuItem id="gmail_oficial" icon={Mail} label="Gmail Eclesiástico" />}
-                        {checkPlan('google_forms') && <MenuItem id="google_forms" icon={ClipboardList} label="Google Forms (Inscrições)" />}
-                        {checkPlan('google_classroom') && <MenuItem id="google_classroom" icon={GraduationCap} label="Google Classroom (Turmas)" />}
-                        {checkPlan('google_meet') && <MenuItem id="google_meet" icon={Video} label="Google Meet (Salas)" />}
                         {hasPermission('access_interativo') && checkPlan('interativo') && <MenuItem id="interativo" icon={Gamepad2} label="Módulo Interativo & Gamificação" />}
                         {hasPermission('access_sec_certificados') && checkPlan('credencial_lote') && <MenuItem id="credencial_lote" icon={Badge} label="Credencial em Lote" />}
                     </div>
@@ -16239,9 +16277,19 @@ const MemberPortalLayout = () => {
         { id: 'portal_cursos', icon: GraduationCap, label: 'Cursos', hoverColor: 'group-hover:text-purple-500' },
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
-        { id: 'portal_meet', icon: Video, label: 'Google Meet', hoverColor: 'group-hover:text-emerald-500' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
         { id: 'portal_interativo', icon: Gamepad2, label: 'Interatividade', hoverColor: 'group-hover:text-indigo-400' },
+    ];
+
+    const googleNavItems = [
+        { id: 'portal_meet', icon: GoogleMeetIcon, label: 'Google Meet', isGoogle: true },
+        { id: 'portal_sheets', icon: GoogleSheetsIcon, label: 'Google Sheets', isGoogle: true },
+        { id: 'portal_docs', icon: GoogleDocsIcon, label: 'Google Docs', isGoogle: true },
+        { id: 'portal_google_tasks', icon: GoogleTasksIcon, label: 'Google Tasks', isGoogle: true },
+        { id: 'portal_calendar', icon: GoogleCalendarIcon, label: 'Google Calendar', isGoogle: true },
+        { id: 'portal_gmail', icon: GoogleGmailIcon, label: 'Gmail Eclesiástico', isGoogle: true },
+        { id: 'portal_forms', icon: GoogleFormsIcon, label: 'Google Forms', isGoogle: true },
+        { id: 'portal_classroom', icon: GoogleClassroomIcon, label: 'Google Classroom', isGoogle: true },
     ];
 
     const filteredBaseNavItems = baseNavItems.filter(item => {
@@ -16253,6 +16301,10 @@ const MemberPortalLayout = () => {
             return canAccessFormacao;
         }
         return allowedModules.includes(item.id);
+    });
+
+    const filteredGoogleNavItems = googleNavItems.filter(item => {
+        return allowedModules.includes(item.id) || allowedModules.includes('portal_meet') || user?.nivel === 'master';
     });
 
     const navItems = [...filteredBaseNavItems];
@@ -16340,9 +16392,38 @@ const MemberPortalLayout = () => {
                     <nav className="flex-1 p-5 space-y-2 overflow-y-auto custom-scrollbar">
                         {navItems.map(item => (
                             <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all group ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transform scale-[1.02]' : 'text-slate-500 hover:bg-emerald-50 hover:text-slate-800'}`}>
-                                <item.icon size={20} className={`transition-transform duration-300 ${view === item.id ? 'text-white' : `${item.hoverColor} group-hover:scale-110`}`}/> {item.label}
+                                <item.icon size={20} className={`transition-transform duration-300 ${view === item.id ? 'text-white' : `${item.hoverColor || ''} group-hover:scale-110`}`}/> {item.label}
                             </button>
                         ))}
+
+                        {/* Divisão Google Integração no Portal */}
+                        {filteredGoogleNavItems.length > 0 && (
+                            <div className="pt-4">
+                                <div className="flex items-center justify-between px-2 mb-3">
+                                    <div className="flex items-center gap-1.5">
+                                        <GoogleGLogo size={15} />
+                                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                                            Google Integração
+                                        </span>
+                                    </div>
+                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        Autorizado
+                                    </span>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {filteredGoogleNavItems.map(item => (
+                                        <button 
+                                            key={item.id} 
+                                            onClick={() => setView(item.id)} 
+                                            className={`w-full flex items-center gap-3.5 p-3 rounded-2xl font-bold transition-all group ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                                        >
+                                            <item.icon size={20} className="shrink-0" />
+                                            <span className="text-xs truncate">{item.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </nav>
                     <div className="p-6 border-t border-slate-200/60 shrink-0">
                         <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-xs">
@@ -16492,6 +16573,38 @@ const MemberPortalLayout = () => {
                                 );
                             })}
                         </div>
+
+                        {/* Divisão Google Integração no Mobile */}
+                        {filteredGoogleNavItems.length > 0 && (
+                            <div className="mt-6 pt-5 border-t border-slate-200/50">
+                                <div className="flex items-center justify-between mb-4 px-1">
+                                    <div className="flex items-center gap-2">
+                                        <GoogleGLogo size={16} />
+                                        <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                                            Google Integração
+                                        </span>
+                                    </div>
+                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                        Autorizado
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {filteredGoogleNavItems.map(item => {
+                                        const isSelected = view === item.id;
+                                        return (
+                                            <button 
+                                                key={item.id} 
+                                                onClick={() => { setView(item.id); setShowMoreMenu(false); }} 
+                                                className={`flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl transition-all border ${isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 font-extrabold shadow-xs' : 'bg-slate-500/5 border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-500/10'}`}
+                                            >
+                                                <item.icon size={24} className="shrink-0" />
+                                                <span className="text-[10px] font-bold text-center truncate w-full leading-tight">{item.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                         <div className="mt-6 pt-5 border-t border-slate-200/50 flex flex-col gap-3">
                             <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-500/5 border border-slate-200/20">
                                 <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold font-mono overflow-hidden shrink-0">

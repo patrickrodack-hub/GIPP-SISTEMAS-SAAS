@@ -22,7 +22,8 @@ import {
   UserPlus,
   Download,
   ShieldCheck,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import {
   getWorkspaceAccessToken,
@@ -30,6 +31,7 @@ import {
   signOutGoogleWorkspace,
   listDriveFiles,
   createGoogleForm,
+  deleteDriveFile,
   getGoogleForm,
   getGoogleFormResponses,
   parseGoogleFormResponses,
@@ -37,7 +39,7 @@ import {
   GoogleFormInfo,
   ParsedFormResponse
 } from '../services/googleWorkspaceService';
-import { ChurchContext } from '../App';
+import { ChurchContext, ConfirmModal } from '../App';
 import { collection, addDoc } from 'firebase/firestore';
 
 interface ModuleGoogleFormsProps {
@@ -300,6 +302,10 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db: propDb
   const [importingState, setImportingState] = useState<Record<string, 'importing' | 'imported_visitante' | 'imported_membro'>>({});
   const [batchImporting, setBatchImporting] = useState(false);
 
+  // Deletion state
+  const [formToDelete, setFormToDelete] = useState<GoogleDriveFile | null>(null);
+  const [deletingForm, setDeletingForm] = useState(false);
+
   useEffect(() => {
     if (accessToken) {
       loadForms();
@@ -433,6 +439,33 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db: propDb
       });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleConfirmDeleteForm = async () => {
+    if (!accessToken || !formToDelete) return;
+    try {
+      setDeletingForm(true);
+      await deleteDriveFile(accessToken, formToDelete.id);
+      addToast(`Formulário "${formToDelete.name}" excluído com sucesso!`, 'success');
+      setStatusMessage({
+        type: 'success',
+        text: `O formulário "${formToDelete.name}" foi excluído com sucesso.`
+      });
+      if (selectedFormResponses?.formId === formToDelete.id) {
+        setSelectedFormResponses(null);
+      }
+      setFormToDelete(null);
+      await loadForms();
+    } catch (err: any) {
+      console.error('Erro ao excluir formulário:', err);
+      addToast(err.message || 'Erro ao excluir formulário do Google Forms.', 'error');
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Erro ao excluir formulário do Google Forms.'
+      });
+    } finally {
+      setDeletingForm(false);
     }
   };
 
@@ -777,15 +810,25 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db: propDb
                       <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl flex-shrink-0">
                         <ClipboardList className="w-5 h-5" />
                       </div>
-                      <a
-                        href={form.webViewLink || `https://docs.google.com/forms/d/${form.id}/edit`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 text-slate-400 hover:text-purple-600 transition"
-                        title="Abrir no Google Forms"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={form.webViewLink || `https://docs.google.com/forms/d/${form.id}/edit`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                          title="Abrir no Google Forms"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setFormToDelete(form)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          title="Excluir Formulário"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div>
@@ -840,12 +883,28 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db: propDb
                   <p className="text-xs text-slate-500">{selectedFormResponses.title}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedFormResponses(null)}
-                className="text-slate-400 hover:text-slate-600 text-base font-bold p-1 rounded-lg"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentForm = forms.find(f => f.id === selectedFormResponses.formId) || ({
+                      id: selectedFormResponses.formId,
+                      name: selectedFormResponses.title
+                    } as GoogleDriveFile);
+                    setFormToDelete(currentForm);
+                  }}
+                  className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition"
+                  title="Excluir Formulário"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setSelectedFormResponses(null)}
+                  className="text-slate-400 hover:text-slate-600 text-base font-bold p-1 rounded-lg"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Header Actions & Stats */}
@@ -1060,6 +1119,23 @@ export const ModuleGoogleForms: React.FC<ModuleGoogleFormsProps> = ({ db: propDb
           </div>
         </div>
       )}
+
+      {/* Motor de Exclusão do Formulário */}
+      <ConfirmModal
+        isOpen={!!formToDelete}
+        onClose={() => {
+          if (!deletingForm) setFormToDelete(null);
+        }}
+        onCancel={() => {
+          if (!deletingForm) setFormToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteForm}
+        title="Excluir Formulário Google"
+        message={`Tem certeza que deseja excluir o formulário "${formToDelete?.name}"? Esta ação removerá o formulário do Google Forms e do Google Drive.`}
+        confirmText={deletingForm ? 'Excluindo...' : 'Sim, Excluir'}
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 };

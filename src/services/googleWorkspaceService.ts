@@ -171,17 +171,32 @@ export const listDriveFiles = async (
 };
 
 export const deleteDriveFile = async (accessToken: string, fileId: string): Promise<boolean> => {
+  // Try DELETE first
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${accessToken}` }
   });
 
-  if (!res.ok && res.status !== 204) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Erro ${res.status}: Falha ao excluir arquivo do Google Drive.`);
+  if (res.ok || res.status === 204) {
+    return true;
   }
 
-  return true;
+  // Fallback to moving to trash if direct DELETE is restricted
+  const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ trashed: true })
+  });
+
+  if (patchRes.ok) {
+    return true;
+  }
+
+  const err = await res.json().catch(() => ({}));
+  throw new Error(err?.error?.message || `Erro ${res.status}: Falha ao excluir arquivo do Google Forms / Google Drive.`);
 };
 
 /* ==========================================================================
