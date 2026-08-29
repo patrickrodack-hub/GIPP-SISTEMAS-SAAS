@@ -342,6 +342,7 @@ tbody tr:nth-child(odd) {
 /* Support for dark mode themes and high-contrast tables */
 [data-os-theme="dark"] tbody tr:nth-child(even),
 [data-os-theme="premium_black"] tbody tr:nth-child(even),
+[data-os-theme="gipp_clipper"] tbody tr:nth-child(even),
 [data-os-theme="msdos"] tbody tr:nth-child(even),
 [data-os-theme="futuristic"] tbody tr:nth-child(even),
 [data-os-theme="linux"] tbody tr:nth-child(even) {
@@ -349,6 +350,7 @@ tbody tr:nth-child(odd) {
 }
 [data-os-theme="dark"] tbody tr:nth-child(odd),
 [data-os-theme="premium_black"] tbody tr:nth-child(odd),
+[data-os-theme="gipp_clipper"] tbody tr:nth-child(odd),
 [data-os-theme="msdos"] tbody tr:nth-child(odd),
 [data-os-theme="futuristic"] tbody tr:nth-child(odd),
 [data-os-theme="linux"] tbody tr:nth-child(odd) {
