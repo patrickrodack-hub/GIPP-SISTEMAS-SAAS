@@ -798,21 +798,19 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               }}
               className={`win11-desktop-shortcut absolute z-20 group flex flex-col items-center text-center cursor-default rounded-xl transition-all select-none ${sizeClasses} ${
                 isSelected 
-                  ? 'bg-[#0078d4]/25 border border-[#0078d4]/70 shadow-md backdrop-blur-xs' 
-                  : isLight
-                    ? 'border border-transparent hover:bg-white/40 hover:border-white/60'
-                    : 'border border-transparent hover:bg-white/15 hover:border-white/20'
+                  ? 'bg-[#0078d4]/30 border border-[#0078d4]/80 shadow-md backdrop-blur-xs' 
+                  : 'border border-transparent hover:bg-white/20 hover:border-white/30'
               }`}
             >
               <div className="flex items-center justify-center mb-1 group-hover:scale-105 transition-transform duration-150 relative">
                 <ShortcutIcon size={iconPixelSize} className={`${meta?.color || 'text-sky-500'} drop-shadow-md`} />
               </div>
               
-              {/* Legenda do ícone */}
-              <div className={`mt-0.5 px-1 py-0.5 text-[11px] font-medium leading-tight line-clamp-2 w-full text-center tracking-tight transition-all ${
+              {/* Legenda do ícone - letras brancas destacadas com text-shadow sem caixa no modo claro */}
+              <div className={`mt-0.5 px-1 py-0.5 text-[11px] font-semibold leading-tight line-clamp-2 w-full text-center tracking-tight transition-all ${
                 isSelected
                   ? 'bg-[#0078d4] text-white shadow-md rounded-md'
-                  : 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]'
+                  : 'text-white drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.9)] [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.8)]'
               }`}>
                 {s.label}
               </div>

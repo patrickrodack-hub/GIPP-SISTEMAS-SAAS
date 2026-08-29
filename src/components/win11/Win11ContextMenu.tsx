@@ -76,20 +76,22 @@ export const Win11ContextMenu: React.FC<Win11ContextMenuProps> = ({
     const hasTaskbar = pinnedTaskbarIds.includes(itemMenu.moduleId);
     const isRunning = currentView === itemMenu.moduleId;
 
-    // Calcular posição com limites de tela
-    const posX = Math.min(itemMenu.x, window.innerWidth - 260);
-    const posY = Math.min(itemMenu.y, window.innerHeight - 320);
+    // Calcular posição com limites de tela (se próximo ao rodapé, abrir para cima)
+    const posX = Math.max(8, Math.min(itemMenu.x, window.innerWidth - 270));
+    const posY = itemMenu.y > window.innerHeight - 340 
+      ? Math.max(8, itemMenu.y - 290) 
+      : Math.max(8, Math.min(itemMenu.y, window.innerHeight - 340));
 
     return (
       <>
         <div 
-          className="fixed inset-0 z-50 bg-transparent" 
+          className="fixed inset-0 z-[9998] bg-transparent" 
           onClick={onClose} 
           onContextMenu={(e) => { e.preventDefault(); onClose(); }} 
         />
         <div
           style={{ left: `${posX}px`, top: `${posY}px` }}
-          className={`fixed z-50 w-64 rounded-2xl shadow-2xl border p-1.5 backdrop-blur-3xl select-none animate-in fade-in zoom-in-95 duration-100 ${
+          className={`fixed z-[9999] w-64 rounded-2xl shadow-2xl border p-1.5 backdrop-blur-3xl select-none animate-in fade-in zoom-in-95 duration-100 ${
             isLight 
               ? 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-400/40' 
               : 'bg-[#202028]/95 border-white/15 text-white shadow-black/80'
@@ -200,19 +202,21 @@ export const Win11ContextMenu: React.FC<Win11ContextMenuProps> = ({
   }
 
   // --- DESKTOP CONTEXT MENU (CLIQUE DIREITO NO ESPAÇO VAZIO DO DESKTOP) ---
-  const posX = Math.min(desktopMenu!.x, window.innerWidth - 260);
-  const posY = Math.min(desktopMenu!.y, window.innerHeight - 340);
+  const posX = Math.max(8, Math.min(desktopMenu!.x, window.innerWidth - 270));
+  const posY = desktopMenu!.y > window.innerHeight - 360
+    ? Math.max(8, desktopMenu!.y - 320)
+    : Math.max(8, Math.min(desktopMenu!.y, window.innerHeight - 360));
 
   return (
     <>
       <div 
-        className="fixed inset-0 z-50 bg-transparent" 
+        className="fixed inset-0 z-[9998] bg-transparent" 
         onClick={onClose} 
         onContextMenu={(e) => { e.preventDefault(); onClose(); }} 
       />
       <div
         style={{ left: `${posX}px`, top: `${posY}px` }}
-        className={`fixed z-50 w-64 rounded-2xl shadow-2xl border p-1.5 backdrop-blur-3xl select-none animate-in fade-in zoom-in-95 duration-100 ${
+        className={`fixed z-[9999] w-64 rounded-2xl shadow-2xl border p-1.5 backdrop-blur-3xl select-none animate-in fade-in zoom-in-95 duration-100 ${
           isLight 
             ? 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-400/40' 
             : 'bg-[#202028]/95 border-white/15 text-white shadow-black/80'
