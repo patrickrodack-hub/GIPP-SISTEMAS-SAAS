@@ -27,40 +27,39 @@ import {
 
 const ModuleConfiguracoesGerais = () => {
     const context = useContext(ChurchContext);
-    if (!context) return null;
     const { 
-        db, dbFirestore, appId, addToast, user, 
+        db = {}, dbFirestore, appId, addToast, user, 
         printPalette, setPrintPalette, printMarginType, setPrintMarginType, 
         printOrientation, setPrintOrientation, printContentScale, setPrintContentScale,
         setPrintData, setPrintMode, setPreviewOpen, setDoc: contextSetDoc, doc: contextDoc,
         notifications, clearAllNotifications,
         fcmToken, fcmStatus, fcmPermission, requestFcmPermission,
         startExport, handleImportRequest, logAction, setConfirmDialog
-    } = context;
+    } = context || {};
 
     // Active tab state
     const [activeTab, setActiveTab] = useState<'global' | 'google' | 'visual' | 'backup' | 'portal' | 'notificacoes' | 'performance' | 'auditoria' | 'impressora' | 'suporte'>('global');
 
     // TAB 1: Global Settings
-    const [globalSite, setGlobalSite] = useState(db.igreja?.site || db.igreja?.saas_site || '');
-    const [globalEmail, setGlobalEmail] = useState(db.igreja?.email || db.igreja?.saas_email || '');
-    const [globalWhatsApp, setGlobalWhatsApp] = useState(db.igreja?.whatsapp || db.igreja?.saas_whatsapp || '');
-    const [globalInstagram, setGlobalInstagram] = useState(db.igreja?.instagram || '');
-    const [globalFacebook, setGlobalFacebook] = useState(db.igreja?.facebook || '');
-    const [globalYoutube, setGlobalYoutube] = useState(db.igreja?.youtube || '');
-    const [globalChavePix, setGlobalChavePix] = useState(db.igreja?.chave_pix || db.igreja?.saas_chave_pix || '');
-    const [globalAvisoLegal, setGlobalAvisoLegal] = useState(db.igreja?.aviso_legal || '© 2026 GIPP. Ministério Integrado de Comunicação e Gestão Coletiva. Informativo oficial de circulação interna.');
-    const [footerShowSocials, setFooterShowSocials] = useState(db.igreja?.footer_show_socials !== false);
-    const [footerShowLegalNotice, setFooterShowLegalNotice] = useState(db.igreja?.footer_show_legal_notice !== false);
-    const [footerShowAddress, setFooterShowAddress] = useState(db.igreja?.footer_show_address !== false);
-    const [footerShowPix, setFooterShowPix] = useState(db.igreja?.footer_show_pix !== false);
-    const [footerVariant, setFooterVariant] = useState<'glass' | 'dark' | 'light'>(db.igreja?.footer_variant || 'glass');
+    const [globalSite, setGlobalSite] = useState(db?.igreja?.site || db?.igreja?.saas_site || '');
+    const [globalEmail, setGlobalEmail] = useState(db?.igreja?.email || db?.igreja?.saas_email || '');
+    const [globalWhatsApp, setGlobalWhatsApp] = useState(db?.igreja?.whatsapp || db?.igreja?.saas_whatsapp || '');
+    const [globalInstagram, setGlobalInstagram] = useState(db?.igreja?.instagram || '');
+    const [globalFacebook, setGlobalFacebook] = useState(db?.igreja?.facebook || '');
+    const [globalYoutube, setGlobalYoutube] = useState(db?.igreja?.youtube || '');
+    const [globalChavePix, setGlobalChavePix] = useState(db?.igreja?.chave_pix || db?.igreja?.saas_chave_pix || '');
+    const [globalAvisoLegal, setGlobalAvisoLegal] = useState(db?.igreja?.aviso_legal || '© 2026 GIPP. Ministério Integrado de Comunicação e Gestão Coletiva. Informativo oficial de circulação interna.');
+    const [footerShowSocials, setFooterShowSocials] = useState(db?.igreja?.footer_show_socials !== false);
+    const [footerShowLegalNotice, setFooterShowLegalNotice] = useState(db?.igreja?.footer_show_legal_notice !== false);
+    const [footerShowAddress, setFooterShowAddress] = useState(db?.igreja?.footer_show_address !== false);
+    const [footerShowPix, setFooterShowPix] = useState(db?.igreja?.footer_show_pix !== false);
+    const [footerVariant, setFooterVariant] = useState<'glass' | 'dark' | 'light'>(db?.igreja?.footer_variant || 'glass');
     
     // Additional church fields for advanced institutional setup
-    const [churchName, setChurchName] = useState(db.igreja?.nome || 'GIPP Sede Metropoliana');
-    const [churchAddress, setChurchAddress] = useState(db.igreja?.endereco || 'Avenida das Nações, 1500 - Centro');
-    const [churchCNPJ, setChurchCNPJ] = useState(db.igreja?.cnpj || '12.345.678/0001-99');
-    const [churchPhone, setChurchPhone] = useState(db.igreja?.telefone || '(11) 3345-6789');
+    const [churchName, setChurchName] = useState(db?.igreja?.nome || 'GIPP Sede Metropoliana');
+    const [churchAddress, setChurchAddress] = useState(db?.igreja?.endereco || 'Avenida das Nações, 1500 - Centro');
+    const [churchCNPJ, setChurchCNPJ] = useState(db?.igreja?.cnpj || '12.345.678/0001-99');
+    const [churchPhone, setChurchPhone] = useState(db?.igreja?.telefone || '(11) 3345-6789');
     
     const [isSavingGlobalConfigs, setIsSavingGlobalConfigs] = useState(false);
 

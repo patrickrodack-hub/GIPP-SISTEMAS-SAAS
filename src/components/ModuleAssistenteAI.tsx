@@ -380,8 +380,7 @@ const findAutomaticAnswer = (messageText: string, igrejaData: any) => {
 
 export const FloatingChatWidget = () => {
     const context = useContext(ChurchContext);
-    if (!context || !context.user) return null;
-    const { db, user, dbFirestore, appId, callGeminiAI, addToast } = context;
+    const { db, user, dbFirestore, appId, callGeminiAI, addToast } = context || {};
     const [isOpen, setIsOpen] = useState(false);
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
@@ -456,23 +455,23 @@ export const FloatingChatWidget = () => {
         document.addEventListener('touchmove', onTouchMove, { passive: true });
         document.addEventListener('touchend', onTouchEnd);
     };
-    
-    // Suporte apenas no módulo administrador (quem está logado)
-    if (!user || user.id === 'dev') return null;
 
-    const chat = db.support_chats?.find((c: any) => c.user_id === user.id) || null;
+    const chat = (db?.support_chats || []).find((c: any) => c.user_id === user?.id) || null;
     const messages = chat ? chat.messages : [];
     const status = chat?.status || 'bot';
 
-    const botName = db.igreja?.bot_name || 'Mary (Assistente Virtual)';
-    const botAvatar = db.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200';
-    const botWelcome = db.igreja?.bot_welcome || 'Olá 👋 Sou a assistente virtual Mary. Como posso ajudar você hoje?';
+    const botName = db?.igreja?.bot_name || 'Mary (Assistente Virtual)';
+    const botAvatar = db?.igreja?.bot_avatar || 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200';
+    const botWelcome = db?.igreja?.bot_welcome || 'Olá 👋 Sou a assistente virtual Mary. Como posso ajudar você hoje?';
 
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
     }, [isOpen, messages.length]);
+
+    // Suporte apenas no módulo administrador (quem está logado)
+    if (!context || !user || user.id === 'dev') return null;
 
     const handleSend = async () => {
         if (!text.trim()) return;

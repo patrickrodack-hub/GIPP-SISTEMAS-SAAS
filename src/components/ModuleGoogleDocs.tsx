@@ -21,7 +21,8 @@ import {
 } from '../services/googleWorkspaceService';
 
 export default function ModuleGoogleDocs() {
-  const { db, addToast } = useContext(ChurchContext) || { db: {}, addToast: () => {} };
+  const context = useContext(ChurchContext);
+  const { db, addToast } = context || { db: {}, addToast: () => {} };
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);

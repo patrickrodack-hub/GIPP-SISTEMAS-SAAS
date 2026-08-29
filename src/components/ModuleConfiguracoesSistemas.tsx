@@ -98,36 +98,35 @@ export const PORTAL_MODULES = [
 // Exporting component
 const ModuleConfiguracoesSistemas = () => {
     const context = useContext(ChurchContext);
-    if (!context) return null;
     const { 
-        db, dbFirestore, appId, addToast, user, 
+        db = {}, dbFirestore, appId, addToast, user, 
         printPalette, setPrintPalette, printMarginType, setPrintMarginType, 
         printOrientation, setPrintOrientation, printContentScale, setPrintContentScale,
         setPrintData, setPrintMode, setPreviewOpen, setDoc, doc,
         notifications, clearAllNotifications,
         fcmToken, fcmStatus, fcmPermission, requestFcmPermission
-    } = context;
+    } = context || {};
 
     const [activeTab, setActiveTab] = useState<'performance' | 'impressora' | 'conexao' | 'auditoria' | 'suporte' | 'notificacoes' | 'portal_membros' | 'global_configs' | 'relatorio_engajamento'>('performance');
 
     // Global Configs States
-    const [globalSite, setGlobalSite] = useState(db.igreja?.site || db.igreja?.saas_site || '');
-    const [globalEmail, setGlobalEmail] = useState(db.igreja?.email || db.igreja?.saas_email || '');
-    const [globalWhatsApp, setGlobalWhatsApp] = useState(db.igreja?.whatsapp || db.igreja?.saas_whatsapp || '');
-    const [globalInstagram, setGlobalInstagram] = useState(db.igreja?.instagram || '');
-    const [globalFacebook, setGlobalFacebook] = useState(db.igreja?.facebook || '');
-    const [globalYoutube, setGlobalYoutube] = useState(db.igreja?.youtube || '');
-    const [globalChavePix, setGlobalChavePix] = useState(db.igreja?.chave_pix || db.igreja?.saas_chave_pix || '');
-    const [globalAvisoLegal, setGlobalAvisoLegal] = useState(db.igreja?.aviso_legal || '© 2026 GIPP. Ministério Integrado de Comunicação e Gestão Coletiva. Informativo oficial de circulação interna.');
-    const [footerShowSocials, setFooterShowSocials] = useState(db.igreja?.footer_show_socials !== false);
-    const [footerShowLegalNotice, setFooterShowLegalNotice] = useState(db.igreja?.footer_show_legal_notice !== false);
-    const [footerShowAddress, setFooterShowAddress] = useState(db.igreja?.footer_show_address !== false);
-    const [footerShowPix, setFooterShowPix] = useState(db.igreja?.footer_show_pix !== false);
-    const [footerVariant, setFooterVariant] = useState<'glass' | 'dark' | 'light'>(db.igreja?.footer_variant || 'glass');
+    const [globalSite, setGlobalSite] = useState(db?.igreja?.site || db?.igreja?.saas_site || '');
+    const [globalEmail, setGlobalEmail] = useState(db?.igreja?.email || db?.igreja?.saas_email || '');
+    const [globalWhatsApp, setGlobalWhatsApp] = useState(db?.igreja?.whatsapp || db?.igreja?.saas_whatsapp || '');
+    const [globalInstagram, setGlobalInstagram] = useState(db?.igreja?.instagram || '');
+    const [globalFacebook, setGlobalFacebook] = useState(db?.igreja?.facebook || '');
+    const [globalYoutube, setGlobalYoutube] = useState(db?.igreja?.youtube || '');
+    const [globalChavePix, setGlobalChavePix] = useState(db?.igreja?.chave_pix || db?.igreja?.saas_chave_pix || '');
+    const [globalAvisoLegal, setGlobalAvisoLegal] = useState(db?.igreja?.aviso_legal || '© 2026 GIPP. Ministério Integrado de Comunicação e Gestão Coletiva. Informativo oficial de circulação interna.');
+    const [footerShowSocials, setFooterShowSocials] = useState(db?.igreja?.footer_show_socials !== false);
+    const [footerShowLegalNotice, setFooterShowLegalNotice] = useState(db?.igreja?.footer_show_legal_notice !== false);
+    const [footerShowAddress, setFooterShowAddress] = useState(db?.igreja?.footer_show_address !== false);
+    const [footerShowPix, setFooterShowPix] = useState(db?.igreja?.footer_show_pix !== false);
+    const [footerVariant, setFooterVariant] = useState<'glass' | 'dark' | 'light'>(db?.igreja?.footer_variant || 'glass');
     const [isSavingGlobalConfigs, setIsSavingGlobalConfigs] = useState(false);
     const [selectedEngagedMember, setSelectedEngagedMember] = useState<any>(null);
 
-    const membersList = db.membros || [];
+    const membersList = db?.membros || [];
 
     // Datasets agregados e realísticos baseados nos dados cadastrados da igreja
     const aggregateStats = useMemo(() => {
