@@ -211,7 +211,7 @@ const ModuleConfigVisual = () => {
                             { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
                             { id: 'win81', name: 'Windows 8.1 (Modern UI & Live Tiles)', label: 'Win8.1', desc: 'Ambiente autêntico do Windows 8.1 com Tela Iniciar em blocos dinâmicos (Live Tiles), Charms Bar lateral, cantos retos e barra de tarefas clássica.' },
                             { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
-                            { id: 'msdos', name: 'Sistema COBOL (Mainframe)', label: 'COBOL', desc: 'Visual clássico de terminal AS/400 ou mainframe IBM, fontes mono espaçadas em fósforo verde com destaques coloridos.' },
+                            { id: 'gipp_clipper', name: 'GIPP CLIPPER (CA-Clipper 5.3)', label: 'Clipper', desc: 'Ambiente autêntico de sistemas desenvolvidos em Clipper / Summer 87 / DOS com molduras ASCII duplas, telas de consulta DBF, teclas de função [F1..F10], beep do PC Speaker e dot-prompt interativo.' },
                             { id: 'linux', name: 'Linux Ubuntu (GNOME)', label: 'Linux', desc: 'Soberbo tema inspirado na elegância do Ubuntu e do ecossistema GNOME, com gradientes aubergine e detalhes em laranja Yaru.' },
                             { id: 'premium_black', name: 'Premium Black & Gold', label: 'Luxo', desc: 'Tema escuro requintado com contrastes profundos e acabamentos em dourado.' },
                             { id: 'futuristic', name: 'GIPP Sci-Fi Futurista', label: 'Futurista', desc: 'Estética cibernética de alta performance com realces neon ciano/rosa e acabamento holográfico.' }
@@ -263,7 +263,7 @@ const ModuleConfigVisual = () => {
                             previewTheme === 'win11' ? 'bg-gradient-to-tr from-[#9ec2e6] to-[#d6e5f5]' :
                             previewTheme === 'win81' ? 'bg-[#004f7c]' :
                             previewTheme === 'win95' ? 'bg-[#008080]' : /* classic teal */
-                            previewTheme === 'msdos' ? 'bg-black' :
+                            previewTheme === 'gipp_clipper' ? 'bg-[#0000aa]' :
                             previewTheme === 'linux' ? 'bg-[#1f0b1a]' : /* aubergine */
                             previewTheme === 'premium_black' ? 'bg-[#1a1a1a]' :
                             previewTheme === 'futuristic' ? 'bg-[#03001e]' : 'bg-slate-100'
@@ -281,7 +281,7 @@ const ModuleConfigVisual = () => {
                                 previewTheme === 'win95' ? 'bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#808080] border-b-[#808080] outline-1 outline-black p-0.5' :
                                 previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
                                 previewTheme === 'win81' ? 'bg-[#1f1f1f] rounded-none border border-white/20 p-1 shadow-2xl text-slate-100' :
-                                previewTheme === 'msdos' ? 'bg-black border-4 border-double border-green-500 p-2 text-green-500 font-mono text-[11px]' :
+                                previewTheme === 'gipp_clipper' ? 'bg-[#0000aa] border-4 border-double border-white p-2 text-white font-mono text-[11px] shadow-[6px_6px_0px_#000]' :
                                 previewTheme === 'linux' ? 'bg-[#221820] rounded-2xl border border-white/10 p-1 shadow-2xl text-slate-100' :
                                 previewTheme === 'premium_black' ? 'bg-[#0a0a0a] border border-[#D4AF37] p-2 text-slate-100' :
                                 previewTheme === 'futuristic' ? 'bg-black/90 border border-[#00f0ff] p-2 text-slate-100 shadow-[0_0_15px_rgba(0,240,255,0.25)]' :
@@ -290,7 +290,7 @@ const ModuleConfigVisual = () => {
                               style={{ 
                                 fontFamily: previewTheme === 'gipp_retro' ? "'Segoe UI', 'Tahoma', sans-serif" :
                                              previewTheme === 'win95' ? "'Tahoma', sans-serif" : 
-                                             previewTheme === 'msdos' ? "'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
+                                             previewTheme === 'gipp_clipper' ? "'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
                               }}
                             >
                                 {/* Barra de título simulada */}
@@ -301,7 +301,7 @@ const ModuleConfigVisual = () => {
                                     previewTheme === 'win95' ? 'bg-[#000080] text-white font-bold' :
                                     previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
                                     previewTheme === 'win81' ? 'bg-[#004f7c] rounded-none p-1.5 text-white font-semibold' :
-                                    previewTheme === 'msdos' ? 'bg-black border-b border-green-500 pb-1 mb-2 font-mono text-yellow-400 font-bold uppercase tracking-wider' :
+                                    previewTheme === 'gipp_clipper' ? 'bg-[#000080] border-b-2 border-white pb-1 mb-2 font-mono text-[#ffff55] font-bold uppercase tracking-wider' :
                                     previewTheme === 'linux' ? 'bg-[#1b1118] rounded-t-xl p-2 border-b border-white/5 text-white font-bold' :
                                     previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border-b border-[#D4AF37]/40 pb-1 mb-2 text-[#D4AF37] font-bold' :
                                     previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#03001e] to-[#120012] border-b border-[#00f0ff]/40 pb-1 mb-2 text-[#00f0ff] font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' :
@@ -309,7 +309,7 @@ const ModuleConfigVisual = () => {
                                   }`}
                                 >
                                     <span className="text-[11px] truncate uppercase tracking-wider font-bold">
-                                        {previewTheme === 'msdos' ? 'C:\\GIPP\\DASHBOARD.EXE' : 
+                                        {previewTheme === 'gipp_clipper' ? '╔═ GIPP.EXE (CLIPPER 5.3) ═════════════════════════╗' : 
                                          previewTheme === 'gipp_retro' ? 'FormMembros: TForm (Delphi 13 Florence)' : 'GIPP - Visual Preview'}
                                     </span>
                                     {/* Botões de controle simulados */}
@@ -358,7 +358,7 @@ const ModuleConfigVisual = () => {
                                 <div className={`p-4 mt-1 flex flex-col space-y-3.5 ${
                                     previewTheme === 'macos_tahoe' ? 'bg-[#16171e] text-slate-100' :
                                     previewTheme === 'gipp_retro' ? 'bg-[#ECEFF4] text-[#102A43] border border-[#CBD5E1]' :
-                                    previewTheme === 'msdos' ? 'bg-black text-green-500 font-mono' :
+                                    previewTheme === 'gipp_clipper' ? 'bg-[#0000aa] text-white font-mono' :
                                     previewTheme === 'premium_black' ? 'bg-[#050505] text-slate-100' :
                                     previewTheme === 'futuristic' ? 'bg-[#03001e] text-slate-100' :
                                     previewTheme === 'linux' ? 'bg-[#221820] text-slate-100' :
@@ -376,7 +376,7 @@ const ModuleConfigVisual = () => {
                                             previewTheme === 'macos_tahoe' ? 'border border-white/10 bg-white/5 text-white rounded-lg' :
                                             previewTheme === 'gipp_retro' ? 'bg-white border-t-2 border-l-2 border-t-[#6E7A8A] border-l-[#6E7A8A] border-r border-b border-r-[#CBD5E1] border-b-[#CBD5E1] text-[#0F172A] font-bold shadow-inner' :
                                             previewTheme === 'win95' ? 'bg-white border-t-1.5 border-l-1.5 border-t-[#404040] border-l-[#404040] border-r-1.5 border-b-1.5 border-r-white border-b-white text-black' :
-                                            previewTheme === 'msdos' ? 'border-b-2 border-cyan-400 bg-black text-cyan-400 font-mono font-bold' :
+                                            previewTheme === 'gipp_clipper' ? 'border-2 border-[#55ffff] bg-[#000080] text-[#ffff55] font-mono font-bold' :
                                             previewTheme === 'linux' ? 'border border-white/10 bg-[#150d14] text-white rounded-lg' :
                                             previewTheme === 'premium_black' ? 'border border-[#D4AF37]/40 bg-black text-[#D4AF37]' :
                                             previewTheme === 'futuristic' ? 'border border-[#00f0ff]/50 bg-slate-950 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]' :
@@ -392,7 +392,7 @@ const ModuleConfigVisual = () => {
                                             previewTheme === 'macos_tahoe' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-400/20 text-white rounded-lg text-center shadow-md' :
                                             previewTheme === 'gipp_retro' ? 'bg-gradient-to-b from-white via-[#E6E9ED] to-[#D2D7DF] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#102A43] font-black rounded-xs shadow-xs text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
-                                            previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
+                                            previewTheme === 'gipp_clipper' ? 'border-2 border-white bg-[#000080] text-[#ffff55] font-mono text-center font-bold tracking-widest uppercase shadow-[2px_2px_0px_#000]' :
                                             previewTheme === 'linux' ? 'bg-gradient-to-b from-[#e95420] to-[#df3812] border border-transparent text-white rounded-lg text-center font-bold shadow-[0_4px_10px_rgba(223,56,18,0.3)]' :
                                             previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border border-[#D4AF37] text-[#D4AF37] text-center font-bold' :
                                             previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#00f0ff] to-[#ff007f] border border-white/10 text-white text-center font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)] rounded-lg' :
@@ -404,7 +404,7 @@ const ModuleConfigVisual = () => {
                                             previewTheme === 'macos_tahoe' ? 'bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg text-center' :
                                             previewTheme === 'gipp_retro' ? 'bg-gradient-to-b from-white via-[#E6E9ED] to-[#D2D7DF] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#5A6578] font-bold rounded-xs shadow-xs text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
-                                            previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
+                                            previewTheme === 'gipp_clipper' ? 'border-2 border-[#55ffff] bg-[#000080] text-white font-mono text-center font-bold tracking-widest uppercase shadow-[2px_2px_0px_#000]' :
                                             previewTheme === 'linux' ? 'bg-[#3a3a44] border border-white/5 text-white rounded-lg text-center font-bold' :
                                             previewTheme === 'premium_black' ? 'bg-black border border-slate-700 text-slate-400 text-center' :
                                             previewTheme === 'futuristic' ? 'bg-slate-900/80 border border-[#ff007f]/40 text-[#ff007f] text-center rounded-lg shadow-[0_0_8px_rgba(255,0,127,0.15)]' :

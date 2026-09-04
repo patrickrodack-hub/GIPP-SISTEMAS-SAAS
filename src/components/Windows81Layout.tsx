@@ -8,7 +8,8 @@ import {
   Book, Sparkles, ImagePlus, MessageCircle, QrCode, ShieldCheck, Newspaper,
   Award, Calendar, Gamepad2, Music, Video, Heart, Globe, Baby, Car, Package,
   FileSpreadsheet, FileCheck, CheckSquare, Activity, ArrowUpCircle, ArrowDownCircle,
-  HelpCircle, Eye, EyeOff
+  HelpCircle, Eye, EyeOff, Laptop, Key, Layers, VolumeX, Upload, RotateCcw,
+  SlidersHorizontal, Battery, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
@@ -21,6 +22,108 @@ export const Win81Logo = ({ size = 20, className = "" }: { size?: number; classN
     <polygon points="11.8,12.8 22,12.8 22,22 11.8,20.6" />
   </svg>
 );
+
+export const WIN81_BACKGROUND_PATTERNS = [
+  {
+    id: 'ribbon',
+    name: 'Ribbon Signature (Clássico)',
+    previewColor: '#004f7c',
+    css: 'radial-gradient(ellipse at 85% 15%, rgba(240, 185, 11, 0.35) 0%, transparent 45%), radial-gradient(ellipse at 15% 85%, rgba(0, 164, 228, 0.45) 0%, transparent 55%), linear-gradient(135deg, #002b44 0%, #004f7c 50%, #006097 100%)'
+  },
+  {
+    id: 'dragon',
+    name: 'Tatuagem Tribal / Floral',
+    previewColor: '#681111',
+    css: 'radial-gradient(circle at 80% 20%, rgba(229, 20, 0, 0.45) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(255, 140, 0, 0.35) 0%, transparent 50%), linear-gradient(135deg, #1f0505 0%, #4a0d0d 50%, #681111 100%)'
+  },
+  {
+    id: 'circuit',
+    name: 'Circuito Tecnológico',
+    previewColor: '#08263d',
+    css: 'radial-gradient(circle at 50% 50%, rgba(0, 164, 239, 0.3) 0%, transparent 65%), linear-gradient(135deg, #05131e 0%, #08263d 50%, #0d3b5e 100%)'
+  },
+  {
+    id: 'origami',
+    name: 'Origami Geométrico',
+    previewColor: '#004940',
+    css: 'radial-gradient(circle at 75% 25%, rgba(140, 189, 24, 0.35) 0%, transparent 45%), radial-gradient(circle at 25% 75%, rgba(0, 130, 114, 0.4) 0%, transparent 55%), linear-gradient(135deg, #082924 0%, #004940 50%, #006356 100%)'
+  },
+  {
+    id: 'gears',
+    name: 'Engrenagens Mecânicas',
+    previewColor: '#4d2d09',
+    css: 'radial-gradient(circle at 80% 30%, rgba(255, 185, 0, 0.35) 0%, transparent 50%), linear-gradient(135deg, #241402 0%, #4d2d09 50%, #633b0e 100%)'
+  },
+  {
+    id: 'aurora',
+    name: 'Aurora Boreal Noturna',
+    previewColor: '#112d2b',
+    css: 'radial-gradient(circle at 20% 20%, rgba(51, 153, 51, 0.45) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(91, 58, 182, 0.45) 0%, transparent 50%), linear-gradient(135deg, #091a14 0%, #112d2b 50%, #1e133d 100%)'
+  },
+  {
+    id: 'lines',
+    name: 'Linhas Metro Magenta',
+    previewColor: '#4a0429',
+    css: 'radial-gradient(circle at 90% 10%, rgba(216, 0, 115, 0.4) 0%, transparent 50%), linear-gradient(135deg, #240013 0%, #4a0429 50%, #6b093d 100%)'
+  },
+  {
+    id: 'bliss',
+    name: 'Windows 8.1 Bliss Modern',
+    previewColor: '#1c75bc',
+    css: 'radial-gradient(circle at 70% 30%, rgba(0, 120, 215, 0.35) 0%, transparent 60%), linear-gradient(180deg, #1c75bc 0%, #29b6f6 40%, #43a047 75%, #2e7d32 100%)'
+  }
+];
+
+export const WIN81_ACCENT_PALETTE = [
+  { id: 'cobalt', label: 'Azul Cobalto', hex: '#004f7c' },
+  { id: 'teal', label: 'Petróleo', hex: '#008272' },
+  { id: 'ocean', label: 'Azul Oceano', hex: '#0078d7' },
+  { id: 'cyan', label: 'Ciano', hex: '#00a4ef' },
+  { id: 'emerald', label: 'Esmeralda', hex: '#107c41' },
+  { id: 'green', label: 'Verde', hex: '#339933' },
+  { id: 'lime', label: 'Lima', hex: '#8cbd18' },
+  { id: 'orange', label: 'Laranja Metro', hex: '#d24726' },
+  { id: 'amber', label: 'Âmbar', hex: '#ff8c00' },
+  { id: 'yellow', label: 'Amarelo Ouro', hex: '#ffb900' },
+  { id: 'crimson', label: 'Vermelho Carmim', hex: '#e51400' },
+  { id: 'rose', label: 'Rubro', hex: '#e81123' },
+  { id: 'magenta', label: 'Magenta', hex: '#d80073' },
+  { id: 'purple', label: 'Roxo Metro', hex: '#7e3878' },
+  { id: 'violet', label: 'Violeta', hex: '#5b3ab6' },
+  { id: 'indigo', label: 'Índigo', hex: '#4617b4' },
+  { id: 'pink', label: 'Rosa Shock', hex: '#e671b8' },
+  { id: 'charcoal', label: 'Grafite', hex: '#2f2f2f' },
+  { id: 'slate', label: 'Ardósia', hex: '#4a5568' },
+  { id: 'midnight', label: 'Noturno Profundo', hex: '#1b1b2f' }
+];
+
+export const WIN81_DESKTOP_WALLPAPERS = [
+  {
+    id: 'default',
+    name: 'Windows 8.1 Padrão',
+    url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=1920&auto=format&fit=crop'
+  },
+  {
+    id: 'bliss_nature',
+    name: 'Colina Verde & Céu Aberto',
+    url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1920&auto=format&fit=crop'
+  },
+  {
+    id: 'aurora_lake',
+    name: 'Lago & Aurora Boreal',
+    url: 'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?q=80&w=1920&auto=format&fit=crop'
+  },
+  {
+    id: 'modern_arch',
+    name: 'Arquitetura Moderna & Geometria',
+    url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=1920&auto=format&fit=crop'
+  },
+  {
+    id: 'cathedral',
+    name: 'Catedral & Vitrais',
+    url: 'https://images.unsplash.com/photo-1548625361-195fe578b871?q=80&w=1920&auto=format&fit=crop'
+  }
+];
 
 interface Windows81LayoutProps {
   view: string;
@@ -135,6 +238,77 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
 
   // Desktop active drag shortcut
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Personalization states
+  const [patternId, setPatternId] = useState<string>(() => localStorage.getItem('win81_pattern') || 'ribbon');
+  const [accentColor, setAccentColor] = useState<string>(() => localStorage.getItem('win81_accent') || '#004f7c');
+  const [desktopWallpaper, setDesktopWallpaper] = useState<string>(() => localStorage.getItem('win81_desktop_wallpaper') || 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=1920&auto=format&fit=crop');
+  const [useDesktopOnStart, setUseDesktopOnStart] = useState<boolean>(() => localStorage.getItem('win81_use_desktop_on_start') === 'true');
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => localStorage.getItem('win81_sound_enabled') !== 'false');
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+  const [win81PersonalizeOpen, setWin81PersonalizeOpen] = useState<boolean>(false);
+  const [win81PcSettingsOpen, setWin81PcSettingsOpen] = useState<boolean>(false);
+  const [pcSettingsCategory, setPcSettingsCategory] = useState<'personalize' | 'devices' | 'network' | 'accounts' | 'about'>('personalize');
+  const [startTipVisible, setStartTipVisible] = useState<boolean>(false);
+  const [customWallpaperInput, setCustomWallpaperInput] = useState<string>('');
+  const [personalizeTab, setPersonalizeTab] = useState<'start' | 'colors' | 'desktop'>('start');
+
+  // Audio synthesis helper
+  const playSound = (type: 'click' | 'open' | 'charm' | 'unlock' | 'toggle') => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(460, ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } else if (type === 'charm') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(540, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(760, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.09);
+      } else if (type === 'open') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } else if (type === 'unlock') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(380, ctx.currentTime);
+        osc.frequency.setValueAtTime(540, ctx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(720, ctx.currentTime + 0.16);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.26);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.26);
+      } else if (type === 'toggle') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(500, ctx.currentTime);
+        gain.gain.setValueAtTime(0.03, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.04);
+      }
+    } catch {
+      // AudioContext unavailable
+    }
+  };
   const [activeDragPos, setActiveDragPos] = useState<{ x: number; y: number } | null>(null);
 
   // Right-click Context Menu
@@ -432,12 +606,11 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
     <div 
       className="fixed inset-0 overflow-hidden select-none font-sans text-white bg-[#004f7c]"
       style={{
-        // Windows 8.1 Signature Ribbon Background
-        backgroundImage: `
-          radial-gradient(ellipse at 85% 15%, rgba(240, 185, 11, 0.28) 0%, transparent 45%),
-          radial-gradient(ellipse at 15% 85%, rgba(0, 164, 228, 0.45) 0%, transparent 55%),
-          linear-gradient(135deg, #002b44 0%, #004f7c 50%, #006097 100%)
-        `
+        backgroundImage: desktopWallpaper 
+          ? `url("${desktopWallpaper}")` 
+          : (WIN81_BACKGROUND_PATTERNS.find(p => p.id === patternId)?.css || WIN81_BACKGROUND_PATTERNS[0].css),
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
       }}
       onClick={() => {
         setContextMenu(null);
@@ -626,15 +799,21 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-40 bg-[#004f7c]/98 overflow-x-auto overflow-y-hidden custom-scrollbar select-none flex flex-col pb-10"
+            className="fixed inset-0 z-40 overflow-x-auto overflow-y-hidden custom-scrollbar select-none flex flex-col pb-10"
             style={{
-              backgroundImage: `
-                radial-gradient(circle at 85% 20%, rgba(240, 185, 11, 0.35) 0%, transparent 45%),
-                radial-gradient(circle at 10% 75%, rgba(0, 164, 228, 0.4) 0%, transparent 50%),
-                linear-gradient(135deg, #002b44 0%, #004f7c 50%, #006097 100%)
-              `
+              backgroundImage: useDesktopOnStart 
+                ? (desktopWallpaper ? `url("${desktopWallpaper}")` : (WIN81_BACKGROUND_PATTERNS.find(p => p.id === patternId)?.css || WIN81_BACKGROUND_PATTERNS[0].css))
+                : (WIN81_BACKGROUND_PATTERNS.find(p => p.id === patternId)?.css || WIN81_BACKGROUND_PATTERNS[0].css),
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundColor: accentColor
             }}
           >
+            {/* Subtle dark tint overlay if using desktop background */}
+            {useDesktopOnStart && (
+              <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px] pointer-events-none" />
+            )}
+
             {/* Top Bar (Start Screen Header: Title + User Avatar + Power + Search) */}
             <div className="h-20 px-8 md:px-14 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
@@ -1172,11 +1351,12 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
                   <div className="space-y-2">
                     <button
                       onClick={() => {
-                        setView('config_visual');
+                        setWin81PersonalizeOpen(true);
                         setActiveCharmFlyout(null);
                         setCharmsBarOpen(false);
+                        playSound('open');
                       }}
-                      className="w-full p-2 text-left bg-white/5 hover:bg-[#0078d7] transition-colors flex items-center justify-between text-xs font-semibold"
+                      className="w-full p-2 text-left bg-white/5 hover:bg-[#0078d7] transition-colors flex items-center justify-between text-xs font-semibold cursor-pointer"
                     >
                       <span>Personalizar Telas & Papel de Parede</span>
                       <ChevronRight size={14} />
@@ -1253,6 +1433,19 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      setWin81PcSettingsOpen(true);
+                      setActiveCharmFlyout(null);
+                      setCharmsBarOpen(false);
+                      playSound('open');
+                    }}
+                    className="w-full mt-4 py-2.5 px-3 bg-white/10 hover:bg-white/20 text-white font-semibold flex items-center justify-between text-xs cursor-pointer border border-white/20 transition-colors"
+                  >
+                    <span>Mudar configurações do computador</span>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
               )}
 
@@ -1342,7 +1535,10 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* WINDOWS 8.1 TASKBAR (BARRA DE TAREFAS CLÁSSICA INFERIOR) */}
       {/* ------------------------------------------------------------- */}
-      <div className="fixed bottom-0 left-0 right-0 h-10 bg-[#00395d]/95 backdrop-blur-md border-t border-white/20 z-50 flex items-center justify-between px-0 select-none shadow-2xl">
+      <div 
+        style={{ backgroundColor: `${accentColor}ee` }}
+        className="fixed bottom-0 left-0 right-0 h-10 backdrop-blur-md border-t border-white/20 z-50 flex items-center justify-between px-0 select-none shadow-2xl"
+      >
         {/* Left: Windows 8.1 Start Button (Angled 4-pane logo) */}
         <button
           onClick={() => setStartScreenOpen(!startScreenOpen)}
@@ -1511,13 +1707,14 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
 
                 <button
                   onClick={() => {
-                    setView('config_visual');
+                    setWin81PersonalizeOpen(true);
                     setContextMenu(null);
+                    playSound('open');
                   }}
                   className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
                 >
                   <Palette size={14} className="text-purple-400" />
-                  <span>Alterar Papel de Parede</span>
+                  <span>Personalizar Fundo & Cores Metro</span>
                 </button>
 
                 <button
@@ -1687,6 +1884,642 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
           </div>
         </>
       )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 START TIP & HOT CORNERS */}
+      {/* ------------------------------------------------------------- */}
+      {/* Bottom-Left Start Tip Hover Trigger */}
+      {!startScreenOpen && (
+        <div
+          onMouseEnter={() => setStartTipVisible(true)}
+          className="fixed bottom-10 left-0 w-8 h-8 z-45 cursor-pointer pointer-events-auto"
+        />
+      )}
+
+      {/* Start Tip Thumbnail Popup */}
+      <AnimatePresence>
+        {!startScreenOpen && startTipVisible && (
+          <motion.div
+            initial={{ opacity: 0, x: -20, y: 20 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, x: -20, y: 20 }}
+            onMouseLeave={() => setStartTipVisible(false)}
+            onClick={() => {
+              playSound('open');
+              setStartScreenOpen(true);
+              setStartTipVisible(false);
+            }}
+            className="fixed bottom-10 left-0 z-45 w-28 h-18 bg-[#68217a] border-2 border-white/80 shadow-2xl p-2 cursor-pointer flex flex-col items-center justify-center group transition-transform hover:scale-105"
+            title="Ir para a Tela Inicial"
+          >
+            <Win81Logo size={28} className="text-white drop-shadow" />
+            <span className="text-[10px] font-bold text-white uppercase tracking-wider mt-1">Iniciar</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hot Corners for Charms Bar */}
+      <div 
+        onMouseEnter={() => {
+          setCharmsBarOpen(true);
+          playSound('charm');
+        }}
+        className="fixed top-0 right-0 w-4 h-16 z-45 cursor-pointer pointer-events-auto"
+        title="Abrir Atalhos"
+      />
+      <div 
+        onMouseEnter={() => {
+          setCharmsBarOpen(true);
+          playSound('charm');
+        }}
+        className="fixed bottom-10 right-0 w-4 h-16 z-45 cursor-pointer pointer-events-auto"
+        title="Abrir Atalhos"
+      />
+
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 AUTHENTIC LOCK SCREEN */}
+      {/* ------------------------------------------------------------- */}
+      <AnimatePresence>
+        {isLocked && (
+          <motion.div
+            initial={{ y: 0 }}
+            exit={{ y: '-100%' }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            className="fixed inset-0 z-[100] flex flex-col justify-between p-8 md:p-14 select-none cursor-pointer text-white overflow-hidden"
+            style={{
+              backgroundImage: desktopWallpaper ? `url("${desktopWallpaper}")` : `url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1920&auto=format&fit=crop")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+            onClick={() => {
+              playSound('unlock');
+              setIsLocked(false);
+            }}
+          >
+            <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+
+            <div className="relative z-10 text-xs tracking-wider opacity-70 uppercase font-semibold">
+              Windows 8.1 Pro - GIPP Teológico
+            </div>
+
+            <div className="relative z-10 flex flex-col gap-2">
+              <div className="text-7xl md:text-9xl font-extralight tracking-tighter drop-shadow-lg font-sans">
+                {currentTime}
+              </div>
+              <div className="text-xl md:text-2xl font-light drop-shadow-md capitalize opacity-95">
+                {currentDate}
+              </div>
+
+              <div className="flex items-center gap-4 mt-6">
+                <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-none border border-white/20 text-xs">
+                  <Wifi size={14} className="text-emerald-400" />
+                  <span className="text-[11px]">Conectado</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-none border border-white/20 text-xs">
+                  <Battery size={14} className="text-sky-400" />
+                  <span className="text-[11px]">100%</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-none border border-white/20 text-xs">
+                  <Bell size={14} className="text-amber-400" />
+                  <span className="text-[11px]">Sistema Pronto</span>
+                </div>
+              </div>
+
+              <div className="mt-8 text-xs font-semibold tracking-wider text-white/80 animate-pulse flex items-center gap-2">
+                <ChevronUp size={16} />
+                <span>Clique ou deslize para cima para desbloquear</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 PERSONALIZE FLYOUT */}
+      {/* ------------------------------------------------------------- */}
+      <AnimatePresence>
+        {win81PersonalizeOpen && (
+          <>
+            <div 
+              className="fixed inset-0 z-55 bg-black/20"
+              onClick={() => setWin81PersonalizeOpen(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="fixed top-0 right-0 bottom-0 w-80 md:w-96 bg-[#1f1f1f]/95 backdrop-blur-xl border-l border-white/20 z-60 p-6 flex flex-col text-white shadow-2xl overflow-y-auto custom-scrollbar select-none"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
+                <div className="flex items-center gap-2">
+                  <Palette size={18} className="text-sky-400" />
+                  <h2 className="text-base font-semibold tracking-tight">Personalizar Telas & Cores</h2>
+                </div>
+                <button
+                  onClick={() => setWin81PersonalizeOpen(false)}
+                  className="p-1 hover:bg-white/10 text-white/70 hover:text-white cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Tabs inside Personalize flyout */}
+              <div className="flex items-center gap-1 mb-5 bg-white/5 p-1 border border-white/10 text-xs">
+                <button
+                  onClick={() => setPersonalizeTab('start')}
+                  className={`flex-1 py-1.5 font-semibold transition-colors cursor-pointer ${
+                    personalizeTab === 'start' ? 'bg-[#0078d7] text-white' : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  Tela Inicial
+                </button>
+                <button
+                  onClick={() => setPersonalizeTab('colors')}
+                  className={`flex-1 py-1.5 font-semibold transition-colors cursor-pointer ${
+                    personalizeTab === 'colors' ? 'bg-[#0078d7] text-white' : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  Cores Metro
+                </button>
+                <button
+                  onClick={() => setPersonalizeTab('desktop')}
+                  className={`flex-1 py-1.5 font-semibold transition-colors cursor-pointer ${
+                    personalizeTab === 'desktop' ? 'bg-[#0078d7] text-white' : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  Papel de Parede
+                </button>
+              </div>
+
+              {personalizeTab === 'start' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-white/80">Escolha o padrão artístico para a Tela Inicial:</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {WIN81_BACKGROUND_PATTERNS.map(pat => {
+                      const isSelected = patternId === pat.id;
+                      return (
+                        <button
+                          key={pat.id}
+                          onClick={() => {
+                            setPatternId(pat.id);
+                            localStorage.setItem('win81_pattern', pat.id);
+                            playSound('click');
+                            addToast(`Padrão "${pat.name}" selecionado!`, 'success');
+                          }}
+                          style={{ background: pat.css }}
+                          className={`h-20 p-2 text-left flex flex-col justify-end transition-all border-2 relative cursor-pointer ${
+                            isSelected ? 'border-sky-400 ring-2 ring-sky-400/50 scale-[1.02]' : 'border-white/20 hover:border-white/60'
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold text-white drop-shadow bg-black/40 px-1 py-0.5 rounded-none leading-tight line-clamp-1">
+                            {pat.name}
+                          </span>
+                          {isSelected && (
+                            <CheckCircle2 size={14} className="absolute top-1 right-1 text-sky-400 drop-shadow" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop wallpaper on Start screen toggle */}
+                  <div className="pt-4 border-t border-white/10">
+                    <label className="flex items-center gap-3 cursor-pointer p-2 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={useDesktopOnStart}
+                        onChange={(e) => {
+                          setUseDesktopOnStart(e.target.checked);
+                          localStorage.setItem('win81_use_desktop_on_start', String(e.target.checked));
+                          playSound('toggle');
+                          addToast(e.target.checked ? "Tela Inicial agora usa a tela de fundo da Área de Trabalho!" : "Padrão de fundo da Tela Inicial restaurado!", "info");
+                        }}
+                        className="w-4 h-4 rounded-none accent-[#0078d7]"
+                      />
+                      <span className="text-xs font-semibold">Mostrar tela de fundo da Área de Trabalho na Tela Inicial</span>
+                    </label>
+                    <p className="text-[10px] text-white/50 mt-1 px-1">
+                      Recurso do Windows 8.1 Update 1 que unifica a experiência entre Iniciar e Desktop.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {personalizeTab === 'colors' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-white/80">Escolha a cor de destaque da Barra de Tarefas e Acentos Metro:</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {WIN81_ACCENT_PALETTE.map(c => {
+                      const isSelected = accentColor === c.hex;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setAccentColor(c.hex);
+                            localStorage.setItem('win81_accent', c.hex);
+                            playSound('click');
+                            addToast(`Cor ${c.label} aplicada!`, 'success');
+                          }}
+                          style={{ backgroundColor: c.hex }}
+                          className={`h-12 border-2 flex items-center justify-center transition-transform hover:scale-105 cursor-pointer relative ${
+                            isSelected ? 'border-white ring-2 ring-white/50' : 'border-white/20'
+                          }`}
+                          title={c.label}
+                        >
+                          {isSelected && <Check size={16} className="text-white drop-shadow" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="p-3 bg-white/5 border border-white/10 mt-4">
+                    <div className="text-[11px] font-bold text-white/80 mb-1">Prévia da Cor:</div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 border border-white/30" style={{ backgroundColor: accentColor }} />
+                      <span className="text-xs font-mono">{accentColor}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {personalizeTab === 'desktop' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-white/80">Selecione uma imagem de fundo para a Área de Trabalho:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {WIN81_DESKTOP_WALLPAPERS.map(wp => {
+                      const isSelected = desktopWallpaper === wp.url;
+                      return (
+                        <button
+                          key={wp.id}
+                          onClick={() => {
+                            setDesktopWallpaper(wp.url);
+                            localStorage.setItem('win81_desktop_wallpaper', wp.url);
+                            playSound('click');
+                            addToast(`Papel de parede "${wp.name}" definido!`, 'success');
+                          }}
+                          className={`h-24 overflow-hidden relative border-2 text-left cursor-pointer group ${
+                            isSelected ? 'border-sky-400 ring-2 ring-sky-400/50' : 'border-white/20 hover:border-white/50'
+                          }`}
+                        >
+                          <img 
+                            src={wp.url} 
+                            alt={wp.name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1">
+                            <span className="text-[10px] font-bold text-white block truncate">{wp.name}</span>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle2 size={16} className="absolute top-1.5 right-1.5 text-sky-400 drop-shadow" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom wallpaper URL */}
+                  <div className="pt-3 border-t border-white/10 space-y-2">
+                    <span className="text-xs font-semibold block">Ou insira URL personalizada:</span>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="https://..."
+                        value={customWallpaperInput}
+                        onChange={(e) => setCustomWallpaperInput(e.target.value)}
+                        className="flex-1 bg-black/40 border border-white/20 px-2 py-1.5 text-xs text-white outline-none focus:border-sky-400"
+                      />
+                      <button
+                        onClick={() => {
+                          if (customWallpaperInput.trim()) {
+                            setDesktopWallpaper(customWallpaperInput.trim());
+                            localStorage.setItem('win81_desktop_wallpaper', customWallpaperInput.trim());
+                            playSound('click');
+                            addToast("Papel de parede personalizado aplicado!", "success");
+                          }
+                        }}
+                        className="px-3 bg-[#0078d7] hover:bg-[#005a9e] text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        OK
+                      </button>
+                    </div>
+
+                    {/* Upload file simulation */}
+                    <label className="flex items-center justify-center gap-2 p-2 bg-white/5 border border-dashed border-white/25 hover:bg-white/10 transition-colors cursor-pointer text-xs font-semibold text-white/80 mt-2">
+                      <Upload size={14} />
+                      <span>Carregar do Computador</span>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result === 'string') {
+                                setDesktopWallpaper(reader.result);
+                                localStorage.setItem('win81_desktop_wallpaper', reader.result);
+                                playSound('click');
+                                addToast("Papel de parede carregado com sucesso!", "success");
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* System Sounds Toggle */}
+              <div className="mt-auto pt-4 border-t border-white/10 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer text-xs">
+                  <span className="font-semibold">Sons do Windows 8.1</span>
+                  <input
+                    type="checkbox"
+                    checked={soundEnabled}
+                    onChange={(e) => {
+                      setSoundEnabled(e.target.checked);
+                      localStorage.setItem('win81_sound_enabled', String(e.target.checked));
+                      if (e.target.checked) playSound('click');
+                      addToast(e.target.checked ? "Efeitos sonoros ativados!" : "Efeitos sonoros desativados!", "info");
+                    }}
+                    className="w-4 h-4 rounded-none accent-[#0078d7]"
+                  />
+                </label>
+
+                <button
+                  onClick={() => {
+                    setPatternId('ribbon');
+                    setAccentColor('#004f7c');
+                    setDesktopWallpaper('https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=1920&auto=format&fit=crop');
+                    setUseDesktopOnStart(false);
+                    setSoundEnabled(true);
+                    localStorage.removeItem('win81_pattern');
+                    localStorage.removeItem('win81_accent');
+                    localStorage.removeItem('win81_desktop_wallpaper');
+                    localStorage.removeItem('win81_use_desktop_on_start');
+                    localStorage.removeItem('win81_sound_enabled');
+                    playSound('open');
+                    addToast("Configurações do Windows 8.1 restauradas ao padrão!", "info");
+                  }}
+                  className="w-full py-2 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/20 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <RotateCcw size={12} />
+                  <span>Restaurar Padrão do Windows 8.1</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 PC SETTINGS (CONFIGURAÇÕES DO COMPUTADOR METRO) */}
+      {/* ------------------------------------------------------------- */}
+      <AnimatePresence>
+        {win81PcSettingsOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-55 bg-[#2d2d30] text-white flex select-none overflow-hidden"
+          >
+            {/* PC Settings Left Navigation Sidebar */}
+            <div className="w-64 md:w-72 bg-[#1e1e1e] border-r border-white/10 flex flex-col p-6 shrink-0">
+              <div className="flex items-center gap-3 mb-8">
+                <button
+                  onClick={() => setWin81PcSettingsOpen(false)}
+                  className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Voltar ao Sistema"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <h1 className="text-xl font-light tracking-tight">Configurações do PC</h1>
+              </div>
+
+              <div className="space-y-1 text-xs font-semibold">
+                <button
+                  onClick={() => setPcSettingsCategory('personalize')}
+                  className={`w-full text-left p-3 flex items-center gap-3 transition-colors cursor-pointer ${
+                    pcSettingsCategory === 'personalize' ? 'bg-[#0078d7] text-white' : 'hover:bg-white/5 text-white/80'
+                  }`}
+                >
+                  <Palette size={16} />
+                  <span>Personalizar</span>
+                </button>
+
+                <button
+                  onClick={() => setPcSettingsCategory('devices')}
+                  className={`w-full text-left p-3 flex items-center gap-3 transition-colors cursor-pointer ${
+                    pcSettingsCategory === 'devices' ? 'bg-[#0078d7] text-white' : 'hover:bg-white/5 text-white/80'
+                  }`}
+                >
+                  <Laptop size={16} />
+                  <span>PC e Dispositivos</span>
+                </button>
+
+                <button
+                  onClick={() => setPcSettingsCategory('network')}
+                  className={`w-full text-left p-3 flex items-center gap-3 transition-colors cursor-pointer ${
+                    pcSettingsCategory === 'network' ? 'bg-[#0078d7] text-white' : 'hover:bg-white/5 text-white/80'
+                  }`}
+                >
+                  <Wifi size={16} />
+                  <span>Rede e Sincronização</span>
+                </button>
+
+                <button
+                  onClick={() => setPcSettingsCategory('accounts')}
+                  className={`w-full text-left p-3 flex items-center gap-3 transition-colors cursor-pointer ${
+                    pcSettingsCategory === 'accounts' ? 'bg-[#0078d7] text-white' : 'hover:bg-white/5 text-white/80'
+                  }`}
+                >
+                  <Users size={16} />
+                  <span>Contas e Usuários</span>
+                </button>
+
+                <button
+                  onClick={() => setPcSettingsCategory('about')}
+                  className={`w-full text-left p-3 flex items-center gap-3 transition-colors cursor-pointer ${
+                    pcSettingsCategory === 'about' ? 'bg-[#0078d7] text-white' : 'hover:bg-white/5 text-white/80'
+                  }`}
+                >
+                  <Info size={16} />
+                  <span>Sobre o Sistema</span>
+                </button>
+              </div>
+
+              <div className="mt-auto pt-6 border-t border-white/10 text-[10px] text-white/50">
+                Windows 8.1 Pro - Compilação 9600
+              </div>
+            </div>
+
+            {/* PC Settings Main Content Area */}
+            <div className="flex-1 p-8 md:p-12 overflow-y-auto custom-scrollbar">
+              {pcSettingsCategory === 'personalize' && (
+                <div className="max-w-3xl space-y-6">
+                  <h2 className="text-3xl font-light mb-4">Personalizar</h2>
+                  <div className="p-4 bg-white/5 border border-white/10 space-y-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-sky-400">Padrão da Tela Inicial</h3>
+                    <div className="grid grid-cols-4 gap-2">
+                      {WIN81_BACKGROUND_PATTERNS.map(pat => (
+                        <button
+                          key={pat.id}
+                          onClick={() => {
+                            setPatternId(pat.id);
+                            localStorage.setItem('win81_pattern', pat.id);
+                            playSound('click');
+                          }}
+                          style={{ background: pat.css }}
+                          className={`h-16 border-2 relative cursor-pointer ${
+                            patternId === pat.id ? 'border-white' : 'border-white/20 hover:border-white/50'
+                          }`}
+                        >
+                          <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/40 px-1 truncate max-w-[90%]">
+                            {pat.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-white/5 border border-white/10 space-y-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-sky-400">Cores de Acento</h3>
+                    <div className="grid grid-cols-8 gap-2">
+                      {WIN81_ACCENT_PALETTE.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setAccentColor(c.hex);
+                            localStorage.setItem('win81_accent', c.hex);
+                            playSound('click');
+                          }}
+                          style={{ backgroundColor: c.hex }}
+                          className={`h-10 border-2 cursor-pointer ${
+                            accentColor === c.hex ? 'border-white' : 'border-white/20'
+                          }`}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10">
+                    <div>
+                      <h4 className="font-bold text-sm">Bloquear Sessão</h4>
+                      <p className="text-xs text-white/60">Ativa a tela de bloqueio do Windows 8.1</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setWin81PcSettingsOpen(false);
+                        setIsLocked(true);
+                        playSound('open');
+                      }}
+                      className="px-4 py-2 bg-[#0078d7] hover:bg-[#005a9e] text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Bloquear Agora
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {pcSettingsCategory === 'devices' && (
+                <div className="max-w-2xl space-y-6">
+                  <h2 className="text-3xl font-light mb-4">PC e Dispositivos</h2>
+                  <div className="p-4 bg-white/5 border border-white/10 space-y-3 text-xs">
+                    <div className="flex items-center justify-between py-2 border-b border-white/10">
+                      <span>Resolução da Tela</span>
+                      <span className="font-mono text-sky-400">{window.innerWidth} x {window.innerHeight}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-white/10">
+                      <span>Modo de Tela Cheia</span>
+                      <button
+                        onClick={() => requestAppFullscreen()}
+                        className="px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold cursor-pointer"
+                      >
+                        Alternar Tela Cheia
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <span>Efeitos Sonoros do Sistema</span>
+                      <input
+                        type="checkbox"
+                        checked={soundEnabled}
+                        onChange={(e) => {
+                          setSoundEnabled(e.target.checked);
+                          localStorage.setItem('win81_sound_enabled', String(e.target.checked));
+                        }}
+                        className="w-4 h-4 accent-[#0078d7]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {pcSettingsCategory === 'network' && (
+                <div className="max-w-2xl space-y-6">
+                  <h2 className="text-3xl font-light mb-4">Rede e Sincronização</h2>
+                  <div className="p-5 bg-white/5 border border-white/10 space-y-4 text-xs">
+                    <div className="flex items-center gap-3">
+                      <Wifi size={24} className="text-emerald-400" />
+                      <div>
+                        <h3 className="font-bold text-sm">GIPP Cloud Network</h3>
+                        <p className="text-emerald-400 text-[11px]">Conectado à Internet e Nuvem Eclesiástica</p>
+                      </div>
+                    </div>
+                    <div className="pt-3 border-t border-white/10 space-y-1 text-white/70">
+                      <p>Status: Ativo e operacional</p>
+                      <p>Sincronização: Tempo real com banco de dados local e remoto</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {pcSettingsCategory === 'accounts' && (
+                <div className="max-w-2xl space-y-6">
+                  <h2 className="text-3xl font-light mb-4">Sua Conta</h2>
+                  <div className="p-6 bg-white/5 border border-white/10 flex items-center gap-4">
+                    <div className="w-16 h-16 bg-[#0078d7] flex items-center justify-center text-2xl font-bold text-white border-2 border-white/20">
+                      {user?.usuario ? user.usuario.charAt(0).toUpperCase() : 'A'}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base">{user?.usuario || 'Administrador'}</h3>
+                      <p className="text-xs text-white/60">Conta Local - Administrador do Sistema Eclesiástico</p>
+                      <p className="text-xs text-sky-400 mt-1">GIPP Teológico & Ministerial</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {pcSettingsCategory === 'about' && (
+                <div className="max-w-2xl space-y-6">
+                  <h2 className="text-3xl font-light mb-4">Sobre o Sistema</h2>
+                  <div className="p-6 bg-white/5 border border-white/10 space-y-4 text-xs">
+                    <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                      <Win81Logo size={32} className="text-[#0078d7]" />
+                      <div>
+                        <h3 className="font-bold text-sm">Windows 8.1 Pro (GIPP Edition)</h3>
+                        <p className="text-white/60 text-[11px]">Sistema de Gestão Integrada Pastoral e Teológica</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-white/80">
+                      <p><strong className="text-white">Versão:</strong> 8.1 Update 1 Pro</p>
+                      <p><strong className="text-white">Ambiente:</strong> React 18 + Tailwind CSS + Framer Motion</p>
+                      <p><strong className="text-white">Doutrina:</strong> 24 Capítulos da Declaração de Fé CGADB / CPAD</p>
+                      <p><strong className="text-white">Design:</strong> Metro Modern UI com Live Tiles e Charms Bar</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
