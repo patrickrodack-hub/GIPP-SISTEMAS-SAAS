@@ -5,7 +5,8 @@ import {
   Edit, Trash2, Clock, BookOpen, HeartHandshake, RefreshCw, Sparkles, 
   ChevronRight, ArrowRight, User, BookOpenText, MessageCircle, Send, Award, FileBadge
 } from 'lucide-react';
-import { ChurchContext, ConfirmModal } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
+import { ConfirmModal } from './ConfirmModal';
 
 interface Familia {
   id: string;

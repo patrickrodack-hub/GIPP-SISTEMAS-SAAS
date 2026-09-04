@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useContext } from 'react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
   BookOpen, Search, ChevronRight, HelpCircle, Users, Wallet, Calendar, 
   MapPin, Bell, Shield, Info, Download, Star, Settings, CheckCircle, 

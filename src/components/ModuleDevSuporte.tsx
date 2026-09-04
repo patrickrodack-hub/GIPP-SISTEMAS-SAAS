@@ -44,8 +44,9 @@ import {
 // Exporting component
 const ModuleDevSuporte = () => {
     const context = useContext(ChurchContext);
-    const { db = {}, setDoc, doc, dbFirestore, appId, addToast, deleteDoc } = context || {};
-    const chats = db?.support_chats || [];
+    if (!context) return null;
+    const { db, setDoc, doc, dbFirestore, appId, addToast, deleteDoc } = context;
+    const chats = db.support_chats || [];
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [replyText, setReplyText] = useState("");
 

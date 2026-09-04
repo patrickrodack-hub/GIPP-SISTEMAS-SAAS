@@ -10,7 +10,7 @@ import {
     Type, PaintBucket, Minus, Plus, Link, Highlighter, Scissors, Copy, Clipboard,
     ChevronDown, FileText, Download, FolderOpen, FileCheck, Maximize, Minimize, Settings, PanelRightClose, FileBox, X
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
     getStoredWindowState, 
     saveWindowState, 

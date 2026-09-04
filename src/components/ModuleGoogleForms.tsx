@@ -39,7 +39,8 @@ import {
   GoogleFormInfo,
   ParsedFormResponse
 } from '../services/googleWorkspaceService';
-import { ChurchContext, ConfirmModal } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
+import { ConfirmModal } from './ConfirmModal';
 import { collection, addDoc } from 'firebase/firestore';
 
 interface ModuleGoogleFormsProps {

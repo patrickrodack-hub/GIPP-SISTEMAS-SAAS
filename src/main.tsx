@@ -6,7 +6,11 @@ import './index.css';
 // Patch getComputedStyle globally to support parsing oklch colors in external libraries like html2canvas
 const originalGetComputedStyle = window.getComputedStyle;
 window.getComputedStyle = function (element: Element, pseudoElt?: string | null): CSSStyleDeclaration {
-  const style = originalGetComputedStyle(element, pseudoElt);
+  if (!element || typeof originalGetComputedStyle !== 'function') {
+    return originalGetComputedStyle ? originalGetComputedStyle.call(window, element, pseudoElt) : ({} as CSSStyleDeclaration);
+  }
+  const style = originalGetComputedStyle.call(window, element, pseudoElt);
+  if (!style) return style;
   
   const convertColorToRgb = (str: string): string => {
     if (typeof str !== 'string') return str;
@@ -144,21 +148,29 @@ window.getComputedStyle = function (element: Element, pseudoElt?: string | null)
     get(target, prop) {
       if (prop === 'getPropertyValue') {
         return function(propertyName: string) {
-          const value = target.getPropertyValue(propertyName);
-          if (typeof value === 'string' && (value.includes('oklch') || value.includes('oklab'))) {
-            return convertColorToRgb(value);
+          try {
+            const value = target.getPropertyValue(propertyName);
+            if (typeof value === 'string' && (value.includes('oklch') || value.includes('oklab'))) {
+              return convertColorToRgb(value);
+            }
+            return value;
+          } catch {
+            return '';
           }
-          return value;
         };
       }
-      const value = Reflect.get(target, prop);
-      if (typeof value === 'function') {
-        return value.bind(target);
+      try {
+        const value = Reflect.get(target, prop, target);
+        if (typeof value === 'function') {
+          return value.bind(target);
+        }
+        if (typeof prop === 'string' && typeof value === 'string' && (value.includes('oklch') || value.includes('oklab'))) {
+          return convertColorToRgb(value);
+        }
+        return value;
+      } catch {
+        return (target as any)[prop];
       }
-      if (typeof prop === 'string' && typeof value === 'string' && (value.includes('oklch') || value.includes('oklab'))) {
-        return convertColorToRgb(value);
-      }
-      return value;
     }
   }) as any;
 };

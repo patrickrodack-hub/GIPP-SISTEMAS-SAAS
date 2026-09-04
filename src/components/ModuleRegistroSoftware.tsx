@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef } from 'react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
   Scale, ShieldCheck, Printer, Download, Search, BookOpen, Quote, 
   FileText, Award, Landmark, HelpCircle, ExternalLink, ShieldAlert,

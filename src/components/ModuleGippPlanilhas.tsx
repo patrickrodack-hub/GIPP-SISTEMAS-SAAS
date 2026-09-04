@@ -32,7 +32,7 @@ import {
   Calendar,
   Hash
 } from "lucide-react";
-import { ChurchContext } from "../App";
+import { ChurchContext } from "../context/ChurchContext";
 import * as XLSX from "xlsx";
 import { 
   getStoredWindowState, 

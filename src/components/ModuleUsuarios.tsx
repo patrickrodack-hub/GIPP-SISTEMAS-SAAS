@@ -9,7 +9,7 @@ import {
   Settings, ShieldCheck, Book, Car, FileCode
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 // Categorias organizadas de permissão com 100% dos módulos do sistema GIPP
 const CATEGORIAS_PERMISSOES = [

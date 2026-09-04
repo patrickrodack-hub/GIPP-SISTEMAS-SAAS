@@ -2,7 +2,7 @@ import React, { useState, useMemo, useContext } from 'react';
 import { 
   Calendar, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, BookOpen, Home, Baby, Award, Users, ShieldAlert, Sparkles, UserCheck
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 const PortalFrequencia = ({ user, db }) => {
   const { addToast } = useContext(ChurchContext);

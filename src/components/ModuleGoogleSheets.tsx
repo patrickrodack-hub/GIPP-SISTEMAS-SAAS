@@ -4,7 +4,7 @@ import {
   Search, Check, AlertCircle, Sparkles, Download, Table, Database,
   Eye, Save, X, ArrowLeft, Layers, ShieldAlert, LogOut, CheckCircle2
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
   initWorkspaceAuth, 
   signInWithGoogleWorkspace, 
@@ -21,8 +21,7 @@ import {
 } from '../services/googleWorkspaceService';
 
 export default function ModuleGoogleSheets() {
-  const context = useContext(ChurchContext);
-  const { db, addToast } = context || { db: {}, addToast: () => {} };
+  const { db, addToast } = useContext(ChurchContext) || { db: {}, addToast: () => {} };
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);

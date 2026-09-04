@@ -9,7 +9,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, BarChart as RechartsBarChart, Bar
 } from 'recharts';
 import { collection, doc, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 export interface Vehicle {
   id: string;

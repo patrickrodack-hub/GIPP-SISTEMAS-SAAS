@@ -4,7 +4,7 @@ import {
   Baby, GraduationCap, Users, Search, Download, Printer, 
   Sparkles, Check, X, Shield, ArrowRight
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 export const ModuleQrCheckin: React.FC = () => {
   const { db, setDbState, addToast, user } = useContext(ChurchContext);

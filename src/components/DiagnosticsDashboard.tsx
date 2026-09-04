@@ -6,7 +6,7 @@ import {
   TrendingUp, FileText, Globe, MessageSquare, Info
 } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 interface TelemetryData {
   time: string;

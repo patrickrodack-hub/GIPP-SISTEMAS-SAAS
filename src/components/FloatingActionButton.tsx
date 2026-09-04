@@ -31,7 +31,7 @@ import {
   Check,
   Search
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 export interface ShortcutItem {
   id: string;
@@ -47,6 +47,8 @@ export interface ShortcutItem {
 export function FloatingActionButton() {
   const context = useContext(ChurchContext) as any;
 
+  if (!context) return null;
+
   const {
     view,
     setView,
@@ -59,7 +61,7 @@ export function FloatingActionButton() {
     dbFirestore,
     appId,
     osTheme
-  } = context || {};
+  } = context;
 
   const [isOpen, setIsOpen] = useState(false);
   const [quickModal, setQuickModal] = useState<'none' | 'membro' | 'financeiro' | 'visitante' | 'evento' | 'oracao'>('none');
@@ -97,8 +99,8 @@ export function FloatingActionButton() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Do not display if context is missing, user is not logged in or in fullscreen interativo mode
-  if (!context || !user || view === 'portal_interativo') {
+  // Do not display if user is not logged in or in fullscreen interativo mode
+  if (!user || view === 'portal_interativo') {
     return null;
   }
 

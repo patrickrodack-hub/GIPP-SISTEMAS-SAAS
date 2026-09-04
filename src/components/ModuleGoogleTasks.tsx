@@ -5,7 +5,7 @@ import {
   Layers, ShieldAlert, LogOut, RefreshCw, X, Tag, ListOrdered,
   BookOpen, Heart, Landmark, Users
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
   initWorkspaceAuth, 
   signInWithGoogleWorkspace, 
@@ -24,8 +24,7 @@ import {
 } from '../services/googleWorkspaceService';
 
 export default function ModuleGoogleTasks() {
-  const context = useContext(ChurchContext);
-  const { db, addToast } = context || { db: {}, addToast: () => {} };
+  const { db, addToast } = useContext(ChurchContext) || { db: {}, addToast: () => {} };
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);

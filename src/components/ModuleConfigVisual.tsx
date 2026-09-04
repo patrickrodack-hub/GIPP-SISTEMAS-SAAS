@@ -74,20 +74,18 @@ const ModuleConfigVisual = () => {
     // Sincroniza estados caso d_igreja mude externamente
     useEffect(() => {
         if (configData.papel_parede !== undefined) {
-             setSelectedWall(prev => prev !== configData.papel_parede ? configData.papel_parede : prev);
+             setSelectedWall(configData.papel_parede);
         }
         if (configData.tipo_animacao !== undefined) {
-             setSelectedAnim(prev => prev !== configData.tipo_animacao ? configData.tipo_animacao : prev);
+             setSelectedAnim(configData.tipo_animacao);
         }
         if (configData.papel_parede_opacidade !== undefined) {
-             const op = Number(configData.papel_parede_opacidade);
-             setOpacityFilter(prev => prev !== op ? op : prev);
+             setOpacityFilter(Number(configData.papel_parede_opacidade));
         }
         if (configData.pacote_icones !== undefined) {
-             const pack = configData.pacote_icones || 'gipp';
-             setSelectedIconPack(prev => prev !== pack ? pack : prev);
+             setSelectedIconPack(configData.pacote_icones || 'gipp');
         }
-    }, [configData.papel_parede, configData.tipo_animacao, configData.papel_parede_opacidade, configData.pacote_icones]);
+    }, [db.igreja]);
 
     const handleSaveConfig = async (wall = selectedWall, anim = selectedAnim, opacity = opacityFilter, iconPack = selectedIconPack) => {
         setSaving(true);
@@ -208,12 +206,12 @@ const ModuleConfigVisual = () => {
                     <div className="lg:col-span-5 flex flex-col space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {[
                             { id: 'default', name: 'GIPP Padrão (Moderno)', label: 'Default', desc: 'Interface moderna com cantos arredondados, gradientes e estética minimalista.' },
-                            { id: 'win81', name: 'Windows 8.1 (Metro / Modern UI)', label: 'Win8.1', desc: 'Experiência autêntica do Windows 8.1 com Tela Inicial de Blocos Dinâmicos (Live Tiles), Barra de Amuletos (Charms Bar), janelas Aero Lite e botões retangulares.' },
                             { id: 'gipp_retro', name: 'GIPP RETRO (Delphi 13 Florence)', label: 'Delphi 13', desc: 'Ambiente RAD clássico e corporativo baseado no Embarcadero Delphi 13 (Florence) com componentes VCL, TDBGrid, TSpeedButton e grelha de formulário.' },
                             { id: 'macos_tahoe', name: 'macOS 26 Tahoe (Elegante) ', label: 'macOS', desc: 'Tema exuberante com barra superior translúcida, dock flutuante com zoom, Launchpad e cantos super-arredondados.' },
-                            { id: 'win11', name: 'Windows 11 (Fluent & Mica)', label: 'Win11', desc: 'Experiência imersiva do Windows 11: Menu Iniciar centralizado, Snap Layouts para ancoragem de janelas, Efeito Mica translúcido, Central de Notificações, Calendário, Widgets de Clima, Sons Oficiais e Wallpapers Bloom.' },
+                            { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
+                            { id: 'win81', name: 'Windows 8.1 (Modern UI & Live Tiles)', label: 'Win8.1', desc: 'Ambiente autêntico do Windows 8.1 com Tela Iniciar em blocos dinâmicos (Live Tiles), Charms Bar lateral, cantos retos e barra de tarefas clássica.' },
                             { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
-                            { id: 'gipp_clipper', name: 'GIPP CLIPPER (Nantucket / CA-Clipper 5.x)', label: 'Clipper', desc: 'Experiência nostálgica e hiper veloz do clássico CA-Clipper em modo texto com barras de menu, teclas F1-F10, DBU, prompt interativo, janelas ASCII com molduras duplas e som PC Speaker.' },
+                            { id: 'msdos', name: 'Sistema COBOL (Mainframe)', label: 'COBOL', desc: 'Visual clássico de terminal AS/400 ou mainframe IBM, fontes mono espaçadas em fósforo verde com destaques coloridos.' },
                             { id: 'linux', name: 'Linux Ubuntu (GNOME)', label: 'Linux', desc: 'Soberbo tema inspirado na elegância do Ubuntu e do ecossistema GNOME, com gradientes aubergine e detalhes em laranja Yaru.' },
                             { id: 'premium_black', name: 'Premium Black & Gold', label: 'Luxo', desc: 'Tema escuro requintado com contrastes profundos e acabamentos em dourado.' },
                             { id: 'futuristic', name: 'GIPP Sci-Fi Futurista', label: 'Futurista', desc: 'Estética cibernética de alta performance com realces neon ciano/rosa e acabamento holográfico.' }
@@ -260,19 +258,18 @@ const ModuleConfigVisual = () => {
                         <div 
                           className={`w-full h-[330px] rounded-[1.5rem] overflow-hidden relative flex flex-col p-4 shadow-inner border border-slate-200/60 transition-all duration-300 ${
                             previewTheme === 'default' ? 'bg-[#0f172a]' :
-                            previewTheme === 'win81' ? 'bg-[#004B40]' :
                             previewTheme === 'gipp_retro' ? 'bg-[#E2E6EA]' :
                             previewTheme === 'macos_tahoe' ? 'bg-[#0b0c16]' :
                             previewTheme === 'win11' ? 'bg-gradient-to-tr from-[#9ec2e6] to-[#d6e5f5]' :
+                            previewTheme === 'win81' ? 'bg-[#004f7c]' :
                             previewTheme === 'win95' ? 'bg-[#008080]' : /* classic teal */
-                            (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'bg-[#0000AA]' :
+                            previewTheme === 'msdos' ? 'bg-black' :
                             previewTheme === 'linux' ? 'bg-[#1f0b1a]' : /* aubergine */
                             previewTheme === 'premium_black' ? 'bg-[#1a1a1a]' :
                             previewTheme === 'futuristic' ? 'bg-[#03001e]' : 'bg-slate-100'
                           }`}
                           style={{
-                            backgroundImage: previewTheme === 'gipp_retro' ? 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)' : 
-                                            previewTheme === 'win81' ? 'radial-gradient(circle at 100% 100%, #006052 0%, #004B40 100%)' : undefined,
+                            backgroundImage: previewTheme === 'gipp_retro' ? 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)' : undefined,
                             backgroundSize: previewTheme === 'gipp_retro' ? '8px 8px' : undefined
                           }}
                         >
@@ -280,31 +277,31 @@ const ModuleConfigVisual = () => {
                             <div 
                               className={`w-full max-w-md mx-auto mt-6 relative flex flex-col transition-all duration-300 z-10 ${
                                 previewTheme === 'macos_tahoe' ? 'bg-[#16171e]/95 rounded-[1.2rem] border border-white/10 p-1.5 shadow-2xl text-slate-100' :
-                                previewTheme === 'win81' ? 'bg-[#ffffff] border-2 border-[#0078D7] rounded-none shadow-2xl text-slate-900' :
                                 previewTheme === 'gipp_retro' ? 'bg-[#ECEFF4] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] rounded-xs shadow-xl text-slate-900 p-1' :
                                 previewTheme === 'win95' ? 'bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#808080] border-b-[#808080] outline-1 outline-black p-0.5' :
                                 previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
-                                (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'bg-[#000088] border-4 border-double border-[#00AAAA] p-2 text-white font-mono text-[11px] shadow-2xl' :
+                                previewTheme === 'win81' ? 'bg-[#1f1f1f] rounded-none border border-white/20 p-1 shadow-2xl text-slate-100' :
+                                previewTheme === 'msdos' ? 'bg-black border-4 border-double border-green-500 p-2 text-green-500 font-mono text-[11px]' :
                                 previewTheme === 'linux' ? 'bg-[#221820] rounded-2xl border border-white/10 p-1 shadow-2xl text-slate-100' :
                                 previewTheme === 'premium_black' ? 'bg-[#0a0a0a] border border-[#D4AF37] p-2 text-slate-100' :
                                 previewTheme === 'futuristic' ? 'bg-black/90 border border-[#00f0ff] p-2 text-slate-100 shadow-[0_0_15px_rgba(0,240,255,0.25)]' :
                                 'bg-white/95 rounded-3xl border border-slate-100 p-3 shadow-xl text-slate-800'
                               }`}
                               style={{ 
-                                fontFamily: previewTheme === 'gipp_retro' || previewTheme === 'win81' ? "'Segoe UI', 'Tahoma', sans-serif" :
+                                fontFamily: previewTheme === 'gipp_retro' ? "'Segoe UI', 'Tahoma', sans-serif" :
                                              previewTheme === 'win95' ? "'Tahoma', sans-serif" : 
-                                             (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? "'VT323', 'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
+                                             previewTheme === 'msdos' ? "'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
                               }}
                             >
                                 {/* Barra de título simulada */}
                                 <div 
                                   className={`flex items-center justify-between px-2 py-1 select-none ${
                                     previewTheme === 'macos_tahoe' ? 'bg-[#1e2029] rounded-t-xl p-2 border-b border-white/5 text-white font-bold flex-row-reverse' :
-                                    previewTheme === 'win81' ? 'bg-white text-[#000000] border-b border-slate-200 font-semibold text-xs px-3 py-1.5' :
                                     previewTheme === 'gipp_retro' ? 'bg-gradient-to-r from-[#004E98] to-[#1D65A6] text-white font-black p-1.5 rounded-xs shadow-xs' :
                                     previewTheme === 'win95' ? 'bg-[#000080] text-white font-bold' :
                                     previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
-                                    (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'bg-[#00AAAA] text-black font-bold border-b border-black pb-1 mb-2 font-mono uppercase tracking-wider' :
+                                    previewTheme === 'win81' ? 'bg-[#004f7c] rounded-none p-1.5 text-white font-semibold' :
+                                    previewTheme === 'msdos' ? 'bg-black border-b border-green-500 pb-1 mb-2 font-mono text-yellow-400 font-bold uppercase tracking-wider' :
                                     previewTheme === 'linux' ? 'bg-[#1b1118] rounded-t-xl p-2 border-b border-white/5 text-white font-bold' :
                                     previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border-b border-[#D4AF37]/40 pb-1 mb-2 text-[#D4AF37] font-bold' :
                                     previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#03001e] to-[#120012] border-b border-[#00f0ff]/40 pb-1 mb-2 text-[#00f0ff] font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' :
@@ -312,8 +309,7 @@ const ModuleConfigVisual = () => {
                                   }`}
                                 >
                                     <span className="text-[11px] truncate uppercase tracking-wider font-bold">
-                                        {(previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? '╔═[ █ SISTEMA GIPP CLIPPER 5.3 █ ]═╗' : 
-                                         previewTheme === 'win81' ? 'Secretaria - Windows 8.1 Modern UI' :
+                                        {previewTheme === 'msdos' ? 'C:\\GIPP\\DASHBOARD.EXE' : 
                                          previewTheme === 'gipp_retro' ? 'FormMembros: TForm (Delphi 13 Florence)' : 'GIPP - Visual Preview'}
                                     </span>
                                     {/* Botões de controle simulados */}
@@ -323,12 +319,6 @@ const ModuleConfigVisual = () => {
                                                 <span className="w-2.5 h-2.5 bg-rose-500 rounded-full flex items-center justify-center border border-rose-600/30"></span>
                                                 <span className="w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-amber-600/30"></span>
                                                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full flex items-center justify-center border border-emerald-600/30"></span>
-                                            </div>
-                                        ) : previewTheme === 'win81' ? (
-                                            <div className="flex">
-                                                <span className="w-6 h-5 bg-transparent hover:bg-slate-200 text-[10px] flex items-center justify-center font-normal text-slate-800 select-none">🗕</span>
-                                                <span className="w-6 h-5 bg-transparent hover:bg-slate-200 text-[10px] flex items-center justify-center font-normal text-slate-800 select-none">🗖</span>
-                                                <span className="w-6 h-5 bg-transparent hover:bg-red-600 hover:text-white text-[10px] flex items-center justify-center font-normal text-slate-800 select-none">✕</span>
                                             </div>
                                         ) : previewTheme === 'gipp_retro' ? (
                                             <div className="flex gap-0.5">
@@ -342,17 +332,17 @@ const ModuleConfigVisual = () => {
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">▢</span>
                                                 <span className="w-4 h-3.5 bg-[#d4d0c8] border border-t-white border-l-white border-r-[#404040] border-b-[#404040] text-[8px] flex items-center justify-center font-bold text-black select-none">✕</span>
                                             </div>
-                                        ) : (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? (
-                                            <div className="flex gap-1 font-mono text-[9px] font-bold text-black">
-                                                <span className="px-1 bg-black text-white">▲</span>
-                                                <span className="px-1 bg-black text-white">■</span>
-                                                <span className="px-1 bg-rose-700 text-white">X</span>
-                                            </div>
                                         ) : previewTheme === 'linux' ? (
                                             <div className="flex gap-1.5">
                                                 <span className="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center font-bold text-black/45 text-[7px] select-none cursor-default">✕</span>
                                                 <span className="w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center font-bold text-black/45 text-[7px] select-none cursor-default">_</span>
                                                 <span className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center font-bold text-black/45 text-[7px] select-none cursor-default">⤢</span>
+                                            </div>
+                                        ) : previewTheme === 'win81' ? (
+                                            <div className="flex gap-0">
+                                                <span className="w-4 h-3.5 bg-white/10 hover:bg-white/20 text-[8px] flex items-center justify-center font-bold text-white select-none">-</span>
+                                                <span className="w-4 h-3.5 bg-white/10 hover:bg-white/20 text-[8px] flex items-center justify-center font-bold text-white select-none">▢</span>
+                                                <span className="w-4 h-3.5 bg-[#e81123] text-[8px] flex items-center justify-center font-bold text-white select-none">✕</span>
                                             </div>
                                         ) : (
                                             <div className="flex gap-1">
@@ -368,7 +358,7 @@ const ModuleConfigVisual = () => {
                                 <div className={`p-4 mt-1 flex flex-col space-y-3.5 ${
                                     previewTheme === 'macos_tahoe' ? 'bg-[#16171e] text-slate-100' :
                                     previewTheme === 'gipp_retro' ? 'bg-[#ECEFF4] text-[#102A43] border border-[#CBD5E1]' :
-                                    (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'bg-[#000088] text-white font-mono' :
+                                    previewTheme === 'msdos' ? 'bg-black text-green-500 font-mono' :
                                     previewTheme === 'premium_black' ? 'bg-[#050505] text-slate-100' :
                                     previewTheme === 'futuristic' ? 'bg-[#03001e] text-slate-100' :
                                     previewTheme === 'linux' ? 'bg-[#221820] text-slate-100' :
@@ -376,22 +366,17 @@ const ModuleConfigVisual = () => {
                                     'bg-white text-slate-800'
                                 }`}>
                                     <div className="text-[11px] font-extrabold flex items-center justify-between">
-                                        <span className={previewTheme === 'gipp_retro' ? 'text-[#004E98] font-black' : (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'text-yellow-300 font-bold' : ''}>
-                                          {(previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? '@ 04,02 SAY "SECRETARIA GIPP (CADASTRO)"' : 'Secretaria GIPP (Demonstração)'}
-                                        </span>
+                                        <span className={previewTheme === 'gipp_retro' ? 'text-[#004E98] font-black' : ''}>Secretaria GIPP (Demonstração)</span>
                                     </div>
                                     
                                     {/* Campo de input simulado */}
                                     <div className="flex flex-col space-y-1">
-                                        <span className="text-[10px] font-bold opacity-85">
-                                          {(previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? '@ 06,02 GET cNomeMembro PICTURE "@!"' : 'Nome do Membro (TDBEdit):'}
-                                        </span>
+                                        <span className="text-[10px] font-bold opacity-85">Nome do Membro (TDBEdit):</span>
                                         <div className={`p-1.5 text-[10px] truncate ${
                                             previewTheme === 'macos_tahoe' ? 'border border-white/10 bg-white/5 text-white rounded-lg' :
-                                            previewTheme === 'win81' ? 'bg-white border border-[#ababab] text-black rounded-none shadow-inner' :
                                             previewTheme === 'gipp_retro' ? 'bg-white border-t-2 border-l-2 border-t-[#6E7A8A] border-l-[#6E7A8A] border-r border-b border-r-[#CBD5E1] border-b-[#CBD5E1] text-[#0F172A] font-bold shadow-inner' :
                                             previewTheme === 'win95' ? 'bg-white border-t-1.5 border-l-1.5 border-t-[#404040] border-l-[#404040] border-r-1.5 border-b-1.5 border-r-white border-b-white text-black' :
-                                            (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'border border-[#00AAAA] bg-[#000055] text-[#55FFFF] font-mono font-bold' :
+                                            previewTheme === 'msdos' ? 'border-b-2 border-cyan-400 bg-black text-cyan-400 font-mono font-bold' :
                                             previewTheme === 'linux' ? 'border border-white/10 bg-[#150d14] text-white rounded-lg' :
                                             previewTheme === 'premium_black' ? 'border border-[#D4AF37]/40 bg-black text-[#D4AF37]' :
                                             previewTheme === 'futuristic' ? 'border border-[#00f0ff]/50 bg-slate-950 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]' :
@@ -405,29 +390,27 @@ const ModuleConfigVisual = () => {
                                     <div className="flex gap-2">
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
                                             previewTheme === 'macos_tahoe' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-400/20 text-white rounded-lg text-center shadow-md' :
-                                            previewTheme === 'win81' ? 'bg-[#0078D7] hover:bg-[#0063B1] text-white font-semibold rounded-none text-center shadow-none' :
                                             previewTheme === 'gipp_retro' ? 'bg-gradient-to-b from-white via-[#E6E9ED] to-[#D2D7DF] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#102A43] font-black rounded-xs shadow-xs text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
-                                            (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'border border-black bg-[#00AAAA] text-black font-mono text-center font-black uppercase' :
+                                            previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
                                             previewTheme === 'linux' ? 'bg-gradient-to-b from-[#e95420] to-[#df3812] border border-transparent text-white rounded-lg text-center font-bold shadow-[0_4px_10px_rgba(223,56,18,0.3)]' :
                                             previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border border-[#D4AF37] text-[#D4AF37] text-center font-bold' :
                                             previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#00f0ff] to-[#ff007f] border border-white/10 text-white text-center font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)] rounded-lg' :
                                             'bg-indigo-600 text-white rounded-xl font-bold shadow-md shadow-indigo-100 text-center'
                                         }`}>
-                                            {(previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? '< F2 GRAVAR >' : 'Gravar [F9]'}
+                                            Gravar [F9]
                                         </div>
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
                                             previewTheme === 'macos_tahoe' ? 'bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg text-center' :
-                                            previewTheme === 'win81' ? 'bg-[#cccccc] text-slate-800 font-semibold rounded-none text-center' :
                                             previewTheme === 'gipp_retro' ? 'bg-gradient-to-b from-white via-[#E6E9ED] to-[#D2D7DF] border-t-2 border-l-2 border-t-white border-l-white border-r-2 border-b-2 border-r-[#5A6578] border-b-[#5A6578] text-[#5A6578] font-bold rounded-xs shadow-xs text-center' :
                                             previewTheme === 'win95' ? 'bg-[#d4d0c8] border-t-1.5 border-l-1.5 border-t-white border-l-white border-r-1.5 border-b-1.5 border-r-[#404040] border-b-[#404040] text-black' :
-                                            (previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? 'border border-black bg-rose-700 text-white font-mono text-center font-black uppercase' :
+                                            previewTheme === 'msdos' ? 'border-2 border-white bg-blue-900 text-white font-mono text-center font-bold tracking-widest uppercase' :
                                             previewTheme === 'linux' ? 'bg-[#3a3a44] border border-white/5 text-white rounded-lg text-center font-bold' :
                                             previewTheme === 'premium_black' ? 'bg-black border border-slate-700 text-slate-400 text-center' :
                                             previewTheme === 'futuristic' ? 'bg-slate-900/80 border border-[#ff007f]/40 text-[#ff007f] text-center rounded-lg shadow-[0_0_8px_rgba(255,0,127,0.15)]' :
                                             'bg-slate-100 text-slate-500 rounded-xl font-bold text-center'
                                         }`}>
-                                            {(previewTheme === 'gipp_clipper' || previewTheme === 'msdos') ? '< ESC CANCELAR >' : 'Cancelar [Esc]'}
+                                            Cancelar [Esc]
                                         </div>
                                     </div>
                                 </div>
@@ -521,56 +504,6 @@ const ModuleConfigVisual = () => {
                                 </button>
                             );
                         })}
-                    </div>
-                </div>
-
-                {/* PAINEL ESPECIAL: RECURSOS WINDOWS 8.1 METRO */}
-                <div className="mt-4 pt-6 border-t border-slate-100 flex flex-col space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-teal-100 text-teal-800 rounded-xl">
-                                <Palette size={18} />
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-black text-slate-800">Recursos do Tema Windows 8.1 (Modern UI)</h4>
-                                <p className="text-[11px] text-slate-550 font-medium">Tela Inicial de Blocos Dinâmicos, Barra de Amuletos (Charms Bar), janelas Aero Lite e som autêntico.</p>
-                            </div>
-                        </div>
-                        <span className="text-[10px] font-mono bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full font-bold border border-teal-200">
-                            Metro UI & Charms
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="p-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50/50 flex flex-col justify-between gap-2">
-                            <span className="text-xs font-black text-slate-800">Blocos Dinâmicos (Live Tiles)</span>
-                            <div className="flex gap-1.5 items-center">
-                                <div className="w-8 h-8 bg-teal-600 flex items-center justify-center text-white text-[10px] font-bold">W8</div>
-                                <div className="w-8 h-8 bg-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">GP</div>
-                                <div className="w-16 h-8 bg-purple-700 flex items-center justify-center text-white text-[10px] font-bold">Modern</div>
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-medium">Grid com ícones dinâmicos de alta legibilidade agrupados por departamento.</p>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50/50 flex flex-col justify-between gap-2">
-                            <span className="text-xs font-black text-slate-800">Barra de Amuletos (Charms Bar)</span>
-                            <div className="bg-[#111111] p-1.5 flex justify-around text-white text-[10px] font-bold">
-                                <span>🔍 Buscar</span>
-                                <span>🔗 Partilhar</span>
-                                <span>🪟 Início</span>
-                                <span>⚙️ Definições</span>
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-medium">Passe o cursor no canto direito da tela ou use a barra lateral para acessar.</p>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50/50 flex flex-col justify-between gap-2">
-                            <span className="text-xs font-black text-slate-800">Janelas Aero Lite</span>
-                            <div className="border border-teal-600 bg-white p-1 flex justify-between items-center text-[10px] font-bold text-slate-800">
-                                <span>Módulo</span>
-                                <div className="flex gap-1 text-[8px] text-slate-500"><span>_</span><span>▢</span><span className="text-red-500">✕</span></div>
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-medium">Bordas nítidas sem arredondamento com navegação em fita estilo Windows 8.1.</p>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gipp-cache-v2';
+const CACHE_NAME = 'gipp-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -72,8 +72,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // Ignorar Firebase Firestore, genai e outras APIs para não atrapalhar
-  if (url.hostname.includes('firestore.googleapis.com') ||
+  // Nunca interceptar requisições em ambiente de desenvolvimento, Vite, APIs ou serviços externos
+  if (url.hostname === 'localhost' ||
+      url.hostname.includes('run.app') ||
+      url.pathname.startsWith('/@') ||
+      url.pathname.startsWith('/src/') ||
+      url.pathname.startsWith('/node_modules/') ||
+      url.pathname.startsWith('/api/') ||
+      url.hostname.includes('firestore.googleapis.com') ||
       url.hostname.includes('firebase') ||
       url.hostname.includes('google') ||
       event.request.method !== 'GET') {

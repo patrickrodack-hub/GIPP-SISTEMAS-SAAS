@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { 
   LayoutDashboard, Users, Building2, CreditCard, FileText, Settings, 
   LogOut, Plus, Edit, Trash2, Printer, Search, X, BookOpen, GraduationCap, Shield, Database, Save, RefreshCw, 
@@ -1130,7 +1130,9 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
                   </div>
                 ) : hasPermission(access) ? (
                   <div className="delphi-form-workspace relative z-10">
-                    <CurrentModule {...currentProps} />
+                    <Suspense fallback={<div className="p-8 text-center text-xs font-mono opacity-60">Carregando formulário Delphi...</div>}>
+                      <CurrentModule {...currentProps} />
+                    </Suspense>
                   </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-center p-12 relative z-10">

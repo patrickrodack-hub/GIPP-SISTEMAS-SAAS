@@ -22,17 +22,28 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        const registerSW = () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registrado com sucesso: ', registration.scope);
-          }).catch(err => {
-            console.log('O registro do SW falhou: ', err);
+        // No ambiente de desenvolvimento ou no preview do iframe do AI Studio,
+        // cancelamos o registro de Service Workers antigos para evitar travamento de cache de módulos Vite
+        const isDevOrIframe = window.self !== window.top || location.hostname === 'localhost' || location.hostname.includes('run.app');
+        if (isDevOrIframe) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (const registration of registrations) {
+              registration.unregister();
+            }
           });
-        };
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-          registerSW();
+          if ('caches' in window) {
+            caches.keys().then(keys => {
+              for (const key of keys) {
+                caches.delete(key);
+              }
+            });
+          }
         } else {
-          window.addEventListener('load', registerSW);
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+              console.log('O registro do SW falhou: ', err);
+            });
+          });
         }
       }
     </script>

@@ -211,6 +211,10 @@ function trackApiCall(api: "gemini" | "asaas" | "push" | "whatsapp" | "maps", se
     }
 }
 
+app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+});
+
 app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
 });
@@ -1972,39 +1976,22 @@ async function start() {
         });
         console.log("[Server] Arquivos estáticos de produção configurados com sucesso.");
     } else {
-        // Registra o middleware dinâmico após todas as rotas de API em dev
-        app.use((req, res, next) => {
-            if (viteMiddleware) {
-                viteMiddleware(req, res, next);
-            } else {
-                if (req.path.startsWith("/api")) {
-                    next();
-                } else {
-                    res.setHeader("Content-Type", "text/html; charset=utf-8");
-                    res.send("<html><head><meta charset='utf-8'></head><body><h3>Iniciando o servidor de desenvolvimento, por favor aguarde alguns segundos e recarregue a página...</h3></body></html>");
-                }
-            }
-        });
+        try {
+            console.log("[Vite] Inicializando servidor de desenvolvimento...");
+            const vite = await createViteServer({
+                server: { middlewareMode: true },
+                appType: "spa",
+            });
+            app.use(vite.middlewares);
+            console.log("[Vite] Servidor de desenvolvimento carregado com sucesso!");
+        } catch (err) {
+            console.error("[Vite] Falha crítica ao inicializar o Vite:", err);
+        }
     }
 
-    // 1. Iniciamos o escuta da porta imediatamente para liberar as sondagens de saúde (health check)
-    app.listen(PORT, "0.0.0.0", async () => {
+    // 1. Iniciamos a escuta da porta com o servidor completamente pronto
+    app.listen(PORT, "0.0.0.0", () => {
         console.log(`Server running on http://localhost:${PORT}`);
-        
-        // 2. Inicialização em segundo plano dependendo do ambiente
-        if (process.env.NODE_ENV !== "production") {
-            try {
-                console.log("[Vite] Inicializando servidor de desenvolvimento em segundo plano...");
-                const vite = await createViteServer({
-                    server: { middlewareMode: true },
-                    appType: "spa",
-                });
-                viteMiddleware = vite.middlewares;
-                console.log("[Vite] Servidor de desenvolvimento carregado com sucesso!");
-            } catch (err) {
-                console.error("[Vite] Falha crítica ao inicializar o Vite:", err);
-            }
-        }
 
         // 3. Iniciar serviços de segundo plano de forma assíncrona com tempos seguros
         setTimeout(async () => {

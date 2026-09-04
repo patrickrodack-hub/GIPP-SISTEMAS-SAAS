@@ -10,7 +10,8 @@ import {
   Hash, QrCode, MapPin, UserPlus, ChevronLeft, ChevronRight, AlertCircle,
   FileSpreadsheet, ScrollText, CheckSquare, Settings, Trash, X
 } from 'lucide-react';
-import { ChurchContext, playMenuSound, formatDateLocal, getTodayDate } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
+import { playMenuSound, formatDateLocal, getTodayDate } from '../utils/sharedHelpers';
 
 // Seed data to make the app beautiful immediately if database is empty
 const INITIAL_LIVROS_SEED = [

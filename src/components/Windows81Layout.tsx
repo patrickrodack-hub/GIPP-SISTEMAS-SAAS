@@ -1,45 +1,28 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { 
   LayoutDashboard, Users, Building2, CreditCard, FileText, Settings, 
-  LogOut, Plus, Edit, Trash2, Printer, Search, X, BookOpen, GraduationCap, Shield, Database, Save, RefreshCw, 
-  Phone, Mail, Code, Info, Home, Wifi, Sparkles, Palette,
-  CheckCircle2, Minus, Maximize2, FileSpreadsheet, Lock, AlertTriangle,
-  Play, Square, Terminal, Cpu, HardDrive, HelpCircle, Layers, Sliders,
-  QrCode, BookOpenText, DollarSign, ArrowUpCircle, ArrowDownCircle, Briefcase,
-  History, ShieldCheck, Newspaper, Award, Calendar, FolderTree, Check,
-  Gamepad2, Music, Video, Heart, Globe, Baby, Car, Package, Share2, HeartHandshake, Book, MessageCircle, Badge,
-  CheckSquare, Activity, FileCheck, ImagePlus, UserCheck, ChevronDown, ChevronRight, Volume2, VolumeX,
-  Power, ArrowLeft, ArrowRight, CornerDownRight, Monitor, Folder, ExternalLink, ChevronUp, Bell, BatteryCharging,
-  SlidersHorizontal, Smartphone, Tablet
+  LogOut, Plus, Search, X, BookOpen, GraduationCap, Shield, Database, 
+  RefreshCw, Lock, Sliders, ChevronDown, ChevronUp, ChevronRight,
+  Wifi, Volume2, Bell, Sun, Monitor, Share2, Grid, Check, Trash2,
+  Maximize, Minus, Power, Palette, Info, History, ArrowRight, ExternalLink,
+  Book, Sparkles, ImagePlus, MessageCircle, QrCode, ShieldCheck, Newspaper,
+  Award, Calendar, Gamepad2, Music, Video, Heart, Globe, Baby, Car, Package,
+  FileSpreadsheet, FileCheck, CheckSquare, Activity, ArrowUpCircle, ArrowDownCircle,
+  HelpCircle, Eye, EyeOff
 } from 'lucide-react';
-import {
-  GoogleGLogo,
-  GoogleMeetIcon,
-  GoogleSheetsIcon,
-  GoogleDocsIcon,
-  GoogleTasksIcon,
-  GoogleCalendarIcon,
-  GoogleGmailIcon,
-  GoogleFormsIcon,
-  GoogleClassroomIcon
-} from './GoogleIcons';
+import { motion, AnimatePresence } from 'motion/react';
+import { requestAppFullscreen } from '../lib/performanceHelpers';
 
-// Windows 8.1 4-Pane angled Start Button Logo
-export const Windows81Logo: React.FC<{ className?: string; size?: number }> = ({ className = '', size = 18 }) => {
-  return (
-    <svg 
-      width={size} 
-      height={size} 
-      viewBox="0 0 88 88" 
-      fill="currentColor" 
-      className={`shrink-0 transition-transform ${className}`}
-    >
-      <path d="M0,12.5 L35.5,7.5 L35.5,41.5 L0,41.5 Z M0,46.5 L35.5,46.5 L35.5,80.5 L0,75.5 Z M39.5,7 L88,0 L88,41.5 L39.5,41.5 Z M39.5,46.5 L88,46.5 L88,88 L39.5,81 Z" />
-    </svg>
-  );
-};
+export const Win81Logo = ({ size = 20, className = "" }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`shrink-0 ${className}`}>
+    <polygon points="2,4.8 10.4,3.6 10.4,11.2 2,11.2" />
+    <polygon points="11.8,3.4 22,2 22,11.2 11.8,11.2" />
+    <polygon points="2,12.8 10.4,12.8 10.4,20.4 2,19.2" />
+    <polygon points="11.8,12.8 22,12.8 22,22 11.8,20.6" />
+  </svg>
+);
 
-export interface Windows81LayoutProps {
+interface Windows81LayoutProps {
   view: string;
   setView: (view: string) => void;
   user: any;
@@ -61,43 +44,23 @@ export interface Windows81LayoutProps {
   setTheme: (t: string) => void;
   osTheme: string;
   setOsTheme: (t: string) => void;
-  animBgEnabled: boolean;
-  setAnimBgEnabled: (enabled: boolean) => void;
+  animBgEnabled?: boolean;
+  setAnimBgEnabled?: (enabled: boolean) => void;
   ALL_AVAILABLE_MODULES: any[];
+  userShortcuts?: { id: string; label: string; x: number; y: number }[];
+  addShortcutToDesktop?: (moduleId: string, x?: number, y?: number) => void;
+  removeShortcutFromDesktop?: (moduleId: string) => void;
+  autoArrangeWin11Shortcuts?: () => void;
+  pinnedTaskbarModules?: string[];
+  setPinnedTaskbarModules?: React.Dispatch<React.SetStateAction<string[]>>;
+  pinnedStartModules?: string[];
+  setPinnedStartModules?: React.Dispatch<React.SetStateAction<string[]>>;
+  openedModules?: string[];
+  setOpenedModules?: React.Dispatch<React.SetStateAction<string[]>>;
+  minimizedModules?: string[];
+  setMinimizedModules?: React.Dispatch<React.SetStateAction<string[]>>;
+  addToast?: (msg: string, type?: any) => void;
 }
-
-// Windows 8.1 Accent Color Themes
-export interface Win81Accent {
-  id: string;
-  name: string;
-  primary: string;
-  darkBg: string;
-  lightBg: string;
-  tileBg: string;
-  taskbarBg: string;
-  windowBorder: string;
-  highlight: string;
-}
-
-export const WIN81_ACCENTS: Win81Accent[] = [
-  { id: 'teal', name: 'Turquesa Oficial', primary: '#008272', darkBg: '#004B40', lightBg: '#00A896', tileBg: '#008272', taskbarBg: '#005A4E', windowBorder: '#008272', highlight: '#00BFA5' },
-  { id: 'cyan', name: 'Azul Windows 8.1', primary: '#0078D7', darkBg: '#003E73', lightBg: '#0099FF', tileBg: '#0078D7', taskbarBg: '#004D8C', windowBorder: '#0078D7', highlight: '#33B0FF' },
-  { id: 'cobalt', name: 'Azul Cobalto', primary: '#004E98', darkBg: '#00264D', lightBg: '#1D65A6', tileBg: '#004E98', taskbarBg: '#003366', windowBorder: '#004E98', highlight: '#3A86FF' },
-  { id: 'purple', name: 'Roxo Real', primary: '#68217A', darkBg: '#3B0D47', lightBg: '#8A2BE2', tileBg: '#68217A', taskbarBg: '#4A1559', windowBorder: '#68217A', highlight: '#A855F7' },
-  { id: 'magenta', name: 'Magenta Vibrante', primary: '#B4009E', darkBg: '#610055', lightBg: '#D80073', tileBg: '#B4009E', taskbarBg: '#7D006E', windowBorder: '#B4009E', highlight: '#F43F5E' },
-  { id: 'crimson', name: 'Vermelho Carmesim', primary: '#C42B1C', darkBg: '#6A1009', lightBg: '#E81123', tileBg: '#C42B1C', taskbarBg: '#8B140B', windowBorder: '#C42B1C', highlight: '#FF4D4F' },
-  { id: 'orange', name: 'Laranja Mango', primary: '#D83B01', darkBg: '#731F00', lightBg: '#EA580C', tileBg: '#D83B01', taskbarBg: '#962900', windowBorder: '#D83B01', highlight: '#FB923C' },
-  { id: 'emerald', name: 'Verde Esmeralda', primary: '#107C41', darkBg: '#084021', lightBg: '#16A34A', tileBg: '#107C41', taskbarBg: '#0B572D', windowBorder: '#107C41', highlight: '#4ADE80' },
-  { id: 'charcoal', name: 'Grafite Escuro', primary: '#2B2B2B', darkBg: '#171717', lightBg: '#3F3F46', tileBg: '#2B2B2B', taskbarBg: '#1E1E1E', windowBorder: '#3F3F46', highlight: '#71717A' },
-  { id: 'navy', name: 'Azul Marinho', primary: '#1B365D', darkBg: '#0B192C', lightBg: '#2A5298', tileBg: '#1B365D', taskbarBg: '#12243E', windowBorder: '#1B365D', highlight: '#60A5FA' }
-];
-
-export const WIN81_PATTERNS = [
-  { id: 'waves', name: 'Ondas Ribbon (Oficial)', css: 'radial-gradient(ellipse at top left, rgba(255,255,255,0.18) 0%, transparent 60%), radial-gradient(ellipse at bottom right, rgba(0,0,0,0.3) 0%, transparent 70%)' },
-  { id: 'circuit', name: 'Geometria Moderna', css: 'linear-gradient(45deg, rgba(255,255,255,0.08) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.08) 75%, rgba(255,255,255,0.08)), linear-gradient(45deg, rgba(255,255,255,0.08) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.08) 75%, rgba(255,255,255,0.08))' },
-  { id: 'mesh', name: 'Gradiente Suave', css: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.15) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(0,0,0,0.25) 0%, transparent 50%)' },
-  { id: 'clean', name: 'Metro Puro', css: 'none' }
-];
 
 export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
   view,
@@ -116,709 +79,916 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
   setTheme,
   osTheme,
   setOsTheme,
-  animBgEnabled,
-  setAnimBgEnabled,
   ALL_AVAILABLE_MODULES,
+  userShortcuts = [],
+  addShortcutToDesktop = (_moduleId?: string, _x?: number, _y?: number) => {},
+  removeShortcutFromDesktop = (_moduleId?: string) => {},
+  autoArrangeWin11Shortcuts = () => {},
+  pinnedTaskbarModules,
+  setPinnedTaskbarModules,
+  pinnedStartModules,
+  setPinnedStartModules,
+  openedModules,
+  setOpenedModules,
+  minimizedModules,
+  setMinimizedModules,
+  addToast = (_msg?: string, _type?: any) => {}
 }) => {
-  // Navigation & View States
-  const [isStartOpen, setIsStartOpen] = useState(false);
-  const [startScreenView, setStartScreenView] = useState<'tiles' | 'all_apps'>('tiles');
-  const [isCharmsBarOpen, setIsCharmsBarOpen] = useState(false);
-  const [activeCharm, setActiveCharm] = useState<'search' | 'share' | 'settings' | 'devices' | null>(null);
-  const [isWindowMaximized, setIsWindowMaximized] = useState(true);
-  const [isWindowMinimized, setIsWindowMinimized] = useState(false);
-  const [isMetroAppMode, setIsMetroAppMode] = useState(false); // Immersive full-screen modern app mode
-  const [searchQuery, setSearchQuery] = useState('');
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  
-  // Customization: Accent color & pattern
-  const [accentId, setAccentId] = useState<string>(() => {
-    return localStorage.getItem('gipp_win81_accent') || 'teal';
-  });
-  const [patternId, setPatternId] = useState<string>(() => {
-    return localStorage.getItem('gipp_win81_pattern') || 'waves';
-  });
-  const [wallpaperMode, setWallpaperMode] = useState<'accent' | 'desktop_hero' | 'custom'>(() => {
-    return (localStorage.getItem('gipp_win81_wallmode') as any) || 'accent';
-  });
+  // Safe local fallback states if not provided by parent
+  const [localMinimized, setLocalMinimized] = useState<string[]>([]);
+  const [localOpened, setLocalOpened] = useState<string[]>([]);
+  const [localPinnedTaskbar, setLocalPinnedTaskbar] = useState<string[]>(['dashboard', 'curso_teologia', 'formacao_obreiros', 'cad_membro', 'secretaria_ebd']);
+  const [localPinnedStart, setLocalPinnedStart] = useState<string[]>(['dashboard', 'curso_teologia', 'formacao_obreiros', 'secretaria_ebd', 'cad_membro', 'visitantes', 'cad_igreja', 'fin_entrada', 'assistente_ai']);
 
-  // System Tray & Flyouts
-  const [trayFlyout, setTrayFlyout] = useState<'calendar' | 'volume' | 'network' | 'power' | null>(null);
-  const [volumeLevel, setVolumeLevel] = useState(80);
+  const activeMinimized = minimizedModules || localMinimized;
+  const setActiveMinimized = setMinimizedModules || setLocalMinimized;
+  
+  const activeOpened = openedModules || localOpened;
+  const setActiveOpened = setOpenedModules || setLocalOpened;
+
+  const activePinnedTaskbar = pinnedTaskbarModules || localPinnedTaskbar;
+  const setActivePinnedTaskbar = setPinnedTaskbarModules || setLocalPinnedTaskbar;
+
+  const activePinnedStart = pinnedStartModules || localPinnedStart;
+  const setActivePinnedStart = setPinnedStartModules || setLocalPinnedStart;
+
+  // Start Screen visibility: by default open if no active module or if user explicitly opened it
+  const [startScreenOpen, setStartScreenOpen] = useState<boolean>(!view || view === 'dashboard' || activeMinimized.includes(view));
+  const [startScreenTab, setStartScreenTab] = useState<'tiles' | 'allApps'>('tiles');
+  const [startSearchQuery, setStartSearchQuery] = useState('');
+  
+  // Charms Bar visibility & flyouts
+  const [charmsBarOpen, setCharmsBarOpen] = useState(false);
+  const [activeCharmFlyout, setActiveCharmFlyout] = useState<'search' | 'share' | 'settings' | 'devices' | null>(null);
+
+  // Time and Date state for Live Tiles, Clock, and Charms Bar
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const [liveFlipIndex, setLiveFlipIndex] = useState(0);
+  const [currentDayNumber, setCurrentDayNumber] = useState('');
+  const [currentMonthStr, setCurrentMonthStr] = useState('');
 
-  // Desktop Context Menu
-  const [desktopMenuPos, setDesktopMenuPos] = useState<{ x: number; y: number } | null>(null);
+  // Window positioning and size for Desktop mode
+  const [windowPos, setWindowPos] = useState({ x: 50, y: 30 });
+  const [windowSize, setWindowSize] = useState({ width: 1100, height: 680 });
+  const [isMaximized, setIsMaximized] = useState(true);
+  const [isDraggingWindow, setIsDraggingWindow] = useState(false);
 
-  const activeAccent = useMemo(() => {
-    return WIN81_ACCENTS.find(a => a.id === accentId) || WIN81_ACCENTS[0];
-  }, [accentId]);
+  // Desktop active drag shortcut
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [activeDragPos, setActiveDragPos] = useState<{ x: number; y: number } | null>(null);
 
-  const activePattern = useMemo(() => {
-    return WIN81_PATTERNS.find(p => p.id === patternId) || WIN81_PATTERNS[0];
-  }, [patternId]);
+  // Right-click Context Menu
+  const [contextMenu, setContextMenu] = useState<{
+    type: 'desktop' | 'desktop-icon' | 'start-tile' | 'start-app' | 'taskbar-item';
+    x: number;
+    y: number;
+    moduleId?: string;
+  } | null>(null);
 
-  // Handle accent change
-  const handleAccentChange = (id: string) => {
-    setAccentId(id);
-    try {
-      localStorage.setItem('gipp_win81_accent', id);
-    } catch {}
-    playAudioFeedback('click');
-  };
+  // User Profile popup in Start Screen
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [powerMenuOpen, setPowerMenuOpen] = useState(false);
 
-  const handlePatternChange = (id: string) => {
-    setPatternId(id);
-    try {
-      localStorage.setItem('gipp_win81_pattern', id);
-    } catch {}
-    playAudioFeedback('click');
-  };
+  // Flip ticker for live tiles animation
+  const [tileFlipStep, setTileFlipStep] = useState(0);
 
-  // Sound Synthesizer for Windows 8.1 Audio Effects
-  const playAudioFeedback = (type: 'click' | 'navigation' | 'start' | 'charm' | 'notification') => {
-    if (!soundEnabled) return;
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
+  // Sound effects simulation toggle
+  const [volumeLevel, setVolumeLevel] = useState(85);
+  const [brightnessLevel, setBrightnessLevel] = useState(100);
 
-      if (type === 'click' || type === 'navigation') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.05);
-      } else if (type === 'start') {
-        const now = ctx.currentTime;
-        [523.25, 659.25, 783.99].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, now + i * 0.04);
-          gain.gain.setValueAtTime(0.06, now + i * 0.04);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.12);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now + i * 0.04);
-          osc.stop(now + i * 0.04 + 0.12);
-        });
-      } else if (type === 'charm') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1100, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(850, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.08);
-      }
-    } catch {}
-  };
-
-  // Clock Update
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
       setCurrentDate(now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }));
+      setCurrentDayNumber(String(now.getDate()));
+      setCurrentMonthStr(now.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase());
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Live Tiles flipping animation interval
+  // Periodic flip for live tiles (every 6 seconds)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveFlipIndex(prev => (prev + 1) % 4);
-    }, 4500);
-    return () => clearInterval(interval);
+    const flipInterval = setInterval(() => {
+      setTileFlipStep(prev => (prev + 1) % 3);
+    }, 6000);
+    return () => clearInterval(flipInterval);
   }, []);
 
-  // Hotkeys: Win/Super, Win+C (Charms), Win+F (Search), Win+I (Settings), Esc
+  // Sync window state on view change
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '');
-
-      // Win+C: Charms Bar
-      if ((e.metaKey || e.altKey) && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        setIsCharmsBarOpen(prev => !prev);
-        playAudioFeedback('charm');
-        return;
+    if (view && view !== 'dashboard') {
+      if (!activeOpened.includes(view)) {
+        setActiveOpened(prev => [...prev, view]);
       }
+      setActiveMinimized(prev => prev.filter(m => m !== view));
+      // In Windows 8.1, launching an app shifts from Start Screen to the app window
+      setStartScreenOpen(false);
+    }
+  }, [view]);
 
-      // Win+F or Ctrl+F (when not inside editor): Search Charm
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !isInput) {
-        e.preventDefault();
-        setIsCharmsBarOpen(true);
-        setActiveCharm('search');
-        playAudioFeedback('charm');
-        return;
+  // Pinning helpers
+  const isPinnedToTaskbar = (id: string) => activePinnedTaskbar.includes(id);
+  const isPinnedToStart = (id: string) => activePinnedStart.includes(id);
+
+  const togglePinTaskbar = (id: string) => {
+    if (isPinnedToTaskbar(id)) {
+      setActivePinnedTaskbar(prev => prev.filter(m => m !== id));
+      addToast("Desafixado da barra de tarefas", "info");
+    } else {
+      setActivePinnedTaskbar(prev => [...prev, id]);
+      addToast("Fixado na barra de tarefas", "success");
+    }
+  };
+
+  const togglePinStart = (id: string) => {
+    if (isPinnedToStart(id)) {
+      setActivePinnedStart(prev => prev.filter(m => m !== id));
+      addToast("Desafixado da tela Iniciar", "info");
+    } else {
+      setActivePinnedStart(prev => [...prev, id]);
+      addToast("Fixado na tela Iniciar", "success");
+    }
+  };
+
+  const handleLaunchModule = (moduleId: string) => {
+    setView(moduleId);
+    setStartScreenOpen(false);
+    if (!activeOpened.includes(moduleId)) {
+      setActiveOpened(prev => [...prev, moduleId]);
+    }
+    setActiveMinimized(prev => prev.filter(m => m !== moduleId));
+    setContextMenu(null);
+  };
+
+  const handleCloseModule = (moduleId: string) => {
+    const nextOpened = activeOpened.filter(m => m !== moduleId);
+    setActiveOpened(nextOpened);
+    setActiveMinimized(prev => prev.filter(m => m !== moduleId));
+    if (view === moduleId) {
+      if (nextOpened.length > 0) {
+        setView(nextOpened[nextOpened.length - 1]);
+      } else {
+        setView('dashboard');
+        setStartScreenOpen(true);
       }
+    }
+  };
 
-      // Win+I: Settings Charm
-      if ((e.metaKey || e.altKey) && e.key.toLowerCase() === 'i') {
-        e.preventDefault();
-        setIsCharmsBarOpen(true);
-        setActiveCharm('settings');
-        playAudioFeedback('charm');
-        return;
-      }
+  // Drag and Drop: Start Screen item dropped to Desktop
+  const handleDragStartFromMenu = (e: React.DragEvent, moduleId: string) => {
+    e.dataTransfer.setData('application/gipp-module', moduleId);
+    e.dataTransfer.setData('text/plain', moduleId);
+  };
 
-      // Escape key closes start screen, charms bar or tray flyouts
-      if (e.key === 'Escape') {
-        if (isCharmsBarOpen) {
-          setIsCharmsBarOpen(false);
-          setActiveCharm(null);
-        } else if (isStartOpen) {
-          setIsStartOpen(false);
-        } else if (trayFlyout) {
-          setTrayFlyout(null);
-        } else if (desktopMenuPos) {
-          setDesktopMenuPos(null);
-        }
+  const handleDesktopDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const moduleId = e.dataTransfer.getData('application/gipp-module') || e.dataTransfer.getData('text/plain');
+    if (moduleId && ALL_AVAILABLE_MODULES.some(m => m.id === moduleId)) {
+      const container = e.currentTarget.getBoundingClientRect();
+      const dropX = Math.max(2, Math.min(88, ((e.clientX - container.left) / container.width) * 100 - 4));
+      const dropY = Math.max(3, Math.min(85, ((e.clientY - container.top) / container.height) * 100 - 4));
+      addShortcutToDesktop(moduleId, dropX, dropY);
+    }
+  };
+
+  // Desktop icon drag handling
+  const handleDesktopIconMouseDown = (e: React.MouseEvent, shortcutId: string) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let dragDist = 0;
+
+    const container = document.getElementById('win81-desktop-area');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+
+    const currentShortcut = userShortcuts.find(s => s.id === shortcutId);
+    const initX = currentShortcut ? currentShortcut.x : 2;
+    const initY = currentShortcut ? currentShortcut.y : 3;
+
+    setActiveDragId(shortcutId);
+    setActiveDragPos({ x: initX, y: initY });
+
+    const onMouseMove = (me: MouseEvent) => {
+      const dx = me.clientX - startX;
+      const dy = me.clientY - startY;
+      dragDist = Math.sqrt(dx * dx + dy * dy);
+
+      const relX = ((me.clientX - rect.left) / rect.width) * 100;
+      const relY = ((me.clientY - rect.top) / rect.height) * 100;
+
+      const clampedX = Math.max(1, Math.min(92, relX - 4));
+      const clampedY = Math.max(1, Math.min(88, relY - 4));
+      setActiveDragPos({ x: clampedX, y: clampedY });
+    };
+
+    const onMouseUp = (ue: MouseEvent) => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      setActiveDragId(null);
+      setActiveDragPos(null);
+
+      if (dragDist < 5) {
+        handleLaunchModule(shortcutId);
+      } else {
+        const finalRelX = ((ue.clientX - rect.left) / rect.width) * 100;
+        const finalRelY = ((ue.clientY - rect.top) / rect.height) * 100;
+        const clampedX = Math.max(1, Math.min(92, finalRelX - 4));
+        const clampedY = Math.max(1, Math.min(88, finalRelY - 4));
+        addShortcutToDesktop(shortcutId, clampedX, clampedY);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCharmsBarOpen, isStartOpen, trayFlyout, desktopMenuPos]);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
 
-  // When view changes, unminimize window and close start screen
-  useEffect(() => {
-    setIsWindowMinimized(prev => prev ? false : prev);
-    setIsStartOpen(prev => prev ? false : prev);
-  }, [view]);
+  // Window drag handling
+  const handleWindowDragStart = (e: React.MouseEvent) => {
+    if (isMaximized) return;
+    e.preventDefault();
+    setIsDraggingWindow(true);
+    const startX = e.clientX - windowPos.x;
+    const startY = e.clientY - windowPos.y;
 
-  // Dynamic Live Data stats from Church Context
-  const totalMembros = db?.membros?.length || 0;
-  const totalEntradas = db?.financeiro_entradas?.reduce((acc: number, curr: any) => acc + (Number(curr.valor) || 0), 0) || 0;
-  const totalSaidas = db?.financeiro_saidas?.reduce((acc: number, curr: any) => acc + (Number(curr.valor) || 0), 0) || 0;
-  const saldoCaixa = totalEntradas - totalSaidas;
-  const totalVisitantes = db?.visitantes?.length || 0;
+    const onMove = (me: MouseEvent) => {
+      setWindowPos({
+        x: Math.max(0, Math.min(window.innerWidth - 200, me.clientX - startX)),
+        y: Math.max(0, Math.min(window.innerHeight - 100, me.clientY - startY))
+      });
+    };
 
-  // Filtered modules for All Apps & Search
-  const filteredModules = useMemo(() => {
-    return ALL_AVAILABLE_MODULES.filter(m => {
-      if (!isModuleAllowed(m.id)) return false;
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        m.label.toLowerCase().includes(q) ||
-        m.id.toLowerCase().includes(q) ||
-        (m.id.startsWith('google_') && 'google'.includes(q))
-      );
-    });
-  }, [ALL_AVAILABLE_MODULES, isModuleAllowed, searchQuery]);
+    const onUp = () => {
+      setIsDraggingWindow(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
 
-  // Grouped modules for "All Apps" Screen (Alphabetical)
-  const groupedModules = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    filteredModules.forEach(m => {
-      const char = m.label.charAt(0).toUpperCase();
-      const letter = /^[A-Z]$/.test(char) ? char : '#';
-      if (!groups[letter]) groups[letter] = [];
-      groups[letter].push(m);
-    });
-    return Object.keys(groups).sort().map(letter => ({
-      letter,
-      modules: groups[letter]
-    }));
-  }, [filteredModules]);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
-  // Pinned taskbar shortcuts
-  const taskbarShortcuts = [
-    { id: 'dashboard', label: 'Dashboard GIPP', icon: LayoutDashboard, color: '#0078D7' },
-    { id: 'secretaria_integrada', label: 'Secretaria & Agenda', icon: FileText, color: '#107C41' },
-    { id: 'cad_membro', label: 'Rol de Membros', icon: Users, color: '#D83B01' },
-    { id: 'fin_entrada', label: 'Livro Caixa', icon: ArrowUpCircle, color: '#008272' },
-    { id: 'assistente_ai', label: 'Pastoral IA', icon: Sparkles, color: '#68217A' },
-    { id: 'google_meet', label: 'Google Meet', icon: GoogleMeetIcon, isGoogle: true },
-    { id: 'google_sheets', label: 'Google Sheets', icon: GoogleSheetsIcon, isGoogle: true },
-    { id: 'google_docs', label: 'Google Docs', icon: GoogleDocsIcon, isGoogle: true },
-    { id: 'curso_teologia', label: 'Universidade Teológica', icon: BookOpen, color: '#B4009E' }
+  // Window resize handling
+  const handleWindowResizeStart = (e: React.MouseEvent, direction: 'r' | 'b' | 'br') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = windowSize.width;
+    const startHeight = windowSize.height;
+
+    const onMove = (me: MouseEvent) => {
+      let newW = startWidth;
+      let newH = startHeight;
+      if (direction === 'r' || direction === 'br') {
+        newW = Math.max(500, startWidth + (me.clientX - startX));
+      }
+      if (direction === 'b' || direction === 'br') {
+        newH = Math.max(350, startHeight + (me.clientY - startY));
+      }
+      setWindowSize({ width: newW, height: newH });
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  // All combined taskbar items (pinned + opened)
+  const taskbarItemIds = Array.from(new Set([...activePinnedTaskbar, ...activeOpened])).filter(id => isModuleAllowed(id));
+
+  // Pre-categorized modules for Live Tiles Start Screen
+  const tileCategories = [
+    {
+      title: "GESTÃO & MEMBROS",
+      modules: [
+        { id: 'dashboard', size: 'large', bg: 'bg-[#0078d7]', live: true },
+        { id: 'cad_membro', size: 'medium', bg: 'bg-[#2b5797]', live: true },
+        { id: 'visitantes', size: 'medium', bg: 'bg-[#b91d47]', live: false },
+        { id: 'cad_igreja', size: 'wide', bg: 'bg-[#00a300]', live: false },
+        { id: 'cad_patrimonio', size: 'medium', bg: 'bg-[#00aba9]', live: false },
+        { id: 'controle_frotas', size: 'medium', bg: 'bg-[#1e7145]', live: false }
+      ]
+    },
+    {
+      title: "ENSINO & TEOLOGIA (CGADB / CPAD)",
+      modules: [
+        { id: 'curso_teologia', size: 'large', bg: 'bg-[#107c41]', live: true },
+        { id: 'formacao_obreiros', size: 'wide', bg: 'bg-[#008272]', live: true },
+        { id: 'secretaria_ebd', size: 'medium', bg: 'bg-[#603cba]', live: false },
+        { id: 'biblia', size: 'medium', bg: 'bg-[#d83b01]', live: true },
+        { id: 'gestao_cursos', size: 'medium', bg: 'bg-[#004e8c]', live: false }
+      ]
+    },
+    {
+      title: "FINANÇAS & SECRETARIA",
+      modules: [
+        { id: 'fin_entrada', size: 'medium', bg: 'bg-[#008a00]', live: true },
+        { id: 'fin_saida', size: 'medium', bg: 'bg-[#da532c]', live: true },
+        { id: 'fin_dre', size: 'wide', bg: 'bg-[#0072c6]', live: false },
+        { id: 'secretaria_integrada', size: 'wide', bg: 'bg-[#7e3878]', live: false },
+        { id: 'relatorios', size: 'medium', bg: 'bg-[#666666]', live: false }
+      ]
+    },
+    {
+      title: "COMUNICAÇÃO & FERRAMENTAS",
+      modules: [
+        { id: 'assistente_ai', size: 'wide', bg: 'bg-[#5c2d91]', live: true },
+        { id: 'rede_social', size: 'medium', bg: 'bg-[#d13438]', live: false },
+        { id: 'mensagens_lote', size: 'medium', bg: 'bg-[#008272]', live: false },
+        { id: 'config_sistema', size: 'medium', bg: 'bg-[#464646]', live: false },
+        { id: 'config_visual', size: 'medium', bg: 'bg-[#a4373a]', live: false }
+      ]
+    }
   ];
 
-  const handleOpenModule = (moduleId: string) => {
-    playAudioFeedback('navigation');
-    setView(moduleId);
-    setIsStartOpen(false);
-    setIsCharmsBarOpen(false);
-    setActiveCharm(null);
-    setIsWindowMinimized(false);
-  };
+  // Filtered list for "All Apps" view
+  const allAppsFiltered = ALL_AVAILABLE_MODULES.filter(m => {
+    if (!isModuleAllowed(m.id)) return false;
+    if (!startSearchQuery) return true;
+    const q = startSearchQuery.toLowerCase();
+    return m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q);
+  }).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
 
-  const toggleStartScreen = () => {
-    playAudioFeedback('start');
-    setIsStartOpen(prev => !prev);
-    setStartScreenView('tiles');
-    setTrayFlyout(null);
-    setIsCharmsBarOpen(false);
-  };
+  // Group apps by letter
+  const groupedApps: { [key: string]: typeof ALL_AVAILABLE_MODULES } = {};
+  allAppsFiltered.forEach(app => {
+    const firstLetter = app.label.charAt(0).toUpperCase();
+    if (!groupedApps[firstLetter]) groupedApps[firstLetter] = [];
+    groupedApps[firstLetter].push(app);
+  });
 
-  const WindowIcon = mMeta.icon || LayoutDashboard;
+  const isWindowMinimized = activeMinimized.includes(view) || !view;
 
   return (
     <div 
-      className="h-screen w-full flex flex-col font-sans select-none overflow-hidden relative text-white"
+      className="fixed inset-0 overflow-hidden select-none font-sans text-white bg-[#004f7c]"
       style={{
-        backgroundColor: activeAccent.darkBg,
-        backgroundImage: activePattern.css !== 'none' ? activePattern.css : undefined,
-        backgroundSize: activePattern.id === 'circuit' ? '40px 40px' : 'cover'
-      }}
-      onContextMenu={(e) => {
-        // Desktop context menu when clicking on empty desktop
-        if ((e.target as HTMLElement).classList.contains('win81-desktop-area')) {
-          e.preventDefault();
-          setDesktopMenuPos({ x: e.clientX, y: e.clientY });
-        }
+        // Windows 8.1 Signature Ribbon Background
+        backgroundImage: `
+          radial-gradient(ellipse at 85% 15%, rgba(240, 185, 11, 0.28) 0%, transparent 45%),
+          radial-gradient(ellipse at 15% 85%, rgba(0, 164, 228, 0.45) 0%, transparent 55%),
+          linear-gradient(135deg, #002b44 0%, #004f7c 50%, #006097 100%)
+        `
       }}
       onClick={() => {
-        if (desktopMenuPos) setDesktopMenuPos(null);
+        setContextMenu(null);
+        setUserMenuOpen(false);
+        setPowerMenuOpen(false);
       }}
     >
-      {/* =========================================================================
-          1. WINDOWS 8.1 START SCREEN (Modern UI / Metro Live Tiles)
-          ========================================================================= */}
-      {isStartOpen && (
-        <div 
-          className="absolute inset-0 z-50 flex flex-col animate-fadeIn overflow-hidden text-white"
-          style={{
-            backgroundColor: activeAccent.darkBg,
-            backgroundImage: activePattern.css !== 'none' ? activePattern.css : undefined,
-            backgroundSize: activePattern.id === 'circuit' ? '40px 40px' : 'cover'
-          }}
-        >
-          {/* Top Start Screen Header: Title & User Profile / Power Controls */}
-          <div className="flex items-center justify-between px-8 md:px-16 pt-8 pb-4 shrink-0">
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white/95 drop-shadow-xs">
-                {startScreenView === 'tiles' ? 'Iniciar' : 'Aplicativos'}
-              </h1>
-              {startScreenView === 'all_apps' && (
-                <button
-                  onClick={() => setStartScreenView('tiles')}
-                  className="text-xs text-white/70 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <ArrowLeft size={14} /> Voltar à tela inicial
-                </button>
-              )}
-            </div>
+      {/* ------------------------------------------------------------- */}
+      {/* DESKTOP WORKSPACE AREA (Underneath or Visible when Start Screen is closed) */}
+      {/* ------------------------------------------------------------- */}
+      <div 
+        id="win81-desktop-area"
+        className="absolute inset-0 pb-10 overflow-hidden"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={handleDesktopDrop}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenu({ type: 'desktop', x: e.clientX, y: e.clientY });
+        }}
+      >
+        {/* Desktop Shortcuts */}
+        <div className="absolute inset-0 p-4 pointer-events-auto">
+          {userShortcuts.filter(s => isModuleAllowed(s.id)).map(s => {
+            const mInfo = ALL_AVAILABLE_MODULES.find(m => m.id === s.id);
+            if (!mInfo) return null;
+            const ShortcutIcon = mInfo.icon || LayoutDashboard;
+            const isDragging = activeDragId === s.id;
+            const curX = isDragging && activeDragPos ? activeDragPos.x : s.x;
+            const curY = isDragging && activeDragPos ? activeDragPos.y : s.y;
 
-            {/* Right: User Profile Avatar, Name, Power & Search */}
-            <div className="flex items-center gap-3">
-              {/* Search Charm trigger */}
-              <button
-                onClick={() => {
-                  setIsCharmsBarOpen(true);
-                  setActiveCharm('search');
+            return (
+              <div
+                key={s.id}
+                style={{
+                  position: 'absolute',
+                  left: `${curX}%`,
+                  top: `${curY}%`,
+                  zIndex: isDragging ? 50 : 10
                 }}
-                className="w-10 h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors cursor-pointer text-white/90"
-                title="Pesquisar [Win+F]"
+                onMouseDown={(e) => handleDesktopIconMouseDown(e, s.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContextMenu({ type: 'desktop-icon', x: e.clientX, y: e.clientY, moduleId: s.id });
+                }}
+                className={`flex flex-col items-center justify-center p-1.5 rounded-none transition-all duration-100 w-22 border border-transparent hover:border-white/40 hover:bg-white/15 active:bg-white/25 cursor-default group select-none`}
               >
-                <Search size={20} />
-              </button>
+                <div className="w-12 h-12 flex items-center justify-center mb-1 bg-black/20 border border-white/20 shadow-md">
+                  <ShortcutIcon size={28} className="text-white drop-shadow-md" />
+                </div>
+                {/* White text label with dark shadow as requested in instructions */}
+                <span className="text-[11px] font-medium leading-tight text-center break-words line-clamp-2 w-full text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] font-sans pointer-events-none">
+                  {s.label}
+                </span>
 
-              {/* Power Options Button */}
-              <div className="relative">
                 <button
-                  onClick={() => setTrayFlyout(trayFlyout === 'power' ? null : 'power')}
-                  className="w-10 h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors cursor-pointer text-white/90"
-                  title="Opções de Energia"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeShortcutFromDesktop(s.id);
+                  }}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 hover:bg-rose-700 text-white rounded-none flex items-center justify-center text-[9px] font-black opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                  title="Remover atalho"
                 >
-                  <Power size={20} />
+                  ✕
                 </button>
+              </div>
+            );
+          })}
+        </div>
 
-                {trayFlyout === 'power' && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-[#1F1F1F] border border-white/20 shadow-2xl p-1 z-50 animate-fadeIn">
-                    <button
-                      onClick={() => {
-                        setIsScreenLocked(true);
-                        setTrayFlyout(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-[#0078D7] text-white flex items-center gap-2 cursor-pointer"
-                    >
-                      <Lock size={14} /> Bloquear Estação
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleLogoutRequest();
-                        setTrayFlyout(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-rose-700 text-white flex items-center gap-2 cursor-pointer"
-                    >
-                      <LogOut size={14} /> Sair / Desconectar
-                    </button>
+        {/* Active Application Window (Windows 8.1 Straight-Edged Frame) */}
+        {view && view !== 'dashboard' && !isWindowMinimized && (
+          <div
+            style={isMaximized ? undefined : {
+              position: 'absolute',
+              left: `${windowPos.x}px`,
+              top: `${windowPos.y}px`,
+              width: `${windowSize.width}px`,
+              height: `${windowSize.height}px`,
+              zIndex: 30
+            }}
+            className={`${
+              isMaximized ? 'absolute inset-0 pb-10 z-30' : ''
+            } flex flex-col shadow-2xl transition-all duration-150 animate-fadeIn`}
+          >
+            {/* Windows 8.1 Window Container: Strict sharp edges (rounded-none) */}
+            <div className="flex-1 flex flex-col border border-white/20 bg-[#1e1e1e] text-slate-100 overflow-hidden relative rounded-none shadow-[0_10px_35px_rgba(0,0,0,0.7)]">
+              {/* Window Title Bar */}
+              <div 
+                onMouseDown={handleWindowDragStart}
+                onDoubleClick={() => setIsMaximized(!isMaximized)}
+                className={`h-8 px-3 flex items-center justify-between select-none shrink-0 bg-[#004f7c] border-b border-black/30 ${
+                  isMaximized ? 'cursor-default' : 'cursor-move'
+                }`}
+              >
+                <div className="flex items-center gap-2 pointer-events-none">
+                  {mMeta.icon && React.createElement(mMeta.icon, { size: 15, className: "text-white shrink-0" })}
+                  <span className="text-xs font-semibold tracking-wide text-white drop-shadow-xs">
+                    {mMeta.label} - GIPP Sistema Eclesiástico
+                  </span>
+                </div>
+
+                {/* Windows 8.1 Controls: Straight buttons, red hover on close */}
+                <div className="flex items-center h-full">
+                  {/* Minimize */}
+                  <button
+                    onClick={() => setMinimizedModules(prev => [...prev, view])}
+                    className="w-11 h-full flex items-center justify-center text-white/90 hover:bg-white/20 transition-colors cursor-pointer text-xs"
+                    title="Minimizar"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  {/* Maximize / Restore */}
+                  <button
+                    onClick={() => setIsMaximized(!isMaximized)}
+                    className="w-11 h-full flex items-center justify-center text-white/90 hover:bg-white/20 transition-colors cursor-pointer text-xs"
+                    title={isMaximized ? "Restaurar" : "Maximizar"}
+                  >
+                    <span className="border border-white w-3 h-3 block" />
+                  </button>
+                  {/* Close button: bright red hover */}
+                  <button
+                    onClick={() => handleCloseModule(view)}
+                    className="w-12 h-full flex items-center justify-center text-white/90 hover:bg-[#e81123] hover:text-white transition-colors cursor-pointer text-xs"
+                    title="Fechar"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Window Content Area */}
+              <div className="flex-1 overflow-y-auto bg-slate-950 text-slate-100 p-4 md:p-6 custom-scrollbar relative">
+                {hasPermission(access) ? (
+                  <Suspense fallback={
+                    <div className="h-64 flex flex-col items-center justify-center text-center text-slate-300">
+                      <RefreshCw size={32} className="animate-spin mb-3 text-sky-400" />
+                      <p className="text-sm font-semibold">Carregando no Windows 8.1...</p>
+                    </div>
+                  }>
+                    <CurrentModule {...currentProps} />
+                  </Suspense>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                    <Lock size={64} className="text-rose-500 mb-6" />
+                    <h2 className="text-2xl font-bold">Acesso Restrito</h2>
+                    <p className="text-sm text-slate-400 mt-2">Você não possui permissão para este módulo.</p>
                   </div>
                 )}
               </div>
 
-              {/* User Avatar & Name */}
-              <div 
-                onClick={() => {
-                  setIsCharmsBarOpen(true);
-                  setActiveCharm('settings');
-                }}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-sm hover:bg-white/10 cursor-pointer transition-colors"
-                title="Configurações da Conta e Personalização"
-              >
-                <span className="text-sm font-semibold hidden sm:inline text-white/90">
-                  {user?.nome || 'Operador GIPP'}
-                </span>
-                <div className="w-8 h-8 rounded-full bg-white/20 border border-white/40 overflow-hidden flex items-center justify-center font-bold text-xs">
-                  {user?.fotoUrl || user?.foto ? (
-                    <img src={user.fotoUrl || user.foto} alt={user?.nome} className="w-full h-full object-cover" />
-                  ) : (
-                    user?.nome?.charAt(0) || 'U'
-                  )}
-                </div>
-              </div>
+              {/* Resize Handles (When not maximized) */}
+              {!isMaximized && (
+                <>
+                  <div 
+                    onMouseDown={(e) => handleWindowResizeStart(e, 'r')}
+                    className="absolute top-0 right-0 w-2 h-full cursor-ew-resize hover:bg-sky-500/20 z-20" 
+                  />
+                  <div 
+                    onMouseDown={(e) => handleWindowResizeStart(e, 'b')}
+                    className="absolute left-0 bottom-0 w-full h-2 cursor-ns-resize hover:bg-sky-500/20 z-20" 
+                  />
+                  <div 
+                    onMouseDown={(e) => handleWindowResizeStart(e, 'br')}
+                    className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize flex items-end justify-end p-0.5 z-30"
+                  >
+                    <div className="w-2 h-2 border-r-2 border-b-2 border-white/60" />
+                  </div>
+                </>
+              )}
             </div>
           </div>
+        )}
+      </div>
 
-          {/* =========================================================================
-              START SCREEN CONTENT: LIVE TILES GRID
-              ========================================================================= */}
-          {startScreenView === 'tiles' ? (
-            <div className="flex-1 overflow-x-auto overflow-y-hidden px-8 md:px-16 py-4 flex gap-10 items-start custom-scrollbar">
-              
-              {/* GROUP 1: GIPP & ADMINISTRAÇÃO ECLESIÁSTICA */}
-              <div className="flex flex-col gap-3 shrink-0">
-                <div className="text-xs font-semibold tracking-wider text-white/70 uppercase flex items-center gap-1.5">
-                  <span>GIPP Eclesiástico</span>
-                  <ChevronRight size={12} className="opacity-50" />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 auto-rows-[120px]">
-                  {/* Large / Wide Live Tile: Dashboard Geral */}
-                  <div
-                    onClick={() => handleOpenModule('dashboard')}
-                    className="col-span-2 row-span-1 bg-[#0078D7] hover:brightness-110 active:scale-[0.98] transition-all p-3.5 flex flex-col justify-between cursor-pointer shadow-md relative overflow-hidden group border border-white/10"
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 FULLSCREEN "START SCREEN" (TELA INICIAR COM LIVE TILES) */}
+      {/* ------------------------------------------------------------- */}
+      <AnimatePresence>
+        {startScreenOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed inset-0 z-40 bg-[#004f7c]/98 overflow-x-auto overflow-y-hidden custom-scrollbar select-none flex flex-col pb-10"
+            style={{
+              backgroundImage: `
+                radial-gradient(circle at 85% 20%, rgba(240, 185, 11, 0.35) 0%, transparent 45%),
+                radial-gradient(circle at 10% 75%, rgba(0, 164, 228, 0.4) 0%, transparent 50%),
+                linear-gradient(135deg, #002b44 0%, #004f7c 50%, #006097 100%)
+              `
+            }}
+          >
+            {/* Top Bar (Start Screen Header: Title + User Avatar + Power + Search) */}
+            <div className="h-20 px-8 md:px-14 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white drop-shadow-sm font-sans">
+                  {startScreenTab === 'tiles' ? 'Iniciar' : 'Aplicativos'}
+                </h1>
+                {startScreenTab === 'allApps' && (
+                  <button
+                    onClick={() => setStartScreenTab('tiles')}
+                    className="flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-white px-2 py-1 rounded-none border border-sky-400/30 hover:border-white transition-all cursor-pointer ml-4"
                   >
-                    <div className="flex justify-between items-start">
-                      <LayoutDashboard size={28} className="text-white group-hover:scale-110 transition-transform" />
-                      <span className="bg-white/20 px-2 py-0.5 text-[10px] font-bold rounded-xs uppercase tracking-wider">
-                        Ativo
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold truncate">Visão Geral & Dashboard</div>
-                      <div className="text-xs text-white/80 flex items-center gap-2">
-                        <span>{totalMembros} membros</span>
-                        <span>•</span>
-                        <span>R$ {saldoCaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Secretaria Integrada */}
-                  <div
-                    onClick={() => handleOpenModule('secretaria_integrada')}
-                    className="col-span-1 row-span-1 bg-[#107C41] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <FileText size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Secretaria & Atas</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Agenda & Certificados</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Rol de Membros */}
-                  <div
-                    onClick={() => handleOpenModule('cad_membro')}
-                    className="col-span-1 row-span-1 bg-[#D83B01] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10 relative"
-                  >
-                    <Users size={24} className="text-white" />
-                    <div className="absolute top-2 right-2 text-xl font-black opacity-85">{totalMembros}</div>
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Rol de Membros</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Membros & Obreiros</div>
-                    </div>
-                  </div>
-
-                  {/* Wide Live Tile: Livro Caixa & Dízimos (Flipping content) */}
-                  <div
-                    onClick={() => handleOpenModule('fin_entrada')}
-                    className="col-span-2 row-span-1 bg-[#008272] hover:brightness-110 active:scale-[0.98] transition-all p-3.5 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <div className="flex justify-between items-center">
-                      <CreditCard size={26} className="text-white" />
-                      <span className="text-xs font-mono font-bold bg-white/20 px-2 py-0.5 rounded-xs">
-                        R$ {totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold">Livro Caixa & Dízimos</div>
-                      <div className="text-[11px] text-white/80">Entradas, saídas e conciliação bancária</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Pastoral IA */}
-                  <div
-                    onClick={() => handleOpenModule('assistente_ai')}
-                    className="col-span-1 row-span-1 bg-[#68217A] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <Sparkles size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Pastoral IA</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Assistente Bíblico</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Bíblia Sagrada */}
-                  <div
-                    onClick={() => handleOpenModule('biblia')}
-                    className="col-span-1 row-span-1 bg-[#B4009E] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <Book size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Bíblia de Estudo</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">66 Livros Offline</div>
-                    </div>
-                  </div>
-                </div>
+                    <ChevronUp size={14} />
+                    <span>Voltar à Tela Inicial</span>
+                  </button>
+                )}
               </div>
 
-              {/* GROUP 2: GOOGLE WORKSPACE & INTERATIVIDADE */}
-              <div className="flex flex-col gap-3 shrink-0">
-                <div className="text-xs font-semibold tracking-wider text-white/70 uppercase flex items-center gap-1.5">
-                  <GoogleGLogo size={14} />
-                  <span>Google & Produtividade</span>
-                  <ChevronRight size={12} className="opacity-50" />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 auto-rows-[120px]">
-                  {/* Wide Live Tile: Google Meet */}
-                  <div
-                    onClick={() => handleOpenModule('google_meet')}
-                    className="col-span-2 row-span-1 bg-[#00897B] hover:brightness-110 active:scale-[0.98] transition-all p-3.5 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <div className="flex justify-between items-center">
-                      <GoogleMeetIcon size={26} />
-                      <span className="bg-white/20 px-2 py-0.5 text-[10px] font-bold rounded-xs uppercase">
-                        Videoconferência
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold">Google Meet Eclesiástico</div>
-                      <div className="text-[11px] text-white/80">Salas de oração, reuniões de obreiros e cultos online</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Google Sheets */}
-                  <div
-                    onClick={() => handleOpenModule('google_sheets')}
-                    className="col-span-1 row-span-1 bg-[#0F9D58] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <GoogleSheetsIcon size={24} />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Google Sheets</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Planilhas na Nuvem</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Google Docs */}
-                  <div
-                    onClick={() => handleOpenModule('google_docs')}
-                    className="col-span-1 row-span-1 bg-[#4285F4] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <GoogleDocsIcon size={24} />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Google Docs</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Documentos Oficiais</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Google Calendar */}
-                  <div
-                    onClick={() => handleOpenModule('google_calendar')}
-                    className="col-span-1 row-span-1 bg-[#EA4335] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <GoogleCalendarIcon size={24} />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Google Calendar</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Agenda Integrada</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Google Tasks */}
-                  <div
-                    onClick={() => handleOpenModule('google_tasks')}
-                    className="col-span-1 row-span-1 bg-[#1A73E8] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <GoogleTasksIcon size={24} />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Google Tasks</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Tarefas & Metas</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Gmail */}
-                  <div
-                    onClick={() => handleOpenModule('gmail_oficial')}
-                    className="col-span-1 row-span-1 bg-[#D93025] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <GoogleGmailIcon size={24} />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Gmail Eclesiástico</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Comunicação Oficial</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Gamificação & Quiz */}
-                  <div
-                    onClick={() => handleOpenModule('interativo')}
-                    className="col-span-1 row-span-1 bg-[#8E24AA] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <Gamepad2 size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Interatividade</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Quiz & Gamificação</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* GROUP 3: CAPACITAÇÃO & TEOLOGIA */}
-              <div className="flex flex-col gap-3 shrink-0">
-                <div className="text-xs font-semibold tracking-wider text-white/70 uppercase flex items-center gap-1.5">
-                  <GraduationCap size={14} />
-                  <span>Capacitações & Ensino</span>
-                  <ChevronRight size={12} className="opacity-50" />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 auto-rows-[120px]">
-                  {/* Wide Live Tile: Universidade Teológica */}
-                  <div
-                    onClick={() => handleOpenModule('curso_teologia')}
-                    className="col-span-2 row-span-1 bg-[#004E98] hover:brightness-110 active:scale-[0.98] transition-all p-3.5 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <div className="flex justify-between items-center">
-                      <BookOpen size={26} className="text-white" />
-                      <span className="bg-white/20 px-2 py-0.5 text-[10px] font-bold rounded-xs">
-                        CGADB / CPAD
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold">Universidade Teológica GIPP</div>
-                      <div className="text-[11px] text-white/80">Estudos Básico, Médio e Avançado</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Formação de Obreiros */}
-                  <div
-                    onClick={() => handleOpenModule('formacao_obreiros')}
-                    className="col-span-1 row-span-1 bg-[#C42B1C] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <Award size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Formação Obreiros</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Ministério & Liderança</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: EBD */}
-                  <div
-                    onClick={() => handleOpenModule('secretaria_ebd')}
-                    className="col-span-1 row-span-1 bg-[#E65100] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <BookOpenText size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Escola Dominical</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Classes & Frequência</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Estúdio de Carteirinhas */}
-                  <div
-                    onClick={() => handleOpenModule('carteirinha_studio')}
-                    className="col-span-1 row-span-1 bg-[#00838F] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <Users size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Carteirinhas</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Estúdio de Impressão</div>
-                    </div>
-                  </div>
-
-                  {/* Medium Live Tile: Configurações Visuais */}
-                  <div
-                    onClick={() => {
-                      setIsCharmsBarOpen(true);
-                      setActiveCharm('settings');
-                    }}
-                    className="col-span-1 row-span-1 bg-[#37474F] hover:brightness-110 active:scale-[0.98] transition-all p-3 flex flex-col justify-between cursor-pointer shadow-md border border-white/10"
-                  >
-                    <Palette size={24} className="text-white" />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">Personalização</div>
-                      <div className="text-[10px] text-white/75 mt-0.5">Cores Windows 8.1</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* =========================================================================
-               START SCREEN: "ALL APPS" (TODOS OS APLICATIVOS) VIEW
-               ========================================================================= */
-            <div className="flex-1 overflow-y-auto px-8 md:px-16 py-4 custom-scrollbar">
-              <div className="max-w-6xl mx-auto space-y-8">
-                {/* Search in All Apps */}
-                <div className="relative max-w-md">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
+              {/* User Profile, Power, and Search Icons */}
+              <div className="flex items-center gap-4">
+                {/* Search Bar if on allApps or quick button */}
+                <div className="relative">
                   <input
                     type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Pesquisar em todos os aplicativos..."
-                    className="w-full pl-9 pr-4 py-2 bg-white/10 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:border-white transition-colors"
+                    placeholder="Pesquisar..."
+                    value={startSearchQuery}
+                    onChange={(e) => {
+                      setStartSearchQuery(e.target.value);
+                      if (startScreenTab !== 'allApps' && e.target.value) {
+                        setStartScreenTab('allApps');
+                      }
+                    }}
+                    className="w-44 md:w-64 pl-8 pr-3 py-1.5 text-xs bg-black/30 border border-white/20 text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-all rounded-none"
                   />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/70" />
+                </div>
+
+                {/* Power Options Menu */}
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPowerMenuOpen(!powerMenuOpen);
+                      setUserMenuOpen(false);
+                    }}
+                    className="w-10 h-10 rounded-full hover:bg-white/15 flex items-center justify-center text-white transition-colors cursor-pointer border border-transparent hover:border-white/30"
+                    title="Opções de Energia"
+                  >
+                    <Power size={18} />
+                  </button>
+                  {powerMenuOpen && (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-12 w-48 bg-[#1f1f1f] border border-white/20 shadow-2xl z-50 p-1 rounded-none text-xs animate-fadeIn"
                     >
-                      ✕
-                    </button>
+                      <button
+                        onClick={() => {
+                          setPowerMenuOpen(false);
+                          setIsScreenLocked(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[#0078d7] text-white transition-colors cursor-pointer"
+                      >
+                        <Lock size={14} />
+                        <span>Suspender / Bloquear</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPowerMenuOpen(false);
+                          window.location.reload();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[#0078d7] text-white transition-colors cursor-pointer"
+                      >
+                        <RefreshCw size={14} />
+                        <span>Reiniciar GIPP</span>
+                      </button>
+                      <div className="border-t border-white/10 my-1" />
+                      <button
+                        onClick={() => {
+                          setPowerMenuOpen(false);
+                          handleLogoutRequest();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                      >
+                        <LogOut size={14} />
+                        <span>Desligar / Sair</span>
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                  {groupedModules.map(group => (
-                    <div key={group.letter} className="space-y-3">
-                      <div className="text-2xl font-light border-b border-white/20 pb-1 text-white/80">
-                        {group.letter}
+                {/* User Avatar & Menu */}
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUserMenuOpen(!userMenuOpen);
+                      setPowerMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 hover:bg-white/15 px-2.5 py-1.5 rounded-none border border-transparent hover:border-white/30 transition-all cursor-pointer"
+                  >
+                    <span className="text-xs font-semibold hidden md:inline text-white">
+                      {user?.nome || 'Usuário GIPP'}
+                    </span>
+                    <div className="w-9 h-9 rounded-full bg-[#0078d7] text-white font-bold flex items-center justify-center overflow-hidden border border-white/40 shadow-sm shrink-0">
+                      {user?.fotoUrl || user?.foto ? (
+                        <img src={user.fotoUrl || user.foto} alt="User" className="w-full h-full object-cover" />
+                      ) : (
+                        user?.nome?.charAt(0) || 'U'
+                      )}
+                    </div>
+                  </button>
+
+                  {userMenuOpen && (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-12 w-56 bg-[#1f1f1f] border border-white/20 shadow-2xl z-50 p-1 rounded-none text-xs animate-fadeIn"
+                    >
+                      <div className="p-3 border-b border-white/10 mb-1">
+                        <p className="font-bold text-white leading-tight">{user?.nome}</p>
+                        <p className="text-[10px] text-sky-400 mt-0.5">{user?.funcao_administrativa || user?.cargo || 'Administrador'}</p>
                       </div>
-                      <div className="space-y-1">
-                        {group.modules.map(mod => {
-                          const ModIcon = mod.icon || Folder;
-                          return (
-                            <button
-                              key={mod.id}
-                              onClick={() => handleOpenModule(mod.id)}
-                              className="w-full flex items-center gap-3 p-2 hover:bg-white/15 text-left transition-colors cursor-pointer group"
-                            >
-                              <div className="w-8 h-8 rounded-xs bg-[#0078D7] flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-                                <ModIcon size={16} className="text-white" />
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setView('config_visual');
+                          setStartScreenOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[#0078d7] text-white transition-colors cursor-pointer"
+                      >
+                        <Palette size={14} />
+                        <span>Mudar imagem da conta</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setIsScreenLocked(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[#0078d7] text-white transition-colors cursor-pointer"
+                      >
+                        <Lock size={14} />
+                        <span>Bloquear sessão</span>
+                      </button>
+                      <div className="border-t border-white/10 my-1" />
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          handleLogoutRequest();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                      >
+                        <LogOut size={14} />
+                        <span>Sair da conta</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* TAB 1: LIVE TILES VIEW */}
+            {startScreenTab === 'tiles' ? (
+              <div className="flex-1 px-8 md:px-14 flex items-start gap-12 overflow-x-auto custom-scrollbar pt-2 pb-16">
+                {tileCategories.map((cat, cIdx) => (
+                  <div key={cat.title} className="flex flex-col shrink-0">
+                    {/* Category Title (Windows 8.1 Uppercase font-semibold) */}
+                    <div className="text-xs font-bold uppercase tracking-wider text-white/80 mb-3 pl-1">
+                      {cat.title}
+                    </div>
+
+                    {/* Tiles Grid for this category */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {cat.modules.map(tile => {
+                        const mInfo = ALL_AVAILABLE_MODULES.find(m => m.id === tile.id);
+                        if (!mInfo || !isModuleAllowed(tile.id)) return null;
+                        const TileIcon = mInfo.icon || LayoutDashboard;
+
+                        const isWide = tile.size === 'wide' || tile.size === 'large';
+                        const isLarge = tile.size === 'large';
+
+                        return (
+                          <div
+                            key={tile.id}
+                            draggable
+                            onDragStart={(e) => handleDragStartFromMenu(e, tile.id)}
+                            onClick={() => handleLaunchModule(tile.id)}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setContextMenu({ type: 'start-tile', x: e.clientX, y: e.clientY, moduleId: tile.id });
+                            }}
+                            className={`relative cursor-pointer transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg border border-white/10 overflow-hidden ${tile.bg} ${
+                              isLarge ? 'col-span-2 row-span-2 w-72 h-72' :
+                              isWide ? 'col-span-2 w-72 h-34' : 'w-34 h-34'
+                            }`}
+                          >
+                            {/* Live Tile Content Flip Simulator */}
+                            <div className="w-full h-full p-3.5 flex flex-col justify-between relative z-10 text-white select-none">
+                              {/* Top Icon & Live indicator badge */}
+                              <div className="flex justify-between items-start">
+                                <TileIcon size={isLarge ? 36 : 24} className="text-white drop-shadow-md" />
+                                {tile.live && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-black/30 border border-white/20 uppercase tracking-widest text-white/90">
+                                    Ao Vivo
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-xs font-semibold text-white/90 truncate">
-                                {mod.label}
-                              </span>
-                            </button>
+
+                              {/* Live Dynamic Middle Content (Flip Effect) */}
+                              {isLarge && (
+                                <div className="my-auto py-2">
+                                  {tile.id === 'curso_teologia' ? (
+                                    <div className="text-left space-y-1">
+                                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200">
+                                        Declaração de Fé CPAD/CGADB
+                                      </span>
+                                      <p className="text-xs font-semibold text-white/95 line-clamp-2 leading-tight">
+                                        Cap. 19: Distintivos Pentecostais & Atualidade dos Dons
+                                      </p>
+                                      <p className="text-[10px] text-white/70">Níveis: Básico, Médio e Avançado</p>
+                                    </div>
+                                  ) : tile.id === 'dashboard' ? (
+                                    <div className="text-left space-y-1">
+                                      <span className="text-2xl font-light tracking-tight">{currentTime}</span>
+                                      <p className="text-xs font-bold capitalize text-sky-200">{currentDate}</p>
+                                      <p className="text-[10px] opacity-80">{db?.igreja?.nome || 'Igreja Sede GIPP'}</p>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              )}
+
+                              {isWide && !isLarge && (
+                                <div className="text-left">
+                                  {tile.id === 'assistente_ai' && (
+                                    <p className="text-[11px] font-semibold text-purple-200 line-clamp-1">
+                                      Pastoral IA pronta para estudos bíblicos
+                                    </p>
+                                  )}
+                                  {tile.id === 'formacao_obreiros' && (
+                                    <p className="text-[11px] font-semibold text-teal-200 line-clamp-1">
+                                      Módulos ministeriais e liturgia pastoral
+                                    </p>
+                                  )}
+                                  {tile.id === 'fin_dre' && (
+                                    <p className="text-[11px] font-semibold text-sky-200 line-clamp-1">
+                                      Demonstrativo de Resultado do Exercício
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Bottom Label (Classic Windows 8.1 Segoe UI styling) */}
+                              <div className="text-left">
+                                <span className="text-xs font-bold leading-tight line-clamp-1 text-white drop-shadow-xs font-sans">
+                                  {mInfo.label}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Subtle glossy gradient reflection */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Additional Desktop Tile */}
+                <div className="flex flex-col shrink-0">
+                  <div className="text-xs font-bold uppercase tracking-wider text-white/80 mb-3 pl-1">
+                    ÁREA DE TRABALHO
+                  </div>
+                  <div
+                    onClick={() => setStartScreenOpen(false)}
+                    className="w-72 h-34 bg-[#005a9e] border border-white/20 p-3.5 flex flex-col justify-between shadow-lg cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group"
+                  >
+                    <div className="flex justify-between items-start">
+                      <Monitor size={28} className="text-white drop-shadow-md" />
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-black/30 border border-white/20">
+                        Desktop
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Área de Trabalho</p>
+                      <p className="text-[10px] text-white/70">Alternar para o ambiente tradicional</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* TAB 2: ALL APPS SCREEN (TODOS OS APLICATIVOS) */
+              <div className="flex-1 px-8 md:px-14 overflow-y-auto custom-scrollbar pt-2 pb-16">
+                <div className="mb-4 text-xs font-bold uppercase tracking-wider text-white/70">
+                  {allAppsFiltered.length} Aplicativos Disponíveis
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {Object.keys(groupedApps).sort().map(letter => (
+                    <div key={letter} className="bg-black/20 border border-white/10 p-3.5 rounded-none">
+                      <div className="text-lg font-light text-sky-400 border-b border-white/10 pb-1 mb-2">
+                        {letter}
+                      </div>
+                      <div className="space-y-1.5">
+                        {groupedApps[letter].map(app => {
+                          const Icon = app.icon || LayoutDashboard;
+                          const isPinned = isPinnedToStart(app.id);
+                          const isTaskbar = isPinnedToTaskbar(app.id);
+
+                          return (
+                            <div
+                              key={app.id}
+                              draggable
+                              onDragStart={(e) => handleDragStartFromMenu(e, app.id)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setContextMenu({ type: 'start-app', x: e.clientX, y: e.clientY, moduleId: app.id });
+                              }}
+                              className="flex items-center justify-between p-1.5 hover:bg-white/15 transition-colors cursor-pointer group"
+                            >
+                              <div 
+                                onClick={() => handleLaunchModule(app.id)}
+                                className="flex items-center gap-2.5 flex-1 min-w-0 pr-2"
+                              >
+                                <div className="w-7 h-7 bg-[#0078d7] flex items-center justify-center shrink-0 shadow-xs">
+                                  <Icon size={16} className="text-white" />
+                                </div>
+                                <span className="text-xs font-semibold text-white truncate">
+                                  {app.label}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addShortcutToDesktop(app.id);
+                                  }}
+                                  className="p-1 hover:bg-white/20 text-white text-[10px]"
+                                  title="Adicionar à Área de Trabalho"
+                                >
+                                  +Desktop
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePinTaskbar(app.id);
+                                  }}
+                                  className={`p-1 hover:bg-white/20 text-[10px] ${isTaskbar ? 'text-sky-300' : 'text-white'}`}
+                                  title={isTaskbar ? "Desafixar da Barra" : "Fixar na Barra"}
+                                >
+                                  {isTaskbar ? '✓Barra' : '+Barra'}
+                                </button>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -826,758 +996,697 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Bottom Circular Arrow to toggle between Tiles and All Apps */}
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center">
+              <button
+                onClick={() => setStartScreenTab(startScreenTab === 'tiles' ? 'allApps' : 'tiles')}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 border border-white/30 flex items-center justify-center text-white transition-all cursor-pointer shadow-md"
+                title={startScreenTab === 'tiles' ? "Ver todos os aplicativos" : "Voltar aos blocos dinâmicos"}
+              >
+                {startScreenTab === 'tiles' ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              </button>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-white/60 mt-1">
+                {startScreenTab === 'tiles' ? 'Aplicativos' : 'Iniciar'}
+              </span>
             </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Bottom Start Screen Switcher Arrow (⬇ / ⬆) */}
-          <div className="h-12 flex items-center justify-center shrink-0">
-            <button
-              onClick={() => {
-                playAudioFeedback('click');
-                setStartScreenView(prev => prev === 'tiles' ? 'all_apps' : 'tiles');
-              }}
-              className="w-10 h-10 rounded-full hover:bg-white/15 flex items-center justify-center transition-colors cursor-pointer text-white/80"
-              title={startScreenView === 'tiles' ? 'Todos os Aplicativos' : 'Voltar aos Blocos'}
-            >
-              {startScreenView === 'tiles' ? <ChevronDown size={22} /> : <ChevronUp size={22} />}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          2. WINDOWS 8.1 CHARMS BAR (Slide-in Right Sidebar)
-          ========================================================================= */}
-      {/* Charms Trigger Zone (Hover in top-right or bottom-right corner) */}
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 CHARMS BAR (SLIDES OUT FROM RIGHT EDGE) */}
+      {/* ------------------------------------------------------------- */}
+      {/* Mouse hover trigger on right border */}
       <div 
-        onMouseEnter={() => {
-          setIsCharmsBarOpen(true);
-          playAudioFeedback('charm');
-        }}
-        className="fixed top-0 right-0 w-3 h-screen z-40 pointer-events-auto"
+        onMouseEnter={() => setCharmsBarOpen(true)}
+        className="fixed top-0 right-0 w-2 h-full z-45"
       />
 
-      {isCharmsBarOpen && (
-        <div className="fixed inset-y-0 right-0 z-50 flex items-center animate-slideLeft">
-          {/* Main Dark Charms Strip */}
-          <div className="w-20 h-[380px] bg-black/90 backdrop-blur-md border-l border-white/15 shadow-2xl flex flex-col justify-around items-center py-2 text-white select-none">
-            {/* 1. Search Charm */}
-            <button
-              onClick={() => {
-                setActiveCharm('search');
-                playAudioFeedback('click');
-              }}
-              className={`flex flex-col items-center gap-1 w-16 py-2 rounded-sm transition-colors cursor-pointer ${
-                activeCharm === 'search' ? 'bg-[#0078D7] text-white' : 'hover:bg-white/15 text-white/80'
-              }`}
-              title="Pesquisar [Win+F]"
-            >
-              <Search size={22} />
-              <span className="text-[10px] font-medium">Pesquisar</span>
-            </button>
-
-            {/* 2. Share Charm */}
-            <button
-              onClick={() => {
-                setActiveCharm('share');
-                playAudioFeedback('click');
-              }}
-              className={`flex flex-col items-center gap-1 w-16 py-2 rounded-sm transition-colors cursor-pointer ${
-                activeCharm === 'share' ? 'bg-[#0078D7] text-white' : 'hover:bg-white/15 text-white/80'
-              }`}
-              title="Compartilhar"
-            >
-              <Share2 size={22} />
-              <span className="text-[10px] font-medium">Partilhar</span>
-            </button>
-
-            {/* 3. Start Charm */}
-            <button
-              onClick={toggleStartScreen}
-              className="flex flex-col items-center gap-1 w-16 py-2 rounded-sm hover:bg-white/15 text-white/80 transition-colors cursor-pointer"
-              title="Iniciar [Win]"
-            >
-              <Windows81Logo size={22} className="text-[#00A4EF]" />
-              <span className="text-[10px] font-medium">Iniciar</span>
-            </button>
-
-            {/* 4. Devices Charm */}
-            <button
-              onClick={() => {
-                setActiveCharm('devices');
-                playAudioFeedback('click');
-              }}
-              className={`flex flex-col items-center gap-1 w-16 py-2 rounded-sm transition-colors cursor-pointer ${
-                activeCharm === 'devices' ? 'bg-[#0078D7] text-white' : 'hover:bg-white/15 text-white/80'
-              }`}
-              title="Dispositivos"
-            >
-              <Monitor size={22} />
-              <span className="text-[10px] font-medium">Dispositivos</span>
-            </button>
-
-            {/* 5. Settings Charm */}
-            <button
-              onClick={() => {
-                setActiveCharm('settings');
-                playAudioFeedback('click');
-              }}
-              className={`flex flex-col items-center gap-1 w-16 py-2 rounded-sm transition-colors cursor-pointer ${
-                activeCharm === 'settings' ? 'bg-[#0078D7] text-white' : 'hover:bg-white/15 text-white/80'
-              }`}
-              title="Configurações [Win+I]"
-            >
-              <Settings size={22} />
-              <span className="text-[10px] font-medium">Ajustes</span>
-            </button>
-          </div>
-
-          {/* Charm Close button */}
-          <button
-            onClick={() => {
-              setIsCharmsBarOpen(false);
-              setActiveCharm(null);
-            }}
-            className="absolute -left-7 top-1/2 -translate-y-1/2 w-6 h-12 bg-black/80 hover:bg-black text-white/80 hover:text-white flex items-center justify-center text-xs cursor-pointer border-l border-t border-b border-white/20"
-            title="Ocultar Barra de Amuletos"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Windows 8.1 Bottom-Left Huge Clock & Wifi Charm Widget (shown when charms bar is active) */}
-      {isCharmsBarOpen && (
-        <div className="fixed bottom-12 left-12 z-50 bg-black/85 backdrop-blur-md p-6 border border-white/15 shadow-2xl text-white animate-fadeIn flex flex-col gap-1 pointer-events-none">
-          <div className="text-6xl font-light tracking-tight font-mono">{currentTime}</div>
-          <div className="text-sm font-semibold capitalize text-white/80">{currentDate}</div>
-          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/15 text-xs text-white/70">
-            <span className="flex items-center gap-1"><Wifi size={14} className="text-emerald-400" /> Conectado</span>
-            <span>•</span>
-            <span className="flex items-center gap-1"><BatteryCharging size={14} className="text-emerald-400" /> 100% CA</span>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          2.1 CHARM FLYOUT PANELS (Slide-in Panels from Right)
-          ========================================================================= */}
-      {activeCharm === 'search' && (
-        <div className="fixed inset-y-0 right-0 w-80 md:w-96 bg-[#1F1F1F] z-50 border-l border-white/15 shadow-2xl p-6 flex flex-col gap-4 animate-slideLeft text-white">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-light">Pesquisar</h2>
-            <button onClick={() => setActiveCharm(null)} className="text-white/60 hover:text-white">✕</button>
-          </div>
-          
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
-            <input
-              type="text"
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Digite o nome do módulo..."
-              className="w-full pl-9 pr-4 py-2 bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:border-[#0078D7]"
-            />
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-            <div className="text-xs font-bold text-white/50 uppercase">Módulos Encontrados ({filteredModules.length})</div>
-            {filteredModules.map(m => {
-              const ModIcon = m.icon || Folder;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => handleOpenModule(m.id)}
-                  className="w-full flex items-center gap-3 p-2.5 hover:bg-[#0078D7] text-left transition-colors cursor-pointer rounded-xs"
-                >
-                  <div className="w-7 h-7 bg-white/20 flex items-center justify-center shrink-0">
-                    <ModIcon size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">{m.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {activeCharm === 'settings' && (
-        <div className="fixed inset-y-0 right-0 w-80 md:w-96 bg-[#1F1F1F] z-50 border-l border-white/15 shadow-2xl p-6 flex flex-col gap-6 animate-slideLeft text-white overflow-y-auto custom-scrollbar">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-light">Ajustes do PC</h2>
-            <button onClick={() => setActiveCharm(null)} className="text-white/60 hover:text-white">✕</button>
-          </div>
-
-          {/* 1. Accent Color Palette Selector */}
-          <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-white/70">
-              Cor de Destaque do Windows 8.1
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {WIN81_ACCENTS.map(acc => (
-                <button
-                  key={acc.id}
-                  onClick={() => handleAccentChange(acc.id)}
-                  className={`h-9 w-full rounded-xs flex items-center justify-center transition-all cursor-pointer ${
-                    accentId === acc.id ? 'ring-2 ring-white scale-105 shadow-md' : 'opacity-85 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: acc.primary }}
-                  title={acc.name}
-                >
-                  {accentId === acc.id && <Check size={16} className="text-white drop-shadow-xs" />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 2. Start Screen Pattern Motif */}
-          <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-white/70">
-              Padrão de Fundo da Tela Inicial
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {WIN81_PATTERNS.map(pat => (
-                <button
-                  key={pat.id}
-                  onClick={() => handlePatternChange(pat.id)}
-                  className={`p-2 text-left text-xs font-semibold border transition-all cursor-pointer ${
-                    patternId === pat.id ? 'border-white bg-white/20' : 'border-white/20 hover:border-white/50 bg-white/5'
-                  }`}
-                >
-                  {pat.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 3. Audio / Sounds Switch */}
-          <div className="space-y-2 pt-2 border-t border-white/10">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold">Efeitos Sonoros do Windows 8.1</span>
-              <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className={`w-12 h-6 rounded-full transition-colors flex items-center p-1 cursor-pointer ${
-                  soundEnabled ? 'bg-[#0078D7] justify-end' : 'bg-white/20 justify-start'
-                }`}
-              >
-                <div className="w-4 h-4 rounded-full bg-white shadow-xs" />
-              </button>
-            </div>
-          </div>
-
-          {/* 4. Quick Actions */}
-          <div className="space-y-2 pt-2 border-t border-white/10">
-            <button
-              onClick={() => {
-                setIsScreenLocked(true);
-                setActiveCharm(null);
-              }}
-              className="w-full text-left p-3 bg-white/5 hover:bg-white/15 border border-white/10 flex items-center gap-3 text-xs font-semibold cursor-pointer"
-            >
-              <Lock size={16} /> Bloquear Estação de Trabalho
-            </button>
-            <button
-              onClick={() => {
-                handleLogoutRequest();
-                setActiveCharm(null);
-              }}
-              className="w-full text-left p-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 flex items-center gap-3 text-xs font-semibold cursor-pointer text-rose-300"
-            >
-              <LogOut size={16} /> Encerrar Sessão (Logout)
-            </button>
-          </div>
-
-          {/* System Info Footnote */}
-          <div className="mt-auto pt-4 border-t border-white/10 text-[11px] text-white/50 font-mono">
-            <div>GIPP Eclesiástico Windows 8.1 Pro</div>
-            <div>Build 9600.Win81_GIPP_VCL</div>
-          </div>
-        </div>
-      )}
-
-      {activeCharm === 'share' && (
-        <div className="fixed inset-y-0 right-0 w-80 md:w-96 bg-[#1F1F1F] z-50 border-l border-white/15 shadow-2xl p-6 flex flex-col gap-4 animate-slideLeft text-white">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-light">Partilhar</h2>
-            <button onClick={() => setActiveCharm(null)} className="text-white/60 hover:text-white">✕</button>
-          </div>
-          <p className="text-xs text-white/70">Compartilhe o registro ou relatório ativo com a liderança ou membros:</p>
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                window.open(`https://wa.me/?text=Acesso%20ao%20GIPP%20Eclesi%C3%A1stico:%20${encodeURIComponent(window.location.href)}`, '_blank');
-                setActiveCharm(null);
-              }}
-              className="w-full flex items-center gap-3 p-3 bg-emerald-800 hover:bg-emerald-700 text-left text-xs font-bold cursor-pointer"
-            >
-              <MessageCircle size={18} /> Enviar via WhatsApp
-            </button>
-            <button
-              onClick={() => {
-                window.print();
-                setActiveCharm(null);
-              }}
-              className="w-full flex items-center gap-3 p-3 bg-[#0078D7] hover:bg-[#0063B1] text-left text-xs font-bold cursor-pointer"
-            >
-              <Printer size={18} /> Imprimir Relatório Ativo
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeCharm === 'devices' && (
-        <div className="fixed inset-y-0 right-0 w-80 md:w-96 bg-[#1F1F1F] z-50 border-l border-white/15 shadow-2xl p-6 flex flex-col gap-4 animate-slideLeft text-white">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-light">Dispositivos</h2>
-            <button onClick={() => setActiveCharm(null)} className="text-white/60 hover:text-white">✕</button>
-          </div>
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                window.print();
-                setActiveCharm(null);
-              }}
-              className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 text-left text-xs font-bold cursor-pointer border border-white/10"
-            >
-              <Printer size={18} /> Imprimir (Impressora / PDF)
-            </button>
-            <button
-              onClick={() => {
-                if (document.fullscreenElement) {
-                  document.exitFullscreen();
-                } else {
-                  document.documentElement.requestFullscreen?.();
-                }
-                setActiveCharm(null);
-              }}
-              className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 text-left text-xs font-bold cursor-pointer border border-white/10"
-            >
-              <Monitor size={18} /> Projetor / Telão da Igreja (Tela Cheia)
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          3. DESKTOP WORKSPACE & AERO LITE / METRO WINDOW
-          ========================================================================= */}
-      <div 
-        className="flex-1 flex flex-col p-2 md:p-3 overflow-hidden relative win81-desktop-area z-10"
-        style={{
-          backgroundColor: wallpaperMode === 'accent' ? activeAccent.darkBg : '#171717'
-        }}
-      >
-        {/* Desktop Icons (When window is minimized or partial) */}
-        {isWindowMinimized && (
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-xl animate-fadeIn">
-            {[
-              { id: 'dashboard', label: 'Este Computador (GIPP)', icon: Monitor, color: '#0078D7' },
-              { id: 'secretaria_integrada', label: 'Secretaria Geral', icon: FileText, color: '#107C41' },
-              { id: 'cad_membro', label: 'Rol de Membros', icon: Users, color: '#D83B01' },
-              { id: 'fin_entrada', label: 'Livro Caixa', icon: ArrowUpCircle, color: '#008272' },
-              { id: 'curso_teologia', label: 'Universidade Teológica', icon: BookOpen, color: '#004E98' },
-              { id: 'google_meet', label: 'Google Meet', icon: GoogleMeetIcon, isGoogle: true },
-              { id: 'config_visual', label: 'Painel de Controle', icon: Settings, color: '#68217A' },
-              { id: 'lixeira', label: 'Lixeira', icon: Trash2, color: '#71717A' }
-            ].map(item => {
-              const ItemIcon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  onDoubleClick={() => handleOpenModule(item.id)}
-                  onClick={() => handleOpenModule(item.id)}
-                  className="flex flex-col items-center justify-center p-3 rounded-xs hover:bg-white/10 active:bg-white/20 cursor-pointer text-center group border border-transparent hover:border-white/20"
-                >
-                  <div 
-                    className="w-12 h-12 flex items-center justify-center mb-1.5 shadow-md rounded-xs group-hover:scale-105 transition-transform"
-                    style={{ backgroundColor: item.isGoogle ? 'white' : item.color }}
-                  >
-                    <ItemIcon size={24} className={item.isGoogle ? '' : 'text-white'} />
-                  </div>
-                  <span className="text-xs font-semibold text-white drop-shadow-md truncate max-w-[110px]">
-                    {item.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Windows 8.1 Aero Lite Window Container */}
-        {!isWindowMinimized && (
-          <div 
-            className={`flex-1 flex flex-col overflow-hidden transition-all duration-150 shadow-2xl border ${
-              isWindowMaximized ? 'w-full h-full' : 'w-[96%] h-[95%] mx-auto my-auto'
-            }`}
-            style={{
-              borderColor: activeAccent.windowBorder,
-              backgroundColor: '#F3F3F3'
-            }}
-          >
-            {/* Windows 8.1 Window Title Bar (Sharp rectangular styling) */}
+      <AnimatePresence>
+        {charmsBarOpen && (
+          <>
+            {/* Backdrop to close charms */}
             <div 
-              className="h-9 flex items-center justify-between px-3 select-none shrink-0"
-              style={{
-                backgroundColor: activeAccent.primary,
-                color: 'white'
+              className="fixed inset-0 z-45 cursor-default bg-black/10"
+              onClick={() => {
+                setCharmsBarOpen(false);
+                setActiveCharmFlyout(null);
               }}
-            >
-              {/* Left: Window Icon, Title & Breadcrumb */}
-              <div className="flex items-center gap-2 truncate">
-                <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                  <WindowIcon size={16} className="text-white" />
-                </div>
-                <span className="text-xs font-semibold truncate tracking-tight">
-                  {mMeta.label} - GIPP Eclesiástico
-                </span>
-              </div>
-
-              {/* Right: Window Controls (_, ▢, ✕) Windows 8.1 style */}
-              <div className="flex items-center gap-0.5">
-                {/* Minimize Button */}
-                <button
-                  onClick={() => {
-                    playAudioFeedback('click');
-                    setIsWindowMinimized(true);
-                  }}
-                  className="w-8 h-7 flex items-center justify-center hover:bg-white/20 active:bg-white/30 text-white font-bold text-xs cursor-pointer transition-colors"
-                  title="Minimizar"
-                >
-                  <Minus size={14} />
-                </button>
-
-                {/* Maximize / Restore Button */}
-                <button
-                  onClick={() => {
-                    playAudioFeedback('click');
-                    setIsWindowMaximized(!isWindowMaximized);
-                  }}
-                  className="w-8 h-7 flex items-center justify-center hover:bg-white/20 active:bg-white/30 text-white font-bold text-xs cursor-pointer transition-colors"
-                  title={isWindowMaximized ? "Restaurar" : "Maximizar"}
-                >
-                  {isWindowMaximized ? <Maximize2 size={12} /> : <Square size={12} />}
-                </button>
-
-                {/* Close Button (Iconic Red Hover) */}
-                <button
-                  onClick={() => {
-                    playAudioFeedback('click');
-                    if (view !== 'dashboard') {
-                      setView('dashboard');
-                    } else {
-                      setIsWindowMinimized(true);
-                    }
-                  }}
-                  className="w-10 h-7 flex items-center justify-center hover:bg-[#E81123] active:bg-[#B8101C] text-white font-bold text-xs cursor-pointer transition-colors"
-                  title="Fechar Janela"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-            </div>
-
-            {/* Windows 8.1 File Explorer Style Ribbon Navigation Toolbar */}
-            <div className="bg-[#F5F6F7] border-b border-[#D9D9D9] px-3 py-1.5 flex items-center justify-between gap-3 text-xs text-slate-800 shrink-0">
-              {/* Back / Forward / Up navigation */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => handleOpenModule('dashboard')}
-                  className="w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-700 cursor-pointer disabled:opacity-40"
-                  title="Voltar ao Início"
-                >
-                  <ArrowLeft size={14} />
-                </button>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-700 cursor-pointer"
-                  title="Atualizar Módulo"
-                >
-                  <RefreshCw size={12} />
-                </button>
-              </div>
-
-              {/* Breadcrumb Address Bar */}
-              <div className="flex-1 bg-white border border-[#D9D9D9] px-2.5 py-1 flex items-center gap-1.5 text-xs text-slate-700 font-medium">
-                <Monitor size={13} className="text-[#0078D7]" />
-                <span className="text-slate-400">Este Computador</span>
-                <span className="text-slate-400">&gt;</span>
-                <span className="text-slate-400">GIPP</span>
-                <span className="text-slate-400">&gt;</span>
-                <span className="font-bold text-slate-900 truncate">{mMeta.label}</span>
-              </div>
-
-              {/* Quick Action Buttons (Ribbon Buttons) */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => window.print()}
-                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-[#D9D9D9] text-[11px] font-semibold flex items-center gap-1 cursor-pointer text-slate-800"
-                  title="Imprimir [Ctrl+P]"
-                >
-                  <Printer size={12} className="text-slate-600" />
-                  <span className="hidden sm:inline">Imprimir</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsCharmsBarOpen(true);
-                    setActiveCharm('search');
-                  }}
-                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-[#D9D9D9] text-[11px] font-semibold flex items-center gap-1 cursor-pointer text-slate-800"
-                  title="Pesquisar Módulo [Win+F]"
-                >
-                  <Search size={12} className="text-slate-600" />
-                  <span className="hidden sm:inline">Pesquisar</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Active Module Body Render */}
-            <div className="flex-1 overflow-y-auto bg-white text-slate-900 p-2 sm:p-4 custom-scrollbar">
-              <CurrentModule {...currentProps} />
-            </div>
-
-            {/* Windows 8.1 Status Bar */}
-            <div className="h-6 bg-[#F5F6F7] border-t border-[#D9D9D9] px-3 flex items-center justify-between text-[10px] text-slate-600 font-medium shrink-0">
-              <div className="flex items-center gap-3">
-                <span>Status: Pronto</span>
-                <span>•</span>
-                <span>Módulo: {view}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>GIPP VCL Engine</span>
-                <span>•</span>
-                <span className="text-emerald-700 font-bold">Online</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* =========================================================================
-          4. WINDOWS 8.1 BOTTOM TASKBAR (Barra de Tarefas)
-          ========================================================================= */}
-      <footer 
-        className="h-10 border-t flex items-center justify-between px-1 select-none shrink-0 z-40 relative text-white"
-        style={{
-          backgroundColor: activeAccent.taskbarBg,
-          borderColor: 'rgba(255, 255, 255, 0.15)'
-        }}
-      >
-        {/* Left: Windows 8.1 Start Button + Running / Pinned Apps */}
-        <div className="flex items-center gap-1 h-full">
-          {/* Windows 8.1 Start Button (Angled Cyan Quad Logo) */}
-          <button
-            onClick={toggleStartScreen}
-            className={`h-full px-3 flex items-center justify-center transition-all cursor-pointer group ${
-              isStartOpen ? 'bg-black/30' : 'hover:bg-white/15 active:bg-black/20'
-            }`}
-            title="Iniciar (Alternar Tela Inicial) [Win]"
-          >
-            <Windows81Logo 
-              size={18} 
-              className={`transition-colors ${
-                isStartOpen ? 'text-[#00B4FF]' : 'text-[#00A4EF] group-hover:text-white'
-              }`} 
             />
-          </button>
 
-          <div className="h-5 w-px bg-white/20 mx-0.5" />
+            {/* Bottom-left Clock / Battery Overlay (Iconic Win8.1 Charms Indicator) */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              className="fixed bottom-14 left-6 z-50 bg-black/90 border border-white/20 p-4 shadow-2xl text-white select-none pointer-events-none rounded-none w-64"
+            >
+              <div className="text-4xl font-light tracking-tight">{currentTime}</div>
+              <div className="text-xs font-semibold text-sky-400 capitalize mt-0.5">{currentDate}</div>
+              <div className="flex items-center gap-3 mt-3 pt-2 border-t border-white/10 text-[10px] text-white/80">
+                <span className="flex items-center gap-1"><Wifi size={12} className="text-emerald-400" /> Conectado</span>
+                <span className="flex items-center gap-1"><ShieldCheck size={12} className="text-sky-400" /> GIPP Seguro</span>
+              </div>
+            </motion.div>
 
-          {/* Pinned & Running Taskbar Icons */}
-          <div className="flex items-center gap-0.5 h-full overflow-x-auto no-scrollbar">
-            {taskbarShortcuts.map(item => {
-              const ItemIcon = item.icon;
-              const isActive = view === item.id && !isWindowMinimized;
-              return (
+            {/* The Charms Bar (5 Iconic Vertical Buttons) */}
+            <motion.div
+              initial={{ x: 80 }}
+              animate={{ x: 0 }}
+              exit={{ x: 80 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed right-0 top-0 bottom-10 w-20 bg-black/90 backdrop-blur-md border-l border-white/15 z-50 flex flex-col items-center justify-center gap-6 select-none shadow-2xl"
+            >
+              {/* 1. Pesquisar (Search) */}
+              <button
+                onClick={() => setActiveCharmFlyout(activeCharmFlyout === 'search' ? null : 'search')}
+                className={`flex flex-col items-center gap-1 group cursor-pointer transition-colors ${
+                  activeCharmFlyout === 'search' ? 'text-sky-400' : 'text-white/80 hover:text-white'
+                }`}
+                title="Pesquisar (Win+Q)"
+              >
+                <div className="w-11 h-11 rounded-full flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <Search size={22} />
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider">Pesquisar</span>
+              </button>
+
+              {/* 2. Compartilhar (Share) */}
+              <button
+                onClick={() => setActiveCharmFlyout(activeCharmFlyout === 'share' ? null : 'share')}
+                className={`flex flex-col items-center gap-1 group cursor-pointer transition-colors ${
+                  activeCharmFlyout === 'share' ? 'text-sky-400' : 'text-white/80 hover:text-white'
+                }`}
+                title="Compartilhar"
+              >
+                <div className="w-11 h-11 rounded-full flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <Share2 size={22} />
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider">Compartilhar</span>
+              </button>
+
+              {/* 3. Iniciar (Start) */}
+              <button
+                onClick={() => {
+                  setStartScreenOpen(!startScreenOpen);
+                  setCharmsBarOpen(false);
+                  setActiveCharmFlyout(null);
+                }}
+                className="flex flex-col items-center gap-1 text-white/80 hover:text-white group cursor-pointer"
+                title="Tela Inicial (Win)"
+              >
+                <div className="w-11 h-11 rounded-full flex items-center justify-center group-hover:bg-[#0078d7] transition-colors">
+                  <Win81Logo size={24} />
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider">Iniciar</span>
+              </button>
+
+              {/* 4. Dispositivos (Devices) */}
+              <button
+                onClick={() => setActiveCharmFlyout(activeCharmFlyout === 'devices' ? null : 'devices')}
+                className={`flex flex-col items-center gap-1 group cursor-pointer transition-colors ${
+                  activeCharmFlyout === 'devices' ? 'text-sky-400' : 'text-white/80 hover:text-white'
+                }`}
+                title="Dispositivos"
+              >
+                <div className="w-11 h-11 rounded-full flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <Monitor size={22} />
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider">Dispositivos</span>
+              </button>
+
+              {/* 5. Configurações (Settings) */}
+              <button
+                onClick={() => setActiveCharmFlyout(activeCharmFlyout === 'settings' ? null : 'settings')}
+                className={`flex flex-col items-center gap-1 group cursor-pointer transition-colors ${
+                  activeCharmFlyout === 'settings' ? 'text-sky-400' : 'text-white/80 hover:text-white'
+                }`}
+                title="Configurações (Win+I)"
+              >
+                <div className="w-11 h-11 rounded-full flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <Settings size={22} />
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider">Configurações</span>
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------------------------------------------- */}
+      {/* CHARM FLYOUT PANELS (Settings / Search / Share / Devices) */}
+      {/* ------------------------------------------------------------- */}
+      <AnimatePresence>
+        {activeCharmFlyout && (
+          <motion.div
+            initial={{ x: 320 }}
+            animate={{ x: 0 }}
+            exit={{ x: 320 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed right-20 top-0 bottom-10 w-80 bg-[#1e1e1e] border-l border-white/20 z-50 p-6 flex flex-col justify-between shadow-2xl text-white select-none rounded-none"
+          >
+            {/* Header */}
+            <div>
+              <div className="flex items-center justify-between border-b border-white/15 pb-3 mb-4">
+                <h2 className="text-xl font-light capitalize tracking-wide">
+                  {activeCharmFlyout === 'settings' ? 'Configurações' :
+                   activeCharmFlyout === 'search' ? 'Pesquisa do GIPP' :
+                   activeCharmFlyout === 'share' ? 'Compartilhar' : 'Dispositivos'}
+                </h2>
                 <button
-                  key={item.id}
-                  onClick={() => handleOpenModule(item.id)}
-                  className={`h-full px-2.5 flex items-center gap-1.5 border-b-2 transition-all cursor-pointer relative ${
-                    isActive 
-                      ? 'bg-white/20 border-white font-bold' 
-                      : 'border-transparent hover:bg-white/10 hover:border-white/40 opacity-90 hover:opacity-100'
-                  }`}
-                  title={item.label}
+                  onClick={() => setActiveCharmFlyout(null)}
+                  className="p-1 hover:bg-white/10 text-white/70 hover:text-white"
                 >
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <ItemIcon size={16} className={item.isGoogle ? '' : 'text-white'} />
-                  </div>
-                  <span className="text-xs hidden md:inline truncate max-w-[120px]">
-                    {item.label}
-                  </span>
+                  <X size={16} />
                 </button>
-              );
-            })}
-          </div>
+              </div>
+
+              {/* Content for Settings Charm */}
+              {activeCharmFlyout === 'settings' && (
+                <div className="space-y-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-sky-400">
+                    GIPP Eclesiástico
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => {
+                        setView('config_visual');
+                        setActiveCharmFlyout(null);
+                        setCharmsBarOpen(false);
+                      }}
+                      className="w-full p-2 text-left bg-white/5 hover:bg-[#0078d7] transition-colors flex items-center justify-between text-xs font-semibold"
+                    >
+                      <span>Personalizar Telas & Papel de Parede</span>
+                      <ChevronRight size={14} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setView('config_sistema');
+                        setActiveCharmFlyout(null);
+                        setCharmsBarOpen(false);
+                      }}
+                      className="w-full p-2 text-left bg-white/5 hover:bg-[#0078d7] transition-colors flex items-center justify-between text-xs font-semibold"
+                    >
+                      <span>Painel de Controle do Sistema</span>
+                      <ChevronRight size={14} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setView('sobre');
+                        setActiveCharmFlyout(null);
+                        setCharmsBarOpen(false);
+                      }}
+                      className="w-full p-2 text-left bg-white/5 hover:bg-[#0078d7] transition-colors flex items-center justify-between text-xs font-semibold"
+                    >
+                      <span>Informações do Computador (Sobre)</span>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+
+                  {/* Windows 8.1 Settings Grid Quick Toggles */}
+                  <div className="pt-6 border-t border-white/10">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-3 bg-white/5 border border-white/10 text-center flex flex-col items-center justify-center hover:bg-white/10 cursor-pointer">
+                        <Wifi size={18} className="text-emerald-400 mb-1" />
+                        <span className="text-[10px]">Wi-Fi</span>
+                        <span className="text-[8px] text-emerald-300">Conectado</span>
+                      </div>
+
+                      <div className="p-3 bg-white/5 border border-white/10 text-center flex flex-col items-center justify-center hover:bg-white/10 cursor-pointer">
+                        <Volume2 size={18} className="text-sky-400 mb-1" />
+                        <span className="text-[10px]">Volume</span>
+                        <span className="text-[8px] text-sky-300">{volumeLevel}%</span>
+                      </div>
+
+                      <div className="p-3 bg-white/5 border border-white/10 text-center flex flex-col items-center justify-center hover:bg-white/10 cursor-pointer">
+                        <Sun size={18} className="text-amber-400 mb-1" />
+                        <span className="text-[10px]">Brilho</span>
+                        <span className="text-[8px] text-amber-300">{brightnessLevel}%</span>
+                      </div>
+
+                      <div className="p-3 bg-white/5 border border-white/10 text-center flex flex-col items-center justify-center hover:bg-white/10 cursor-pointer">
+                        <Bell size={18} className="text-purple-400 mb-1" />
+                        <span className="text-[10px]">Avisos</span>
+                        <span className="text-[8px] text-purple-300">Ativo</span>
+                      </div>
+
+                      <div 
+                        onClick={() => requestAppFullscreen()}
+                        className="p-3 bg-white/5 border border-white/10 text-center flex flex-col items-center justify-center hover:bg-white/10 cursor-pointer"
+                      >
+                        <Maximize size={18} className="text-sky-400 mb-1" />
+                        <span className="text-[10px]">Tela Cheia</span>
+                        <span className="text-[8px] text-sky-300">Alternar</span>
+                      </div>
+
+                      <div 
+                        onClick={() => handleLogoutRequest()}
+                        className="p-3 bg-white/5 border border-white/10 text-center flex flex-col items-center justify-center hover:bg-rose-600 cursor-pointer"
+                      >
+                        <Power size={18} className="text-rose-400 mb-1" />
+                        <span className="text-[10px]">Desligar</span>
+                        <span className="text-[8px] text-rose-300">Sair</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content for Search Charm */}
+              {activeCharmFlyout === 'search' && (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Pesquisar tudo no GIPP..."
+                    value={startSearchQuery}
+                    onChange={(e) => setStartSearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/20 text-white text-xs focus:outline-none focus:border-sky-400"
+                    autoFocus
+                  />
+                  <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-1">
+                    {ALL_AVAILABLE_MODULES.filter(m => 
+                      m.label.toLowerCase().includes(startSearchQuery.toLowerCase()) || 
+                      m.id.toLowerCase().includes(startSearchQuery.toLowerCase())
+                    ).map(m => {
+                      const Icon = m.icon || LayoutDashboard;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            handleLaunchModule(m.id);
+                            setActiveCharmFlyout(null);
+                            setCharmsBarOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-2 text-left hover:bg-[#0078d7] transition-colors cursor-pointer text-xs"
+                        >
+                          <Icon size={16} className="text-white shrink-0" />
+                          <span className="truncate">{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Content for Share Charm */}
+              {activeCharmFlyout === 'share' && (
+                <div className="space-y-3 text-xs">
+                  <p className="text-white/80 leading-relaxed">
+                    Compartilhe relatórios e informações eclesiásticas com lideranças e membros:
+                  </p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      addToast("Link do sistema copiado para a área de transferência!", "success");
+                    }}
+                    className="w-full p-2.5 bg-[#0078d7] hover:bg-[#005a9e] text-white font-bold flex items-center justify-center gap-2"
+                  >
+                    <Share2 size={14} /> Copiar Link do GIPP
+                  </button>
+                </div>
+              )}
+
+              {/* Content for Devices Charm */}
+              {activeCharmFlyout === 'devices' && (
+                <div className="space-y-3 text-xs">
+                  <div className="p-3 bg-white/5 border border-white/10 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold">Projetor / Telão do Templo</p>
+                      <p className="text-[10px] text-emerald-400">Pronto para transmissão</p>
+                    </div>
+                    <Monitor size={18} />
+                  </div>
+                  <div className="p-3 bg-white/5 border border-white/10 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold">Impressora de Certificados</p>
+                      <p className="text-[10px] text-white/70">Padrão do Sistema</p>
+                    </div>
+                    <FileText size={18} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom status */}
+            <div className="text-[10px] text-white/60 text-center border-t border-white/10 pt-3">
+              Windows 8.1 Pro - GIPP Teológico
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------------------------------------------- */}
+      {/* WINDOWS 8.1 TASKBAR (BARRA DE TAREFAS CLÁSSICA INFERIOR) */}
+      {/* ------------------------------------------------------------- */}
+      <div className="fixed bottom-0 left-0 right-0 h-10 bg-[#00395d]/95 backdrop-blur-md border-t border-white/20 z-50 flex items-center justify-between px-0 select-none shadow-2xl">
+        {/* Left: Windows 8.1 Start Button (Angled 4-pane logo) */}
+        <button
+          onClick={() => setStartScreenOpen(!startScreenOpen)}
+          className={`h-full px-4 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-r border-white/10 ${
+            startScreenOpen 
+              ? 'bg-[#68217a] text-white' 
+              : 'hover:bg-[#68217a] text-white/90 hover:text-white'
+          }`}
+          title="Iniciar"
+        >
+          <Win81Logo size={18} />
+        </button>
+
+        {/* Center: Running & Pinned Applications */}
+        <div className="flex-1 flex items-center gap-1 px-2 h-full overflow-x-auto custom-scrollbar">
+          {taskbarItemIds.map(mid => {
+            const mInfo = ALL_AVAILABLE_MODULES.find(m => m.id === mid);
+            if (!mInfo) return null;
+            const Icon = mInfo.icon || LayoutDashboard;
+            const isOpen = activeOpened.includes(mid);
+            const isActive = view === mid && !activeMinimized.includes(mid) && !startScreenOpen;
+
+            return (
+              <button
+                key={mid}
+                onClick={() => {
+                  if (startScreenOpen) {
+                    setStartScreenOpen(false);
+                  }
+                  if (view === mid && !activeMinimized.includes(mid)) {
+                    // Minimize
+                    setActiveMinimized(prev => [...prev, mid]);
+                  } else {
+                    setView(mid);
+                    if (!activeOpened.includes(mid)) setActiveOpened(prev => [...prev, mid]);
+                    setActiveMinimized(prev => prev.filter(m => m !== mid));
+                  }
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContextMenu({ type: 'taskbar-item', x: e.clientX, y: e.clientY - 80, moduleId: mid });
+                }}
+                className={`h-full px-3 flex items-center gap-2 transition-all cursor-pointer border-b-2 text-xs font-medium max-w-44 truncate ${
+                  isActive 
+                    ? 'bg-white/20 border-sky-400 text-white shadow-inner' 
+                    : isOpen 
+                    ? 'bg-white/10 border-white/40 text-white/90 hover:bg-white/15' 
+                    : 'border-transparent text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+                title={mInfo.label}
+              >
+                <Icon size={16} className="shrink-0" />
+                <span className="truncate hidden sm:inline text-[11px]">
+                  {mInfo.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Right: Notification Area / System Tray (Relógio, Som, Rede, Idioma, Notificações) */}
-        <div className="flex items-center gap-1 h-full pr-1">
-          {/* Audio Volume Button */}
+        {/* Right: Notification Area / System Tray + Aero Peek */}
+        <div className="flex items-center h-full shrink-0">
+          {/* Charms toggle button */}
           <button
-            onClick={() => setTrayFlyout(trayFlyout === 'volume' ? null : 'volume')}
-            className="p-1.5 hover:bg-white/15 rounded-xs transition-colors cursor-pointer text-white/90"
-            title={`Volume: ${volumeLevel}%`}
+            onClick={() => setCharmsBarOpen(!charmsBarOpen)}
+            className="h-full px-2.5 hover:bg-white/10 text-white/80 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+            title="Barra de Atalhos (Charms Bar)"
           >
-            {volumeLevel > 0 ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            <Sliders size={14} />
           </button>
 
-          {/* Network Wifi Button */}
-          <button
-            onClick={() => setTrayFlyout(trayFlyout === 'network' ? null : 'network')}
-            className="p-1.5 hover:bg-white/15 rounded-xs transition-colors cursor-pointer text-white/90"
-            title="Rede Eclesiástica: Conectado"
-          >
-            <Wifi size={16} />
-          </button>
-
-          {/* Action Center / Notifications */}
-          <button
-            onClick={() => {
-              setIsCharmsBarOpen(true);
-              setActiveCharm('search');
-            }}
-            className="p-1.5 hover:bg-white/15 rounded-xs transition-colors cursor-pointer text-white/90"
-            title="Central de Ações / Pesquisa"
-          >
-            <Bell size={16} />
-          </button>
-
-          {/* Language PTB Badge */}
-          <div className="px-1 text-[11px] font-bold text-white/80 hidden sm:inline">
-            POR
+          {/* Tray Icons (Network, Volume) */}
+          <div className="flex items-center gap-2 px-2 text-white/80 text-xs">
+            <Wifi size={14} className="text-emerald-400" />
+            <Volume2 size={14} />
           </div>
 
-          {/* Digital Clock & Calendar Flyout */}
-          <button
-            onClick={() => setTrayFlyout(trayFlyout === 'calendar' ? null : 'calendar')}
-            className={`h-full px-2 flex flex-col justify-center items-end text-right transition-colors cursor-pointer ${
-              trayFlyout === 'calendar' ? 'bg-white/20' : 'hover:bg-white/15'
-            }`}
-            title="Data e Hora do Sistema"
+          {/* Clock and Date (Classic Windows 8.1 vertical stack) */}
+          <div 
+            onClick={() => setStartScreenOpen(!startScreenOpen)}
+            className="h-full px-3 hover:bg-white/10 cursor-pointer flex flex-col justify-center text-right leading-none border-l border-white/10"
           >
-            <span className="text-[11px] font-bold font-mono leading-none">{currentTime}</span>
-            <span className="text-[9px] text-white/80 leading-none mt-0.5">{new Date().toLocaleDateString('pt-BR')}</span>
-          </button>
+            <span className="text-[11px] font-semibold text-white">
+              {currentTime || '14:32'}
+            </span>
+            <span className="text-[9px] text-white/80 mt-0.5">
+              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </span>
+          </div>
 
-          {/* Show Desktop Peek (Far right corner strip) */}
+          {/* Aero Peek (Show Desktop sliver at extreme right) */}
           <button
             onClick={() => {
-              playAudioFeedback('click');
-              setIsWindowMinimized(prev => !prev);
+              if (startScreenOpen) {
+                setStartScreenOpen(false);
+              }
+              // Minimize all active windows to reveal desktop
+              setMinimizedModules(openedModules);
             }}
-            className="w-1.5 h-full hover:bg-white/30 active:bg-white/50 border-l border-white/20 cursor-pointer ml-1"
+            className="w-3 h-full border-l border-white/20 hover:bg-white/30 transition-colors cursor-pointer"
             title="Mostrar Área de Trabalho"
           />
         </div>
-      </footer>
+      </div>
 
-      {/* =========================================================================
-          5. SYSTEM TRAY FLYOUTS (Calendar, Volume, Network)
-          ========================================================================= */}
-      {trayFlyout === 'volume' && (
-        <div className="absolute bottom-11 right-20 w-64 bg-[#1F1F1F] border border-white/20 shadow-2xl p-4 z-50 animate-fadeIn text-white">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-bold uppercase">Alto-Falantes</span>
-            <span className="text-xs font-mono font-bold">{volumeLevel}%</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Volume2 size={18} />
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={volumeLevel}
-              onChange={(e) => setVolumeLevel(Number(e.target.value))}
-              className="flex-1 accent-[#0078D7] cursor-pointer"
-            />
-          </div>
-        </div>
-      )}
+      {/* ------------------------------------------------------------- */}
+      {/* UNIFIED CONTEXT MENU (WINDOWS 8.1 MODERN FLAT DESIGN) */}
+      {/* ------------------------------------------------------------- */}
+      {contextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-50 cursor-default"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            style={{
+              left: `${Math.min(window.innerWidth - 240, Math.max(10, contextMenu.x))}px`,
+              top: `${Math.min(window.innerHeight - 260, Math.max(10, contextMenu.y))}px`
+            }}
+            className="fixed z-50 w-60 bg-[#1f1f1f] border border-white/25 shadow-2xl p-1 text-xs select-none rounded-none text-white animate-fadeIn font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Context menu for Desktop Empty Space */}
+            {contextMenu.type === 'desktop' && (
+              <>
+                <button
+                  onClick={() => {
+                    autoArrangeWin11Shortcuts();
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Grid size={14} className="text-sky-400" />
+                  <span>Organizar ícones automaticamente</span>
+                </button>
 
-      {trayFlyout === 'calendar' && (
-        <div className="absolute bottom-11 right-2 w-72 bg-[#1F1F1F] border border-white/20 shadow-2xl p-4 z-50 animate-fadeIn text-white">
-          <div className="text-2xl font-light font-mono mb-1">{currentTime}</div>
-          <div className="text-xs font-semibold text-white/80 capitalize pb-3 border-b border-white/20 mb-3">
-            {currentDate}
-          </div>
-          <div className="text-xs space-y-1 text-white/70">
-            <div className="font-bold text-white">Cultos & Agenda Ministerial:</div>
-            <div>• Quarta-feira: Culto de Doutrina (19h30)</div>
-            <div>• Domingo: Escola Dominical (09h00)</div>
-            <div>• Domingo: Culto da Família (18h30)</div>
-          </div>
-          <button
-            onClick={() => handleOpenModule('google_calendar')}
-            className="w-full mt-3 p-2 bg-[#0078D7] hover:bg-[#0063B1] text-xs font-bold transition-colors cursor-pointer text-center"
-          >
-            Abrir Agenda Completa
-          </button>
-        </div>
-      )}
+                <button
+                  onClick={() => {
+                    addToast("Área de trabalho atualizada!", "info");
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <RefreshCw size={14} className="text-emerald-400" />
+                  <span>Atualizar</span>
+                </button>
 
-      {trayFlyout === 'network' && (
-        <div className="absolute bottom-11 right-14 w-64 bg-[#1F1F1F] border border-white/20 shadow-2xl p-4 z-50 animate-fadeIn text-white space-y-2">
-          <div className="text-xs font-bold uppercase">Conexão de Rede</div>
-          <div className="p-2 bg-white/10 border border-white/20 text-xs flex items-center justify-between">
-            <span className="font-bold">GIPP Cloud Sync</span>
-            <span className="text-emerald-400 font-bold">Conectado</span>
-          </div>
-          <div className="text-[10px] text-white/60">
-            Banco de Dados FireDAC Firestore ativo e sincronizado em tempo real.
-          </div>
-        </div>
-      )}
+                <div className="border-t border-white/10 my-1" />
 
-      {/* Desktop Context Menu (Right Click on Desktop) */}
-      {desktopMenuPos && (
-        <div 
-          className="fixed bg-[#1F1F1F] border border-white/20 shadow-2xl p-1 z-50 animate-fadeIn text-xs text-white min-w-[180px]"
-          style={{ top: desktopMenuPos.y, left: desktopMenuPos.x }}
-        >
-          <button 
-            onClick={() => {
-              toggleStartScreen();
-              setDesktopMenuPos(null);
-            }} 
-            className="w-full text-left px-3 py-1.5 hover:bg-[#0078D7] flex items-center gap-2 cursor-pointer"
-          >
-            <Windows81Logo size={14} className="text-[#00A4EF]" /> Tela Inicial
-          </button>
-          <button 
-            onClick={() => {
-              handleOpenModule('dashboard');
-              setDesktopMenuPos(null);
-            }} 
-            className="w-full text-left px-3 py-1.5 hover:bg-[#0078D7] flex items-center gap-2 cursor-pointer"
-          >
-            <LayoutDashboard size={14} /> Abrir Visão Geral
-          </button>
-          <div className="my-1 border-t border-white/15" />
-          <button 
-            onClick={() => {
-              window.location.reload();
-              setDesktopMenuPos(null);
-            }} 
-            className="w-full text-left px-3 py-1.5 hover:bg-[#0078D7] flex items-center gap-2 cursor-pointer"
-          >
-            <RefreshCw size={14} /> Atualizar
-          </button>
-          <button 
-            onClick={() => {
-              setIsCharmsBarOpen(true);
-              setActiveCharm('settings');
-              setDesktopMenuPos(null);
-            }} 
-            className="w-full text-left px-3 py-1.5 hover:bg-[#0078D7] flex items-center gap-2 cursor-pointer"
-          >
-            <Palette size={14} /> Personalizar Windows 8.1
-          </button>
-        </div>
+                <button
+                  onClick={() => {
+                    setStartScreenOpen(true);
+                    setStartScreenTab('allApps');
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Plus size={14} className="text-amber-400" />
+                  <span>Adicionar atalho à Área de Trabalho</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setView('config_visual');
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Palette size={14} className="text-purple-400" />
+                  <span>Alterar Papel de Parede</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setView('sobre');
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Info size={14} className="text-teal-400" />
+                  <span>Propriedades do Sistema</span>
+                </button>
+              </>
+            )}
+
+            {/* Context menu for Desktop Icon / Shortcut */}
+            {contextMenu.type === 'desktop-icon' && contextMenu.moduleId && (
+              <>
+                <button
+                  onClick={() => handleLaunchModule(contextMenu.moduleId!)}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer font-bold"
+                >
+                  <ArrowRight size={14} className="text-emerald-400" />
+                  <span>Abrir aplicativo</span>
+                </button>
+
+                <div className="border-t border-white/10 my-1" />
+
+                <button
+                  onClick={() => {
+                    togglePinTaskbar(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Sliders size={14} className="text-sky-400" />
+                  <span>
+                    {isPinnedToTaskbar(contextMenu.moduleId!) ? 'Desafixar da barra de tarefas' : 'Fixar na barra de tarefas'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    togglePinStart(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Win81Logo size={14} className="text-amber-400" />
+                  <span>
+                    {isPinnedToStart(contextMenu.moduleId!) ? 'Desafixar da tela Iniciar' : 'Fixar na tela Iniciar'}
+                  </span>
+                </button>
+
+                <div className="border-t border-white/10 my-1" />
+
+                <button
+                  onClick={() => {
+                    removeShortcutFromDesktop(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-rose-600 text-left transition-colors cursor-pointer text-rose-300 hover:text-white"
+                >
+                  <Trash2 size={14} />
+                  <span>Remover da Área de Trabalho</span>
+                </button>
+              </>
+            )}
+
+            {/* Context menu for Start Tile / Start App */}
+            {(contextMenu.type === 'start-tile' || contextMenu.type === 'start-app') && contextMenu.moduleId && (
+              <>
+                <button
+                  onClick={() => handleLaunchModule(contextMenu.moduleId!)}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer font-bold"
+                >
+                  <ArrowRight size={14} className="text-emerald-400" />
+                  <span>Abrir aplicativo</span>
+                </button>
+
+                <div className="border-t border-white/10 my-1" />
+
+                <button
+                  onClick={() => {
+                    togglePinStart(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Win81Logo size={14} className="text-amber-400" />
+                  <span>
+                    {isPinnedToStart(contextMenu.moduleId!) ? 'Desafixar da tela Iniciar' : 'Fixar na tela Iniciar'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    togglePinTaskbar(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Sliders size={14} className="text-sky-400" />
+                  <span>
+                    {isPinnedToTaskbar(contextMenu.moduleId!) ? 'Desafixar da barra de tarefas' : 'Fixar na barra de tarefas'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    addShortcutToDesktop(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Plus size={14} className="text-emerald-400" />
+                  <span>Criar atalho na Área de Trabalho</span>
+                </button>
+              </>
+            )}
+
+            {/* Context menu for Taskbar item */}
+            {contextMenu.type === 'taskbar-item' && contextMenu.moduleId && (
+              <>
+                <div className="p-2 border-b border-white/10 mb-1 text-[11px] font-bold text-sky-400 truncate">
+                  {ALL_AVAILABLE_MODULES.find(m => m.id === contextMenu.moduleId)?.label || contextMenu.moduleId}
+                </div>
+
+                <button
+                  onClick={() => handleLaunchModule(contextMenu.moduleId!)}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer font-bold"
+                >
+                  <ArrowRight size={14} className="text-emerald-400" />
+                  <span>Abrir</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    togglePinTaskbar(contextMenu.moduleId!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-[#0078d7] text-left transition-colors cursor-pointer"
+                >
+                  <Sliders size={14} className="text-sky-400" />
+                  <span>
+                    {isPinnedToTaskbar(contextMenu.moduleId!) ? 'Desafixar da barra de tarefas' : 'Fixar na barra de tarefas'}
+                  </span>
+                </button>
+
+                {contextMenu.moduleId && activeOpened.includes(contextMenu.moduleId) && (
+                  <>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={() => {
+                        handleCloseModule(contextMenu.moduleId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-rose-600 text-left transition-colors cursor-pointer text-rose-300 hover:text-white"
+                    >
+                      <X size={14} />
+                      <span>Fechar janela</span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
 };
-
-export default Windows81Layout;

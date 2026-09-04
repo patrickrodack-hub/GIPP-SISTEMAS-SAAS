@@ -4,7 +4,7 @@ import {
   Square, Search, Copy, ExternalLink, Calendar, Music, BookOpen, 
   HeartHandshake, Church, UserCheck, CheckCircle2, Shield, RefreshCw
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 
 interface MessageTemplate {
   id: string;

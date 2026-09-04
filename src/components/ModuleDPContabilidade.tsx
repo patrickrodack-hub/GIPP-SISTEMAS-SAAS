@@ -2,7 +2,8 @@ import React, { useState, useEffect, useContext, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { InteractiveWindow } from './InteractiveWindow';
 import jsPDF from 'jspdf';
-import { ChurchContext, Button, FormInput, FormSelect } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
+import { Button, FormInput, FormSelect } from '../utils/sharedHelpers';
 import { 
   Users, DollarSign, Briefcase, Calendar, Building2, Printer, 
   FileText, CheckCircle, TrendingUp, Plus, Trash2, Edit, Search, 
