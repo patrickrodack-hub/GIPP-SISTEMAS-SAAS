@@ -12079,77 +12079,85 @@ const PortalHome = ({ user, db, setView }) => {
                 </div>
             </div>
 
-            {/* SELETOR DE ABAS / FLUIDEZ OPERACIONAL */}
-            <div className="flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar pb-1 border-b border-slate-200/60">
-                <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* SELETOR DE ABAS / FLUIDEZ OPERACIONAL (PADRÃO E DIMENSÕES UNIFORMES) */}
+            <div className="flex items-center justify-between gap-2.5 overflow-x-auto custom-scrollbar pb-2 border-b border-slate-200/60">
+                <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+                    {/* 1. PAINEL RÁPIDO */}
                     <button
                         onClick={() => { setHomeViewTab('cockpit'); playMenuSound(); }}
-                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'cockpit'
-                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Zap size={13} className={homeViewTab === 'cockpit' ? 'text-amber-300' : 'text-emerald-600'} />
-                        <span>Painel Rápido</span>
+                        <Zap size={14} className={homeViewTab === 'cockpit' ? 'text-amber-400' : 'text-amber-500'} />
+                        <span className="whitespace-nowrap">Painel Rápido</span>
                     </button>
+
+                    {/* 2. CONQUISTAS */}
                     <button
                         onClick={() => { setHomeViewTab('conquistas'); playMenuSound(); }}
-                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'conquistas'
-                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Award size={13} className={homeViewTab === 'conquistas' ? 'text-amber-300' : 'text-amber-500'} />
-                        <span>Conquistas</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-900 text-emerald-400 font-bold ml-0.5">
+                        <Award size={14} className={homeViewTab === 'conquistas' ? 'text-amber-400' : 'text-amber-500'} />
+                        <span className="whitespace-nowrap">Conquistas</span>
+                        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-slate-900 text-emerald-400 text-[10px] font-black leading-none ml-0.5">
                             {unlockedCount + unlockedCursosCount}
                         </span>
                     </button>
+
+                    {/* 3. LINHA DO TEMPO */}
                     <button
                         onClick={() => { setHomeViewTab('linha_tempo'); playMenuSound(); }}
-                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'linha_tempo'
-                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Activity size={13} className={homeViewTab === 'linha_tempo' ? 'text-white' : 'text-indigo-500'} />
-                        <span>Linha do Tempo</span>
+                        <Activity size={14} className={homeViewTab === 'linha_tempo' ? 'text-amber-400' : 'text-indigo-500'} />
+                        <span className="whitespace-nowrap">Linha do Tempo</span>
                         {notifications && notifications.length > 0 && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-bold ml-0.5 animate-pulse">
+                            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black leading-none ml-0.5 animate-pulse">
                                 {notifications.length}
                             </span>
                         )}
                     </button>
+
+                    {/* 4. DEVOCIONAL IA */}
                     <button
                         onClick={() => { setHomeViewTab('devocional'); playMenuSound(); }}
-                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'devocional'
-                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Sparkles size={13} className={homeViewTab === 'devocional' ? 'text-amber-300' : 'text-indigo-500'} />
-                        <span>Devocional IA</span>
+                        <Sparkles size={14} className={homeViewTab === 'devocional' ? 'text-amber-400' : 'text-indigo-500'} />
+                        <span className="whitespace-nowrap">Devocional IA</span>
                     </button>
                 </div>
 
+                {/* 5. VISÃO COMPLETA */}
                 <button
                     onClick={() => { 
                         setHomeViewTab(homeViewTab === 'tudo' ? 'cockpit' : 'tudo'); 
                         playMenuSound(); 
                     }}
-                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                    className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                         homeViewTab === 'tudo'
-                            ? 'bg-slate-900 text-white shadow-sm'
-                            : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                            ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                            : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-xs'
                     }`}
                     title={homeViewTab === 'tudo' ? 'Voltar ao modo Painel Rápido sem rolagem' : 'Exibir todas as seções continuamente'}
                 >
-                    <SlidersHorizontal size={13} />
-                    <span>{homeViewTab === 'tudo' ? 'Modo Painel' : 'Visão Completa'}</span>
+                    <SlidersHorizontal size={14} className={homeViewTab === 'tudo' ? 'text-amber-400' : 'text-slate-400'} />
+                    <span className="whitespace-nowrap">{homeViewTab === 'tudo' ? 'Modo Painel' : 'Visão Completa'}</span>
                 </button>
             </div>
 
