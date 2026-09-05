@@ -11684,6 +11684,7 @@ const PortalHome = ({ user, db, setView }) => {
     
     const [devocional, setDevocional] = useState('');
     const [loadingDev, setLoadingDev] = useState(false);
+    const [homeViewTab, setHomeViewTab] = useState<'cockpit' | 'conquistas' | 'linha_tempo' | 'devocional' | 'tudo'>('cockpit');
 
     // --- ESTADOS E AUXILIARES DO HISTÓRICO DE MEDALHAS ---
     const [isMedalHistoryOpen, setIsMedalHistoryOpen] = useState(false);
@@ -12019,137 +12020,337 @@ const PortalHome = ({ user, db, setView }) => {
     const nivelRotulo = (unlockedCount + unlockedCursosCount) === totalBadgesCount + 5 ? "Obreiro Aprovado" : (unlockedCount + unlockedCursosCount) >= 4 ? "Servo Dedicado" : (unlockedCount + unlockedCursosCount) >= 1 ? "Membro Ativo" : "Novo Integrante";
 
     return (
-        <div className="space-y-6 animate-entrance pb-12">
+        <div className="space-y-4 sm:space-y-6 animate-entrance pb-12">
             
-            {/* NOVO HERO COM STATUS DO PERFIL */}
-            <div className="rounded-3xl bg-slate-900 text-white shadow-2xl relative overflow-hidden border border-slate-800 flex flex-col md:flex-row items-center p-8 md:p-10 gap-8 group">
+            {/* HERO COM STATUS DO PERFIL (RESPONSIVO E COMPACTO) */}
+            <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-xl relative overflow-hidden border border-slate-800 p-4 sm:p-6 md:p-7 flex flex-col md:flex-row items-center gap-4 sm:gap-6 group">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full blur-[100px] opacity-30 -mr-20 -mt-20 pointer-events-none transition-all duration-1000 group-hover:opacity-50"></div>
                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none"></div>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
                 
                 <div className="relative z-10 shrink-0">
-                    <div className="w-32 h-32 rounded-full border-[6px] border-slate-800 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.2)] relative group/foto">
-                        {currentUser.foto ? <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/> : <User size={48} className="text-slate-500"/>}
-                        <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity">
-                            <Camera size={24} className="text-white mb-1"/>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white">Atualizar</span>
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-slate-800 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.25)] relative group/foto shrink-0">
+                        {currentUser.foto ? <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/> : <User size={32} className="text-slate-500"/>}
+                        <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer">
+                            <Camera size={18} className="text-white mb-0.5"/>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-white">Editar</span>
                         </button>
                     </div>
                 </div>
                 
-                <div className="relative z-10 flex-1 text-center md:text-left w-full">
-                    <div className="flex flex-col md:flex-row md:items-center gap-3 mb-3 justify-center md:justify-start">
-                        <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-sm w-fit mx-auto md:mx-0">
+                <div className="relative z-10 flex-1 text-center md:text-left w-full min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5 justify-center md:justify-start">
+                        <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-xs">
                             {currentUser.cargo || 'Membro Ativo'}
                         </span>
                         {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
-                            <span className="bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-sm w-fit mx-auto md:mx-0">
+                            <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-xs">
                                 ADM: {currentUser.funcao_administrativa}
                             </span>
                         )}
-                        <span className="text-xs text-slate-400 font-bold hidden md:inline-block">•</span>
-                        <span className="text-xs font-bold text-slate-400 flex items-center justify-center md:justify-start gap-1">
-                            <MapPin size={12}/> {db.igreja.nome}
+                        <span className="text-xs text-slate-500 font-bold hidden md:inline-block">•</span>
+                        <span className="text-[11px] font-bold text-slate-400 flex items-center justify-center md:justify-start gap-1 truncate max-w-[200px]">
+                            <MapPin size={11} className="shrink-0"/> {db.igreja.nome}
                         </span>
                     </div>
                     
-                    <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300">
-                        {saudacaoTempo},<br/>{currentUser.nome.split(' ')[0]}!
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
+                        {saudacaoTempo}, {currentUser.nome.split(' ')[0]}!
                     </h2>
-                    
-                    {/* BARRA DE NÍVEL DE ENGAJAMENTO GLOBAL (DESIGN PREMIUM) */}
-                    <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/50 backdrop-blur-md max-w-lg mx-auto md:mx-0 shadow-inner">
-                        <div className="flex justify-between items-end mb-2">
-                            <div>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-1"><Activity size={12}/> Jornada de Fé do Mês</span>
-                                <span className="text-sm font-black text-white">{nivelRotulo}</span>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-xl font-black text-emerald-400">{nivelSpiritual}%</span>
-                            </div>
+                </div>
+
+                {/* BARRA DE NÍVEL DE ENGAJAMENTO GLOBAL (COMPACTA) */}
+                <div className="relative z-10 w-full md:w-64 bg-slate-800/60 p-3 sm:p-3.5 rounded-2xl border border-slate-700/60 backdrop-blur-md shrink-0 shadow-inner">
+                    <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                            <Activity size={11} className="text-emerald-400"/> Jornada de Fé
+                        </span>
+                        <span className="text-xs sm:text-sm font-black text-emerald-400">{nivelSpiritual}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/80 mb-1">
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 relative" style={{width: `${nivelSpiritual}%`}}>
+                            <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ animation: 'slideRight 2s infinite linear' }}></div>
                         </div>
-                        <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700">
-                            <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 relative" style={{width: `${nivelSpiritual}%`}}>
-                                <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ animation: 'slideRight 2s infinite linear' }}></div>
-                            </div>
-                        </div>
+                    </div>
+                    <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold">
+                        <span className="text-slate-300 truncate">{nivelRotulo}</span>
+                        <span>{unlockedCount + unlockedCursosCount} Conquistas</span>
                     </div>
                 </div>
             </div>
 
-            {/* AÇÕES RÁPIDAS (NOVO LAYOUT ESTILO FINTECH) */}
-            <div className={`grid grid-cols-2 gap-4 ${isProfessor ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
+            {/* SELETOR DE ABAS / FLUIDEZ OPERACIONAL */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar pb-1 border-b border-slate-200/60">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    <button
+                        onClick={() => { setHomeViewTab('cockpit'); playMenuSound(); }}
+                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            homeViewTab === 'cockpit'
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                    >
+                        <Zap size={13} className={homeViewTab === 'cockpit' ? 'text-amber-300' : 'text-emerald-600'} />
+                        <span>Painel Rápido</span>
+                    </button>
+                    <button
+                        onClick={() => { setHomeViewTab('conquistas'); playMenuSound(); }}
+                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            homeViewTab === 'conquistas'
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                    >
+                        <Award size={13} className={homeViewTab === 'conquistas' ? 'text-amber-300' : 'text-amber-500'} />
+                        <span>Conquistas</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-900 text-emerald-400 font-bold ml-0.5">
+                            {unlockedCount + unlockedCursosCount}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => { setHomeViewTab('linha_tempo'); playMenuSound(); }}
+                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            homeViewTab === 'linha_tempo'
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                    >
+                        <Activity size={13} className={homeViewTab === 'linha_tempo' ? 'text-white' : 'text-indigo-500'} />
+                        <span>Linha do Tempo</span>
+                        {notifications && notifications.length > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-bold ml-0.5 animate-pulse">
+                                {notifications.length}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => { setHomeViewTab('devocional'); playMenuSound(); }}
+                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            homeViewTab === 'devocional'
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                    >
+                        <Sparkles size={13} className={homeViewTab === 'devocional' ? 'text-amber-300' : 'text-indigo-500'} />
+                        <span>Devocional IA</span>
+                    </button>
+                </div>
+
+                <button
+                    onClick={() => { 
+                        setHomeViewTab(homeViewTab === 'tudo' ? 'cockpit' : 'tudo'); 
+                        playMenuSound(); 
+                    }}
+                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                        homeViewTab === 'tudo'
+                            ? 'bg-slate-900 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                    }`}
+                    title={homeViewTab === 'tudo' ? 'Voltar ao modo Painel Rápido sem rolagem' : 'Exibir todas as seções continuamente'}
+                >
+                    <SlidersHorizontal size={13} />
+                    <span>{homeViewTab === 'tudo' ? 'Modo Painel' : 'Visão Completa'}</span>
+                </button>
+            </div>
+
+            {/* AÇÕES RÁPIDAS (RENDERIZADO NO PAINEL RÁPIDO E NA VISÃO COMPLETA) */}
+            {(homeViewTab === 'cockpit' || homeViewTab === 'tudo') && (
+            <div className={`grid grid-cols-2 gap-2.5 sm:gap-4 ${isProfessor ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
                 {allowedModulesHome.includes('portal_financas') && (
-                    <button onClick={() => setView('portal_financas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Dízimos</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ofertar agora</span>
+                    <button onClick={() => setView('portal_financas')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group cursor-pointer">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={20} className="sm:w-6 sm:h-6"/></div>
+                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Dízimos</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ofertar agora</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_carteirinha') && (
-                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><QrCode size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Credencial</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
+                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group cursor-pointer">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-50 text-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><QrCode size={20} className="sm:w-6 sm:h-6"/></div>
+                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Credencial</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
                     </button>
                 )}
                 {canAccessFormacaoHome && allowedModulesHome.includes('portal_candidato') && (
-                    <button onClick={() => setView('portal_candidato')} className="bg-gradient-to-br from-white to-emerald-50/50 p-6 rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
-                        <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
+                    <button onClick={() => setView('portal_candidato')} className="bg-gradient-to-br from-white to-emerald-50/50 p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
+                        <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[8px] sm:text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
                             CGADB
                         </div>
-                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Formação GIPP</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus & Provas</span>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={20} className="sm:w-6 sm:h-6"/></div>
+                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Formação GIPP</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus & Provas</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_tarefas') && (
-                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:rotate-6"><CheckSquare size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Escalas</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minhas tarefas</span>
+                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group cursor-pointer">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:rotate-6"><CheckSquare size={20} className="sm:w-6 sm:h-6"/></div>
+                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Escalas</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minhas tarefas</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_ebd') && (
-                    <button onClick={() => setView('portal_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Estudo EBD</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
+                    <button onClick={() => setView('portal_ebd')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group cursor-pointer">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={20} className="sm:w-6 sm:h-6"/></div>
+                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Estudo EBD</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
                     </button>
                 )}
-                <button onClick={() => setView('portal_meet')} className="bg-gradient-to-br from-white to-emerald-50/60 p-6 rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
-                    <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
+                <button onClick={() => setView('portal_meet')} className="bg-gradient-to-br from-white to-emerald-50/60 p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
+                    <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[8px] sm:text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
                         Google Meet
                     </div>
-                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Video size={24}/></div>
-                    <span className="font-black text-slate-800 text-base mb-1">Google Meet</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Videoconferências</span>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Video size={20} className="sm:w-6 sm:h-6"/></div>
+                    <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Google Meet</span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Videoconferências</span>
                 </button>
                 {isProfessor && (
-                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1 cursor-pointer">
-                        <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={24}/></div>
-                        <span className="font-black text-slate-800 text-base mb-1">Sala do Professor</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">EBD Painel</span>
+                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1 cursor-pointer">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-50 text-violet-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={20} className="sm:w-6 sm:h-6"/></div>
+                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Sala do Professor</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">EBD Painel</span>
                     </button>
                 )}
             </div>
+            )}
+
+            {/* PAINEL RÁPIDO: WIDGETS COMPACTOS DE ALTA FLUIDEZ (ZERO SCROLL) */}
+            {homeViewTab === 'cockpit' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-5 animate-entrance">
+                    {/* WIDGET 1: RESUMO DE CONQUISTAS */}
+                    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+                                        <Award size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-slate-800 text-sm">Conquistas & Distintivos</h4>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Engajamento Mensal</p>
+                                    </div>
+                                </div>
+                                <span className="text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                                    {unlockedCount + unlockedCursosCount} conquistadas
+                                </span>
+                            </div>
+
+                            {/* Mini visualizador de distintivos */}
+                            <div className="grid grid-cols-5 gap-1.5 sm:gap-2 py-3.5">
+                                {BADGE_DEFS.map((b) => {
+                                    const isUnlocked = badges.includes(b.id);
+                                    const IconComp = b.icon;
+                                    return (
+                                        <div 
+                                            key={b.id} 
+                                            title={`${b.title}: ${isUnlocked ? 'Desbloqueado!' : 'Pendente'}`}
+                                            className={`flex flex-col items-center justify-center p-2 rounded-xl text-center border transition-all ${
+                                                isUnlocked 
+                                                    ? 'bg-gradient-to-b from-amber-50 to-orange-50 border-amber-200 text-amber-700 shadow-xs' 
+                                                    : 'bg-slate-50/70 border-slate-200/60 text-slate-300 opacity-60'
+                                            }`}
+                                        >
+                                            <IconComp size={16} className={isUnlocked ? 'text-amber-600' : 'text-slate-400'} />
+                                            <span className="text-[9px] font-bold mt-1 truncate max-w-full leading-tight">{b.title}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-bold text-slate-400">Nível: {nivelRotulo}</span>
+                            <button
+                                onClick={() => { setHomeViewTab('conquistas'); playMenuSound(); }}
+                                className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                            >
+                                <span>Ver Galeria Completa</span>
+                                <ArrowRight size={13} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* WIDGET 2: AVISOS & DEVOCIONAL RÁPIDO */}
+                    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                                        <Sparkles size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-slate-800 text-sm">Palavra & Avisos</h4>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Comunicação Pastoral</p>
+                                    </div>
+                                </div>
+                                {notifications && notifications.length > 0 ? (
+                                    <span className="text-xs font-black text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-full animate-pulse">
+                                        {notifications.length} avisos
+                                    </span>
+                                ) : (
+                                    <span className="text-xs font-black text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">
+                                        Em dia
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Conteúdo rápido */}
+                            <div className="py-3">
+                                {inboxItems.length > 0 ? (
+                                    <div 
+                                        onClick={inboxItems[0].action}
+                                        className="p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-100 hover:border-indigo-200 transition-all cursor-pointer flex items-center justify-between gap-2"
+                                    >
+                                        <div className="min-w-0">
+                                            <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider block">{inboxItems[0].sender}</span>
+                                            <p className="font-bold text-slate-800 text-xs truncate">{inboxItems[0].subject}</p>
+                                        </div>
+                                        <span className="text-[10px] text-slate-400 shrink-0">{inboxItems[0].date === hoje ? 'Hoje' : formatDateLocal(inboxItems[0].date)}</span>
+                                    </div>
+                                ) : (
+                                    <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                                        <CheckCircle2 size={16} className="text-emerald-500 shrink-0"/>
+                                        <span>Sem pendências ou escalas conflitantes no momento!</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <button
+                                onClick={() => { setHomeViewTab('linha_tempo'); playMenuSound(); }}
+                                className="text-xs font-black text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+                            >
+                                <Activity size={13} className="text-indigo-500" />
+                                <span>Ver Linha do Tempo</span>
+                            </button>
+                            <button
+                                onClick={() => { setHomeViewTab('devocional'); playMenuSound(); }}
+                                className="text-xs font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                                <Sparkles size={13} />
+                                <span>Devocional IA</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* --- SECÇÃO DE GAMIFICAÇÃO (CONQUISTAS 3D) --- */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden p-6 md:p-8 relative">
+            {(homeViewTab === 'conquistas' || homeViewTab === 'tudo') && (
+            <div className="bg-white rounded-2xl sm:rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden p-4 sm:p-6 md:p-8 relative animate-entrance">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-100 rounded-full blur-[100px] opacity-50 -mr-20 -mt-20 pointer-events-none"></div>
                 
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8 relative z-10">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 sm:gap-4 mb-5 sm:mb-8 relative z-10">
                     <div>
-                        <h3 className="font-black text-slate-800 text-2xl flex items-center gap-2">
-                            <Award size={28} className="text-amber-500 drop-shadow-md"/> Galeria de Conquistas do Mês
+                        <h3 className="font-black text-slate-800 text-lg sm:text-2xl flex items-center gap-2">
+                            <Award size={22} className="text-amber-500 drop-shadow-md sm:w-7 sm:h-7 shrink-0"/> Galeria de Conquistas do Mês
                         </h3>
-                        <p className="text-xs font-medium text-slate-500 mt-1">O seu envolvimento ministerial e acadêmico é reconhecido mensalmente.</p>
+                        <p className="text-[11px] sm:text-xs font-medium text-slate-500 mt-0.5 sm:mt-1">O seu envolvimento ministerial e acadêmico é reconhecido mensalmente.</p>
                     </div>
-                    <div className="flex gap-2 flex-wrap items-center">
-                        <span className="text-[10px] font-black bg-slate-900 text-emerald-400 px-4 py-2 rounded-full tracking-widest uppercase shadow-md w-fit">
+                    <div className="flex gap-1.5 sm:gap-2 flex-wrap items-center">
+                        <span className="text-[9px] sm:text-[10px] font-black bg-slate-900 text-emerald-400 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full tracking-widest uppercase shadow-md w-fit">
                             {unlockedCount} / {BADGE_DEFS.length} Atividades
                         </span>
-                        <span className="text-[10px] font-black bg-slate-900 text-amber-400 px-4 py-2 rounded-full tracking-widest uppercase shadow-md w-fit">
+                        <span className="text-[9px] sm:text-[10px] font-black bg-slate-900 text-amber-400 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full tracking-widest uppercase shadow-md w-fit">
                             {unlockedCursosCount} / {CURSOS_DISPONIVEIS.length} Cursos
                         </span>
                         <button
@@ -12157,34 +12358,34 @@ const PortalHome = ({ user, db, setView }) => {
                                 setIsMedalHistoryOpen(true);
                                 playMenuSound();
                             }}
-                            className="text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-4 py-2 rounded-full tracking-widest uppercase shadow-md w-fit flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-indigo-500/20"
+                            className="text-[9px] sm:text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full tracking-widest uppercase shadow-md w-fit flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-indigo-500/20"
                         >
-                            <History size={12} /> Histórico Completo
+                            <History size={11} className="sm:w-3 sm:h-3" /> Histórico Completo
                         </button>
                     </div>
                 </div>
                 
                 {/* SESSÃO 1: ATIVIDADES MINISTERIAIS */}
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 relative z-10">1. Atividades Ministeriais</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 relative z-10 mb-10">
+                <h4 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mb-2.5 sm:mb-4 border-b border-slate-100 pb-1.5 sm:pb-2 relative z-10">1. Atividades Ministeriais</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-4 md:gap-6 relative z-10 mb-6 sm:mb-10">
                     {BADGE_DEFS.map(b => {
                         const isUnlocked = badges.includes(b.id);
                         return (
                             <div key={b.id} className="relative group perspective-[1000px] cursor-default">
-                                <div className={`relative flex flex-col items-center justify-center p-5 rounded-3xl border border-white shadow-xl transition-all duration-500 transform ${isUnlocked ? 'bg-white hover:-translate-y-2 hover:rotate-2' : 'bg-slate-50 opacity-80 grayscale'}`}>
-                                    {isUnlocked && <div className={`absolute inset-0 rounded-3xl opacity-10 blur-xl bg-gradient-to-br ${b.grad}`}></div>}
-                                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mb-4 relative transition-transform duration-500 ${isUnlocked ? `bg-gradient-to-br ${b.grad} shadow-[inset_0_-6px_12px_rgba(0,0,0,0.3),_0_12px_20px_-5px_rgba(0,0,0,0.3)] group-hover:scale-110` : 'bg-gradient-to-br from-slate-200 to-slate-400 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.1)]'}`}>
-                                        <div className="absolute top-1 left-2 w-4 h-3 sm:w-6 sm:h-5 bg-white/50 rounded-full blur-[2px] transform -rotate-45"></div>
-                                        <div className={`absolute inset-[3px] rounded-full border-[2px] sm:border-[3px] ${isUnlocked ? 'border-white/30' : 'border-white/50'}`}></div>
-                                        <b.icon className={`w-8 h-8 sm:w-10 sm:h-10 ${isUnlocked ? 'text-white drop-shadow-[0_3px_3px_rgba(0,0,0,0.5)]' : 'text-slate-500'}`} strokeWidth={2.5}/>
-                                        {isUnlocked && <div className="absolute bottom-2 right-3 w-1.5 h-1.5 bg-white rounded-full blur-[1px] animate-pulse"></div>}
+                                <div className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-white shadow-md sm:shadow-xl transition-all duration-500 transform ${isUnlocked ? 'bg-white hover:-translate-y-1 sm:hover:-translate-y-2 hover:rotate-1' : 'bg-slate-50 opacity-80 grayscale'}`}>
+                                    {isUnlocked && <div className={`absolute inset-0 rounded-2xl sm:rounded-3xl opacity-10 blur-lg sm:blur-xl bg-gradient-to-br ${b.grad}`}></div>}
+                                    <div className={`w-11 h-11 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mb-2 sm:mb-4 relative transition-transform duration-500 ${isUnlocked ? `bg-gradient-to-br ${b.grad} shadow-[inset_0_-3px_6px_rgba(0,0,0,0.3),_0_6px_12px_-3px_rgba(0,0,0,0.25)] sm:shadow-[inset_0_-6px_12px_rgba(0,0,0,0.3),_0_12px_20px_-5px_rgba(0,0,0,0.3)] group-hover:scale-110` : 'bg-gradient-to-br from-slate-200 to-slate-400 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.1)]'}`}>
+                                        <div className="absolute top-0.5 left-1 sm:top-1 sm:left-2 w-3 h-2 sm:w-6 sm:h-5 bg-white/50 rounded-full blur-[1px] sm:blur-[2px] transform -rotate-45"></div>
+                                        <div className={`absolute inset-[2px] sm:inset-[3px] rounded-full border-[1.5px] sm:border-[2px] md:border-[3px] ${isUnlocked ? 'border-white/30' : 'border-white/50'}`}></div>
+                                        <b.icon className={`w-5 h-5 sm:w-8 sm:h-8 md:w-10 md:h-10 ${isUnlocked ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]' : 'text-slate-500'}`} strokeWidth={2.5}/>
+                                        {isUnlocked && <div className="absolute bottom-1 right-1.5 sm:bottom-2 sm:right-3 w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full blur-[1px] animate-pulse"></div>}
                                     </div>
-                                    <h4 className={`text-[10px] sm:text-xs font-black uppercase tracking-wider mb-1 text-center ${isUnlocked ? b.textColor : 'text-slate-600'}`}>{b.title}</h4>
-                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 text-center leading-tight">{b.desc}</p>
+                                    <h4 className={`text-[9px] sm:text-xs font-black uppercase tracking-wider mb-0.5 sm:mb-1 text-center truncate w-full ${isUnlocked ? b.textColor : 'text-slate-600'}`}>{b.title}</h4>
+                                    <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 text-center leading-tight line-clamp-2">{b.desc}</p>
                                     {!isUnlocked && (
-                                        <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] rounded-3xl flex items-center justify-center flex-col gap-2 z-10 transition-opacity group-hover:bg-slate-900/20">
-                                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform"><Lock size={16} className="text-slate-500"/></div>
-                                            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-600 bg-white/90 px-2 sm:px-3 py-1 rounded-full shadow-sm">Pendente</span>
+                                        <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px] rounded-2xl sm:rounded-3xl flex items-center justify-center flex-col gap-1 sm:gap-2 z-10 transition-opacity group-hover:bg-slate-900/20">
+                                            <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-white/90 rounded-full flex items-center justify-center shadow-md transform group-hover:scale-110 transition-transform"><Lock size={12} className="sm:w-4 sm:h-4 text-slate-500"/></div>
+                                            <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-widest text-slate-600 bg-white/90 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-xs">Pendente</span>
                                         </div>
                                     )}
                                 </div>
@@ -12194,45 +12395,45 @@ const PortalHome = ({ user, db, setView }) => {
                 </div>
 
                 {/* SESSÃO 2: TROFÉUS ACADÊMICOS */}
-                <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 relative z-10 flex items-center gap-2">
-                    <GraduationCap size={16}/> 2. Troféus Acadêmicos (Cursos Concluídos)
+                <h4 className="text-[10px] sm:text-xs font-black text-indigo-400 uppercase tracking-widest mb-2.5 sm:mb-4 border-b border-slate-100 pb-1.5 sm:pb-2 relative z-10 flex items-center gap-1.5 sm:gap-2">
+                    <GraduationCap size={15} className="sm:w-4 sm:h-4"/> 2. Troféus Acadêmicos (Cursos Concluídos)
                 </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 relative z-10">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6 relative z-10">
                     {CURSOS_DISPONIVEIS.map(curso => {
                         const isUnlocked = cursosConcluidosMes.some(c => c.id === curso.id);
                         const CIcon = curso.icon || GraduationCap;
                         return (
                             <div key={curso.id} className="relative group perspective-[1000px] cursor-default">
-                                <div className={`relative flex flex-col items-center justify-center p-5 rounded-3xl border shadow-xl transition-all duration-500 transform ${isUnlocked ? 'bg-gradient-to-b from-indigo-50 to-white border-indigo-200 hover:-translate-y-2' : 'bg-slate-50 border-slate-200 opacity-80 grayscale'}`}>
-                                    {isUnlocked && <div className="absolute inset-0 rounded-3xl opacity-20 blur-xl bg-gradient-to-br from-indigo-400 to-purple-600"></div>}
+                                <div className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl sm:rounded-3xl border shadow-md sm:shadow-xl transition-all duration-500 transform ${isUnlocked ? 'bg-gradient-to-b from-indigo-50 to-white border-indigo-200 hover:-translate-y-1 sm:hover:-translate-y-2' : 'bg-slate-50 border-slate-200 opacity-80 grayscale'}`}>
+                                    {isUnlocked && <div className="absolute inset-0 rounded-2xl sm:rounded-3xl opacity-20 blur-lg sm:blur-xl bg-gradient-to-br from-indigo-400 to-purple-600"></div>}
                                     
                                     {/* Troféu de Ouro/Prata */}
-                                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4 relative transition-transform duration-500 ${isUnlocked ? 'bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 shadow-[inset_0_-6px_12px_rgba(0,0,0,0.2),_0_12px_20px_-5px_rgba(245,158,11,0.4)] group-hover:scale-110 rotate-3' : 'bg-gradient-to-br from-slate-200 to-slate-300 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.1)]'}`}>
-                                        <div className="absolute top-0 left-0 w-full h-1/2 bg-white/30 rounded-t-2xl"></div>
-                                        <CIcon className={`w-8 h-8 sm:w-10 sm:h-10 ${isUnlocked ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]' : 'text-slate-400'}`} strokeWidth={2}/>
-                                        {isUnlocked && <Star size={16} className="absolute -top-2 -right-2 text-yellow-500 fill-yellow-400 animate-spin-slow drop-shadow-md"/>}
+                                    <div className={`w-11 h-11 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 relative transition-transform duration-500 ${isUnlocked ? 'bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 shadow-[inset_0_-3px_6px_rgba(0,0,0,0.2),_0_6px_12px_-3px_rgba(245,158,11,0.3)] sm:shadow-[inset_0_-6px_12px_rgba(0,0,0,0.2),_0_12px_20px_-5px_rgba(245,158,11,0.4)] group-hover:scale-110 rotate-3' : 'bg-gradient-to-br from-slate-200 to-slate-300 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.1)]'}`}>
+                                        <div className="absolute top-0 left-0 w-full h-1/2 bg-white/30 rounded-t-xl sm:rounded-t-2xl"></div>
+                                        <CIcon className={`w-5 h-5 sm:w-8 sm:h-8 md:w-10 md:h-10 ${isUnlocked ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]' : 'text-slate-400'}`} strokeWidth={2}/>
+                                        {isUnlocked && <Star className="w-3 h-3 sm:w-4 sm:h-4 absolute -top-1 -right-1 sm:-top-2 sm:-right-2 text-yellow-500 fill-yellow-400 animate-spin-slow drop-shadow-md"/>}
                                     </div>
 
-                                    <h4 className={`text-[10px] sm:text-xs font-black uppercase tracking-wider mb-1 text-center ${isUnlocked ? 'text-indigo-800' : 'text-slate-600'}`}>{curso.title}</h4>
+                                    <h4 className={`text-[9px] sm:text-xs font-black uppercase tracking-wider mb-0.5 sm:mb-1 text-center truncate w-full ${isUnlocked ? 'text-indigo-800' : 'text-slate-600'}`}>{curso.title}</h4>
                                     
                                     {/* Progress Bar para cursos não concluídos mas iniciados */}
                                     {(!isUnlocked && getCourseProgress(curso.id, currentUser.modulos_concluidos) > 0) ? (
-                                        <div className="w-full mt-1 px-2 z-20">
-                                            <div className="flex justify-between text-[8px] font-bold text-slate-500 mb-0.5">
+                                        <div className="w-full mt-1 px-1 sm:px-2 z-20">
+                                            <div className="flex justify-between text-[7px] sm:text-[8px] font-bold text-slate-500 mb-0.5">
                                                 <span>Progresso</span>
                                                 <span>{getCourseProgress(curso.id, currentUser.modulos_concluidos)}%</span>
                                             </div>
-                                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                            <div className="w-full h-1 sm:h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                                 <div className="h-full bg-indigo-500 rounded-full" style={{width: `${getCourseProgress(curso.id, currentUser.modulos_concluidos)}%`}}></div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 text-center leading-tight z-20">{isUnlocked ? 'Concluído no mês' : curso.desc}</p>
+                                        <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 text-center leading-tight line-clamp-2 z-20">{isUnlocked ? 'Concluído no mês' : curso.desc}</p>
                                     )}
                                     
                                     {!isUnlocked && getCourseProgress(curso.id, currentUser.modulos_concluidos) === 0 && (
-                                        <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] rounded-3xl flex items-center justify-center z-10 transition-opacity">
-                                            <div className="bg-white/90 p-2 rounded-full shadow-sm"><Lock size={14} className="text-slate-400"/></div>
+                                        <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] rounded-2xl sm:rounded-3xl flex items-center justify-center z-10 transition-opacity">
+                                            <div className="bg-white/90 p-1.5 sm:p-2 rounded-full shadow-xs"><Lock size={12} className="sm:w-3.5 sm:h-3.5 text-slate-400"/></div>
                                         </div>
                                     )}
                                 </div>
@@ -12242,107 +12443,176 @@ const PortalHome = ({ user, db, setView }) => {
                 </div>
 
             </div>
+            )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* TIMELINE DE ATIVIDADES E AVISOS */}
-                <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6 md:p-8">
-                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                        <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                            <Activity size={20} className="text-indigo-500"/> Linha do Tempo
-                        </h3>
-                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-widest">Atividades</span>
-                    </div>
-
-                    {notifications && notifications.length > 0 && (
-                        <div className="mb-6 bg-indigo-50/60 transition-all border border-indigo-100/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-entrance">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
-                                    <Bell size={18} className="animate-bounce" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-black text-indigo-900 uppercase tracking-wide">Alertas do Sistema</h4>
-                                    <p className="text-slate-500 font-medium text-[11px] leading-tight">Você possui {notifications.length} notificações que demandam atenção.</p>
-                                </div>
-                            </div>
-                            <button 
-                                type="button"
-                                onClick={() => {
-                                    clearAllNotifications(notifications.map((n: any) => n.id));
-                                    playMenuSound();
-                                }}
-                                className="text-[10px] font-black tracking-wider uppercase text-slate-500 hover:text-rose-600 bg-white hover:bg-rose-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-rose-100/50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                            >
-                                <Trash2 size={10} /> Dispensar Alertas
-                            </button>
+            {/* TIMELINE DE ATIVIDADES E AVISOS (ABAS LINHA DE TEMPO OU TUDO) */}
+            {(homeViewTab === 'linha_tempo' || homeViewTab === 'tudo') && (
+                <div className={homeViewTab === 'tudo' ? "grid grid-cols-1 lg:grid-cols-3 gap-6 animate-entrance" : "w-full animate-entrance"}>
+                    <div className={`${homeViewTab === 'tudo' ? 'lg:col-span-2' : 'w-full'} bg-white rounded-2xl sm:rounded-[2rem] shadow-sm border border-slate-200 p-4 sm:p-6 md:p-8`}>
+                        <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                                <Activity size={20} className="text-indigo-500"/> Linha do Tempo
+                            </h3>
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-widest">Atividades</span>
                         </div>
-                    )}
 
-                    <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-4">
-                        {inboxItems.length > 0 ? inboxItems.map((msg, i) => (
-                            <div key={i} onClick={msg.action} className="relative pl-6 cursor-pointer group">
-                                <div className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-sm transition-transform group-hover:scale-110 ${msg.isNew ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                    <msg.icon size={12}/>
-                                </div>
-                                <div className={`p-4 rounded-2xl border transition-all ${msg.isNew ? 'bg-white border-indigo-200 shadow-md' : 'bg-slate-50/50 border-slate-100 hover:border-slate-300 hover:bg-white'}`}>
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{msg.sender}</span>
-                                        <span className="text-[10px] font-bold text-slate-400">{msg.date === hoje ? 'Hoje' : formatDateLocal(msg.date)}</span>
+                        {notifications && notifications.length > 0 && (
+                            <div className="mb-6 bg-indigo-50/60 transition-all border border-indigo-100/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-entrance">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+                                        <Bell size={18} className="animate-bounce" />
                                     </div>
-                                    <h4 className="font-bold text-slate-800 text-sm leading-snug">{msg.subject}</h4>
+                                    <div className="min-w-0">
+                                        <h4 className="text-xs font-black text-indigo-900 uppercase tracking-wide">Alertas do Sistema</h4>
+                                        <p className="text-slate-500 font-medium text-[11px] leading-tight">Você possui {notifications.length} notificações que demandam atenção.</p>
+                                    </div>
                                 </div>
-                            </div>
-                        )) : (
-                            <div className="pl-6">
-                                <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
-                                    <CheckCircle size={32} className="mx-auto text-emerald-300 mb-2"/>
-                                    <p className="font-bold text-slate-600 text-sm">Tudo tranquilo!</p>
-                                    <p className="text-xs text-slate-500 mt-1">Nenhum aviso ou convocatória pendente no momento.</p>
-                                </div>
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        clearAllNotifications(notifications.map((n: any) => n.id));
+                                        playMenuSound();
+                                    }}
+                                    className="text-[10px] font-black tracking-wider uppercase text-slate-500 hover:text-rose-600 bg-white hover:bg-rose-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-rose-100/50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                                >
+                                    <Trash2 size={10} /> Dispensar Alertas
+                                </button>
                             </div>
                         )}
-                    </div>
-                </div>
 
-                {/* COLUNA DIREITA (DEVOCIONAL IA) */}
-                <div className="space-y-6 flex flex-col">
-                    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-[2rem] shadow-sm border border-indigo-100 p-6 relative overflow-hidden flex-1 flex flex-col">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Sparkles size={120}/></div>
-                        <div className="relative z-10 flex-1 flex flex-col">
-                            <h3 className="font-black text-indigo-900 text-lg flex items-center gap-2 mb-1"><BookOpen size={20} className="text-indigo-500"/> Palavra Diária</h3>
-                            <p className="text-[10px] text-indigo-700/70 font-bold uppercase tracking-wider mb-6 border-b border-indigo-100 pb-4">Gerada pela IA com base no seu perfil</p>
+                        <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-4">
+                            {inboxItems.length > 0 ? inboxItems.map((msg, i) => (
+                                <div key={i} onClick={msg.action} className="relative pl-6 cursor-pointer group">
+                                    <div className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-sm transition-transform group-hover:scale-110 ${msg.isNew ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                        <msg.icon size={12}/>
+                                    </div>
+                                    <div className={`p-4 rounded-2xl border transition-all ${msg.isNew ? 'bg-white border-indigo-200 shadow-md' : 'bg-slate-50/50 border-slate-100 hover:border-slate-300 hover:bg-white'}`}>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{msg.sender}</span>
+                                            <span className="text-[10px] font-bold text-slate-400">{msg.date === hoje ? 'Hoje' : formatDateLocal(msg.date)}</span>
+                                        </div>
+                                        <h4 className="font-bold text-slate-800 text-sm leading-snug">{msg.subject}</h4>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="pl-6">
+                                    <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
+                                        <CheckCircle size={32} className="mx-auto text-emerald-300 mb-2"/>
+                                        <p className="font-bold text-slate-600 text-sm">Tudo tranquilo!</p>
+                                        <p className="text-xs text-slate-500 mt-1">Nenhum aviso ou convocatória pendente no momento.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* DEVOCIONAL NO MODO TUDO */}
+                    {homeViewTab === 'tudo' && (
+                        <div className="space-y-6 flex flex-col">
+                            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl sm:rounded-[2rem] shadow-sm border border-indigo-100 p-6 relative overflow-hidden flex-1 flex flex-col">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Sparkles size={120}/></div>
+                                <div className="relative z-10 flex-1 flex flex-col">
+                                    <h3 className="font-black text-indigo-900 text-lg flex items-center gap-2 mb-1"><BookOpen size={20} className="text-indigo-500"/> Palavra Diária</h3>
+                                    <p className="text-[10px] text-indigo-700/70 font-bold uppercase tracking-wider mb-6 border-b border-indigo-100 pb-4">Gerada pela IA com base no seu perfil</p>
+                                    
+                                    {!devocional && (
+                                        <div className="flex-1 flex flex-col justify-center items-center text-center">
+                                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm text-indigo-400"><Sparkles size={28}/></div>
+                                            <p className="text-sm font-bold text-indigo-800 mb-6">Precisa de uma palavra de encorajamento para iniciar o seu dia?</p>
+                                            <Button onClick={gerarDevocional} disabled={loadingDev} variant="primary" className="w-full py-4 text-sm shadow-md shadow-indigo-200">
+                                                {loadingDev ? <Loader2 size={18} className="animate-spin"/> : <Sparkles size={18}/>} ✨ Gerar Devocional
+                                            </Button>
+                                        </div>
+                                    )}
+                                    
+                                    {loadingDev && (
+                                        <div className="py-10 flex flex-col items-center justify-center text-indigo-500 flex-1">
+                                            <Loader2 size={40} className="animate-spin mb-4"/>
+                                            <p className="font-bold text-sm animate-pulse">Buscando inspiração divina...</p>
+                                        </div>
+                                    )}
+                                    
+                                    {devocional && (
+                                        <div className="animate-entrance flex-1 flex flex-col">
+                                            <div className="prose prose-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap flex-1">
+                                                {devocional}
+                                            </div>
+                                            <div className="mt-6 flex gap-2 pt-4 border-t border-indigo-100/50">
+                                                <button onClick={() => { copyToClipboard(devocional); if (typeof window !== 'undefined') alert('Copiado para a área de transferência!'); }} className="flex-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-3 py-2.5 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors flex justify-center items-center gap-1.5"><Copy size={16}/> Copiar</button>
+                                                <button onClick={gerarDevocional} disabled={loadingDev} className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors px-3 py-2.5 flex items-center gap-1.5 hover:bg-indigo-50 rounded-xl border border-transparent"><RefreshCw size={16}/></button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* DEVOCIONAL NO MODO ABA EXCLUSIVA */}
+            {homeViewTab === 'devocional' && (
+                <div className="w-full animate-entrance">
+                    <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 rounded-2xl sm:rounded-[2rem] shadow-sm border border-indigo-100 p-6 md:p-10 relative overflow-hidden flex flex-col min-h-[400px]">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Sparkles size={160}/></div>
+                        <div className="relative z-10 flex-1 flex flex-col max-w-3xl mx-auto w-full">
+                            <div className="flex items-center justify-between border-b border-indigo-100 pb-4 mb-6">
+                                <div>
+                                    <h3 className="font-black text-indigo-900 text-xl sm:text-2xl flex items-center gap-2 mb-1">
+                                        <BookOpen size={24} className="text-indigo-600"/> Devocional e Palavra Diária
+                                    </h3>
+                                    <p className="text-xs text-indigo-700/80 font-bold">Inspirado e personalizado pelo assistente teológico para a sua edificação</p>
+                                </div>
+                                <button
+                                    onClick={gerarDevocional}
+                                    disabled={loadingDev}
+                                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
+                                >
+                                    {loadingDev ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                                    <span>Renovar Palavra</span>
+                                </button>
+                            </div>
                             
-                            {!devocional && (
-                                <div className="flex-1 flex flex-col justify-center items-center text-center">
-                                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm text-indigo-400"><Sparkles size={28}/></div>
-                                    <p className="text-sm font-bold text-indigo-800 mb-6">Precisa de uma palavra de encorajamento para iniciar o seu dia?</p>
-                                    <Button onClick={gerarDevocional} disabled={loadingDev} variant="primary" className="w-full py-4 text-sm shadow-md shadow-indigo-200">
-                                        {loadingDev ? <Loader2 size={18} className="animate-spin"/> : <Sparkles size={18}/>} ✨ Gerar Devocional
+                            {!devocional && !loadingDev && (
+                                <div className="flex-1 flex flex-col justify-center items-center text-center py-12">
+                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-5 shadow-md text-indigo-500">
+                                        <Sparkles size={36}/>
+                                    </div>
+                                    <h4 className="text-lg font-black text-indigo-900 mb-2">Mensagem Personalizada do Dia</h4>
+                                    <p className="text-sm font-medium text-slate-600 mb-6 max-w-md">Reflita nas Escrituras e receba uma orientação pastoral adaptada ao seu momento e função na igreja.</p>
+                                    <Button onClick={gerarDevocional} disabled={loadingDev} variant="primary" className="py-3.5 px-8 text-sm shadow-lg shadow-indigo-200">
+                                        ✨ Gerar Devocional Agora
                                     </Button>
                                 </div>
                             )}
                             
                             {loadingDev && (
-                                <div className="py-10 flex flex-col items-center justify-center text-indigo-500 flex-1">
-                                    <Loader2 size={40} className="animate-spin mb-4"/>
-                                    <p className="font-bold text-sm animate-pulse">Buscando inspiração divina...</p>
+                                <div className="py-16 flex flex-col items-center justify-center text-indigo-600 flex-1">
+                                    <Loader2 size={48} className="animate-spin mb-4"/>
+                                    <p className="font-black text-base animate-pulse">Consultando as Sagradas Escrituras...</p>
+                                    <p className="text-xs text-slate-400 mt-1">Gerando reflexão personalizada</p>
                                 </div>
                             )}
                             
                             {devocional && (
                                 <div className="animate-entrance flex-1 flex flex-col">
-                                    <div className="prose prose-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap flex-1">
+                                    <div className="prose prose-slate max-w-none text-slate-800 font-medium leading-relaxed whitespace-pre-wrap flex-1 bg-white/80 p-6 rounded-2xl border border-indigo-100 shadow-inner">
                                         {devocional}
                                     </div>
-                                    <div className="mt-6 flex gap-2 pt-4 border-t border-indigo-100/50">
-                                        <button onClick={() => { copyToClipboard(devocional); if (typeof window !== 'undefined') alert('Copiado para a área de transferência!'); }} className="flex-1 text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-3 py-2.5 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors flex justify-center items-center gap-1.5"><Copy size={16}/> Copiar</button>
-                                        <button onClick={gerarDevocional} disabled={loadingDev} className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors px-3 py-2.5 flex items-center gap-1.5 hover:bg-indigo-50 rounded-xl border border-transparent"><RefreshCw size={16}/></button>
+                                    <div className="mt-6 flex flex-wrap gap-3 pt-4 border-t border-indigo-100/60 justify-end">
+                                        <button onClick={() => { copyToClipboard(devocional); if (typeof window !== 'undefined') alert('Copiado para a área de transferência!'); }} className="text-xs font-bold text-indigo-600 bg-white border border-indigo-200 px-4 py-2.5 rounded-xl shadow-xs hover:bg-indigo-50 transition-colors flex items-center gap-1.5 cursor-pointer">
+                                            <Copy size={16}/> Copiar Mensagem
+                                        </button>
+                                        <button onClick={gerarDevocional} disabled={loadingDev} className="text-xs font-bold text-slate-600 hover:text-indigo-600 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer">
+                                            <RefreshCw size={16}/> Gerar Outra Palavra
+                                        </button>
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* MODAL DETALHADO DO HISTÓRICO DE MEDALHAS */}
             <AnimatePresence>
@@ -16421,24 +16691,33 @@ const MemberPortalLayout = () => {
                 </header>
             )}
 
-            {/* Main Content (Área Rolável) */}
+            {/* Main Content (Área Rolável com flexbox nativo) */}
             <main 
-                className={isInterativoMode ? "flex-1 p-0 m-0 w-full overflow-y-auto relative z-10 h-screen" : "flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative z-10 pb-24 md:pb-16"} 
-                style={isInterativoMode ? { height: '100dvh' } : { height: 'calc(100vh - 4rem)' }}
+                className={isInterativoMode 
+                    ? "flex-1 min-h-0 min-w-0 p-0 m-0 w-full h-full overflow-y-auto relative z-10" 
+                    : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-3 sm:p-5 md:p-8 pb-20 md:pb-8"} 
             >
                 <div className={isInterativoMode ? "w-full h-full" : "max-w-[1800px] mx-auto"}>
                     {/* Desktop Header Panel */}
                     {!isInterativoMode && (
-                        <header className="hidden md:flex justify-between items-center pb-6 border-b border-slate-200/40 mb-8 shrink-0 relative z-20">
-                            <div>
-                                <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
-                                    Olá, {user.nome.split(' ')[0]}! 👋
-                                </h1>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1.5">
-                                    Seja bem-vindo de volta ao portal da sua congregação.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3">
+                        <header className="hidden md:flex justify-between items-center pb-3 border-b border-slate-200/40 mb-4 shrink-0 relative z-20">
+                            {view === 'portal_home' ? (
+                                <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                                    <span className="text-slate-500 font-black tracking-wider uppercase text-[11px]">Portal do Membro</span>
+                                    <span>•</span>
+                                    <span className="text-emerald-600 font-black">{db.igreja.nome}</span>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h1 className="text-xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
+                                        Olá, {user.nome.split(' ')[0]}! 👋
+                                    </h1>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1">
+                                        Seja bem-vindo de volta ao portal da sua congregação.
+                                    </p>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2.5">
                                 <WebPushNotificationTrigger />
                                 <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-1" />
                                 <OsThemeToggle />
