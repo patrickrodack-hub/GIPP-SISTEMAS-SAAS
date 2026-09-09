@@ -17,12 +17,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
 import { Win11PropertiesModal } from './Win11PropertiesModal';
 
-export const Win11Logo = ({ size = 18, className = "" }: { size?: number; className?: string }) => (
+export const Win11Logo = ({ size = 18, className = "", isCristal = false }: { size?: number; className?: string; isCristal?: boolean }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`shrink-0 ${className}`}>
-    <path d="M2 2H11V11H2V2Z" fill="#0078D4" />
-    <path d="M13 2H22V11H13V2Z" fill="#0078D4" />
-    <path d="M2 13H11V22H2V13Z" fill="#0078D4" />
-    <path d="M13 13H22V22H13V13Z" fill="#0078D4" />
+    <path d="M2 2H11V11H2V2Z" fill={isCristal ? "#38bdf8" : "#0078D4"} />
+    <path d="M13 2H22V11H13V2Z" fill={isCristal ? "#0ea5e9" : "#0078D4"} />
+    <path d="M2 13H11V22H2V13Z" fill={isCristal ? "#0ea5e9" : "#0078D4"} />
+    <path d="M13 13H22V22H13V13Z" fill={isCristal ? "#38bdf8" : "#0078D4"} />
   </svg>
 );
 
@@ -41,6 +41,15 @@ const SquareOutlineIcon = ({ size = 12 }: { size?: number }) => (
 
 // High-fidelity Windows 11 Wallpapers collection
 export const WIN11_WALLPAPERS = [
+  {
+    id: 'gipp-cristal',
+    name: 'GIPP -CRISTAL (Aero Bloom 💎)',
+    category: 'Cristal Oficial',
+    thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop',
+    recommendedTheme: 'dark',
+    accent: '#00d2ff'
+  },
   {
     id: 'bloom-light',
     name: 'Windows 11 Bloom (Claro)',
@@ -107,6 +116,7 @@ export const WIN11_WALLPAPERS = [
 ];
 
 export const WIN11_ACCENT_COLORS = [
+  { id: 'cristal', label: 'Cristal Ciano 💎', hex: '#00d2ff' },
   { id: 'blue', label: 'Azul Windows', hex: '#0078d4' },
   { id: 'desert', label: 'Dourado Deserto', hex: '#c28b57' },
   { id: 'emerald', label: 'Verde Floresta', hex: '#107c41' },
@@ -245,6 +255,18 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
   });
   const [volumeLevel, setVolumeLevel] = useState(85);
   const [brightnessLevel, setBrightnessLevel] = useState(100);
+
+  // GIPP -CRISTAL Theme Active State
+  const isCristal = osTheme === 'gipp_cristal' || wallpaperId === 'gipp-cristal';
+
+  useEffect(() => {
+    if (osTheme === 'gipp_cristal') {
+      setWallpaperId('gipp-cristal');
+      setAccentColor('#00d2ff');
+      setMicaTransparency(true);
+      setTaskbarAlign('center');
+    }
+  }, [osTheme]);
 
   // Dialogs & Flyouts
   const [startMenuOpen, setStartMenuOpen] = useState(false);
@@ -667,10 +689,23 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
     >
       {/* Subtle Desktop Mica / Contrast Tint */}
       <div className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${
-        micaTransparency 
-          ? (isLight ? 'bg-white/10 backdrop-blur-[0.5px]' : 'bg-black/20 backdrop-blur-[0.5px]')
-          : (isLight ? 'bg-white/30' : 'bg-black/40')
+        isCristal
+          ? 'bg-transparent'
+          : micaTransparency 
+            ? (isLight ? 'bg-white/10 backdrop-blur-[0.5px]' : 'bg-black/20 backdrop-blur-[0.5px]')
+            : (isLight ? 'bg-white/30' : 'bg-black/40')
       }`} />
+
+      {/* GIPP -CRISTAL Ethereal Water Reflections & Specular Floor Highlights */}
+      {isCristal && (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#021326]/85 via-[#03213d]/45 to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_70%,rgba(0,210,255,0.25)_0%,rgba(0,120,212,0.12)_45%,transparent_75%)]" />
+          {/* Specular glass reflection line over dock base */}
+          <div className="absolute bottom-20 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent shadow-[0_0_20px_rgba(0,210,255,0.6)]" />
+          <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-cyan-950/40 to-transparent backdrop-blur-[0.5px]" />
+        </div>
+      )}
 
       {/* ------------------------------------------------------------- */}
       {/* DESKTOP SHORTCUTS & ICONS AREA */}
@@ -716,8 +751,12 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
           className="w-20 h-22 flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-white/15 dark:hover:bg-white/10 hover:backdrop-blur-md cursor-pointer transition-all group text-center select-none"
           title="Este Computador (Painel Geral)"
         >
-          <div className="w-11 h-11 rounded-xl bg-blue-500/20 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-            <Laptop size={24} className="text-sky-400 drop-shadow-md" />
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-all ${
+            isCristal
+              ? 'bg-sky-400/20 backdrop-blur-xl border border-white/40 shadow-[0_4px_16px_rgba(0,180,255,0.3)] group-hover:shadow-[0_0_20px_rgba(56,189,248,0.6)]'
+              : 'bg-blue-500/20 backdrop-blur-md border border-white/20'
+          }`}>
+            <Laptop size={24} className={isCristal ? 'text-cyan-300 drop-shadow-md' : 'text-sky-400 drop-shadow-md'} />
           </div>
           <span className="text-[11px] font-medium mt-1 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] line-clamp-1">
             Este Computador
@@ -817,10 +856,14 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                 title={`${meta.label} (Dê dois cliques para abrir, ou arraste para reposicionar)`}
               >
                 <div 
-                  className="w-11 h-11 rounded-xl backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform relative"
-                  style={{ backgroundColor: `${accentColor}25` }}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-all relative ${
+                    isCristal
+                      ? 'bg-sky-400/20 backdrop-blur-xl border border-white/40 shadow-[0_4px_16px_rgba(0,180,255,0.3)] group-hover:shadow-[0_0_20px_rgba(56,189,248,0.6)]'
+                      : 'backdrop-blur-md border border-white/20'
+                  }`}
+                  style={!isCristal ? { backgroundColor: `${accentColor}25` } : {}}
                 >
-                  <IconComp size={22} className="drop-shadow-md text-white" style={{ color: accentColor }} />
+                  <IconComp size={22} className="drop-shadow-md text-white" style={{ color: isCristal ? '#38bdf8' : accentColor }} />
                   {/* Genuine Windows Shortcut Arrow Overlay */}
                   <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 bg-white/95 rounded-xs shadow-xs flex items-center justify-center text-slate-800 border border-slate-300">
                     <ArrowRight size={8} className="-rotate-45" />
@@ -857,32 +900,36 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               : 'opacity-100 scale-100 translate-y-0 transition-all duration-250 ease-out'
           }`}
         >
-          <div className={`flex-1 flex flex-col rounded-xl shadow-2xl overflow-hidden min-h-0 border transition-colors duration-200 ${
-            isLight 
-              ? 'bg-[#f8f9fc]/90 border-slate-300/70 shadow-slate-900/15 backdrop-blur-3xl text-slate-800'
-              : 'bg-[#1b1c24]/90 border-white/10 shadow-black/80 backdrop-blur-3xl text-white'
+          <div className={`flex-1 flex flex-col rounded-xl shadow-2xl overflow-hidden min-h-0 border transition-all duration-200 ${
+            isCristal
+              ? 'bg-[#091b30]/80 border-white/30 shadow-[0_20px_60px_rgba(0,180,255,0.35),0_0_30px_rgba(56,189,248,0.2)] backdrop-blur-3xl ring-1 ring-white/25 text-white'
+              : isLight 
+                ? 'bg-[#f8f9fc]/90 border-slate-300/70 shadow-slate-900/15 backdrop-blur-3xl text-slate-800'
+                : 'bg-[#1b1c24]/90 border-white/10 shadow-black/80 backdrop-blur-3xl text-white'
           }`}>
             {/* Windows 11 Titlebar */}
             <div
               onMouseDown={handleWindowDragStart}
               onDoubleClick={() => setIsMaximized(!isMaximized)}
               className={`h-9 px-3 flex items-center justify-between select-none shrink-0 border-b relative ${
-                isLight ? 'bg-slate-100/70 border-slate-200/60' : 'bg-[#181920]/80 border-white/5'
+                isCristal
+                  ? 'bg-sky-950/65 border-white/20 text-white'
+                  : isLight ? 'bg-slate-100/70 border-slate-200/60' : 'bg-[#181920]/80 border-white/5'
               } ${isMaximized ? 'cursor-default' : 'cursor-move'}`}
             >
               {/* App Icon & Title */}
               <div className="flex items-center gap-2 pointer-events-none">
                 <div 
                   className="w-5 h-5 rounded-md flex items-center justify-center text-white shrink-0 shadow-xs"
-                  style={{ backgroundColor: accentColor }}
+                  style={{ backgroundColor: isCristal ? '#0284c7' : accentColor }}
                 >
                   <WindowIcon size={13} />
                 </div>
                 <span className="text-xs font-semibold tracking-tight">
                   {mMeta.label}
                 </span>
-                <span className="text-[10px] opacity-40 font-normal ml-1">
-                  - GIPP Windows 11
+                <span className="text-[10px] opacity-60 font-normal ml-1 text-sky-200/70">
+                  {isCristal ? '- GIPP CRISTAL' : '- GIPP Windows 11'}
                 </span>
               </div>
 
@@ -1060,12 +1107,18 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
           }
         }}
         onDrop={handleTaskbarDrop}
-        className={`fixed bottom-0 left-0 right-0 h-12 flex items-center justify-between px-3 z-40 shadow-2xl backdrop-blur-3xl select-none border-t transition-colors duration-200 ${
-          isDraggingOverTaskbar
-            ? 'ring-2 ring-sky-400 bg-sky-950/80'
-            : isLight 
-              ? 'bg-slate-100/80 border-slate-200/70 text-slate-800' 
-              : 'bg-[#0f1015]/85 border-white/10 text-white'
+        className={`fixed z-40 select-none transition-all duration-200 ${
+          isCristal
+            ? `bottom-2.5 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-auto sm:min-w-[620px] sm:max-w-[95vw] h-13 px-4 rounded-2xl bg-sky-500/20 backdrop-blur-2xl backdrop-saturate-200 border border-white/40 shadow-[0_12px_40px_rgba(0,180,255,0.4),0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-white/30 text-white flex items-center justify-between ${
+                isDraggingOverTaskbar ? 'ring-2 ring-cyan-300 bg-sky-900/60' : ''
+              }`
+            : `bottom-0 left-0 right-0 h-12 flex items-center justify-between px-3 shadow-2xl backdrop-blur-3xl border-t ${
+                isDraggingOverTaskbar
+                  ? 'ring-2 ring-sky-400 bg-sky-950/80'
+                  : isLight 
+                    ? 'bg-slate-100/80 border-slate-200/70 text-slate-800' 
+                    : 'bg-[#0f1015]/85 border-white/10 text-white'
+              }`
         }`}
       >
         {/* Drag over taskbar helper prompt */}
@@ -1110,14 +1163,18 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               playSound('click');
               setStartMenuOpen(!startMenuOpen);
             }}
-            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
-              startMenuOpen 
-                ? (isLight ? 'bg-white shadow-xs' : 'bg-white/15')
-                : (isLight ? 'hover:bg-white/60' : 'hover:bg-white/10')
+            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
+              isCristal
+                ? startMenuOpen 
+                  ? 'bg-white/30 border border-white/50 shadow-[0_0_18px_rgba(56,189,248,0.6)]' 
+                  : 'hover:bg-white/20'
+                : startMenuOpen 
+                  ? (isLight ? 'bg-white shadow-xs' : 'bg-white/15')
+                  : (isLight ? 'hover:bg-white/60' : 'hover:bg-white/10')
             }`}
             title="Iniciar (Win)"
           >
-            <Win11Logo size={20} />
+            <Win11Logo size={20} isCristal={isCristal} />
           </button>
 
           {/* Search Button */}
@@ -1290,24 +1347,28 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               exit={{ opacity: 0, y: 20, scale: 0.96 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className={`w-full max-w-xl rounded-2xl border p-6 flex flex-col shadow-2xl backdrop-blur-3xl ${
-                isLight 
-                  ? 'bg-slate-100/95 border-slate-300/80 text-slate-800 shadow-slate-900/20' 
-                  : 'bg-[#1c1d26]/95 border-white/10 text-white shadow-black/80'
+              className={`w-full max-w-xl rounded-2xl border p-6 flex flex-col shadow-2xl backdrop-blur-3xl transition-all duration-200 ${
+                isCristal
+                  ? 'bg-[#081e36]/80 border-white/35 text-white shadow-[0_25px_60px_rgba(0,180,255,0.4),0_0_40px_rgba(56,189,248,0.25)] ring-1 ring-white/30 backdrop-saturate-200'
+                  : isLight 
+                    ? 'bg-slate-100/95 border-slate-300/80 text-slate-800 shadow-slate-900/20' 
+                    : 'bg-[#1c1d26]/95 border-white/10 text-white shadow-black/80'
               }`}
             >
               {/* Search Bar */}
               <div className="relative mb-5">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isCristal ? 'text-sky-300' : 'text-slate-400'}`} size={16} />
                 <input 
                   type="text"
-                  placeholder="Pesquisar aplicativos, configurações e arquivos..."
+                  placeholder="Digite aqui para pesquisar..."
                   value={startSearch}
                   onChange={(e) => setStartSearch(e.target.value)}
-                  className={`w-full pl-10 pr-8 py-2 text-xs rounded-lg border outline-none transition-all ${
-                    isLight 
-                      ? 'bg-white border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500' 
-                      : 'bg-black/30 border-white/10 focus:border-sky-500 focus:ring-1 focus:ring-sky-500'
+                  className={`w-full pl-10 pr-8 py-2.5 text-xs rounded-xl border outline-none transition-all ${
+                    isCristal
+                      ? 'bg-sky-950/60 border-white/30 text-white placeholder-sky-200/60 focus:border-cyan-300 focus:ring-1 focus:ring-cyan-300 shadow-inner'
+                      : isLight 
+                        ? 'bg-white border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 text-slate-800' 
+                        : 'bg-black/30 border-white/10 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 text-white'
                   }`}
                 />
                 {startSearch && (
@@ -1323,12 +1384,16 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               {/* Tabs: Pinned vs All Apps */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                  <span className={`text-xs font-bold tracking-wide ${isCristal ? 'text-white' : 'uppercase opacity-70'}`}>
                     {startActiveTab === 'pinned' ? 'Fixados' : 'Todos os Aplicativos'}
                   </span>
                   <button
                     onClick={() => setAddShortcutsModalOpen(true)}
-                    className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-1 text-sky-400 cursor-pointer"
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer ${
+                      isCristal
+                        ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-400/30'
+                        : 'bg-white/10 hover:bg-white/20 text-sky-400'
+                    }`}
                     title="Adicionar ou gerenciar aplicativos fixados"
                   >
                     <Plus size={12} />
@@ -1337,10 +1402,14 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                 </div>
                 <button
                   onClick={() => setStartActiveTab(startActiveTab === 'pinned' ? 'all' : 'pinned')}
-                  className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer"
+                  className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    isCristal
+                      ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs'
+                      : 'text-sky-400 hover:text-sky-300'
+                  }`}
                 >
-                  <span>{startActiveTab === 'pinned' ? 'Todos os Aplicativos' : 'Voltar aos Fixados'}</span>
-                  <ChevronRight size={14} />
+                  <span>{startActiveTab === 'pinned' ? 'Todos os aplicativos' : 'Voltar aos Fixados'}</span>
+                  <ChevronRight size={13} />
                 </button>
               </div>
 
@@ -1481,56 +1550,87 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               </div>
 
               {/* Recommended Recent Activities */}
-              <div className="border-t border-white/10 pt-3 mb-4">
-                <div className="text-xs font-bold uppercase tracking-wider opacity-70 mb-2 px-1">
-                  Recomendados
+              <div className={`pt-3 mb-2 ${isCristal ? 'border-t border-white/20' : 'border-t border-white/10'}`}>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className={`text-xs font-bold tracking-wide ${isCristal ? 'text-white' : 'uppercase opacity-70'}`}>
+                    Recomendados
+                  </span>
+                  <button
+                    onClick={() => setStartActiveTab('all')}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      isCristal
+                        ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs'
+                        : 'text-sky-400 hover:text-sky-300'
+                    }`}
+                  >
+                    <span>Mais</span>
+                    <ChevronRight size={13} />
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div 
                     onClick={() => handleLaunchModule('curso_teologia')}
-                    className="p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2.5 cursor-pointer"
+                    className={`p-2 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer ${
+                      isCristal ? 'hover:bg-white/15 bg-white/5 border border-white/10' : 'hover:bg-white/10'
+                    }`}
                   >
-                    <BookOpen size={16} className="text-amber-400 shrink-0" />
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                      <BookOpen size={16} />
+                    </div>
                     <div className="min-w-0">
-                      <span className="block text-xs font-medium truncate">Apostila de Bibliologia</span>
-                      <span className="block text-[9px] opacity-50">Declaração de Fé CPAD</span>
+                      <span className="block text-xs font-medium truncate text-white">Apostila de Bibliologia</span>
+                      <span className="block text-[9px] opacity-60 text-sky-100/70">Declaração de Fé CPAD</span>
                     </div>
                   </div>
 
                   <div 
                     onClick={() => handleLaunchModule('fin_entrada')}
-                    className="p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2.5 cursor-pointer"
+                    className={`p-2 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer ${
+                      isCristal ? 'hover:bg-white/15 bg-white/5 border border-white/10' : 'hover:bg-white/10'
+                    }`}
                   >
-                    <CreditCard size={16} className="text-emerald-400 shrink-0" />
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0">
+                      <CreditCard size={16} />
+                    </div>
                     <div className="min-w-0">
-                      <span className="block text-xs font-medium truncate">Lançamentos de Dízimos</span>
-                      <span className="block text-[9px] opacity-50">Tesouraria Paroquial</span>
+                      <span className="block text-xs font-medium truncate text-white">Lançamentos de Dízimos</span>
+                      <span className="block text-[9px] opacity-60 text-sky-100/70">Tesouraria Paroquial</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Start Menu Footer: User Profile & Power Controls */}
-              <div className="border-t border-white/10 pt-3 flex items-center justify-between px-1">
+              <div className={`mt-3 -mx-6 -mb-6 px-6 py-3.5 rounded-b-2xl border-t flex items-center justify-between transition-colors ${
+                isCristal
+                  ? 'bg-black/35 border-white/15'
+                  : isLight 
+                    ? 'bg-slate-200/60 border-slate-300/60' 
+                    : 'bg-black/40 border-white/10'
+              }`}>
                 {/* User Avatar & Name */}
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer text-left"
+                    className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer text-left"
                   >
-                    <div className="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center font-bold text-white shadow-xs">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-xs ${
+                      isCristal ? 'bg-gradient-to-tr from-cyan-500 to-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.5)]' : 'bg-sky-600'
+                    }`}>
                       {user?.usuario ? user.usuario.charAt(0).toUpperCase() : 'A'}
                     </div>
                     <div>
-                      <span className="block text-xs font-bold">{user?.usuario || 'Administrador'}</span>
-                      <span className="block text-[9px] opacity-60">Conta Local GIPP</span>
+                      <span className="block text-xs font-bold text-white">{user?.usuario || 'Administrador'}</span>
+                      <span className="block text-[9px] text-sky-200/60">Conta Local GIPP</span>
                     </div>
                   </button>
 
                   {/* User Popup */}
                   {userMenuOpen && (
                     <div className={`absolute left-0 bottom-12 w-48 p-1.5 rounded-xl shadow-2xl border backdrop-blur-2xl z-50 ${
-                      isLight ? 'bg-white border-slate-200' : 'bg-[#1f2029] border-white/10'
+                      isCristal
+                        ? 'bg-[#081e36]/95 border-white/20 text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)]'
+                        : isLight ? 'bg-white border-slate-200' : 'bg-[#1f2029] border-white/10'
                     }`}>
                       <button 
                         onClick={() => {
@@ -1570,16 +1670,22 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                 <div className="relative">
                   <button
                     onClick={() => setPowerMenuOpen(!powerMenuOpen)}
-                    className="w-9 h-9 rounded-lg hover:bg-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer"
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                      isCristal 
+                        ? 'hover:bg-white/20 text-white shadow-[0_0_12px_rgba(56,189,248,0.3)] bg-white/5 border border-white/10'
+                        : 'hover:bg-white/10 text-white/80 hover:text-white'
+                    }`}
                     title="Ligar / Desligar"
                   >
-                    <Power size={18} />
+                    <Power size={17} className={isCristal ? 'text-cyan-300' : ''} />
                   </button>
 
                   {/* Power Popup */}
                   {powerMenuOpen && (
                     <div className={`absolute right-0 bottom-12 w-44 p-1.5 rounded-xl shadow-2xl border backdrop-blur-2xl z-50 ${
-                      isLight ? 'bg-white border-slate-200' : 'bg-[#1f2029] border-white/10'
+                      isCristal
+                        ? 'bg-[#081e36]/95 border-white/20 text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)]'
+                        : isLight ? 'bg-white border-slate-200' : 'bg-[#1f2029] border-white/10'
                     }`}>
                       <button 
                         onClick={() => {

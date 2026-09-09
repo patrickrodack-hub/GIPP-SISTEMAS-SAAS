@@ -1446,6 +1446,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     
     const getBaseThemeStyles = () => {
         if (theme === 'macos_tahoe') return "bg-[#0b0c16]";
+        if (theme === 'gipp_cristal') return "bg-[#06182c] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-400/30 via-[#072d52] to-[#020b17]";
         if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
         if (theme === 'win81') return "bg-[#004f7c]";
         if (theme === 'win95') return "bg-[#008080]";
@@ -1496,6 +1497,19 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                             style={{ opacity: overlayOpacity / 100 }}
                         />
                     )}
+                </div>
+            )}
+
+            {/* GIPP -CRISTAL Bloom & Water Reflections */}
+            {theme === 'gipp_cristal' && !papelParede && (
+                <div className="absolute inset-0 pointer-events-none">
+                    <div 
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop')` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#021326]/85 via-[#03213d]/45 to-transparent" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_65%,rgba(0,210,255,0.25)_0%,rgba(0,120,212,0.15)_45%,transparent_75%)]" />
+                    <div className="absolute bottom-16 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent shadow-[0_0_20px_rgba(0,210,255,0.6)]" />
                 </div>
             )}
 
@@ -1780,10 +1794,11 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const themesList = [
         { id: 'default', label: 'GIPP Padrão' }, 
+        { id: 'gipp_cristal', label: 'GIPP -CRISTAL 💎' },
+        { id: 'win11', label: 'Windows 11' },
         { id: 'gipp_clipper', label: 'GIPP CLIPPER' },
         { id: 'win81', label: 'Windows 8.1' },
         { id: 'gipp_retro', label: 'GIPP RETRO (Delphi 13) ⚡' },
-        { id: 'win11', label: 'Windows 11' },
         { id: 'win95', label: 'Windows 95' },
         { id: 'macos_tahoe', label: 'macOS 26 Tahoe ' },
         { id: 'linux', label: 'Linux Ubuntu' },
@@ -1805,7 +1820,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
                         {themesList.map(t => (
                             <button key={t.id} onClick={() => { 
                                 setOsTheme(t.id); 
-                                if (t.id === 'win11') {
+                                if (t.id === 'win11' || t.id === 'gipp_cristal') {
                                     requestAppFullscreen();
                                 }
                                 setIsOpen(false); 
@@ -16286,7 +16301,7 @@ const MemberPortalLayout = () => {
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-    const isThemeDark = osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux';
+    const isThemeDark = osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux' || osTheme === 'gipp_cristal';
 
     const handleVerificarPagamento = async () => {
         setVerificandoPix(true);
@@ -16363,6 +16378,9 @@ const MemberPortalLayout = () => {
     }
 
     const getHeaderStyles = () => {
+        if (osTheme === 'gipp_cristal') {
+            return "bg-sky-500/20 border-b border-white/30 text-white backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,180,255,0.2)]";
+        }
         if (osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-black/70 border-b border-white/10 text-white backdrop-blur-md";
         }
@@ -16373,6 +16391,9 @@ const MemberPortalLayout = () => {
     };
 
     const getFooterStyles = () => {
+        if (osTheme === 'gipp_cristal') {
+            return "bg-sky-500/20 border-t border-white/30 text-white/90 backdrop-blur-2xl shadow-[0_-4px_20px_rgba(0,180,255,0.2)]";
+        }
         if (osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-black/70 border-t border-white/10 text-white/70 backdrop-blur-md";
         }
@@ -16383,6 +16404,9 @@ const MemberPortalLayout = () => {
     };
 
     const getBottomSheetStyles = () => {
+        if (osTheme === 'gipp_cristal') {
+            return "bg-sky-950/80 text-white border-t border-white/25 backdrop-blur-2xl";
+        }
         if (osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux') {
             return "bg-slate-900/70 text-white border-t border-white/10 backdrop-blur-md";
         }
@@ -17502,10 +17526,10 @@ const AppLayout = () => {
     };
 
     useEffect(() => {
-        if (osTheme === 'win11') {
+        if (osTheme === 'win11' || osTheme === 'gipp_cristal') {
             fetchWeatherForCoords(-26.3045, -48.8456, 'Joinville', 'Santa Catarina');
 
-            // Executar sempre iniciando por Full Screen ao abrir o tema Windows 11
+            // Executar sempre iniciando por Full Screen ao abrir o tema Windows 11 / Cristal
             requestAppFullscreen();
 
             // Garantir Full Screen na primeira interação do usuário caso o navegador bloqueie autoplay
@@ -17529,7 +17553,7 @@ const AppLayout = () => {
     }, [osTheme]);
 
     useEffect(() => {
-        if ((osTheme === 'linux' || osTheme === 'win11') && view) {
+        if ((osTheme === 'linux' || osTheme === 'win11' || osTheme === 'gipp_cristal') && view) {
             setOpenedModules(prev => prev.includes(view) ? prev : [...prev, view]);
             setMinimizedModules(prev => prev.includes(view) ? prev.filter(m => m !== view) : prev);
         }
@@ -19097,7 +19121,7 @@ const AppLayout = () => {
         );
     }
 
-    if (osTheme === 'win11') {
+    if (osTheme === 'win11' || osTheme === 'gipp_cristal') {
         const mMeta = getModuleMeta(view);
         return (
             <Windows11Layout
