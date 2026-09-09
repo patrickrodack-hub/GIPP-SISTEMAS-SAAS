@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
+import { SYSTEM_DIVISIONS, groupModulesByDivision, getDivisionForModule } from '../constants/systemDivisions';
 
 export const Win81Logo = ({ size = 20, className = "" }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`shrink-0 ${className}`}>
@@ -219,6 +220,8 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
   const [startScreenOpen, setStartScreenOpen] = useState<boolean>(!view || view === 'dashboard' || activeMinimized.includes(view));
   const [startScreenTab, setStartScreenTab] = useState<'tiles' | 'allApps'>('tiles');
   const [startSearchQuery, setStartSearchQuery] = useState('');
+  const [allAppsSortBy, setAllAppsSortBy] = useState<'division' | 'alpha'>('division');
+  const [selectedWin8Division, setSelectedWin8Division] = useState<string>('all');
   
   // Charms Bar visibility & flyouts
   const [charmsBarOpen, setCharmsBarOpen] = useState(false);
@@ -589,10 +592,22 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
     if (!isModuleAllowed(m.id)) return false;
     if (!startSearchQuery) return true;
     const q = startSearchQuery.toLowerCase();
-    return m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q);
+    const div = getDivisionForModule(m.id);
+    return (
+      m.label.toLowerCase().includes(q) ||
+      m.id.toLowerCase().includes(q) ||
+      div.name.toLowerCase().includes(q) ||
+      div.shortName.toLowerCase().includes(q)
+    );
   }).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
 
-  // Group apps by letter
+  // Group apps by system division
+  const divisionGroupedApps = groupModulesByDivision(allAppsFiltered);
+  const filteredDivisionGroups = selectedWin8Division === 'all'
+    ? divisionGroupedApps
+    : divisionGroupedApps.filter(g => g.division.id === selectedWin8Division);
+
+  // Group apps by letter (fallback for alpha sort)
   const groupedApps: { [key: string]: typeof ALL_AVAILABLE_MODULES } = {};
   allAppsFiltered.forEach(app => {
     const firstLetter = app.label.charAt(0).toUpperCase();
@@ -1104,76 +1119,232 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
               </div>
             ) : (
               /* TAB 2: ALL APPS SCREEN (TODOS OS APLICATIVOS) */
-              <div className="flex-1 px-8 md:px-14 overflow-y-auto custom-scrollbar pt-2 pb-16">
-                <div className="mb-4 text-xs font-bold uppercase tracking-wider text-white/70">
-                  {allAppsFiltered.length} Aplicativos Disponíveis
-                </div>
+              <div className="flex-1 px-6 md:px-14 overflow-y-auto custom-scrollbar pt-2 pb-16">
+                {/* Metro Header with Sort Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-2.5 border-b border-white/15">
+                  <div className="flex items-baseline gap-3">
+                    <h2 className="text-2xl md:text-3xl font-light tracking-tight text-white">Aplicativos</h2>
+                    <span className="text-xs uppercase tracking-wider text-white/60 font-medium">
+                      {allAppsFiltered.length} disponíveis
+                    </span>
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {Object.keys(groupedApps).sort().map(letter => (
-                    <div key={letter} className="bg-black/20 border border-white/10 p-3.5 rounded-none">
-                      <div className="text-lg font-light text-sky-400 border-b border-white/10 pb-1 mb-2">
-                        {letter}
-                      </div>
-                      <div className="space-y-1.5">
-                        {groupedApps[letter].map(app => {
-                          const Icon = app.icon || LayoutDashboard;
-                          const isPinned = isPinnedToStart(app.id);
-                          const isTaskbar = isPinnedToTaskbar(app.id);
-
-                          return (
-                            <div
-                              key={app.id}
-                              draggable
-                              onDragStart={(e) => handleDragStartFromMenu(e, app.id)}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setContextMenu({ type: 'start-app', x: e.clientX, y: e.clientY, moduleId: app.id });
-                              }}
-                              className="flex items-center justify-between p-1.5 hover:bg-white/15 transition-colors cursor-pointer group"
-                            >
-                              <div 
-                                onClick={() => handleLaunchModule(app.id)}
-                                className="flex items-center gap-2.5 flex-1 min-w-0 pr-2"
-                              >
-                                <div className="w-7 h-7 bg-[#0078d7] flex items-center justify-center shrink-0 shadow-xs">
-                                  <Icon size={16} className="text-white" />
-                                </div>
-                                <span className="text-xs font-semibold text-white truncate">
-                                  {app.label}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    addShortcutToDesktop(app.id);
-                                  }}
-                                  className="p-1 hover:bg-white/20 text-white text-[10px]"
-                                  title="Adicionar à Área de Trabalho"
-                                >
-                                  +Desktop
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePinTaskbar(app.id);
-                                  }}
-                                  className={`p-1 hover:bg-white/20 text-[10px] ${isTaskbar ? 'text-sky-300' : 'text-white'}`}
-                                  title={isTaskbar ? "Desafixar da Barra" : "Fixar na Barra"}
-                                >
-                                  {isTaskbar ? '✓Barra' : '+Barra'}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {/* Classificar por (Authentic Windows 8.1 Metro Option) */}
+                  <div className="flex items-center gap-2 text-xs select-none">
+                    <span className="text-white/60">Classificar por:</span>
+                    <div className="flex items-center bg-black/40 border border-white/20 p-0.5">
+                      <button
+                        onClick={() => setAllAppsSortBy('division')}
+                        className={`px-3 py-1 transition-colors cursor-pointer text-xs ${
+                          allAppsSortBy === 'division' ? 'bg-[#0078d7] text-white font-medium shadow-xs' : 'text-white/70 hover:text-white'
+                        }`}
+                      >
+                        Divisão do Sistema
+                      </button>
+                      <button
+                        onClick={() => setAllAppsSortBy('alpha')}
+                        className={`px-3 py-1 transition-colors cursor-pointer text-xs ${
+                          allAppsSortBy === 'alpha' ? 'bg-[#0078d7] text-white font-medium shadow-xs' : 'text-white/70 hover:text-white'
+                        }`}
+                      >
+                        Por Nome (A-Z)
+                      </button>
                     </div>
-                  ))}
+                  </div>
                 </div>
+
+                {/* Division Quick Filter Pills (Smooth & Delicate) */}
+                {allAppsSortBy === 'division' && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-2.5 mb-4 select-none">
+                    <button
+                      onClick={() => setSelectedWin8Division('all')}
+                      className={`px-3 py-1 text-xs transition-colors shrink-0 cursor-pointer border ${
+                        selectedWin8Division === 'all'
+                          ? 'bg-[#0078d7] border-sky-400 text-white font-semibold'
+                          : 'bg-black/30 border-white/15 text-white/75 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      Todas as Divisões
+                    </button>
+                    {SYSTEM_DIVISIONS.map(div => {
+                      const DivIcon = div.icon;
+                      const isSelected = selectedWin8Division === div.id;
+                      return (
+                        <button
+                          key={div.id}
+                          onClick={() => setSelectedWin8Division(div.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1 text-xs transition-colors shrink-0 cursor-pointer border ${
+                            isSelected
+                              ? 'bg-[#0078d7] border-sky-400 text-white font-semibold'
+                              : 'bg-black/30 border-white/15 text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <DivIcon size={12} className={isSelected ? 'text-white' : ''} style={!isSelected ? { color: div.color } : {}} />
+                          <span>{div.shortName}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* All Apps Grid */}
+                {allAppsSortBy === 'division' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredDivisionGroups.map(group => {
+                      const DivIcon = group.division.icon;
+                      return (
+                        <div key={group.division.id} className="bg-black/25 border border-white/10 p-3.5 rounded-none flex flex-col hover:border-white/25 transition-colors">
+                          {/* Delicate Division Header */}
+                          <div className="flex items-center justify-between border-b border-white/15 pb-2 mb-2.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div 
+                                className="w-6 h-6 flex items-center justify-center shrink-0 shadow-xs"
+                                style={{ backgroundColor: group.division.badgeBg, color: group.division.color }}
+                              >
+                                <DivIcon size={13} />
+                              </div>
+                              <span className="text-sm font-medium text-sky-300 tracking-wide truncate">
+                                {group.division.name}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono opacity-60 bg-white/10 px-1.5 py-0.5 shrink-0 ml-1">
+                              {group.items.length}
+                            </span>
+                          </div>
+
+                          {/* App items */}
+                          <div className="space-y-1.5 flex-1">
+                            {group.items.map(app => {
+                              const Icon = app.icon || LayoutDashboard;
+                              const isPinned = isPinnedToStart(app.id);
+                              const isTaskbar = isPinnedToTaskbar(app.id);
+
+                              return (
+                                <div
+                                  key={app.id}
+                                  draggable
+                                  onDragStart={(e) => handleDragStartFromMenu(e, app.id)}
+                                  onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setContextMenu({ type: 'start-app', x: e.clientX, y: e.clientY, moduleId: app.id });
+                                  }}
+                                  className="flex items-center justify-between p-1.5 hover:bg-white/15 transition-colors cursor-pointer group"
+                                >
+                                  <div 
+                                    onClick={() => handleLaunchModule(app.id)}
+                                    className="flex items-center gap-2.5 flex-1 min-w-0 pr-2"
+                                  >
+                                    <div className="w-7 h-7 bg-[#0078d7] flex items-center justify-center shrink-0 shadow-xs">
+                                      <Icon size={16} className="text-white" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <span className="block text-xs font-semibold text-white truncate">
+                                        {app.label}
+                                      </span>
+                                      <span className="block text-[10px] text-white/50 truncate">
+                                        {group.division.shortName}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        addShortcutToDesktop(app.id);
+                                      }}
+                                      className="p-1 hover:bg-white/20 text-white text-[10px]"
+                                      title="Adicionar à Área de Trabalho"
+                                    >
+                                      +Desktop
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        togglePinTaskbar(app.id);
+                                      }}
+                                      className={`p-1 hover:bg-white/20 text-[10px] ${isTaskbar ? 'text-sky-300' : 'text-white'}`}
+                                      title={isTaskbar ? "Desafixar da Barra" : "Fixar na Barra"}
+                                    >
+                                      {isTaskbar ? '✓Barra' : '+Barra'}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Object.keys(groupedApps).sort().map(letter => (
+                      <div key={letter} className="bg-black/20 border border-white/10 p-3.5 rounded-none">
+                        <div className="text-lg font-light text-sky-400 border-b border-white/10 pb-1 mb-2">
+                          {letter}
+                        </div>
+                        <div className="space-y-1.5">
+                          {groupedApps[letter].map(app => {
+                            const Icon = app.icon || LayoutDashboard;
+                            const isPinned = isPinnedToStart(app.id);
+                            const isTaskbar = isPinnedToTaskbar(app.id);
+
+                            return (
+                              <div
+                                key={app.id}
+                                draggable
+                                onDragStart={(e) => handleDragStartFromMenu(e, app.id)}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setContextMenu({ type: 'start-app', x: e.clientX, y: e.clientY, moduleId: app.id });
+                                }}
+                                className="flex items-center justify-between p-1.5 hover:bg-white/15 transition-colors cursor-pointer group"
+                              >
+                                <div 
+                                  onClick={() => handleLaunchModule(app.id)}
+                                  className="flex items-center gap-2.5 flex-1 min-w-0 pr-2"
+                                >
+                                  <div className="w-7 h-7 bg-[#0078d7] flex items-center justify-center shrink-0 shadow-xs">
+                                    <Icon size={16} className="text-white" />
+                                  </div>
+                                  <span className="text-xs font-semibold text-white truncate">
+                                    {app.label}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      addShortcutToDesktop(app.id);
+                                    }}
+                                    className="p-1 hover:bg-white/20 text-white text-[10px]"
+                                    title="Adicionar à Área de Trabalho"
+                                  >
+                                    +Desktop
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      togglePinTaskbar(app.id);
+                                    }}
+                                    className={`p-1 hover:bg-white/20 text-[10px] ${isTaskbar ? 'text-sky-300' : 'text-white'}`}
+                                    title={isTaskbar ? "Desafixar da Barra" : "Fixar na Barra"}
+                                  >
+                                    {isTaskbar ? '✓Barra' : '+Barra'}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

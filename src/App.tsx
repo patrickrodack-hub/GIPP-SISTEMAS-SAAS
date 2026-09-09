@@ -63,6 +63,7 @@ import { InteractiveWindow } from './components/InteractiveWindow';
 import { DelphiFlorenceLayout } from './components/DelphiFlorenceLayout';
 import { Windows81Layout } from './components/Windows81Layout';
 import { Windows11Layout } from './components/Windows11Layout';
+import { NewGippLayout } from './components/NewGippLayout';
 import { ClipperLayout } from './components/ClipperLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
@@ -1446,6 +1447,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     
     const getBaseThemeStyles = () => {
         if (theme === 'macos_tahoe') return "bg-[#0b0c16]";
+        if (theme === 'new_gipp') return "bg-[#08151c]";
         if (theme === 'gipp_cristal') return "bg-[#06182c] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-400/30 via-[#072d52] to-[#020b17]";
         if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
         if (theme === 'win81') return "bg-[#004f7c]";
@@ -1510,6 +1512,18 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#021326]/85 via-[#03213d]/45 to-transparent" />
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_65%,rgba(0,210,255,0.25)_0%,rgba(0,120,212,0.15)_45%,transparent_75%)]" />
                     <div className="absolute bottom-16 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent shadow-[0_0_20px_rgba(0,210,255,0.6)]" />
+                </div>
+            )}
+
+            {/* NEW GIPP Serene Ocean Wallpaper */}
+            {theme === 'new_gipp' && !papelParede && (
+                <div className="absolute inset-0 pointer-events-none">
+                    <div 
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=85&w=1920&auto=format&fit=crop')` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#06141a]/90 via-[#0a1e27]/50 to-[#071922]/30" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_25%_25%,rgba(16,185,129,0.18)_0%,transparent_65%)]" />
                 </div>
             )}
 
@@ -1794,6 +1808,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const themesList = [
         { id: 'default', label: 'GIPP Padrão' }, 
+        { id: 'new_gipp', label: 'New GIPP ⚡' },
         { id: 'gipp_cristal', label: 'GIPP -CRISTAL 💎' },
         { id: 'win11', label: 'Windows 11' },
         { id: 'gipp_clipper', label: 'GIPP CLIPPER' },
@@ -18378,6 +18393,34 @@ const AppLayout = () => {
         );
     }
 
+    if (osTheme === 'new_gipp') {
+        const mMeta = getModuleMeta(view);
+        return (
+            <NewGippLayout
+                view={view}
+                setView={setView}
+                user={user}
+                db={db}
+                mMeta={mMeta}
+                isModuleAllowed={isModuleAllowed}
+                hasPermission={hasPermission}
+                access={access}
+                CurrentModule={CurrentModule}
+                currentProps={currentProps}
+                handleLogoutRequest={handleLogoutRequest}
+                setIsScreenLocked={setIsScreenLocked}
+                theme={theme}
+                setTheme={setTheme}
+                osTheme={osTheme}
+                setOsTheme={setOsTheme}
+                animBgEnabled={animBgEnabled}
+                setAnimBgEnabled={setAnimBgEnabled}
+                ALL_AVAILABLE_MODULES={ALL_AVAILABLE_MODULES}
+                addToast={addToast}
+            />
+        );
+    }
+
     if (osTheme === 'gipp_clipper') {
         const mMeta = getModuleMeta(view);
         return (
@@ -19454,6 +19497,26 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         />
                     </div>
                     <span className="text-[9px] font-sans font-black tracking-[0.25em] uppercase text-white/30 mt-4">macOS 26 Tahoe</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (themeBg === 'new_gipp') {
+        return (
+            <div className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-[#07141a] transition-opacity duration-1000 overflow-hidden select-none">
+                <div className="relative flex flex-col items-center justify-center">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center text-white shadow-[0_0_35px_rgba(20,184,166,0.5)] mb-6 animate-pulse">
+                        <Sparkles size={38} className="text-white" />
+                    </div>
+                    <h2 className="text-white font-black text-2xl tracking-wider mb-1 uppercase">New GIPP</h2>
+                    <p className="text-teal-400 text-xs font-mono tracking-widest uppercase mb-8">Studio Edition • v4.5</p>
+                    <div className="w-56 h-1.5 bg-white/10 rounded-full overflow-hidden border border-teal-500/20">
+                        <div 
+                            className="h-full bg-gradient-to-r from-teal-400 to-emerald-400 transition-all ease-out"
+                            style={{ width: `${progress}%`, transitionDuration: '0.4s' }}
+                        />
+                    </div>
                 </div>
             </div>
         );

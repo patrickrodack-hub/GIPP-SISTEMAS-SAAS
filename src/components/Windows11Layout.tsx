@@ -11,11 +11,12 @@ import {
   HelpCircle, Eye, EyeOff, Folder, Terminal, Battery, CloudSun, CloudRain,
   CloudLightning, Cloud, MapPin, Maximize2, Minimize2, SlidersHorizontal,
   Airplay, Bluetooth, Radio, Coffee, Laptop, HardDrive, Smartphone, Layers,
-  Pin, PinOff, Move
+  Pin, PinOff, Move, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
 import { Win11PropertiesModal } from './Win11PropertiesModal';
+import { SYSTEM_DIVISIONS, groupModulesByDivision, getDivisionForModule } from '../constants/systemDivisions';
 
 export const Win11Logo = ({ size = 18, className = "", isCristal = false }: { size?: number; className?: string; isCristal?: boolean }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`shrink-0 ${className}`}>
@@ -272,6 +273,7 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
   const [startMenuOpen, setStartMenuOpen] = useState(false);
   const [startActiveTab, setStartActiveTab] = useState<'pinned' | 'all'>('pinned');
   const [startSearch, setStartSearch] = useState('');
+  const [selectedDivisionFilter, setSelectedDivisionFilter] = useState<string>('all');
   const [actionCenterOpen, setActionCenterOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [widgetsOpen, setWidgetsOpen] = useState(false);
@@ -1382,36 +1384,99 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               </div>
 
               {/* Tabs: Pinned vs All Apps */}
-              <div className="flex items-center justify-between mb-3 px-1">
+              <div className="flex items-center justify-between mb-2 px-1">
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-bold tracking-wide ${isCristal ? 'text-white' : 'uppercase opacity-70'}`}>
                     {startActiveTab === 'pinned' ? 'Fixados' : 'Todos os Aplicativos'}
                   </span>
-                  <button
-                    onClick={() => setAddShortcutsModalOpen(true)}
-                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer ${
-                      isCristal
-                        ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-400/30'
-                        : 'bg-white/10 hover:bg-white/20 text-sky-400'
-                    }`}
-                    title="Adicionar ou gerenciar aplicativos fixados"
-                  >
-                    <Plus size={12} />
-                    <span>Adicionar</span>
-                  </button>
+                  {startActiveTab === 'pinned' && (
+                    <button
+                      onClick={() => setAddShortcutsModalOpen(true)}
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer ${
+                        isCristal
+                          ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-400/30'
+                          : 'bg-white/10 hover:bg-white/20 text-sky-400'
+                      }`}
+                      title="Adicionar ou gerenciar aplicativos fixados"
+                    >
+                      <Plus size={12} />
+                      <span>Adicionar</span>
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={() => setStartActiveTab(startActiveTab === 'pinned' ? 'all' : 'pinned')}
                   className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
                     isCristal
                       ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs'
-                      : 'text-sky-400 hover:text-sky-300'
+                      : isLight
+                        ? 'bg-slate-200/70 hover:bg-slate-200 text-slate-700'
+                        : 'text-sky-400 hover:text-sky-300'
                   }`}
                 >
-                  <span>{startActiveTab === 'pinned' ? 'Todos os aplicativos' : 'Voltar aos Fixados'}</span>
-                  <ChevronRight size={13} />
+                  {startActiveTab === 'pinned' ? (
+                    <>
+                      <span>Todos os aplicativos</span>
+                      <ChevronRight size={13} />
+                    </>
+                  ) : (
+                    <>
+                      <ChevronLeft size={13} />
+                      <span>Voltar aos Fixados</span>
+                    </>
+                  )}
                 </button>
               </div>
+
+              {/* Division Quick Filter Pills (Smooth & Delicate) */}
+              {startActiveTab === 'all' && (
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-2 mb-2 px-0.5 select-none">
+                  <button
+                    onClick={() => setSelectedDivisionFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium shrink-0 transition-all cursor-pointer ${
+                      selectedDivisionFilter === 'all'
+                        ? isCristal
+                          ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 shadow-[0_0_10px_rgba(56,189,248,0.35)] font-semibold'
+                          : isLight
+                            ? 'bg-slate-800 text-white shadow-xs font-semibold'
+                            : 'bg-white/20 text-white shadow-xs font-semibold'
+                        : isCristal
+                          ? 'bg-white/5 text-white/70 hover:bg-white/15 hover:text-white border border-white/10'
+                          : isLight
+                            ? 'bg-slate-200/60 text-slate-600 hover:bg-slate-200'
+                            : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    Todas as Divisões
+                  </button>
+                  {SYSTEM_DIVISIONS.map(div => {
+                    const DivIcon = div.icon;
+                    const isSelected = selectedDivisionFilter === div.id;
+                    return (
+                      <button
+                        key={div.id}
+                        onClick={() => setSelectedDivisionFilter(div.id)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium shrink-0 transition-all cursor-pointer ${
+                          isSelected
+                            ? isCristal
+                              ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 shadow-[0_0_10px_rgba(56,189,248,0.35)] font-semibold'
+                              : isLight
+                                ? 'bg-sky-600 text-white shadow-xs font-semibold'
+                                : 'bg-sky-600 text-white shadow-xs font-semibold'
+                            : isCristal
+                              ? 'bg-white/5 text-white/70 hover:bg-white/15 hover:text-white border border-white/10'
+                              : isLight
+                                ? 'bg-slate-200/60 text-slate-600 hover:bg-slate-200'
+                                : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <DivIcon size={12} className={isSelected ? 'text-white' : ''} style={!isSelected ? { color: div.color } : {}} />
+                        <span>{div.shortName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Apps Grid */}
               <div className="max-h-[360px] overflow-y-auto custom-scrollbar pr-1 mb-5">
@@ -1458,93 +1523,175 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                     })}
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    {ALL_AVAILABLE_MODULES.filter(m => {
-                      if (!isModuleAllowed(m.id)) return false;
-                      if (startSearch) {
-                        return m.label.toLowerCase().includes(startSearch.toLowerCase());
+                  <div className="space-y-4">
+                    {(() => {
+                      const allowed = ALL_AVAILABLE_MODULES.filter(m => {
+                        if (!isModuleAllowed(m.id)) return false;
+                        if (startSearch) {
+                          const q = startSearch.toLowerCase();
+                          const div = getDivisionForModule(m.id);
+                          return (
+                            m.label.toLowerCase().includes(q) ||
+                            m.id.toLowerCase().includes(q) ||
+                            div.name.toLowerCase().includes(q) ||
+                            div.shortName.toLowerCase().includes(q)
+                          );
+                        }
+                        return true;
+                      });
+
+                      const groups = groupModulesByDivision(allowed);
+                      const filteredGroups = selectedDivisionFilter === 'all'
+                        ? groups
+                        : groups.filter(g => g.division.id === selectedDivisionFilter);
+
+                      if (filteredGroups.length === 0) {
+                        return (
+                          <div className="text-center py-10 opacity-60 text-xs">
+                            Nenhum aplicativo encontrado para esta busca ou divisão.
+                          </div>
+                        );
                       }
-                      return true;
-                    }).map(m => {
-                      const IconComp = m.icon || LayoutDashboard;
-                      const isPinnedStart = activePinnedStart.includes(m.id);
-                      const isPinnedBar = activePinnedTaskbar.includes(m.id);
-                      const isOnDesktop = isDesktopShortcut(m.id);
 
-                      return (
-                        <div
-                          key={m.id}
-                          draggable={true}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', m.id);
-                            e.dataTransfer.effectAllowed = 'copyMove';
-                            setDraggingModuleId(m.id);
-                          }}
-                          onDragEnd={() => setDraggingModuleId(null)}
-                          onClick={() => handleLaunchModule(m.id)}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setContextMenu({ type: 'start-item', x: e.clientX, y: e.clientY, moduleId: m.id });
-                          }}
-                          className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/10 transition-all cursor-pointer text-left group"
-                          title={`${m.label} (Arraste para o Desktop ou Barra de Tarefas)`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div 
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs shrink-0"
-                              style={{ backgroundColor: accentColor }}
-                            >
-                              <IconComp size={16} />
+                      return filteredGroups.map(group => {
+                        const DivIcon = group.division.icon;
+                        return (
+                          <div key={group.division.id} className="space-y-1.5">
+                            {/* Division header - Suave e delicada */}
+                            <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all ${
+                              isCristal
+                                ? 'bg-sky-950/40 border-sky-400/25 shadow-[0_0_12px_rgba(56,189,248,0.15)]'
+                                : isLight
+                                  ? 'bg-slate-100/90 border-slate-200/80'
+                                  : 'bg-white/5 border-white/10'
+                            }`}>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div 
+                                  className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 shadow-xs"
+                                  style={{ backgroundColor: group.division.badgeBg, color: group.division.color }}
+                                >
+                                  <DivIcon size={12} />
+                                </div>
+                                <span className={`text-[11px] font-bold tracking-wide truncate ${
+                                  isCristal ? 'text-sky-200' : isLight ? 'text-slate-800' : 'text-slate-200'
+                                }`}>
+                                  {group.division.name}
+                                </span>
+                              </div>
+                              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ml-2 ${
+                                isCristal
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                                  : isLight
+                                    ? 'bg-slate-200 text-slate-700'
+                                    : 'bg-white/10 text-slate-300'
+                              }`}>
+                                {group.items.length} {group.items.length === 1 ? 'módulo' : 'módulos'}
+                              </span>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="block text-xs font-semibold truncate">{m.label}</span>
-                              <span className="block text-[10px] opacity-50 truncate">{m.category || 'Módulo GIPP'}</span>
+
+                            {/* Division Apps */}
+                            <div className="space-y-0.5">
+                              {group.items.map(m => {
+                                const IconComp = m.icon || LayoutDashboard;
+                                const isPinnedStart = activePinnedStart.includes(m.id);
+                                const isPinnedBar = activePinnedTaskbar.includes(m.id);
+                                const isOnDesktop = isDesktopShortcut(m.id);
+
+                                return (
+                                  <div
+                                    key={m.id}
+                                    draggable={true}
+                                    onDragStart={(e) => {
+                                      e.dataTransfer.setData('text/plain', m.id);
+                                      e.dataTransfer.effectAllowed = 'copyMove';
+                                      setDraggingModuleId(m.id);
+                                    }}
+                                    onDragEnd={() => setDraggingModuleId(null)}
+                                    onClick={() => handleLaunchModule(m.id)}
+                                    onContextMenu={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setContextMenu({ type: 'start-item', x: e.clientX, y: e.clientY, moduleId: m.id });
+                                    }}
+                                    className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer text-left group ${
+                                      isCristal
+                                        ? 'hover:bg-white/15'
+                                        : isLight
+                                          ? 'hover:bg-slate-200/70'
+                                          : 'hover:bg-white/10'
+                                    }`}
+                                    title={`${m.label} (${group.division.name})`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                      <div 
+                                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs shrink-0 ${
+                                          isCristal ? 'shadow-[0_0_10px_rgba(56,189,248,0.3)]' : ''
+                                        }`}
+                                        style={{ backgroundColor: isCristal ? '#0284c7' : accentColor }}
+                                      >
+                                        <IconComp size={16} />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <span className={`block text-xs font-semibold truncate ${
+                                          isCristal ? 'text-white' : isLight ? 'text-slate-800' : 'text-white'
+                                        }`}>
+                                          {m.label}
+                                        </span>
+                                        <span className={`block text-[10px] truncate ${
+                                          isCristal ? 'text-sky-200/70' : isLight ? 'text-slate-500' : 'opacity-50'
+                                        }`}>
+                                          {group.division.shortName}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Quick Pin Buttons on Hover */}
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          togglePinStart(m.id);
+                                        }}
+                                        className={`p-1 rounded hover:bg-white/20 transition-colors ${
+                                          isPinnedStart ? 'text-amber-400' : 'text-slate-400 hover:text-white'
+                                        }`}
+                                        title={isPinnedStart ? "Desafixar do Iniciar" : "Fixar no Iniciar"}
+                                      >
+                                        {isPinnedStart ? <PinOff size={13} /> : <Pin size={13} />}
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          togglePinTaskbar(m.id);
+                                        }}
+                                        className={`p-1 rounded hover:bg-white/20 transition-colors ${
+                                          isPinnedBar ? 'text-sky-400' : 'text-slate-400 hover:text-white'
+                                        }`}
+                                        title={isPinnedBar ? "Desafixar da Barra de Tarefas" : "Fixar na Barra de Tarefas"}
+                                      >
+                                        <Laptop size={13} />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleDesktopShortcut(m.id);
+                                        }}
+                                        className={`p-1 rounded hover:bg-white/20 transition-colors ${
+                                          isOnDesktop ? 'text-emerald-400' : 'text-slate-400 hover:text-white'
+                                        }`}
+                                        title={isOnDesktop ? "Remover da Área de Trabalho" : "Adicionar à Área de Trabalho"}
+                                      >
+                                        <Monitor size={13} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-
-                          {/* Quick Pin Buttons on Hover */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                togglePinStart(m.id);
-                              }}
-                              className={`p-1 rounded hover:bg-white/20 transition-colors ${
-                                isPinnedStart ? 'text-amber-400' : 'text-slate-400 hover:text-white'
-                              }`}
-                              title={isPinnedStart ? "Desafixar do Iniciar" : "Fixar no Iniciar"}
-                            >
-                              {isPinnedStart ? <PinOff size={13} /> : <Pin size={13} />}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                togglePinTaskbar(m.id);
-                              }}
-                              className={`p-1 rounded hover:bg-white/20 transition-colors ${
-                                isPinnedBar ? 'text-sky-400' : 'text-slate-400 hover:text-white'
-                              }`}
-                              title={isPinnedBar ? "Desafixar da Barra de Tarefas" : "Fixar na Barra de Tarefas"}
-                            >
-                              <Laptop size={13} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleDesktopShortcut(m.id);
-                              }}
-                              className={`p-1 rounded hover:bg-white/20 transition-colors ${
-                                isOnDesktop ? 'text-emerald-400' : 'text-slate-400 hover:text-white'
-                              }`}
-                              title={isOnDesktop ? "Remover da Área de Trabalho" : "Adicionar à Área de Trabalho"}
-                            >
-                              <Monitor size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </div>
