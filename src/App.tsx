@@ -64,6 +64,7 @@ import { DelphiFlorenceLayout } from './components/DelphiFlorenceLayout';
 import { Windows81Layout } from './components/Windows81Layout';
 import { Windows11Layout } from './components/Windows11Layout';
 import { NewGippLayout } from './components/NewGippLayout';
+import { GippCppLayout } from './components/GippCppLayout';
 import { ClipperLayout } from './components/ClipperLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
@@ -1447,6 +1448,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
     
     const getBaseThemeStyles = () => {
         if (theme === 'macos_tahoe') return "bg-[#0b0c16]";
+        if (theme === 'gipp_cpp') return "bg-[#8a8f96]";
         if (theme === 'new_gipp') return "bg-[#08151c]";
         if (theme === 'gipp_cristal') return "bg-[#06182c] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-400/30 via-[#072d52] to-[#020b17]";
         if (theme === 'win11') return "bg-[#f3f4f6] dark:bg-[#111111]";
@@ -1808,6 +1810,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const themesList = [
         { id: 'default', label: 'GIPP Padrão' }, 
+        { id: 'gipp_cpp', label: 'GIPP - C++ ⚡' },
         { id: 'new_gipp', label: 'New GIPP ⚡' },
         { id: 'gipp_cristal', label: 'GIPP -CRISTAL 💎' },
         { id: 'win11', label: 'Windows 11' },
@@ -18421,6 +18424,34 @@ const AppLayout = () => {
         );
     }
 
+    if (osTheme === 'gipp_cpp') {
+        const mMeta = getModuleMeta(view);
+        return (
+            <GippCppLayout
+                view={view}
+                setView={setView}
+                user={user}
+                db={db}
+                mMeta={mMeta}
+                isModuleAllowed={isModuleAllowed}
+                hasPermission={hasPermission}
+                access={access}
+                CurrentModule={CurrentModule}
+                currentProps={currentProps}
+                handleLogoutRequest={handleLogoutRequest}
+                setIsScreenLocked={setIsScreenLocked}
+                theme={theme}
+                setTheme={setTheme}
+                osTheme={osTheme}
+                setOsTheme={setOsTheme}
+                animBgEnabled={animBgEnabled}
+                setAnimBgEnabled={setAnimBgEnabled}
+                ALL_AVAILABLE_MODULES={ALL_AVAILABLE_MODULES}
+                addToast={addToast}
+            />
+        );
+    }
+
     if (osTheme === 'gipp_clipper') {
         const mMeta = getModuleMeta(view);
         return (
@@ -19497,6 +19528,39 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                         />
                     </div>
                     <span className="text-[9px] font-sans font-black tracking-[0.25em] uppercase text-white/30 mt-4">macOS 26 Tahoe</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (themeBg === 'gipp_cpp') {
+        return (
+            <div className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-[#8a8f96] transition-opacity duration-1000 overflow-hidden select-none"
+                 style={{
+                    backgroundImage: 'radial-gradient(ellipse at 35% 25%, rgba(255,255,255,0.45) 0%, rgba(220,225,230,0.2) 35%, rgba(110,118,128,0.5) 75%, rgba(60,65,72,0.85) 100%)'
+                 }}
+            >
+                <div className="relative flex flex-col items-center justify-center p-6 bg-[#f0f0f0] border-2 border-t-white border-l-white border-r-[#404040] border-b-[#404040] shadow-2xl rounded-xs min-w-[340px]">
+                    <div className="w-full bg-gradient-to-r from-[#005a9e] via-[#0078d7] to-[#0063b1] text-white px-3 py-1 font-bold text-xs flex items-center justify-between mb-6 shadow-xs">
+                        <span>GIPP - C++ (Win32 Enterprise)</span>
+                        <span className="font-mono text-[10px]">v10.0.0 (1.1.8689)</span>
+                    </div>
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-12 h-12 bg-gradient-to-br from-slate-200 to-slate-400 border border-slate-500 rounded-sm flex items-center justify-center shadow-md">
+                            <span className="text-xl font-black text-slate-800 tracking-tighter">C++</span>
+                        </div>
+                        <div>
+                            <h2 className="text-slate-900 font-black text-xl tracking-tight">GIPP</h2>
+                            <p className="text-slate-600 text-xs font-semibold">Gestão de Igrejas & Obreiros</p>
+                        </div>
+                    </div>
+                    <div className="w-full h-3 bg-white border border-[#7f9db9] p-0.5 mb-2 shadow-inner">
+                        <div 
+                            className="h-full bg-gradient-to-r from-[#005a9e] to-[#0078d7] transition-all ease-out"
+                            style={{ width: `${progress}%`, transitionDuration: '0.4s' }}
+                        />
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-600">Carregando módulos C++ Builder... {Math.round(progress)}%</span>
                 </div>
             </div>
         );

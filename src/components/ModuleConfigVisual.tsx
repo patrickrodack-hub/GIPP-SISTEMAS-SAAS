@@ -206,6 +206,7 @@ const ModuleConfigVisual = () => {
                     <div className="lg:col-span-5 flex flex-col space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {[
                             { id: 'default', name: 'GIPP Padrão (Moderno)', label: 'Default', desc: 'Interface moderna com cantos arredondados, gradientes e estética minimalista.' },
+                            { id: 'gipp_cpp', name: 'GIPP - C++ (Win32 & MDI Enterprise)', label: 'GIPP - C++', desc: 'Interface corporativa clássica inspirada no C++ Builder e Win32 MFC, com barra de título azul clássica, menus completos, barra de ferramentas colorida com busca rápida e parede metálica com logo 3D esculpido em alto relevo cromado.' },
                             { id: 'new_gipp', name: 'New GIPP (Studio & Teal Glass) ⚡', label: 'New GIPP', desc: 'Inspirado na interface moderna com painel flutuante em vidro escuro, janela Studio com cantos arredondados, logotipo oficial GIPP e estética esmeralda/teal.' },
                             { id: 'gipp_cristal', name: 'GIPP -CRISTAL (Aero Glass & Acrílico) 💎', label: 'Cristal', desc: 'Tema translúcido premium com superfícies de acrílico límpido, reflexos em ciano e azul safira, bordas de vidro e estética futurista de alta fidelidade.' },
                             { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
@@ -260,6 +261,7 @@ const ModuleConfigVisual = () => {
                         <div 
                           className={`w-full h-[330px] rounded-[1.5rem] overflow-hidden relative flex flex-col p-4 shadow-inner border border-slate-200/60 transition-all duration-300 ${
                             previewTheme === 'default' ? 'bg-[#0f172a]' :
+                            previewTheme === 'gipp_cpp' ? 'bg-[#8a8f96]' :
                             previewTheme === 'new_gipp' ? 'bg-[#08151c] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-teal-400/25 via-[#0a1e27] to-[#040e14]' :
                             previewTheme === 'gipp_cristal' ? 'bg-[#06182c] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-400/30 via-[#072d52] to-[#020b17]' :
                             previewTheme === 'gipp_retro' ? 'bg-[#E2E6EA]' :
@@ -273,13 +275,14 @@ const ModuleConfigVisual = () => {
                             previewTheme === 'futuristic' ? 'bg-[#03001e]' : 'bg-slate-100'
                           }`}
                           style={{
-                            backgroundImage: previewTheme === 'gipp_retro' ? 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)' : undefined,
+                            backgroundImage: previewTheme === 'gipp_cpp' ? 'radial-gradient(ellipse at 35% 25%, rgba(255,255,255,0.45) 0%, rgba(220,225,230,0.2) 35%, rgba(110,118,128,0.5) 75%, rgba(60,65,72,0.85) 100%)' : previewTheme === 'gipp_retro' ? 'radial-gradient(#8E9AA8 1.2px, transparent 1.2px)' : undefined,
                             backgroundSize: previewTheme === 'gipp_retro' ? '8px 8px' : undefined
                           }}
                         >
                             {/* Janela simulada */}
                             <div 
                               className={`w-full max-w-md mx-auto mt-6 relative flex flex-col transition-all duration-300 z-10 ${
+                                previewTheme === 'gipp_cpp' ? 'bg-[#f0f0f0] border border-[#005a9e] rounded-xs shadow-2xl text-slate-900 p-0.5' :
                                 previewTheme === 'new_gipp' ? 'bg-[#f8fafc] rounded-2xl border border-teal-500/40 p-1.5 shadow-[0_16px_40px_rgba(13,148,136,0.3)] text-slate-800' :
                                 previewTheme === 'gipp_cristal' ? 'bg-[#081a2e]/70 backdrop-blur-xl rounded-2xl border border-cyan-400/40 p-1.5 shadow-[0_12px_40px_rgba(0,210,255,0.25)] text-cyan-50' :
                                 previewTheme === 'macos_tahoe' ? 'bg-[#16171e]/95 rounded-[1.2rem] border border-white/10 p-1.5 shadow-2xl text-slate-100' :
@@ -294,7 +297,8 @@ const ModuleConfigVisual = () => {
                                 'bg-white/95 rounded-3xl border border-slate-100 p-3 shadow-xl text-slate-800'
                               }`}
                               style={{ 
-                                fontFamily: previewTheme === 'gipp_retro' ? "'Segoe UI', 'Tahoma', sans-serif" :
+                                fontFamily: previewTheme === 'gipp_cpp' ? "'Segoe UI', 'Tahoma', sans-serif" :
+                                             previewTheme === 'gipp_retro' ? "'Segoe UI', 'Tahoma', sans-serif" :
                                              previewTheme === 'win95' ? "'Tahoma', sans-serif" : 
                                              previewTheme === 'gipp_clipper' ? "'Consolas', 'Lucida Console', 'Courier New', monospace" : "inherit"
                               }}
@@ -302,6 +306,7 @@ const ModuleConfigVisual = () => {
                                 {/* Barra de título simulada */}
                                 <div 
                                   className={`flex items-center justify-between px-2 py-1 select-none ${
+                                    previewTheme === 'gipp_cpp' ? 'bg-gradient-to-r from-[#005a9e] via-[#0078d7] to-[#0063b1] text-white font-bold p-1 shadow-xs' :
                                     previewTheme === 'new_gipp' ? 'bg-gradient-to-r from-slate-900 via-[#0d222c] to-slate-900 rounded-xl p-2 border-b border-teal-500/30 text-teal-300 font-bold' :
                                     previewTheme === 'gipp_cristal' ? 'bg-gradient-to-r from-cyan-500/30 via-blue-600/30 to-cyan-500/20 backdrop-blur-md rounded-lg p-1.5 border border-cyan-400/30 text-cyan-200 font-bold shadow-xs' :
                                     previewTheme === 'macos_tahoe' ? 'bg-[#1e2029] rounded-t-xl p-2 border-b border-white/5 text-white font-bold flex-row-reverse' :
@@ -317,14 +322,21 @@ const ModuleConfigVisual = () => {
                                   }`}
                                 >
                                     <span className="text-[11px] truncate uppercase tracking-wider font-bold">
-                                        {previewTheme === 'gipp_clipper' ? '╔═ GIPP.EXE (CLIPPER 5.3) ═════════════════════════╗' : 
+                                        {previewTheme === 'gipp_cpp' ? 'COMERCIAL - Reunidos [GIPP C++]' :
+                                         previewTheme === 'gipp_clipper' ? '╔═ GIPP.EXE (CLIPPER 5.3) ═════════════════════════╗' : 
                                          previewTheme === 'new_gipp' ? '⚡ New GIPP Studio • Desktop' :
                                          previewTheme === 'gipp_cristal' ? '💎 GIPP -CRISTAL (Aero Glass & Acrílico)' :
                                          previewTheme === 'gipp_retro' ? 'FormMembros: TForm (Delphi 13 Florence)' : 'GIPP - Visual Preview'}
                                     </span>
                                     {/* Botões de controle simulados */}
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {previewTheme === 'new_gipp' ? (
+                                        {previewTheme === 'gipp_cpp' ? (
+                                            <div className="flex gap-1 text-white text-[9px] font-bold">
+                                                <span className="px-1 hover:bg-[#0063b1] select-none">-</span>
+                                                <span className="px-1 hover:bg-[#0063b1] select-none">🗖</span>
+                                                <span className="px-1 hover:bg-red-600 select-none">✕</span>
+                                            </div>
+                                        ) : previewTheme === 'new_gipp' ? (
                                             <div className="flex gap-1.5">
                                                 <span className="w-2.5 h-2.5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center font-bold text-slate-300 text-[7px] select-none">-</span>
                                                 <span className="w-2.5 h-2.5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center font-bold text-slate-300 text-[7px] select-none">□</span>
@@ -378,6 +390,7 @@ const ModuleConfigVisual = () => {
 
                                 {/* Conteúdo simulado */}
                                 <div className={`p-4 mt-1 flex flex-col space-y-3.5 ${
+                                    previewTheme === 'gipp_cpp' ? 'bg-white text-slate-800 border border-[#7f9db9]' :
                                     previewTheme === 'new_gipp' ? 'bg-white rounded-xl text-slate-800' :
                                     previewTheme === 'gipp_cristal' ? 'bg-[#040f1d]/75 backdrop-blur-md border border-cyan-500/20 text-cyan-50 rounded-xl' :
                                     previewTheme === 'macos_tahoe' ? 'bg-[#16171e] text-slate-100' :
@@ -390,13 +403,14 @@ const ModuleConfigVisual = () => {
                                     'bg-white text-slate-800'
                                 }`}>
                                     <div className="text-[11px] font-extrabold flex items-center justify-between">
-                                        <span className={previewTheme === 'gipp_retro' ? 'text-[#004E98] font-black' : previewTheme === 'gipp_cristal' ? 'text-cyan-300 font-bold' : previewTheme === 'new_gipp' ? 'text-teal-700 font-bold' : ''}>Secretaria GIPP (Demonstração)</span>
+                                        <span className={previewTheme === 'gipp_cpp' ? 'text-[#005a9e] font-bold' : previewTheme === 'gipp_retro' ? 'text-[#004E98] font-black' : previewTheme === 'gipp_cristal' ? 'text-cyan-300 font-bold' : previewTheme === 'new_gipp' ? 'text-teal-700 font-bold' : ''}>Secretaria GIPP (Demonstração)</span>
                                     </div>
                                     
                                     {/* Campo de input simulado */}
                                     <div className="flex flex-col space-y-1">
                                         <span className="text-[10px] font-bold opacity-85">Nome do Membro (TDBEdit):</span>
                                         <div className={`p-1.5 text-[10px] truncate ${
+                                            previewTheme === 'gipp_cpp' ? 'border border-[#7f9db9] bg-white text-slate-900 rounded-xs shadow-inner' :
                                             previewTheme === 'new_gipp' ? 'border border-teal-500/30 bg-teal-50/40 text-slate-800 rounded-xl' :
                                             previewTheme === 'gipp_cristal' ? 'border border-cyan-400/40 bg-cyan-950/40 text-cyan-200 rounded-xl shadow-[inset_0_1px_4px_rgba(0,210,255,0.2)]' :
                                             previewTheme === 'macos_tahoe' ? 'border border-white/10 bg-white/5 text-white rounded-lg' :
@@ -415,6 +429,7 @@ const ModuleConfigVisual = () => {
                                     {/* Botões simulados */}
                                     <div className="flex gap-2">
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
+                                            previewTheme === 'gipp_cpp' ? 'bg-[#0078d7] hover:bg-[#0063b1] border border-[#005a9e] text-white rounded-xs text-center font-bold shadow-xs' :
                                             previewTheme === 'new_gipp' ? 'bg-gradient-to-r from-teal-500 to-emerald-600 border border-teal-400/40 text-white rounded-xl text-center font-bold shadow-md shadow-teal-500/20' :
                                             previewTheme === 'gipp_cristal' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 border border-cyan-300/50 text-white rounded-xl text-center font-bold shadow-[0_0_16px_rgba(0,210,255,0.4)]' :
                                             previewTheme === 'macos_tahoe' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-400/20 text-white rounded-lg text-center shadow-md' :
@@ -429,6 +444,7 @@ const ModuleConfigVisual = () => {
                                             Gravar [F9]
                                         </div>
                                         <div className={`text-[10px] font-bold px-3 py-1.5 text-center flex-1 cursor-default select-none ${
+                                            previewTheme === 'gipp_cpp' ? 'bg-[#f0f0f0] hover:bg-[#e5e5e5] border border-[#adadad] text-slate-800 rounded-xs text-center' :
                                             previewTheme === 'new_gipp' ? 'bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-center' :
                                             previewTheme === 'gipp_cristal' ? 'bg-white/10 hover:bg-white/15 border border-cyan-400/30 text-cyan-200 rounded-xl text-center' :
                                             previewTheme === 'macos_tahoe' ? 'bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg text-center' :
