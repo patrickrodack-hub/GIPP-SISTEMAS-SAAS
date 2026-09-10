@@ -206,7 +206,7 @@ const ModuleConfigVisual = () => {
                     <div className="lg:col-span-5 flex flex-col space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {[
                             { id: 'default', name: 'GIPP Padrão (Moderno)', label: 'Default', desc: 'Interface moderna com cantos arredondados, gradientes e estética minimalista.' },
-                            { id: 'new_gipp', name: 'New GIPP (Studio & Teal Glass) ⚡', label: 'New GIPP', desc: 'Inspirado na interface moderna com painel flutuante em vidro escuro, janela Studio com cantos arredondados, mascote 3D e estética esmeralda/teal.' },
+                            { id: 'new_gipp', name: 'New GIPP (Studio & Teal Glass) ⚡', label: 'New GIPP', desc: 'Inspirado na interface moderna com painel flutuante em vidro escuro, janela Studio com cantos arredondados, logotipo oficial GIPP e estética esmeralda/teal.' },
                             { id: 'gipp_cristal', name: 'GIPP -CRISTAL (Aero Glass & Acrílico) 💎', label: 'Cristal', desc: 'Tema translúcido premium com superfícies de acrílico límpido, reflexos em ciano e azul safira, bordas de vidro e estética futurista de alta fidelidade.' },
                             { id: 'win11', name: 'Windows 11 (Fluent)', label: 'Win11', desc: 'Abordagem contemporânea com translucidez sutil e cantos super suavizados.' },
                             { id: 'win81', name: 'Windows 8.1 (Modern UI & Live Tiles)', label: 'Win8.1', desc: 'Ambiente autêntico do Windows 8.1 com Tela Iniciar em blocos dinâmicos (Live Tiles), Charms Bar lateral, cantos retos e barra de tarefas clássica.' },

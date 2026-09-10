@@ -37,127 +37,51 @@ interface NewGippLayoutProps {
   addToast?: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-// 3D Mascot inspired by the Android / Tech mascot in the reference screenshot
-const AndroidStudioMascot: React.FC<{ isWaving?: boolean }> = ({ isWaving = false }) => {
+// Official GIPP Large Elegant Typography Display (purely typographic, smooth, and imposing)
+const GippBrandingTypography: React.FC<{ onClick?: () => void }> = ({ onClick }) => {
   return (
-    <div className="relative flex flex-col items-center justify-center select-none group cursor-pointer">
-      {/* 3D Robot Figure */}
-      <div className="relative w-40 h-48 sm:w-48 sm:h-56 flex flex-col items-center justify-center filter drop-shadow-[0_20px_25px_rgba(15,35,45,0.35)] transition-transform duration-300 hover:scale-105">
-        <svg viewBox="0 0 200 240" className="w-full h-full overflow-visible">
-          <defs>
-            {/* 3D Metallic Green / Emerald Gradient */}
-            <linearGradient id="mascotBody" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#b4e478" />
-              <stop offset="35%" stopColor="#8cc84b" />
-              <stop offset="85%" stopColor="#5d9e29" />
-              <stop offset="100%" stopColor="#3d7016" />
-            </linearGradient>
+    <div 
+      onClick={onClick}
+      className="relative flex flex-col items-center justify-center select-none group cursor-pointer py-4"
+    >
+      {/* Soft Ambient Radial Backlight Glow */}
+      <div className="absolute -inset-10 bg-[radial-gradient(ellipse_at_center,rgba(20,184,166,0.25)_0%,rgba(16,185,129,0.1)_40%,transparent_70%)] pointer-events-none blur-xl opacity-75 group-hover:opacity-100 transition-opacity" />
 
-            <linearGradient id="mascotHead" x1="20%" y1="0%" x2="80%" y2="100%">
-              <stop offset="0%" stopColor="#c5ee8f" />
-              <stop offset="40%" stopColor="#96d454" />
-              <stop offset="90%" stopColor="#64a52d" />
-              <stop offset="100%" stopColor="#437b19" />
-            </linearGradient>
-
-            <linearGradient id="mascotLimb" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#9fdc5b" />
-              <stop offset="50%" stopColor="#7cb93b" />
-              <stop offset="100%" stopColor="#477a1c" />
-            </linearGradient>
-
-            <linearGradient id="mascotHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-            </linearGradient>
-
-            {/* Drop shadow filter for 3D realism */}
-            <filter id="mascotShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#1a3810" floodOpacity="0.35" />
-            </filter>
-          </defs>
-
-          {/* Antennas */}
-          <line 
-            x1="70" y1="42" x2="52" y2="16" 
-            stroke="url(#mascotLimb)" strokeWidth="7" strokeLinecap="round" 
-            className="transition-transform duration-300 group-hover:-rotate-6 origin-[70px_42px]"
-          />
-          <circle cx="52" cy="16" r="4" fill="#c5ee8f" />
-
-          <line 
-            x1="130" y1="42" x2="148" y2="16" 
-            stroke="url(#mascotLimb)" strokeWidth="7" strokeLinecap="round" 
-            className="transition-transform duration-300 group-hover:rotate-6 origin-[130px_42px]"
-          />
-          <circle cx="148" cy="16" r="4" fill="#c5ee8f" />
-
-          {/* Head (Semi-circle with 3D bevel) */}
-          <path 
-            d="M 45 78 A 55 55 0 0 1 155 78 Z" 
-            fill="url(#mascotHead)" 
-            filter="url(#mascotShadow)" 
-          />
-          {/* Head highlight for rounded 3D depth */}
-          <path 
-            d="M 52 74 A 48 48 0 0 1 148 74 Z" 
-            fill="url(#mascotHighlight)" 
-            opacity="0.6"
-          />
-
-          {/* Eyes (Glowing Soft White) */}
-          <circle cx="76" cy="52" r="5" fill="#ffffff" className="animate-pulse" />
-          <circle cx="77" cy="51" r="2" fill="#e8ffc7" />
-          
-          <circle cx="124" cy="52" r="5" fill="#ffffff" className="animate-pulse" />
-          <circle cx="125" cy="51" r="2" fill="#e8ffc7" />
-
-          {/* Left Arm */}
-          <rect 
-            x="20" y="90" width="16" height="60" rx="8" 
-            fill="url(#mascotLimb)" 
-            filter="url(#mascotShadow)" 
-          />
-
-          {/* Torso / Body */}
-          <rect 
-            x="44" y="86" width="112" height="78" rx="8" 
-            fill="url(#mascotBody)" 
-            filter="url(#mascotShadow)" 
-          />
-          {/* Subtle horizontal highlight on body */}
-          <rect 
-            x="50" y="90" width="100" height="20" rx="4" 
-            fill="url(#mascotHighlight)" 
-            opacity="0.3" 
-          />
-
-          {/* Right Arm (Waving or resting) */}
-          <rect 
-            x="164" y="90" width="16" height="60" rx="8" 
-            fill="url(#mascotLimb)" 
-            filter="url(#mascotShadow)" 
-            className={`origin-[172px_98px] transition-transform duration-500 ${isWaving ? '-rotate-45' : 'group-hover:-rotate-12'}`}
-          />
-
-          {/* Left Leg */}
-          <rect 
-            x="64" y="166" width="16" height="38" rx="8" 
-            fill="url(#mascotLimb)" 
-            filter="url(#mascotShadow)" 
-          />
-
-          {/* Right Leg */}
-          <rect 
-            x="120" y="166" width="16" height="38" rx="8" 
-            fill="url(#mascotLimb)" 
-            filter="url(#mascotShadow)" 
-          />
-        </svg>
+      {/* Main GIPP Brand Title: Big, elegant, smooth, and powerful display typography */}
+      <div className="relative flex items-baseline justify-center">
+        <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-[0.14em] uppercase font-sans transition-transform duration-500 group-hover:scale-[1.02] filter drop-shadow-[0_12px_24px_rgba(15,23,42,0.12)] dark:drop-shadow-[0_12px_30px_rgba(20,184,166,0.35)]">
+          <span className="bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-950 dark:from-white dark:via-teal-100 dark:to-emerald-200">
+            GIPP
+          </span>
+          <span className="text-teal-500 dark:text-teal-400 text-4xl sm:text-5xl md:text-6xl lg:text-7xl ml-1 font-bold">
+            .
+          </span>
+        </h1>
       </div>
 
-      {/* Soft Ground Shadow on Floor */}
-      <div className="w-36 h-4 bg-[#0a1e28]/25 rounded-full blur-md mt-1 scale-y-75 transform -translate-y-2"></div>
+      {/* Subtitle with elegant wide tracking */}
+      <div className="mt-2 text-center">
+        <p className="text-xs sm:text-sm md:text-base font-bold tracking-[0.3em] sm:tracking-[0.4em] uppercase text-slate-700 dark:text-teal-200/90 drop-shadow-sm">
+          Sistema de Gestão Eclesiástica
+        </p>
+
+        <p className="text-[10px] sm:text-[11px] font-medium tracking-[0.2em] uppercase text-slate-500 dark:text-teal-300/60 mt-1">
+          Gestão Integrada de Portais Pastorais
+        </p>
+      </div>
+
+      {/* Subtle Divider with Studio Tag */}
+      <div className="mt-3 flex items-center justify-center gap-3">
+        <div className="h-[1px] w-10 sm:w-16 bg-gradient-to-r from-transparent to-teal-500/40 dark:to-teal-400/40" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-teal-500/10 dark:bg-teal-400/10 border border-teal-500/20 text-[10px] font-mono font-bold text-teal-800 dark:text-teal-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>STUDIO EDITION • OFICIAL</span>
+        </div>
+        <div className="h-[1px] w-10 sm:w-16 bg-gradient-to-l from-transparent to-teal-500/40 dark:to-teal-400/40" />
+      </div>
+
+      {/* Soft Ground Shadow / Room reflection */}
+      <div className="w-64 sm:w-80 h-3 bg-teal-950/15 dark:bg-[#071720]/40 rounded-full blur-md mt-4 scale-y-75 pointer-events-none" />
     </div>
   );
 };
@@ -515,7 +439,7 @@ export const NewGippLayout: React.FC<NewGippLayoutProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-white tracking-wide">
-                    {isHomeView ? 'Android Studio' : mMeta.label}
+                    {isHomeView ? 'GIPP Studio' : mMeta.label}
                   </span>
                   <span className="hidden sm:inline text-[10px] text-teal-300/70 font-mono bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-500/20">
                     New GIPP
@@ -565,7 +489,7 @@ export const NewGippLayout: React.FC<NewGippLayoutProps> = ({
                   <div className="w-full md:w-64 shrink-0 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200 dark:border-teal-500/20 pb-4 md:pb-0 md:pr-6">
                     <div>
                       <h3 className="text-base font-bold text-slate-800 dark:text-teal-200 tracking-tight mb-4">
-                        Android Studio
+                        GIPP Studio
                       </h3>
 
                       <nav className="space-y-1 text-xs">
@@ -603,11 +527,13 @@ export const NewGippLayout: React.FC<NewGippLayoutProps> = ({
                     </div>
                   </div>
 
-                  {/* Center Column: 3D Mascot & Action Buttons (Signature image composition!) */}
+                  {/* Center Column: Large Elegant GIPP Typography & Action Buttons */}
                   <div className="flex-1 flex flex-col items-center justify-center p-4">
                     
-                    {/* The 3D Mascot */}
-                    <AndroidStudioMascot isWaving={true} />
+                    {/* Large Elegant GIPP Display Typography */}
+                    <GippBrandingTypography 
+                      onClick={() => addToast?.('GIPP - Gestão Integrada de Portais Pastorais', 'info')} 
+                    />
 
                     {/* Action Buttons Section */}
                     <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-sm">
