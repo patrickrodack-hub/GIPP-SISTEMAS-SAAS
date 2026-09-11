@@ -6,7 +6,7 @@ import {
   RotateCcw, Sliders, ExternalLink,
   ShieldCheck, ArrowLeft, Terminal
 } from 'lucide-react';
-import { SYSTEM_DIVISIONS, groupModulesByDivision, getDivisionForModule } from '../constants/systemDivisions';
+import { SYSTEM_DIVISIONS, groupModulesByDivision, getDivisionForModule, getAvailableDivisions } from '../constants/systemDivisions';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
 
 interface NewGippLayoutProps {
@@ -130,10 +130,10 @@ export const NewGippLayout: React.FC<NewGippLayoutProps> = ({
 
   // Group by division
   const divisionGroups = useMemo(() => {
-    const grouped = groupModulesByDivision(filteredModules);
+    const grouped = groupModulesByDivision(filteredModules, user);
     if (selectedDivision === 'all') return grouped;
     return grouped.filter(g => g.division.id === selectedDivision);
-  }, [filteredModules, selectedDivision]);
+  }, [filteredModules, selectedDivision, user]);
 
   // Handle module click
   const handleSelectModule = (modId: string) => {
@@ -318,7 +318,7 @@ export const NewGippLayout: React.FC<NewGippLayoutProps> = ({
                 >
                   Todas
                 </button>
-                {SYSTEM_DIVISIONS.map(div => (
+                {getAvailableDivisions(user).map(div => (
                   <button
                     key={div.id}
                     onClick={() => setSelectedDivision(div.id)}

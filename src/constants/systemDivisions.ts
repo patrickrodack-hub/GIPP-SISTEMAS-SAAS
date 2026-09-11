@@ -11,8 +11,19 @@ import {
   Sparkles,
   Settings,
   FolderKanban,
+  Code,
   LucideIcon
 } from 'lucide-react';
+
+export const isDeveloperUser = (user: any): boolean => {
+  if (!user) return false;
+  return Boolean(
+    user.id === 'dev' ||
+    user.nivel === 'dev' ||
+    (typeof user.usuario === 'string' && user.usuario.toUpperCase() === 'PATRICK PESSOA') ||
+    (typeof user.nome === 'string' && user.nome.toUpperCase() === 'PATRICK PESSOA')
+  );
+};
 
 export interface SystemDivisionDef {
   id: string;
@@ -124,9 +135,30 @@ export const SYSTEM_DIVISIONS: SystemDivisionDef[] = [
     icon: Settings,
     color: '#94a3b8',
     badgeBg: 'rgba(148, 163, 184, 0.15)',
-    modules: ['config_sistema', 'config_visual', 'config_backup', 'auditoria', 'lixeira', 'desenvolvedor', 'suporte_dev', 'marketing_social']
+    modules: ['config_sistema', 'config_visual', 'config_backup', 'auditoria', 'lixeira', 'suporte_dev']
+  },
+  {
+    id: 'desenvolvedor',
+    name: 'Desenvolvedor & Engenharia (Master)',
+    shortName: 'Desenvolvedor',
+    description: 'Painel Master SaaS, telemetria e ferramentas exclusivas do desenvolvedor',
+    icon: Code,
+    color: '#10b981',
+    badgeBg: 'rgba(16, 185, 129, 0.15)',
+    modules: ['desenvolvedor', 'marketing_social']
   }
 ];
+
+/**
+ * Returns divisions available to the current user.
+ * The 'desenvolvedor' division is strictly exclusive to the developer.
+ */
+export function getAvailableDivisions(user?: any): SystemDivisionDef[] {
+  if (isDeveloperUser(user)) {
+    return SYSTEM_DIVISIONS;
+  }
+  return SYSTEM_DIVISIONS.filter(div => div.id !== 'desenvolvedor');
+}
 
 // Fallback division for any module that is not explicitly in the list above
 export const FALLBACK_DIVISION: SystemDivisionDef = {
@@ -158,11 +190,20 @@ export interface BaseModuleItem {
 /**
  * Groups an array of module items by their system division.
  * Returns an array of division groups with their matching modules.
+ * Strictly prevents the 'desenvolvedor' division and modules from appearing for non-developers.
  */
-export function groupModulesByDivision<T extends BaseModuleItem>(modules: T[]): Array<{ division: SystemDivisionDef; items: T[] }> {
+export function groupModulesByDivision<T extends BaseModuleItem>(
+  modules: T[],
+  user?: any
+): Array<{ division: SystemDivisionDef; items: T[] }> {
+  const isDev = isDeveloperUser(user);
+  const activeDivisions = isDev 
+    ? SYSTEM_DIVISIONS 
+    : SYSTEM_DIVISIONS.filter(div => div.id !== 'desenvolvedor');
+
   const map = new Map<string, { division: SystemDivisionDef; items: T[] }>();
 
-  SYSTEM_DIVISIONS.forEach(div => {
+  activeDivisions.forEach(div => {
     map.set(div.id, { division: div, items: [] });
   });
 
@@ -172,7 +213,16 @@ export function groupModulesByDivision<T extends BaseModuleItem>(modules: T[]): 
   };
 
   modules.forEach(mod => {
+    // If not developer, strictly discard 'desenvolvedor'
+    if (!isDev && mod.id === 'desenvolvedor') {
+      return;
+    }
+
     const div = getDivisionForModule(mod.id);
+    if (!isDev && div.id === 'desenvolvedor') {
+      return;
+    }
+
     if (map.has(div.id)) {
       map.get(div.id)!.items.push(mod);
     } else {
@@ -182,7 +232,7 @@ export function groupModulesByDivision<T extends BaseModuleItem>(modules: T[]): 
 
   const result: Array<{ division: SystemDivisionDef; items: T[] }> = [];
 
-  SYSTEM_DIVISIONS.forEach(div => {
+  activeDivisions.forEach(div => {
     const group = map.get(div.id);
     if (group && group.items.length > 0) {
       result.push(group);

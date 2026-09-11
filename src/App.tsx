@@ -17615,8 +17615,16 @@ const AppLayout = () => {
         }
     };
 
+    const isDeveloper = Boolean(
+        user?.id === 'dev' || 
+        user?.nivel === 'dev' || 
+        (typeof user?.usuario === 'string' && user.usuario.toUpperCase() === 'PATRICK PESSOA') ||
+        (typeof user?.nome === 'string' && user.nome.toUpperCase() === 'PATRICK PESSOA')
+    );
+
     const ALL_AVAILABLE_MODULES = [
         { id: 'dashboard', icon: LayoutDashboard, label: "Visão Geral", color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        ...(isDeveloper ? [{ id: 'desenvolvedor', icon: Code, label: "Painel Master SaaS (Dev)", color: 'text-emerald-500', bg: 'bg-emerald-500/10' }] : []),
         { id: 'curso_teologia', icon: BookOpen, label: "Estudo de Teologia Básico GIPP", color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         { id: 'formacao_obreiros', icon: Award, label: "Formação de Obreiros GIPP", color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
         { id: 'gestao_cursos', icon: GraduationCap, label: "EAD Cursos de Capacitação", color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
@@ -17687,7 +17695,8 @@ const AppLayout = () => {
         if (moduleId === 'interativo' || moduleId === 'portal_interativo') {
             targetModuleId = 'access_interativo';
         }
-        if (user?.id === 'dev') return true; 
+        if (moduleId === 'desenvolvedor') return isDeveloper;
+        if (user?.id === 'dev' || isDeveloper) return true; 
         const plano = (db.igreja?.plano || 'avancado').toLowerCase();
 
         const defaultPlanos: Record<string, string[]> = {
@@ -17709,6 +17718,10 @@ const AppLayout = () => {
     };
 
     const isModuleAllowed = (moduleId: string) => {
+        if (moduleId === 'desenvolvedor') {
+            return isDeveloper;
+        }
+
         const mapping: Record<string, string> = {
             'cad_membro': 'access_membros',
             'visitantes': 'access_visitantes',
@@ -17759,7 +17772,7 @@ const AppLayout = () => {
             'registro_software': 'access_registro_software',
             'marketing_social': 'master',
             'suporte_dev': 'master',
-            'desenvolvedor': 'master'
+            'desenvolvedor': 'dev_only'
         };
 
         const reqAccess = mapping[moduleId] || 'public';
@@ -18317,7 +18330,7 @@ const AppLayout = () => {
         'amparo_legal': { component: ModuleAmparoLegal, access: 'access_amparo_legal' },
         'registro_software': { component: ModuleRegistroSoftware, access: 'access_registro_software' },
         'portal_pastor': { component: ModulePortalPastor, access: 'public' },
-        'desenvolvedor': { component: ModuleDesenvolvedor, access: 'master' },
+        'desenvolvedor': { component: ModuleDesenvolvedor, access: 'dev_only' },
         'config_visual': { component: ModuleConfigVisual, access: 'access_config_visual' },
         'config_sistema': { component: ModuleConfiguracoesGerais, access: 'access_config_sistema' },
         'mensagens_lote': { component: ModuleMensagensLote, access: 'access_sec_agenda' },
@@ -18325,7 +18338,18 @@ const AppLayout = () => {
         'marketing_social': { component: ModuleMarketingSocial, access: 'master' },
         'suporte_dev': { component: ModuleDevSuporte, access: 'master' }
     };
-    const CurrentModule = MODULE_REGISTRY[view]?.component || DashboardModule;
+    const isDeveloperBlocked = view === 'desenvolvedor' && !isDeveloper;
+
+    useEffect(() => {
+        if (isDeveloperBlocked) {
+            setView('dashboard');
+            addToast('Acesso restrito exclusivamente ao desenvolvedor do sistema.', 'error');
+        }
+    }, [isDeveloperBlocked]);
+
+    const CurrentModule = isDeveloperBlocked
+        ? DashboardModule
+        : (MODULE_REGISTRY[view]?.component || DashboardModule);
     const currentProps = MODULE_REGISTRY[view]?.props || {};
     const access = MODULE_REGISTRY[view]?.access || 'public';
 
@@ -21577,7 +21601,15 @@ export default function App() {
   const closeModal = () => { setModalOpen(false); setEditingItem(null); setFormData({}); };
   const hasPermission = (perm) => { 
       if (!user) return false; 
-      if (user.id === 'dev' || user.nivel === 'master' || user.nivel === 'dev') return true;
+      const isDev = Boolean(
+          user.id === 'dev' || 
+          user.nivel === 'dev' || 
+          (typeof user.usuario === 'string' && user.usuario.toUpperCase() === 'PATRICK PESSOA') ||
+          (typeof user.nome === 'string' && user.nome.toUpperCase() === 'PATRICK PESSOA')
+      );
+      if (perm === 'dev_only') return isDev;
+      if (isDev) return true; 
+      if (user.nivel === 'master' || user.nivel === 'dev') return true;
       if (user.usuario?.toLowerCase() === 'mary') return true;
       if (perm === 'public' || user.nivel === 'master') return true; 
       

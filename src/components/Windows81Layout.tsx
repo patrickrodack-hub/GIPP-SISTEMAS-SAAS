@@ -599,10 +599,10 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
       div.name.toLowerCase().includes(q) ||
       div.shortName.toLowerCase().includes(q)
     );
-  }).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+  }).sort((a, b) => String(a?.label || '').localeCompare(String(b?.label || ''), 'pt-BR'));
 
   // Group apps by system division
-  const divisionGroupedApps = groupModulesByDivision(allAppsFiltered);
+  const divisionGroupedApps = groupModulesByDivision(allAppsFiltered, user);
   const filteredDivisionGroups = selectedWin8Division === 'all'
     ? divisionGroupedApps
     : divisionGroupedApps.filter(g => g.division.id === selectedWin8Division);

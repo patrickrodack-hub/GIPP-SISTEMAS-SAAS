@@ -146,6 +146,21 @@ window.getComputedStyle = function (element: Element, pseudoElt?: string | null)
 
   return new Proxy(style, {
     get(target, prop) {
+      if (prop === Symbol.toPrimitive) {
+        return (hint?: string) => {
+          if (hint === 'number') return 0;
+          return '[object CSSStyleDeclaration]';
+        };
+      }
+      if (prop === 'toString') {
+        return () => '[object CSSStyleDeclaration]';
+      }
+      if (prop === 'valueOf') {
+        return () => '[object CSSStyleDeclaration]';
+      }
+      if (prop === Symbol.toStringTag) {
+        return 'CSSStyleDeclaration';
+      }
       if (prop === 'getPropertyValue') {
         return function(propertyName: string) {
           try {
@@ -169,7 +184,11 @@ window.getComputedStyle = function (element: Element, pseudoElt?: string | null)
         }
         return value;
       } catch {
-        return (target as any)[prop];
+        try {
+          return (target as any)[prop];
+        } catch {
+          return undefined;
+        }
       }
     }
   }) as any;

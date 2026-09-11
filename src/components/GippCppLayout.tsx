@@ -13,6 +13,7 @@ import {
   MessageCircle, ShieldCheck, History, Info
 } from 'lucide-react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
+import { isDeveloperUser } from '../constants/systemDivisions';
 
 interface GippCppLayoutProps {
   view: string;
@@ -413,8 +414,11 @@ export const GippCppLayout: React.FC<GippCppLayoutProps> = ({
     setIsWindowMinimized(false);
   }, [view]);
 
+  // System developer identification check
+  const isDeveloper = isDeveloperUser(user);
+
   // Menu structure organized by official module divisions:
-  // "Início", "Administrativo", "Financeiro", "Secretaria", "Ministérios", "Ensino", "Mídia & Artes", "Google Workspace", "Pastoral & IA", "Sistema", "Janelas", "Ajuda"
+  // "Início", "Administrativo", "Financeiro", "Secretaria", "Ministérios", "Ensino", "Mídia & Artes", "Google Workspace", "Pastoral & IA", "Sistema", "Desenvolvedor" (dev only), "Janelas", "Ajuda"
   const menus = [
     {
       id: 'inicio',
@@ -561,12 +565,21 @@ export const GippCppLayout: React.FC<GippCppLayoutProps> = ({
         { label: 'Backup Geral & Restauração da Base', icon: Database, action: () => setView('config_backup') },
         { label: 'Auditoria de Usuários & Segurança', icon: ShieldCheck, action: () => setView('auditoria') },
         { label: 'Lixeira Virtual de Registros', icon: Trash2, action: () => setView('lixeira') },
-        { label: 'Ferramentas de Desenvolvedor (C++)', icon: Code, action: () => setView('desenvolvedor') },
         { label: 'Amparo Legal & Estatuto da Igreja', icon: Shield, action: () => setView('amparo_legal') },
         { label: 'Registro de Software & Direitos', icon: Award, action: () => setView('registro_software') },
         { label: 'Suporte Técnico Especializado GIPP', icon: HelpCircle, action: () => setView('suporte_dev') }
       ]
     },
+    ...(isDeveloper ? [{
+      id: 'desenvolvedor',
+      label: 'Desenvolvedor',
+      items: [
+        { header: 'Engenharia C++ & Painel Master SaaS' },
+        { label: 'Painel Master do Desenvolvedor (C++)', shortcut: 'Ctrl+Shift+D', icon: Code, action: () => setView('desenvolvedor') },
+        { label: 'Central de Suporte do Desenvolvedor', icon: HelpCircle, action: () => setView('suporte_dev') },
+        { label: 'Marketing, Licenciamento & Divulgação', icon: Award, action: () => setView('marketing_social') }
+      ]
+    }] : []),
     {
       id: 'janelas',
       label: 'Janelas',

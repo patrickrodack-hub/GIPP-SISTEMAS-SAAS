@@ -1540,7 +1540,7 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                         return true;
                       });
 
-                      const groups = groupModulesByDivision(allowed);
+                      const groups = groupModulesByDivision(allowed, user);
                       const filteredGroups = selectedDivisionFilter === 'all'
                         ? groups
                         : groups.filter(g => g.division.id === selectedDivisionFilter);
