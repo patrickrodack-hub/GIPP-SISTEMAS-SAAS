@@ -20,7 +20,7 @@ import {
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
-  LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
+  LayoutTemplate, MousePointerClick, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, Instagram, Facebook,
   Fingerprint, FileSignature, ShieldAlert, CheckCircle2, Scale
@@ -1194,7 +1194,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                     const canvas = canvasRef.current;
                     const ctx = canvas.getContext('2d');
                     if (ctx) {
-                        const img = new Image();
+                        const img = new window.Image();
                         img.crossOrigin = "anonymous";
                         img.onload = () => {
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1214,7 +1214,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                const img = new Image();
+                const img = new window.Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4634,7 +4634,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                             id: 'estudio_midia',
                             nome: 'Estúdio GIPP Mídia & Encartes',
                             categoria: 'Liderança & IA Pastoral',
-                            icon: Image,
+                            icon: ImageIcon,
                             pitchVendas: 'Criação de artes para cultos, banners para Instagram e avisos de reuniões. Ferramenta de design simplificada diretamente dentro do sistema sem depender do Canva.',
                             recursos: [
                                 'Modelos prontos de Banners para Culto de Jovens, Ensino e Aniversários',

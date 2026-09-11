@@ -23,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowLeft, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -66,6 +66,7 @@ import { Windows11Layout } from './components/Windows11Layout';
 import { NewGippLayout } from './components/NewGippLayout';
 import { GippCppLayout } from './components/GippCppLayout';
 import { ClipperLayout } from './components/ClipperLayout';
+import { PortalCyberLayout } from './components/PortalCyberLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS } from './constants/portalPermissions';
@@ -1457,6 +1458,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         if (theme === 'gipp_retro') return "bg-[#E2E6EA]";
         if (theme === 'gipp_clipper') return "bg-[#0000aa]";
         if (theme === 'premium_black') return "bg-[#050505]";
+        if (theme === 'portal_cyber_dark') return "bg-[#091115] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#123844] via-[#0D191F] to-[#070D10]";
         if (theme === 'linux') return "bg-[#1f0b1a]";
         if (theme === 'futuristic') return "bg-[#03001e]";
         if (isLightTheme) {
@@ -1479,7 +1481,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         </div>
     );
 
-    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic' || osTheme === 'linux' || theme === 'linux';
+    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic' || osTheme === 'linux' || theme === 'linux' || osTheme === 'portal_cyber_dark' || theme === 'portal_cyber_dark';
 
     return (
         <div className={`absolute inset-0 overflow-hidden ${papelParede ? '' : getBaseThemeStyles()}`}>
@@ -1819,6 +1821,7 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
         { id: 'gipp_retro', label: 'GIPP RETRO (Delphi 13) ⚡' },
         { id: 'win95', label: 'Windows 95' },
         { id: 'macos_tahoe', label: 'macOS 26 Tahoe ' },
+        { id: 'portal_cyber_dark', label: 'Cyber Faith (Portal Membro) ⚡📱' },
         { id: 'linux', label: 'Linux Ubuntu' },
         { id: 'premium_black', label: 'Premium Black' },
         { id: 'futuristic', label: 'GIPP Sci-Fi' }
@@ -11662,7 +11665,7 @@ const PortalPerfil = ({ user, db, setView }) => {
 
 // --- PORTAL DO MEMBRO (AUTOATENDIMENTO) ---
 const PortalHome = ({ user, db, setView }) => {
-    const { notifications, clearAllNotifications } = useContext(ChurchContext);
+    const { notifications, clearAllNotifications, setOsTheme } = useContext(ChurchContext);
     const hojeObj = new Date();
     const hoje = hojeObj.toISOString().split('T')[0];
     const currentMonthStr = hojeObj.toISOString().slice(0, 7);
@@ -12055,6 +12058,34 @@ const PortalHome = ({ user, db, setView }) => {
     return (
         <div className="space-y-4 sm:space-y-6 animate-entrance pb-12">
             
+            {/* BANNER ATIVAR NOVO TEMA CYBER FAITH (APP GAMIFICADO) */}
+            <div className="rounded-3xl bg-gradient-to-r from-[#0C1A20] via-[#102731] to-[#0C1A20] border border-cyan-400/40 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_4px_25px_rgba(56,225,237,0.15)] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="flex items-center gap-3.5 relative z-10 w-full md:w-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black shadow-[0_0_15px_rgba(56,225,237,0.4)] shrink-0 group-hover:scale-105 transition-transform">
+                        <Zap size={24} className="fill-current" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[10px] font-black tracking-wider text-cyan-300 uppercase">Novo Tema do Portal ⚡📱</span>
+                            <span className="text-[9px] px-2 py-0.2 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold">Cyber Faith</span>
+                        </div>
+                        <h3 className="text-sm sm:text-base font-black text-white">Visual Gamificado com Alvo Diário & Pódio 3D</h3>
+                        <p className="text-xs text-slate-300">Layout escuro atlético ciano neon com MyCredits, micro-ondas estatísticas e classificação de membros.</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setOsTheme('portal_cyber_dark');
+                    }}
+                    className="w-full md:w-auto py-3 px-6 rounded-2xl bg-[#38E1ED] hover:bg-[#58e7f2] active:scale-95 text-[#08151A] font-black text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(56,225,237,0.35)] transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2"
+                >
+                    <Smartphone size={16} />
+                    Ativar Tema Cyber Faith
+                </button>
+            </div>
+
             {/* HERO COM STATUS DO PERFIL (RESPONSIVO E COMPACTO) */}
             <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-xl relative overflow-hidden border border-slate-800 p-4 sm:p-6 md:p-7 flex flex-col md:flex-row items-center gap-4 sm:gap-6 group">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full blur-[100px] opacity-30 -mr-20 -mt-20 pointer-events-none transition-all duration-1000 group-hover:opacity-50"></div>
@@ -16315,11 +16346,11 @@ const WebPushNotificationTrigger = () => {
 };
 
 const MemberPortalLayout = () => {
-    const { view, setView, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme } = useContext(ChurchContext);
+    const { view, setView, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, setOsTheme, callGeminiAI } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-    const isThemeDark = osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux' || osTheme === 'gipp_cristal';
+    const isThemeDark = osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux' || osTheme === 'gipp_cristal' || osTheme === 'portal_cyber_dark';
 
     const handleVerificarPagamento = async () => {
         setVerificandoPix(true);
@@ -16396,6 +16427,9 @@ const MemberPortalLayout = () => {
     }
 
     const getHeaderStyles = () => {
+        if (osTheme === 'portal_cyber_dark') {
+            return "bg-[#09151B]/90 border-b border-cyan-400/30 text-white backdrop-blur-xl shadow-[0_4px_25px_rgba(56,225,237,0.15)]";
+        }
         if (osTheme === 'gipp_cristal') {
             return "bg-sky-500/20 border-b border-white/30 text-white backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,180,255,0.2)]";
         }
@@ -16409,6 +16443,9 @@ const MemberPortalLayout = () => {
     };
 
     const getFooterStyles = () => {
+        if (osTheme === 'portal_cyber_dark') {
+            return "bg-[#09151B]/95 border-t border-cyan-400/30 text-white/90 backdrop-blur-xl shadow-[0_-4px_25px_rgba(56,225,237,0.15)]";
+        }
         if (osTheme === 'gipp_cristal') {
             return "bg-sky-500/20 border-t border-white/30 text-white/90 backdrop-blur-2xl shadow-[0_-4px_20px_rgba(0,180,255,0.2)]";
         }
@@ -16422,6 +16459,9 @@ const MemberPortalLayout = () => {
     };
 
     const getBottomSheetStyles = () => {
+        if (osTheme === 'portal_cyber_dark') {
+            return "bg-[#09151B]/95 text-white border-t border-cyan-400/30 backdrop-blur-xl shadow-[0_-4px_25px_rgba(56,225,237,0.15)]";
+        }
         if (osTheme === 'gipp_cristal') {
             return "bg-sky-950/80 text-white border-t border-white/25 backdrop-blur-2xl";
         }
@@ -16654,6 +16694,19 @@ const MemberPortalLayout = () => {
 
     const isInterativoMode = view === 'portal_interativo';
 
+    // Se o usuário selecionou o tema exclusivo Cyber Faith e está na tela inicial do portal, renderiza o App completo
+    if (osTheme === 'portal_cyber_dark' && (view === 'portal_home' || view === 'portal_cyber_layout')) {
+        return (
+            <PortalCyberLayout
+                user={user}
+                db={db}
+                setView={setView}
+                onExitTheme={() => setOsTheme('default')}
+                callGeminiAI={callGeminiAI}
+            />
+        );
+    }
+
     return (
         <div className="flex flex-col md:flex-row w-full overflow-hidden relative font-sans text-slate-900" style={{ height: '100dvh' }}>
             <div className="absolute inset-0 z-0 pointer-events-none">
@@ -16748,6 +16801,27 @@ const MemberPortalLayout = () => {
                     : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-3 sm:p-5 md:p-8 pb-20 md:pb-8"} 
             >
                 <div className={isInterativoMode ? "w-full h-full" : "max-w-[1800px] mx-auto"}>
+                    {/* Botão de retorno ao Cyber Faith App quando navegando em páginas internas */}
+                    {osTheme === 'portal_cyber_dark' && view !== 'portal_home' && (
+                        <div className="mb-4 p-3 sm:p-4 rounded-2xl bg-[#09151B]/95 border border-cyan-400/40 flex items-center justify-between shadow-[0_0_20px_rgba(56,225,237,0.15)] text-white relative z-30">
+                            <div className="flex items-center gap-3">
+                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#38e1ed]" />
+                                <div>
+                                    <span className="text-xs font-black text-cyan-300 uppercase tracking-wider block">Tema Cyber Faith Ativo ⚡</span>
+                                    <span className="text-[11px] text-slate-300 hidden sm:inline">Você está navegando em um módulo interno do portal.</span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setView('portal_home')}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-cyan-400/25 active:scale-95 shrink-0"
+                            >
+                                <ArrowLeft size={16} />
+                                Voltar ao App Cyber Faith
+                            </button>
+                        </div>
+                    )}
+
                     {/* Desktop Header Panel */}
                     {!isInterativoMode && (
                         <header className="hidden md:flex justify-between items-center pb-3 border-b border-slate-200/40 mb-4 shrink-0 relative z-20">

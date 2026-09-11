@@ -137,7 +137,7 @@ export function preprocessImage(
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Falha ao ler o ficheiro físico."));
     reader.onload = (event) => {
-      const img = new Image();
+      const img = typeof window !== 'undefined' && window.Image ? new window.Image() : new Image();
       img.onerror = () => reject(new Error("Falha ao criar o elemento de imagem."));
       img.onload = () => {
         let width = img.width;
