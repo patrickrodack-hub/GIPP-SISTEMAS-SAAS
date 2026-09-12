@@ -1183,7 +1183,18 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         {id: 7, label: 'Relatórios Gerenciais', icon: FileBarChart},
         {id: 8, label: 'Boletos DDA (CNPJ)', icon: Landmark}
     ];
-    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (
+        <button 
+            onClick={() => setTab(item.id)} 
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-bold text-sm whitespace-nowrap cursor-pointer border ${
+                tab === item.id 
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+        >
+            <item.icon size={16}/> {item.label}
+        </button>
+    );
     const StatCard = ({ title, value, sub = undefined, icon: Icon, color, active = undefined }: { title: any; value: any; sub?: any; icon: any; color: any; active?: any }) => (<div className={`glass-card p-6 rounded-3xl relative overflow-hidden group ${active ? 'ring-2 ring-indigo-500 transform scale-[1.02]' : ''}`}><div className={`absolute -right-4 -top-4 text-${color}-100 opacity-20 transform scale-150`}><Icon size={100}/></div><div className="relative z-10"><div className={`w-12 h-12 rounded-2xl bg-${color}-100 text-${color}-600 flex items-center justify-center mb-4`}><Icon size={24}/></div><h3 className="text-3xl font-black text-slate-800 mb-1">{value}</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>{sub && <p className={`text-xs font-bold text-${color}-600`}>{sub}</p>}</div></div>);
     const handleBaixarDespesa = (item) => { 
         setConfirmDialog({
@@ -1250,7 +1261,7 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                  </div>
             </div>
             
-            <div className="glass-modern p-2 rounded-[2rem] flex overflow-x-auto custom-scrollbar gap-2 border border-white/50 shrink-0">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl flex overflow-x-auto custom-scrollbar gap-2 border border-slate-200/80 dark:border-slate-800 shrink-0">
                 {menuItems.map(item => <TabButton key={item.id} item={item} />)}
             </div>
 

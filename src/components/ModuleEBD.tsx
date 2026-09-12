@@ -1195,7 +1195,18 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
     }, [db.ebd?.alunos, db.membros, congregacaoFilter]);
 
     const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}, {id: 7, label: 'Escala de Professores', icon: Calendar}, {id: 8, label: 'Google Classroom', icon: Globe}, {id: 6, label: 'Área do Professor', icon: GraduationCap}];
-    const TabButton: any = ({ item }) => (<button onClick={() => setTab(item.id)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all font-bold text-sm whitespace-nowrap ${tab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}`}><item.icon size={18}/> {item.label}</button>);
+    const TabButton: any = ({ item }) => (
+        <button 
+            onClick={() => setTab(item.id)} 
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-bold text-sm whitespace-nowrap cursor-pointer border ${
+                tab === item.id 
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+        >
+            <item.icon size={16}/> {item.label}
+        </button>
+    );
 
     useEffect(() => {
         if (tab === 6 && !profSelectedTurmaId && turmasFiltradas.length > 0) {
@@ -1459,7 +1470,7 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
 
             {!isProfessorOnly && (
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="glass-modern p-2 rounded-[2rem] flex overflow-x-auto custom-scrollbar gap-2 border border-white/50 w-full md:w-auto">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl flex overflow-x-auto custom-scrollbar gap-2 border border-slate-200/80 dark:border-slate-800 w-full md:w-auto">
                         {menuItems.map(item => <TabButton key={item.id} item={item} />)}
                     </div>
                     {tab === 1 && (

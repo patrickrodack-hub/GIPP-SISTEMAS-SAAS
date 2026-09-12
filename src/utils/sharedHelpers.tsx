@@ -174,18 +174,44 @@ export const playNotificationSound = () => {
     } catch {}
 };
 
-export const Button = ({ children, onClick, variant = 'primary', className = '', ...props }: { children: React.ReactNode, onClick?: (e: any) => void, variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'ghost', className?: string, [x: string]: any }) => { 
-    const variants = { 
-        primary: "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 border-0 hover:-translate-y-1 hover:scale-105 bg-[length:200%_auto] hover:bg-right transition-all duration-500", 
-        secondary: "bg-white/80 backdrop-blur-md text-slate-700 border-white hover:bg-white hover:border-indigo-200 shadow-sm border hover:shadow-md hover:-translate-y-0.5", 
-        danger: "bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 border-0 hover:-translate-y-1 hover:scale-105", 
-        success: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 border-0 hover:-translate-y-1 hover:scale-105", 
-        ghost: "bg-transparent text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50 border-transparent hover:backdrop-blur-sm" 
+export const Button = ({ 
+    children, 
+    onClick, 
+    variant = 'primary', 
+    size = 'md',
+    className = '', 
+    disabled,
+    ...props 
+}: { 
+    children: React.ReactNode; 
+    onClick?: (e: any) => void; 
+    variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'ghost' | 'outline'; 
+    size?: 'sm' | 'md' | 'lg';
+    className?: string; 
+    disabled?: boolean;
+    [x: string]: any; 
+}) => { 
+    const sizeClasses = {
+        sm: "px-3 py-1.5 text-xs rounded-lg gap-1.5",
+        md: "px-4 py-2.5 text-sm rounded-xl gap-2",
+        lg: "px-5 py-3 text-base rounded-xl gap-2.5 font-extrabold"
+    };
+
+    const variantClasses = { 
+        primary: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow border border-indigo-600/30 active:scale-[0.98]", 
+        secondary: "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-[0.98]", 
+        danger: "bg-rose-600 hover:bg-rose-700 text-white shadow-sm hover:shadow border border-rose-600/30 active:scale-[0.98]", 
+        success: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow border border-emerald-600/30 active:scale-[0.98]", 
+        warning: "bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow border border-amber-600/30 active:scale-[0.98]",
+        ghost: "bg-transparent text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-transparent active:scale-[0.98]",
+        outline: "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 active:scale-[0.98]"
     }; 
+
     return (
         <button 
-            className={`relative overflow-hidden px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 ${variants[variant]} ${className}`} 
+            className={`inline-flex items-center justify-center font-bold transition-all duration-150 select-none whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${sizeClasses[size] || sizeClasses.md} ${variantClasses[variant] || variantClasses.primary} ${className}`} 
             onClick={onClick} 
+            disabled={disabled}
             {...props}
         >
             {children}
@@ -193,14 +219,42 @@ export const Button = ({ children, onClick, variant = 'primary', className = '',
     ); 
 };
 
-export const FormInput = ({ label, value, onChange, type = "text", required = false, className="", placeholder="", preserveCase = false, ...props }: { label: any; value: any; onChange: any; type?: string; required?: boolean; className?: string; placeholder?: string; preserveCase?: boolean; [key: string]: any }) => {
+export const FormInput = ({ 
+    label, 
+    value, 
+    onChange, 
+    type = "text", 
+    required = false, 
+    className = "", 
+    placeholder = "", 
+    preserveCase = false, 
+    error = "",
+    helperText = "",
+    ...props 
+}: { 
+    label?: any; 
+    value: any; 
+    onChange: any; 
+    type?: string; 
+    required?: boolean; 
+    className?: string; 
+    placeholder?: string; 
+    preserveCase?: boolean; 
+    error?: string;
+    helperText?: string;
+    [key: string]: any; 
+}) => {
     const safeVal = (typeof value === 'object' && value !== null) ? (value.value || value.label || '') : (value || '');
     return ( 
-        <div className={`mb-6 group ${className}`}>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label} {required && <span className="text-rose-500">*</span>}</label>
+        <div className={`mb-4 group ${className}`}>
+            {label && (
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 ml-0.5 transition-colors group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400">
+                    {label} {required && <span className="text-rose-500 font-bold">*</span>}
+                </label>
+            )}
             <input 
                 type={type} 
-                className={`input-futuristic w-full rounded-2xl p-4 text-sm shadow-sm text-slate-700 placeholder:text-slate-400 backdrop-blur-sm ${!preserveCase && type !== 'password' && type !== 'email' ? 'uppercase' : 'normal-case'}`} 
+                className={`w-full bg-slate-50 dark:bg-slate-800/80 border ${error ? 'border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-600 focus:ring-indigo-500/20'} rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${!preserveCase && type !== 'password' && type !== 'email' ? 'uppercase' : 'normal-case'}`} 
                 value={safeVal} 
                 onChange={e => {
                     let val = e.target.value;
@@ -213,20 +267,50 @@ export const FormInput = ({ label, value, onChange, type = "text", required = fa
                 placeholder={placeholder} 
                 {...props}
             />
+            {error ? (
+                <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 mt-1 ml-0.5">{error}</p>
+            ) : helperText ? (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 ml-0.5">{helperText}</p>
+            ) : null}
         </div> 
     );
 };
 
-export const FormSelect = ({ label, value, onChange, options, className="", ...props }: { label: any; value: any; onChange: any; options: any[]; className?: string; [key: string]: any }) => {
+export const FormSelect = ({ 
+    label, 
+    value, 
+    onChange, 
+    options, 
+    required = false,
+    className = "", 
+    error = "",
+    helperText = "",
+    ...props 
+}: { 
+    label?: any; 
+    value: any; 
+    onChange: any; 
+    options: any[]; 
+    required?: boolean;
+    className?: string; 
+    error?: string;
+    helperText?: string;
+    [key: string]: any; 
+}) => {
     const safeVal = (typeof value === 'object' && value !== null) ? (value.value || '') : (value || '');
     return ( 
-        <div className={`mb-6 group ${className}`}>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 ml-1 transition-colors group-focus-within:text-indigo-600">{label}</label>
+        <div className={`mb-4 group ${className}`}>
+            {label && (
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 ml-0.5 transition-colors group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400">
+                    {label} {required && <span className="text-rose-500 font-bold">*</span>}
+                </label>
+            )}
             <div className="relative">
                 <select 
-                    className="input-futuristic w-full rounded-2xl p-4 text-sm bg-white/50 appearance-none cursor-pointer text-slate-700 shadow-sm pr-10 backdrop-blur-sm" 
+                    className={`w-full bg-slate-50 dark:bg-slate-800/80 border ${error ? 'border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-600 focus:ring-indigo-500/20'} rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 transition-all duration-150 appearance-none cursor-pointer pr-10`} 
                     value={safeVal} 
                     onChange={e => onChange(e.target.value)} 
+                    required={required}
                     {...props}
                 >
                     <option value="">Selecione...</option>
@@ -238,8 +322,13 @@ export const FormSelect = ({ label, value, onChange, options, className="", ...p
                         return <option key={idx} value={val}>{lab}</option>;
                     })}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 group-hover:text-indigo-500 transition-colors"><ChevronDown size={18} /></div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors"><ChevronDown size={18} /></div>
             </div>
+            {error ? (
+                <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 mt-1 ml-0.5">{error}</p>
+            ) : helperText ? (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 ml-0.5">{helperText}</p>
+            ) : null}
         </div> 
     );
 };

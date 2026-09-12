@@ -197,10 +197,10 @@ const ModuleMembros = memo(() => {
             </div>
             <div className="flex-1 overflow-hidden">
                 <GenericTable title="Listagem de Membros" type="membro" data={membrosFiltrados} columns={cols} customActions={(item) => (
-                    <div className="flex gap-2">
-                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2.5 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100 bg-white cursor-pointer" title="Carteirinha"><FileBadge size={18}/></button>
-                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('rel_ficha_membro'); setPreviewOpen(true); }} className="p-2.5 text-amber-500 hover:bg-amber-550 hover:text-white rounded-xl transition-all shadow-sm border border-amber-100 bg-white cursor-pointer" title="Ficha do Membro"><FileText size={18}/></button>
-                        <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2.5 text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100 bg-white cursor-pointer" title="Escala de Compromissos"><ClipboardList size={18}/></button>
+                    <div className="flex gap-1.5">
+                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-indigo-300 cursor-pointer" title="Carteirinha"><FileBadge size={16}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('rel_ficha_membro'); setPreviewOpen(true); }} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-amber-300 cursor-pointer" title="Ficha do Membro"><FileText size={16}/></button>
+                        <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-blue-300 cursor-pointer" title="Escala de Compromissos"><ClipboardList size={16}/></button>
                         
                         {item.procedencia === 'outra_igreja' && item.carta_recomendacao && (
                             <button onClick={() => {
@@ -210,14 +210,14 @@ const ModuleMembros = memo(() => {
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);
-                            }} className="p-2.5 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100 bg-white cursor-pointer" title="Baixar Carta de Recomendação"><ScrollText size={18}/></button>
+                            }} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-rose-300 cursor-pointer" title="Baixar Carta de Recomendação"><ScrollText size={16}/></button>
                         )}
 
-                        <button onClick={() => handleExportVouchers(item)} className="p-2.5 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white cursor-pointer" title="Exportar Comprovantes (.ZIP)"><Download size={18}/></button>
+                        <button onClick={() => handleExportVouchers(item)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-emerald-300 cursor-pointer" title="Exportar Comprovantes (.ZIP)"><Download size={16}/></button>
                         <button onClick={() => {
                             const text = encodeURIComponent(`Olá ${item.nome}, a Paz do Senhor!`);
                             window.open(`https://wa.me/55${item.telefone?.replace(/\D/g,'')}?text=${text}`, '_blank');
-                        }} className="p-2.5 text-emerald-500 hover:bg-emerald-555 hover:text-white rounded-xl transition-all shadow-sm border border-emerald-100 bg-white cursor-pointer" title="WhatsApp"><MessageCircle size={18}/></button>
+                        }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-emerald-300 cursor-pointer" title="WhatsApp"><MessageCircle size={16}/></button>
                     </div>
                 )} />
             </div>

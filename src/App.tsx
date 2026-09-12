@@ -22,7 +22,7 @@ import {
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
-  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
+  Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car, ShoppingBag,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
 } from 'lucide-react';
 
@@ -139,6 +139,8 @@ const ModuleAmparoLegal = lazy(() => import('./components/ModuleAmparoLegal'));
 const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSoftware'));
 const ModuleMensagensLote = lazy(() => import('./components/ModuleMensagensLote'));
 const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin'));
+const ModuleLojaVirtualAdmin = lazy(() => import('./components/ModuleLojaVirtualAdmin'));
+const PortalLojaMembro = lazy(() => import('./components/PortalLojaMembro'));
 import { LockScreenModal } from './components/LockScreenModal';
 import { MobileBottomDock } from './components/MobileBottomDock';
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
@@ -1937,7 +1939,7 @@ export const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [], secretaria_contatos: [], portal_acessos: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [], secretaria_contatos: [], portal_acessos: [], loja_produtos: [], loja_pedidos: [], loja_movimentacoes: [] };
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
@@ -11047,9 +11049,9 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
         const plano = (db.igreja?.plano || 'avancado').toLowerCase(); // Padrão é avançado se não tiver plano
 
         const defaultPlanos = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'loja_virtual'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'loja_virtual'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'loja_virtual']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -11219,7 +11221,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {checkPlan('sobre') && <MenuItem id="sobre" icon={Info} label="Sobre o Sistema" />}
                 </div>
 
-                {(hasPermission('master') || hasPermission('access_membros') || hasPermission('access_visitantes') || hasPermission('access_igreja') || hasPermission('access_patrimonio') || hasPermission('access_celulas') || hasPermission('access_frotas')) && (
+                {(hasPermission('master') || hasPermission('access_membros') || hasPermission('access_visitantes') || hasPermission('access_igreja') || hasPermission('access_patrimonio') || hasPermission('access_celulas') || hasPermission('access_frotas') || hasPermission('access_loja_virtual')) && (
                     <div>
                         <MenuGroup label="Administrativo" />
                         {hasPermission('access_membros') && checkPlan('cad_membro') && <MenuItem id="cad_membro" icon={Users} label="Membros (Rol)" />}
@@ -11227,6 +11229,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                         {hasPermission('access_igreja') && checkPlan('cad_igreja') && <MenuItem id="cad_igreja" icon={Building2} label="Igreja Sede & Filiais" />}
                         {hasPermission('access_patrimonio') && checkPlan('cad_patrimonio') && <MenuItem id="cad_patrimonio" icon={Package} label="Patrimônio Total" />}
                         {hasPermission('access_frotas') && checkPlan('controle_frotas') && <MenuItem id="controle_frotas" icon={Car} label="Controle de Frotas" />}
+                        {hasPermission('access_loja_virtual') && checkPlan('loja_virtual') && <MenuItem id="loja_virtual" icon={ShoppingBag} label="Loja Virtual & Retaguarda" />}
                         {hasPermission('access_celulas') && checkPlan('cad_celula') && <MenuItem id="cad_celula" icon={Share2} label="Células e Grupos" />}
                         {hasPermission('master') && checkPlan('cad_usuario') && <MenuItem id="cad_usuario" icon={Shield} label="Usuários e Níveis" />}
                         {hasPermission('access_membros') && checkPlan('acessos_portal') && <MenuItem id="acessos_portal" icon={Key} label="Acessos do Portal" />}
@@ -13108,6 +13111,11 @@ const PortalHome = ({ user, db, setView }) => {
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Video size={20} className="sm:w-6 sm:h-6"/></div>
                     <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Google Meet</span>
                     <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Videoconferências</span>
+                </button>
+                <button onClick={() => setView('portal_loja')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group cursor-pointer">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><ShoppingBag size={20} className="sm:w-6 sm:h-6"/></div>
+                    <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Loja da Igreja</span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Produtos & Livros</span>
                 </button>
                 {isProfessor && (
                     <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1 cursor-pointer">
@@ -17422,6 +17430,7 @@ const MemberPortalLayout = () => {
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
+        { id: 'portal_loja', icon: ShoppingBag, label: 'Loja Virtual', hoverColor: 'group-hover:text-amber-500' },
         { id: 'portal_interativo', icon: Gamepad2, label: 'Interatividade', hoverColor: 'group-hover:text-indigo-400' },
     ];
 
@@ -17437,7 +17446,7 @@ const MemberPortalLayout = () => {
     ];
 
     const filteredBaseNavItems = baseNavItems.filter(item => {
-        if (item.id === 'portal_home' || item.id === 'portal_interativo') return true;
+        if (item.id === 'portal_home' || item.id === 'portal_interativo' || item.id === 'portal_loja') return true;
         if (item.id === 'portal_professor_ebd') {
             return isProfessor;
         }
@@ -17513,6 +17522,11 @@ const MemberPortalLayout = () => {
             );
             case 'portal_cursos': return <PortalCursos user={user} />;
             case 'portal_informativo': return <ModuleBoletim />;
+            case 'portal_loja': return (
+                <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin text-amber-600 mx-auto" size={32}/></div>}>
+                    <PortalLojaMembro user={user} db={db} setView={setView} />
+                </Suspense>
+            );
             case 'portal_interativo': return <ModuleInterativo onClose={() => setView('portal_home')} />;
             default: return <PortalHome user={user} db={db} setView={setView} />;
         }
@@ -18500,6 +18514,7 @@ const AppLayout = () => {
         { id: 'cad_igreja', icon: Building2, label: "Igreja Sede & Filiais", color: 'text-amber-500', bg: 'bg-amber-500/10' },
         { id: 'cad_patrimonio', icon: Package, label: "Patrimônio & Inventário", color: 'text-teal-500', bg: 'bg-teal-500/10' },
         { id: 'controle_frotas', icon: Car, label: "Controle de Frotas", color: 'text-blue-600', bg: 'bg-blue-600/10' },
+        { id: 'loja_virtual', icon: ShoppingBag, label: "Loja Virtual (Comercial)", color: 'text-amber-600', bg: 'bg-amber-600/10' },
         { id: 'cad_celula', icon: Share2, label: "Células e Grupos", color: 'text-purple-500', bg: 'bg-purple-500/10' },
         { id: 'cad_departamento', icon: Briefcase, label: "Ministérios", color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'ministerio_louvor', icon: Music, label: "Ministério de Louvor", color: 'text-violet-500', bg: 'bg-violet-500/10' },
@@ -18566,9 +18581,9 @@ const AppLayout = () => {
         const plano = (db.igreja?.plano || 'avancado').toLowerCase();
 
         const defaultPlanos: Record<string, string[]> = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -18594,6 +18609,7 @@ const AppLayout = () => {
             'cad_igreja': 'access_igreja',
             'cad_patrimonio': 'access_patrimonio',
             'controle_frotas': 'access_frotas',
+            'loja_virtual': 'access_loja_virtual',
             'cad_celula': 'access_celulas',
             'cad_usuario': 'master',
             'acessos_portal': 'access_acessos_portal',
@@ -19147,6 +19163,7 @@ const AppLayout = () => {
         'cad_igreja': { component: ModuleIgreja, access: 'access_igreja' },
         'cad_patrimonio': { component: ModulePatrimonio, access: 'access_patrimonio' },
         'controle_frotas': { component: ModuleFrotas, access: 'access_frotas' },
+        'loja_virtual': { component: ModuleLojaVirtualAdmin, access: 'access_loja_virtual' },
         'cad_membro': { component: ModuleMembros, access: 'access_membros' },
         'cad_celula': { component: ModuleCelulas, access: 'access_celulas' },
         'visitantes': { component: ModuleVisitantes, access: 'access_visitantes' },
@@ -21940,7 +21957,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos', 'loja_produtos', 'loja_pedidos', 'loja_movimentacoes'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -22507,7 +22524,7 @@ export default function App() {
               if (financialPerms.includes(perm)) return true;
           }
           if (role === 'ADMINISTRADOR') {
-              const adminPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_docs_editor', 'access_sheets_editor', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+              const adminPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_loja_virtual', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_docs_editor', 'access_sheets_editor', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_carnes', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (adminPerms.includes(perm)) return true;
           }
           if (role === 'ADVOGADO') {

@@ -1,6 +1,95 @@
 @import "tailwindcss";
 
 /* ==========================================================================
+   GIPP UNIFIED DESIGN SYSTEM (Formulários, Botões, Menus e Telas)
+   ========================================================================== */
+
+@layer components {
+  /* --- INPUTS & FORMULÁRIOS UNIFICADOS --- */
+  .app-label {
+    @apply block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 ml-0.5;
+  }
+  .app-input,
+  .app-select,
+  .app-textarea {
+    @apply w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .app-textarea {
+    @apply resize-y min-h-[90px];
+  }
+
+  /* --- BOTÕES UNIFICADOS --- */
+  .app-btn {
+    @apply inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 text-sm rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none whitespace-nowrap;
+  }
+  .app-btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+  .app-btn-lg {
+    @apply px-5 py-3 text-base rounded-xl font-extrabold;
+  }
+  .app-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 text-sm rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow border border-indigo-600/30;
+  }
+  .app-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 text-sm rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none whitespace-nowrap bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700;
+  }
+  .app-btn-success {
+    @apply inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 text-sm rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow border border-emerald-600/30;
+  }
+  .app-btn-danger {
+    @apply inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 text-sm rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none whitespace-nowrap bg-rose-600 hover:bg-rose-700 text-white shadow-sm hover:shadow border border-rose-600/30;
+  }
+  .app-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 text-sm rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none whitespace-nowrap bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-transparent;
+  }
+
+  /* --- ABAS / MENUS UNIFICADOS --- */
+  .app-tabs-container {
+    @apply flex items-center gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-x-auto;
+  }
+  .app-tab-btn {
+    @apply flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap cursor-pointer;
+  }
+  .app-tab-active {
+    @apply flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap cursor-pointer bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/60 dark:border-slate-700/60;
+  }
+  .app-tab-inactive {
+    @apply flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50;
+  }
+
+  /* --- CARTÕES & MODAIS UNIFICADOS --- */
+  .app-card {
+    @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden;
+  }
+  .app-card-header {
+    @apply px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/60;
+  }
+  .app-card-body {
+    @apply p-5;
+  }
+  .app-card-footer {
+    @apply px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/60 flex items-center justify-end gap-2.5;
+  }
+
+  .app-modal-overlay {
+    @apply fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto;
+  }
+  .app-modal-container {
+    @apply relative w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden;
+  }
+  .app-modal-header {
+    @apply px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/70;
+  }
+  .app-modal-body {
+    @apply p-6 max-h-[75vh] overflow-y-auto space-y-4;
+  }
+  .app-modal-footer {
+    @apply px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70 flex items-center justify-end gap-3;
+  }
+}
+
+/* ==========================================================================
    GIPP DESIGN SYSTEM & UI STANDARDIZATION
    ========================================================================== */
 

@@ -1750,12 +1750,12 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             {/* ========================================== */}
             {/* BARRA DE NAVEGAÇÃO POR ABAS COM ROLAGEM    */}
             {/* ========================================== */}
-            <div className="relative flex items-center bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-3xl border border-slate-200/80 dark:border-slate-800">
+            <div className="relative flex items-center bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                 {/* Botão de Rolar para a Esquerda */}
                 <button
                     type="button"
                     onClick={() => scrollTabs('left')}
-                    className="shrink-0 p-2 mr-1 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-xs transition-all hover:scale-105 active:scale-95 z-10 flex items-center justify-center cursor-pointer"
+                    className="shrink-0 p-2 mr-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-xs transition-all active:scale-95 z-10 flex items-center justify-center cursor-pointer"
                     title="Rolar abas para a esquerda"
                     aria-label="Rolar abas para a esquerda"
                 >
@@ -1818,9 +1818,9 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                                         setSelectedLicao(null);
                                         e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                                     }}
-                                    className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${
                                         isActive
-                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-600/20'
+                                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                                     }`}
                                 >
@@ -1836,7 +1836,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                 <button
                     type="button"
                     onClick={() => scrollTabs('right')}
-                    className="shrink-0 p-2 ml-1 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-xs transition-all hover:scale-105 active:scale-95 z-10 flex items-center justify-center cursor-pointer"
+                    className="shrink-0 p-2 ml-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-xs transition-all active:scale-95 z-10 flex items-center justify-center cursor-pointer"
                     title="Rolar abas para a direita"
                     aria-label="Rolar abas para a direita"
                 >

@@ -1060,66 +1060,66 @@ const ModuleConfiguracoesGerais = () => {
             </div>
 
             {/* TAB SELECT MENU */}
-            <div className="bg-white/90 dark:bg-slate-950/40 backdrop-blur border border-slate-200/60 dark:border-slate-800 p-1.5 rounded-2xl flex flex-wrap gap-1 shadow-sm shrink-0">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl flex flex-wrap gap-1.5 border border-slate-200/80 dark:border-slate-800 shrink-0">
                 <button 
                     onClick={() => setActiveTab('global')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'global' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'global' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Building2 size={13}/> Sede & Igreja
+                    <Building2 size={14}/> Sede & Igreja
                 </button>
                 <button 
                     onClick={() => setActiveTab('google')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'google' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'google' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Globe size={13}/> Integrações Google
+                    <Globe size={14}/> Integrações Google
                 </button>
                 <button 
                     onClick={() => setActiveTab('visual')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'visual' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'visual' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Palette size={13}/> Personalização Visual
+                    <Palette size={14}/> Personalização Visual
                 </button>
                 <button 
                     onClick={() => setActiveTab('backup')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'backup' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'backup' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Database size={13}/> Backups & Nuvem
+                    <Database size={14}/> Backups & Nuvem
                 </button>
                 <button 
                     onClick={() => setActiveTab('portal')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'portal' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'portal' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <ShieldCheck size={13}/> Portal & Permissões
+                    <ShieldCheck size={14}/> Portal & Permissões
                 </button>
                 <button 
                     onClick={() => setActiveTab('notificacoes')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'notificacoes' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'notificacoes' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Bell size={13}/> Avisos Push
+                    <Bell size={14}/> Avisos Push
                 </button>
                 <button 
                     onClick={() => setActiveTab('performance')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'performance' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'performance' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <RefreshCw size={13}/> Aceleração
+                    <RefreshCw size={14}/> Aceleração
                 </button>
                 <button 
                     onClick={() => setActiveTab('auditoria')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'auditoria' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'auditoria' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <FileText size={13}/> Auditorias
+                    <FileText size={14}/> Auditorias
                 </button>
                 <button 
                     onClick={() => setActiveTab('impressora')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'impressora' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'impressora' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Printer size={13}/> Impressão
+                    <Printer size={14}/> Impressão
                 </button>
                 <button 
                     onClick={() => setActiveTab('suporte')}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black tracking-wider uppercase transition-all border ${activeTab === 'suporte' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-850'}`}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${activeTab === 'suporte' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
-                    <Headset size={13}/> Suporte Dev
+                    <Headset size={14}/> Suporte Dev
                 </button>
             </div>
 

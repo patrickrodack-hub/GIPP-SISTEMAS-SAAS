@@ -524,12 +524,37 @@ const ModuleSecretariaIntegrada = () => {
                 </div>
             </div>
             
-            <div className="flex justify-start bg-white/50 p-1.5 rounded-xl w-fit">
-                <button onClick={()=>setTab('contatos')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='contatos'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Agenda de Contatos</button>
-                <button onClick={()=>setTab('agenda')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='agenda'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Agenda</button>
-                <button onClick={()=>setTab('tarefas')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='tarefas'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Tarefas & Kanban</button>
-                <button onClick={()=>setTab('whatsapp')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='whatsapp'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Mensagens & Templates</button>
-                <button onClick={()=>setTab('liturgia')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab==='liturgia'?'bg-indigo-600 text-white shadow':'text-slate-500 hover:bg-white'}`}>Roteiros & Liturgias</button>
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto custom-scrollbar shrink-0 w-full sm:w-fit">
+                <button 
+                    onClick={()=>setTab('contatos')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='contatos' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <BookOpen size={15} /> Agenda de Contatos
+                </button>
+                <button 
+                    onClick={()=>setTab('agenda')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='agenda' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <Calendar size={15} /> Agenda Geral
+                </button>
+                <button 
+                    onClick={()=>setTab('tarefas')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='tarefas' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <CheckSquare size={15} /> Tarefas & Kanban
+                </button>
+                <button 
+                    onClick={()=>setTab('whatsapp')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='whatsapp' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <MessageCircle size={15} /> Mensagens & Templates
+                </button>
+                <button 
+                    onClick={()=>setTab('liturgia')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='liturgia' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <ScrollText size={15} /> Roteiros & Liturgias
+                </button>
             </div>
             
             <div className="flex-1 overflow-hidden">

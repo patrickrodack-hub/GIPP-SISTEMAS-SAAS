@@ -55,7 +55,7 @@ export const SYSTEM_DIVISIONS: SystemDivisionDef[] = [
     icon: Users,
     color: '#818cf8',
     badgeBg: 'rgba(129, 140, 248, 0.15)',
-    modules: ['cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal']
+    modules: ['cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'loja_virtual']
   },
   {
     id: 'financeiro',
