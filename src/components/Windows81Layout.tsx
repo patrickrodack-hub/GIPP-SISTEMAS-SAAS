@@ -551,6 +551,7 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
         { id: 'cad_membro', size: 'medium', bg: 'bg-[#2b5797]', live: true },
         { id: 'visitantes', size: 'medium', bg: 'bg-[#b91d47]', live: false },
         { id: 'cad_igreja', size: 'wide', bg: 'bg-[#00a300]', live: false },
+        { id: 'loja_virtual', size: 'medium', bg: 'bg-[#d83b01]', live: true },
         { id: 'cad_patrimonio', size: 'medium', bg: 'bg-[#00aba9]', live: false },
         { id: 'controle_frotas', size: 'medium', bg: 'bg-[#1e7145]', live: false }
       ]
@@ -580,6 +581,8 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
       modules: [
         { id: 'assistente_ai', size: 'wide', bg: 'bg-[#5c2d91]', live: true },
         { id: 'rede_social', size: 'medium', bg: 'bg-[#d13438]', live: false },
+        { id: 'carteirinha_studio', size: 'medium', bg: 'bg-[#008272]', live: false },
+        { id: 'qr_checkin', size: 'medium', bg: 'bg-[#107c41]', live: false },
         { id: 'mensagens_lote', size: 'medium', bg: 'bg-[#008272]', live: false },
         { id: 'config_sistema', size: 'medium', bg: 'bg-[#464646]', live: false },
         { id: 'config_visual', size: 'medium', bg: 'bg-[#a4373a]', live: false }

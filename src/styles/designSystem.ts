@@ -55,7 +55,7 @@ export const DS = {
 
     // MODAIS
     modal: {
-        backdrop: "fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto",
+        backdrop: "fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto",
         container: "relative w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150",
         header: "px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/70",
         title: "text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5",

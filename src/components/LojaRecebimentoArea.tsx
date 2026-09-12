@@ -312,7 +312,52 @@ export default function LojaRecebimentoArea({
                     </strong>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    {/* Botão Rápido Contextual de Avanço de Etapa */}
+                    {ped.status_pagamento !== 'pago' && ped.status_entrega !== 'cancelado' && (
+                      <button
+                        type="button"
+                        onClick={() => onQuickUpdateStatus(ped.id, undefined, 'pago')}
+                        title="Confirmar que o pagamento foi recebido"
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                      >
+                        <DollarSign size={13} /> Confirmar Pagto
+                      </button>
+                    )}
+
+                    {ped.status_pagamento === 'pago' && ped.status_entrega === 'novo' && (
+                      <button
+                        type="button"
+                        onClick={() => onQuickUpdateStatus(ped.id, 'separacao')}
+                        title="Iniciar separação física dos produtos"
+                        className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                      >
+                        <Package size={13} /> Iniciar Separação
+                      </button>
+                    )}
+
+                    {ped.status_entrega === 'separacao' && (
+                      <button
+                        type="button"
+                        onClick={() => onQuickUpdateStatus(ped.id, 'pronto_retirada')}
+                        title="Marcar como pronto para retirada pelo membro"
+                        className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                      >
+                        <CheckCircle2 size={13} /> Pronto p/ Retirada
+                      </button>
+                    )}
+
+                    {ped.status_entrega === 'pronto_retirada' && (
+                      <button
+                        type="button"
+                        onClick={() => onQuickUpdateStatus(ped.id, 'entregue')}
+                        title="Confirmar entrega do pedido ao membro"
+                        className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                      >
+                        <Check size={13} /> Concluir Entrega
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => handleWhatsApp(ped)}
@@ -325,9 +370,9 @@ export default function LojaRecebimentoArea({
                     <button
                       type="button"
                       onClick={() => onOpenTratamento(ped)}
-                      className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-none px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <ClipboardCheck size={15} /> Tratar & Fazer Separação
+                      <ClipboardCheck size={15} /> Tratar Pedido
                     </button>
                   </div>
                 </div>

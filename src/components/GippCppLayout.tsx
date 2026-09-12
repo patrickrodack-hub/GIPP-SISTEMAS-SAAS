@@ -450,6 +450,7 @@ export const GippCppLayout: React.FC<GippCppLayoutProps> = ({
         { header: 'Patrimônio & Estrutura' },
         { label: 'Patrimônio & Inventário', shortcut: 'F5', icon: Package, action: () => setView('cad_patrimonio') },
         { label: 'Controle de Frotas & Veículos', icon: Car, action: () => setView('controle_frotas') },
+        { label: 'Loja Virtual & Comercial Eclesiástico', icon: ShoppingBag, action: () => setView('loja_virtual') },
         { label: 'Igreja Sede & Congregações', icon: Building2, action: () => setView('cad_igreja') },
         { label: 'Usuários & Permissões do Sistema', icon: Key, action: () => setView('cad_usuario') }
       ]

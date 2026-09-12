@@ -301,10 +301,10 @@ export default function LojaTratamentoModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-[9999] bg-black/75 flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white dark:bg-slate-900 w-full max-w-4xl max-h-[92vh] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden">
         {/* TOPO / HEADER */}
-        <div className="p-5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/40">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-sm">
               <Package size={22} />

@@ -19401,6 +19401,7 @@ const AppLayout = () => {
         const dockApps = [
             { id: 'dashboard', label: 'Finder', icon: LayoutDashboard, color: 'from-blue-400 to-blue-600' },
             { id: 'google_meet', label: 'Meet', icon: Video, color: 'from-emerald-400 to-teal-600' },
+            { id: 'loja_virtual', label: 'Loja', icon: ShoppingBag, color: 'from-amber-500 to-orange-600' },
             { id: 'curso_teologia', label: 'Universidade', icon: BookOpen, color: 'from-teal-400 to-emerald-600' },
             { id: 'formacao_obreiros', label: 'Obreiros', icon: GraduationCap, color: 'from-emerald-500 to-teal-700' },
             { id: 'secretaria_ebd', label: 'EBD', icon: GraduationCap, color: 'from-violet-400 to-indigo-600' },
@@ -22589,15 +22590,15 @@ export default function App() {
       if (user.funcao_administrativa) {
           const role = user.funcao_administrativa.toUpperCase();
           if (role === 'PASTOR PRESIDENTE' || role === 'PASTOR AUXILIAR') {
-              const pastorPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas'];
+              const pastorPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 'access_loja_virtual'];
               if (pastorPerms.includes(perm)) return true;
           }
           if (role === 'SECRETARIO') {
-              const secPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+              const secPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_loja_virtual'];
               if (secPerms.includes(perm)) return true;
           }
           if (role === 'TESOUREIRO' || role === 'CONTADOR') {
-              const financialPerms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_sec_relatorios', 'access_manual'];
+              const financialPerms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_sec_relatorios', 'access_manual', 'access_loja_virtual'];
               if (financialPerms.includes(perm)) return true;
           }
           if (role === 'ADMINISTRADOR') {

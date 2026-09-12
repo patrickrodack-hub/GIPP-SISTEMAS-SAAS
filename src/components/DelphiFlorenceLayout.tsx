@@ -8,7 +8,7 @@ import {
   QrCode, BookOpenText, DollarSign, ArrowUpCircle, ArrowDownCircle, Briefcase,
   History, ShieldCheck, Newspaper, Award, Calendar, FolderTree, Check,
   Gamepad2, Music, Video, Heart, Globe, Baby, Car, Package, Share2, HeartHandshake, Book, MessageCircle, Badge,
-  CheckSquare, Activity, FileCheck, ImagePlus, UserCheck
+  CheckSquare, Activity, FileCheck, ImagePlus, UserCheck, ShoppingBag
 } from 'lucide-react';
 import {
   GoogleGLogo,
@@ -355,6 +355,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
         { label: 'Células & Pequenos Grupos', shortcut: '', icon: Home, action: () => setView('cad_celula') },
         { label: 'Patrimônio & Bens Tombados', shortcut: '', icon: Package, action: () => setView('cad_patrimonio') },
         { label: 'Controle de Frotas & Veículos', shortcut: '', icon: Car, action: () => setView('controle_frotas') },
+        { label: 'Loja Virtual & Retaguarda Comercial', shortcut: '', icon: ShoppingBag, action: () => setView('loja_virtual') },
         { label: 'Departamentos & Ministérios Gerais', shortcut: '', icon: FolderTree, action: () => setView('cad_departamento') },
         { type: 'separator' },
         { label: 'Ministério de Louvor & Músicos', shortcut: '', icon: Music, action: () => setView('ministerio_louvor') },
@@ -559,6 +560,7 @@ export const DelphiFlorenceLayout: React.FC<DelphiFlorenceLayoutProps> = ({
       { id: 'cad_celula', label: 'Células', icon: Home },
       { id: 'cad_patrimonio', label: 'Patrimônio', icon: Package },
       { id: 'controle_frotas', label: 'Frotas', icon: Car },
+      { id: 'loja_virtual', label: 'Loja Virtual', icon: ShoppingBag },
       { id: 'cad_departamento', label: 'Departamentos', icon: FolderTree },
       { id: 'ministerio_louvor', label: 'Louvor', icon: Music },
       { id: 'ministerio_midia', label: 'Mídia', icon: Video },

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
-  ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, ArrowRight, 
+  ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, ArrowRight, ArrowLeft,
   Store, ShieldCheck, Clock, QrCode, Copy, Check, ChevronRight, 
   Tag, Filter, Heart, MessageCircle, AlertCircle, Printer, X, Sparkles,
   Package, Bell, Truck, CheckSquare, ChevronDown, ChevronUp, MapPin, User, Info
@@ -383,7 +383,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-amber-700 to-indigo-900 text-white p-6 md:p-8 shadow-md">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
-            <div className="inline-flex items-center gap-1.5 bg-amber-500/30 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider text-amber-200 border border-amber-400/30">
+            <div className="inline-flex items-center gap-1.5 bg-amber-700 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider text-amber-100 border border-amber-500">
               <Sparkles size={13} /> Loja Oficial da Congregação
             </div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight">
@@ -559,7 +559,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
-                        <span className="bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                        <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm">
                           {prod.categoria}
                         </span>
                         {prod.destaque && (
@@ -575,7 +575,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
                             ? 'bg-rose-600 text-white'
                             : prod.estoque_atual <= 3
                             ? 'bg-amber-500 text-white'
-                            : 'bg-emerald-600/90 text-white backdrop-blur-md'
+                            : 'bg-emerald-600 text-white'
                         }`}>
                           {isOutOfStock ? 'Esgotado' : `${prod.estoque_atual} un. em estoque`}
                         </span>
@@ -756,7 +756,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
 
       {/* DRAWER / MODAL DA SACOLA DE COMPRAS */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-[9999] bg-black/70 flex justify-end">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
             {/* Topo da Sacola */}
             <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
@@ -868,314 +868,330 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
         </div>
       )}
 
-      {/* MODAL: FECHAMENTO DO PEDIDO (CHECKOUT) - AMPLO, LIVRE DE LIMITAÇÕES E RESPONSIVO */}
+      {/* TELA DE FECHAMENTO DO PEDIDO (CHECKOUT) - TOTALMENTE SÓLIDA, LIVRE DE TRANSPARÊNCIAS E LIMITAÇÕES */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
-            {/* Topo do Checkout */}
-            <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-[10000] bg-slate-100 dark:bg-slate-950 overflow-y-auto flex flex-col">
+          {/* Topo Sólido do Checkout */}
+          <header className="sticky top-0 z-30 bg-amber-600 text-white px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-md border-b border-amber-700">
+            <div className="flex items-center gap-3">
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsCheckoutOpen(false);
+                  setIsCartOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                <ArrowLeft size={16} /> Voltar à Sacola
+              </button>
+              <div className="h-6 w-px bg-amber-500 hidden sm:block" />
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-white/15 rounded-xl">
-                  <Store size={22} />
+                <div className="p-2 bg-amber-700 rounded-xl">
+                  <Store size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base md:text-lg">Finalizar Pedido de Compra</h3>
-                  <p className="text-xs text-amber-100 font-medium">Confirme seus dados e a forma de pagamento para retirada na igreja</p>
+                  <h3 className="font-bold text-base md:text-lg leading-tight">Finalizar Pedido de Compra</h3>
+                  <p className="text-xs text-amber-100 font-medium hidden sm:block">Confirme seus dados e a forma de pagamento para retirada na igreja</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsCheckoutOpen(false)} 
-                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                title="Fechar"
-              >
-                <X size={20} />
-              </button>
             </div>
+            <button 
+              type="button"
+              onClick={() => setIsCheckoutOpen(false)} 
+              className="p-2 rounded-xl text-white hover:bg-amber-700 transition-colors cursor-pointer"
+              title="Fechar e Retornar à Loja"
+            >
+              <X size={20} />
+            </button>
+          </header>
 
-            <form onSubmit={handleConfirmCheckout} className="p-6 md:p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                
-                {/* COLUNA ESQUERDA: DADOS, RETIRADA E PAGAMENTO (7 colunas) */}
-                <div className="lg:col-span-7 space-y-5">
-                  {/* 1. DADOS DO COMPRADOR */}
-                  <div className="space-y-3 bg-slate-50/60 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <User size={15} className="text-amber-600" />
-                      1. Informações do Comprador
-                    </h4>
+          <main className="w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 flex-1">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <form onSubmit={handleConfirmCheckout} className="p-6 md:p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  {/* COLUNA ESQUERDA: DADOS, RETIRADA E PAGAMENTO (7 colunas) */}
+                  <div className="lg:col-span-7 space-y-5">
+                    {/* 1. DADOS DO COMPRADOR */}
+                    <div className="space-y-3 bg-slate-50 dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <User size={15} className="text-amber-600" />
+                        1. Informações do Comprador
+                      </h4>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Nome Completo *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={checkoutData.nome}
-                        onChange={e => setCheckoutData({ ...checkoutData, nome: e.target.value })}
-                        placeholder="Seu nome ou do destinatário"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          WhatsApp / Telefone *
+                          Nome Completo *
                         </label>
                         <input
                           type="text"
                           required
-                          value={checkoutData.telefone}
-                          onChange={e => setCheckoutData({ ...checkoutData, telefone: e.target.value })}
-                          placeholder="(11) 98765-4321"
+                          value={checkoutData.nome}
+                          onChange={e => setCheckoutData({ ...checkoutData, nome: e.target.value })}
+                          placeholder="Seu nome ou do destinatário"
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          E-mail (opcional)
-                        </label>
-                        <input
-                          type="email"
-                          value={checkoutData.email}
-                          onChange={e => setCheckoutData({ ...checkoutData, email: e.target.value })}
-                          placeholder="seuemail@exemplo.com"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 2. LOCAL DE RETIRADA */}
-                  <div className="space-y-2 bg-slate-50/60 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Store size={15} className="text-amber-600" />
-                      2. Local de Retirada
-                    </h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'igreja_sede' })}
-                        className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
-                          checkoutData.local_retirada === 'igreja_sede'
-                            ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 shadow-sm ring-1 ring-amber-600'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
-                          <Store size={15} className="text-amber-600" />
-                          Igreja Cadastrada
-                        </div>
-                        <span className="text-[11px] text-slate-500 block mt-1 leading-snug">
-                          {db?.igreja?.nome || 'Sede / Secretaria'}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'a_combinar' })}
-                        className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
-                          checkoutData.local_retirada === 'a_combinar'
-                            ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 shadow-sm ring-1 ring-amber-600'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
-                          <MessageCircle size={15} className="text-amber-600" />
-                          A Combinar
-                        </div>
-                        <span className="text-[11px] text-slate-500 block mt-1 leading-snug">
-                          Com o responsável da loja ou no culto
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 3. FORMA DE PAGAMENTO */}
-                  <div className="space-y-3 bg-slate-50/60 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <ShieldCheck size={15} className="text-amber-600" />
-                      3. Forma de Pagamento
-                    </h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'pix' })}
-                        className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
-                          checkoutData.forma_pagamento === 'pix'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold ring-1 ring-emerald-600 shadow-sm'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <QrCode size={20} className="text-emerald-600" />
-                        <span className="text-xs">Pix Instantâneo</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'cartao_retirada' })}
-                        className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
-                          checkoutData.forma_pagamento === 'cartao_retirada'
-                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold ring-1 ring-indigo-600 shadow-sm'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <ShieldCheck size={20} className="text-indigo-600" />
-                        <span className="text-xs">Cartão na Retirada</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'dinheiro_retirada' })}
-                        className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
-                          checkoutData.forma_pagamento === 'dinheiro_retirada'
-                            ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold ring-1 ring-amber-600 shadow-sm'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <Store size={20} className="text-amber-600" />
-                        <span className="text-xs">Dinheiro no Balcão</span>
-                      </button>
-                    </div>
-
-                    {/* Bloco informativo Pix */}
-                    {checkoutData.forma_pagamento === 'pix' && (
-                      <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">Chave Pix da Igreja:</span>
-                          <button
-                            type="button"
-                            onClick={handleCopyPix}
-                            className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1.5 cursor-pointer bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-700 shadow-sm"
-                          >
-                            {copiedPix ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                            {copiedPix ? 'Copiado!' : 'Copiar Chave'}
-                          </button>
-                        </div>
-                        <p className="font-mono text-xs font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 select-all">
-                          {db?.igreja?.chave_pix || '12.345.678/0001-90'}
-                        </p>
-                        <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block leading-tight">
-                          Após confirmar o pedido, você poderá enviar o comprovante Pix diretamente pelo WhatsApp da congregação.
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 4. OBSERVAÇÕES */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Observações adicionais (Tamanho, Cor, Dedicatória...)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={checkoutData.observacoes}
-                      onChange={e => setCheckoutData({ ...checkoutData, observacoes: e.target.value })}
-                      placeholder="Ex: Camiseta tamanho G, dedicatória no livro com nome do pastor..."
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-amber-500/20"
-                    />
-                  </div>
-                </div>
-
-                {/* COLUNA DIREITA: RESUMO DO PEDIDO E AÇÕES (5 colunas) */}
-                <div className="lg:col-span-5 space-y-4">
-                  <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
-                      <h4 className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
-                        <ShoppingBag size={16} className="text-amber-600" />
-                        Resumo do Pedido
-                      </h4>
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                        {totalCartCount} item(ns)
-                      </span>
-                    </div>
-
-                    {/* Lista dos itens na sacola */}
-                    <div className="max-h-56 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
-                      {cart.map(item => (
-                        <div key={item.produto_id} className="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700">
-                          <img
-                            src={item.foto || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=150&q=80'}
-                            alt={item.nome}
-                            className="w-11 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0"
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            WhatsApp / Telefone *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={checkoutData.telefone}
+                            onChange={e => setCheckoutData({ ...checkoutData, telefone: e.target.value })}
+                            placeholder="(11) 98765-4321"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
                           />
-                          <div className="flex-1 min-w-0">
-                            <h5 className="text-xs font-bold text-slate-800 dark:text-white truncate">{item.nome}</h5>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                              {item.quantidade}x R$ {item.preco_unitario.toFixed(2)}
-                            </span>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            E-mail (opcional)
+                          </label>
+                          <input
+                            type="email"
+                            value={checkoutData.email}
+                            onChange={e => setCheckoutData({ ...checkoutData, email: e.target.value })}
+                            placeholder="seuemail@exemplo.com"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. LOCAL DE RETIRADA */}
+                    <div className="space-y-2 bg-slate-50 dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Store size={15} className="text-amber-600" />
+                        2. Local de Retirada
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'igreja_sede' })}
+                          className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                            checkoutData.local_retirada === 'igreja_sede'
+                              ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 shadow-sm ring-1 ring-amber-600'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
+                            <Store size={15} className="text-amber-600" />
+                            Igreja Cadastrada
                           </div>
-                          <span className="text-xs font-mono font-bold text-slate-800 dark:text-white">
-                            R$ {item.subtotal.toFixed(2)}
+                          <span className="text-[11px] text-slate-500 block mt-1 leading-snug">
+                            {db?.igreja?.nome || 'Sede / Secretaria'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'a_combinar' })}
+                          className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                            checkoutData.local_retirada === 'a_combinar'
+                              ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 shadow-sm ring-1 ring-amber-600'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
+                            <MessageCircle size={15} className="text-amber-600" />
+                            A Combinar
+                          </div>
+                          <span className="text-[11px] text-slate-500 block mt-1 leading-snug">
+                            Com o responsável da loja ou no culto
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. FORMA DE PAGAMENTO */}
+                    <div className="space-y-3 bg-slate-50 dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldCheck size={15} className="text-amber-600" />
+                        3. Forma de Pagamento
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'pix' })}
+                          className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                            checkoutData.forma_pagamento === 'pix'
+                              ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold ring-1 ring-emerald-600 shadow-sm'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          <QrCode size={20} className="text-emerald-600" />
+                          <span className="text-xs">Pix Instantâneo</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'cartao_retirada' })}
+                          className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                            checkoutData.forma_pagamento === 'cartao_retirada'
+                              ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold ring-1 ring-indigo-600 shadow-sm'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          <ShieldCheck size={20} className="text-indigo-600" />
+                          <span className="text-xs">Cartão na Retirada</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'dinheiro_retirada' })}
+                          className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                            checkoutData.forma_pagamento === 'dinheiro_retirada'
+                              ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold ring-1 ring-amber-600 shadow-sm'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          <Store size={20} className="text-amber-600" />
+                          <span className="text-xs">Dinheiro no Balcão</span>
+                        </button>
+                      </div>
+
+                      {/* Bloco informativo Pix */}
+                      {checkoutData.forma_pagamento === 'pix' && (
+                        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 rounded-xl space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">Chave Pix da Igreja:</span>
+                            <button
+                              type="button"
+                              onClick={handleCopyPix}
+                              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1.5 cursor-pointer bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-700 shadow-sm"
+                            >
+                              {copiedPix ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                              {copiedPix ? 'Copiado!' : 'Copiar Chave'}
+                            </button>
+                          </div>
+                          <p className="font-mono text-xs font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 select-all">
+                            {db?.igreja?.chave_pix || '12.345.678/0001-90'}
+                          </p>
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block leading-tight">
+                            Após confirmar o pedido, você poderá enviar o comprovante Pix diretamente pelo WhatsApp da congregação.
                           </span>
                         </div>
-                      ))}
+                      )}
                     </div>
 
-                    {/* Alerta de Retirada na Igreja */}
-                    <div className="p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl flex items-start gap-2 text-xs text-amber-900 dark:text-amber-300">
-                      <Store size={16} className="shrink-0 mt-0.5 text-amber-600" />
-                      <p className="leading-snug text-[11px]">
-                        <strong>Local de Retirada:</strong> Igreja cadastrada ({db?.igreja?.nome || 'Sede'}) ou a combinar com a liderança da loja.
-                      </p>
-                    </div>
-
-                    {/* Totalizador */}
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span>Subtotal:</span>
-                        <span className="font-mono font-bold">R$ {totalCartValue.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span>Taxa de Entrega / Retirada:</span>
-                        <span className="text-emerald-600 font-bold">Grátis na Igreja</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <span className="text-sm font-bold text-slate-800 dark:text-white">Total a Pagar:</span>
-                        <span className="text-2xl font-black font-mono text-emerald-600">
-                          R$ {totalCartValue.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Botões de Ação */}
-                    <div className="pt-2 space-y-2">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm py-3.5 rounded-xl shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                      >
-                        <CheckCircle2 size={18} />
-                        Confirmar e Gerar Pedido
-                      </Button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCheckoutOpen(false);
-                          setIsCartOpen(true);
-                        }}
-                        className="w-full py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl cursor-pointer transition-colors text-center block"
-                      >
-                        Voltar e Editar Sacola
-                      </button>
+                    {/* 4. OBSERVAÇÕES */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Observações adicionais (Tamanho, Cor, Dedicatória...)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={checkoutData.observacoes}
+                        onChange={e => setCheckoutData({ ...checkoutData, observacoes: e.target.value })}
+                        placeholder="Ex: Camiseta tamanho G, dedicatória no livro com nome do pastor..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-amber-500/20"
+                      />
                     </div>
                   </div>
-                </div>
 
-              </div>
-            </form>
-          </div>
+                  {/* COLUNA DIREITA: RESUMO DO PEDIDO E AÇÕES (5 colunas) */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
+                        <h4 className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                          <ShoppingBag size={16} className="text-amber-600" />
+                          Resumo do Pedido
+                        </h4>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                          {totalCartCount} item(ns)
+                        </span>
+                      </div>
+
+                      {/* Lista dos itens na sacola */}
+                      <div className="max-h-56 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+                        {cart.map(item => (
+                          <div key={item.produto_id} className="flex items-center gap-3 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <img
+                              src={item.foto || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=150&q=80'}
+                              alt={item.nome}
+                              className="w-11 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h5 className="text-xs font-bold text-slate-800 dark:text-white truncate">{item.nome}</h5>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {item.quantidade}x R$ {item.preco_unitario.toFixed(2)}
+                              </span>
+                            </div>
+                            <span className="text-xs font-mono font-bold text-slate-800 dark:text-white">
+                              R$ {item.subtotal.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Alerta de Retirada na Igreja */}
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-800 rounded-xl flex items-start gap-2 text-xs text-amber-900 dark:text-amber-300">
+                        <Store size={16} className="shrink-0 mt-0.5 text-amber-600" />
+                        <p className="leading-snug text-[11px]">
+                          <strong>Local de Retirada:</strong> Igreja cadastrada ({db?.igreja?.nome || 'Sede'}) ou a combinar com a liderança da loja.
+                        </p>
+                      </div>
+
+                      {/* Totalizador */}
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                          <span>Subtotal:</span>
+                          <span className="font-mono font-bold">R$ {totalCartValue.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                          <span>Taxa de Entrega / Retirada:</span>
+                          <span className="text-emerald-600 font-bold">Grátis na Igreja</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                          <span className="text-sm font-bold text-slate-800 dark:text-white">Total a Pagar:</span>
+                          <span className="text-2xl font-black font-mono text-emerald-600">
+                            R$ {totalCartValue.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Botões de Ação */}
+                      <div className="pt-2 space-y-2">
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm py-3.5 rounded-xl shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                        >
+                          <CheckCircle2 size={18} />
+                          Confirmar e Gerar Pedido
+                        </Button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCheckoutOpen(false);
+                            setIsCartOpen(true);
+                          }}
+                          className="w-full py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl cursor-pointer transition-colors text-center block"
+                        >
+                          Voltar e Editar Sacola
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </form>
+            </div>
+          </main>
         </div>
       )}
 
       {/* MODAL: COMPROVANTE DO PEDIDO GERADO */}
       {selectedOrderReceipt && (
-        <div className="fixed inset-0 z-[10001] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10001] bg-black/75 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-4">
             <div className="text-center space-y-1">
               <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2">

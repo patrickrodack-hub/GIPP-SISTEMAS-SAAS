@@ -211,7 +211,7 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
   ]);
   const [localPinnedStart, setLocalPinnedStart] = useState<string[]>([
     'dashboard', 'curso_teologia', 'formacao_obreiros', 'secretaria_ebd', 'cad_membro', 
-    'visitantes', 'cad_igreja', 'fin_entrada', 'fin_saida', 'patrimonio', 'escala_culto', 'assistente_ai'
+    'visitantes', 'cad_igreja', 'loja_virtual', 'fin_entrada', 'fin_saida', 'cad_patrimonio', 'escala_culto', 'assistente_ai'
   ]);
 
   const activeMinimized = minimizedModules || localMinimized;

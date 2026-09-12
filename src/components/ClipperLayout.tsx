@@ -355,8 +355,10 @@ export const ClipperLayout: React.FC<ClipperLayoutProps> = ({
         { id: 'visitantes', label: '2. Registro de Visitantes' },
         { id: 'cad_igreja', label: '3. Sedes e Congregações' },
         { id: 'secretaria_ebd', label: '4. Alunos e Classes EBD' },
-        { id: 'patrimonio', label: '5. Controle Patrimonial' },
-        { id: 'patrocinadores', label: '6. Patrocinadores e Apoio' }
+        { id: 'cad_patrimonio', label: '5. Controle Patrimonial' },
+        { id: 'loja_virtual', label: '6. Loja Virtual & Comercial' },
+        { id: 'controle_frotas', label: '7. Controle de Frotas' },
+        { id: 'cad_celula', label: '8. Células e Grupos' }
       ]
     },
     {
@@ -365,10 +367,10 @@ export const ClipperLayout: React.FC<ClipperLayoutProps> = ({
       hotkey: 'F',
       items: [
         { id: 'fin_entrada', label: '1. Entradas e Dízimos (Caixa)' },
-        { id: 'fin_saidas', label: '2. Saídas e Despesas' },
-        { id: 'fin_prestacao_contas', label: '3. Prestação de Contas' },
+        { id: 'fin_saida', label: '2. Saídas e Despesas' },
+        { id: 'fin_dre', label: '3. Demonstrativo de Resultados (DRE)' },
         { id: 'fin_conciliacao', label: '4. Conciliação Bancária' },
-        { id: 'fin_orcamento', label: '5. Orçamento Anual' },
+        { id: 'fin_carnes', label: '5. Carnês e Contribuições' },
         { id: 'dp_contabilidade', label: '6. Contabilidade & Balanço' }
       ]
     },
@@ -381,7 +383,7 @@ export const ClipperLayout: React.FC<ClipperLayoutProps> = ({
         { id: 'formacao_obreiros', label: '2. Formação de Obreiros' },
         { id: 'gestao_cursos', label: '3. Gerenciamento de Cursos' },
         { id: 'biblia', label: '4. Bíblia Sagrada (Estudo)' },
-        { id: 'discipulado', label: '5. Discipulado de Novos' }
+        { id: 'secretaria_ebd', label: '5. Escola Bíblica Dominical' }
       ]
     },
     {
@@ -392,8 +394,8 @@ export const ClipperLayout: React.FC<ClipperLayoutProps> = ({
         { id: 'ministerio_louvor', label: '1. Ministério de Louvor' },
         { id: 'ministerio_midia', label: '2. Comunicação e Mídia' },
         { id: 'ministerio_familia', label: '3. Ministério da Família' },
-        { id: 'missoes', label: '4. Secretaria de Missões' },
-        { id: 'assistencia_social', label: '5. Assistência Social' }
+        { id: 'missoes_painel', label: '4. Secretaria de Missões' },
+        { id: 'salinha_kids', label: '5. Salinha Kids & Berçário' }
       ]
     },
     {
@@ -401,11 +403,14 @@ export const ClipperLayout: React.FC<ClipperLayoutProps> = ({
       label: 'Secretaria',
       hotkey: 'T',
       items: [
-        { id: 'sec_livro_atas', label: '1. Livro Oficial de Atas' },
-        { id: 'sec_certificados', label: '2. Emissão de Certificados' },
+        { id: 'secretaria_livro_atas', label: '1. Livro Oficial de Atas' },
+        { id: 'secretaria_certificados', label: '2. Emissão de Certificados' },
         { id: 'carteirinha_studio', label: '3. Carteirinhas de Membros' },
-        { id: 'sec_agenda', label: '4. Agenda Eclesiástica' },
-        { id: 'notificacoes_sistema', label: '5. Avisos e Circulares' }
+        { id: 'secretaria_integrada', label: '4. Secretaria e Agenda' },
+        { id: 'credencial_lote', label: '5. Credenciais em Lote' },
+        { id: 'qr_checkin', label: '6. Check-in QR Code' },
+        { id: 'relatorios', label: '7. Relatórios Eclesiásticos' },
+        { id: 'boletim', label: '8. Boletim Informativo' }
       ]
     },
     {
@@ -416,8 +421,9 @@ export const ClipperLayout: React.FC<ClipperLayoutProps> = ({
         { id: 'assistente_ai', label: '1. Assistente Inteligente (IA)' },
         { id: 'docs_editor', label: '2. Editor de Textos Clipper' },
         { id: 'sheets_editor', label: '3. Planilhas de Cálculo' },
-        { id: 'auditoria', label: '4. Trilha de Auditoria (LOG)' },
-        { id: 'suporte_dev', label: '5. Suporte ao Desenvolvedor' }
+        { id: 'mensagens_lote', label: '4. Disparador WhatsApp' },
+        { id: 'auditoria', label: '5. Trilha de Auditoria (LOG)' },
+        { id: 'config_sistema', label: '6. Configurações do Sistema' }
       ]
     },
     {
