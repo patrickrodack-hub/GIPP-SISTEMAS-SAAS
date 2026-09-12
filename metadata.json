@@ -1,6 +1,6 @@
 {
   "name": "Gestão de Igreja - GIPP",
-  "description": "Sistema completo de administração eclesiástica, incluindo painel de membros, financeiro, EBD, missões e gerenciamento teológico.",
+  "description": "Sistema completo de administração eclesiástica, incluindo painel de membros, financeiro, EBD, missões, teologia e loja virtual integrada com esteira comercial e separação de pedidos.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

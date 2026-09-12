@@ -3,13 +3,16 @@ import { ChurchContext } from '../context/ChurchContext';
 import { 
   ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, ArrowRight, 
   Store, ShieldCheck, Clock, QrCode, Copy, Check, ChevronRight, 
-  Tag, Filter, Heart, MessageCircle, AlertCircle, Printer, X, Sparkles
+  Tag, Filter, Heart, MessageCircle, AlertCircle, Printer, X, Sparkles,
+  Package, Bell, Truck, CheckSquare, ChevronDown, ChevronUp, MapPin, User, Info
 } from 'lucide-react';
 import { 
   ProdutoLoja, PedidoLoja, ItemPedidoLoja, MovimentacaoEstoque, 
-  CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS 
+  CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS,
+  HistoricoEventoPedido
 } from '../data/lojaVirtualData';
 import { Button } from '../utils/sharedHelpers';
+import LojaMembroPedidoCard from './LojaMembroPedidoCard';
 
 interface PortalLojaMembroProps {
   user?: any;
@@ -28,11 +31,14 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
   const [activeTab, setActiveTab] = useState<'vitrine' | 'pedidos'>('vitrine');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState('todas');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'todos' | 'andamento' | 'pronto' | 'concluido'>('todos');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedOrderReceipt, setSelectedOrderReceipt] = useState<PedidoLoja | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
+  const [expandedOrderHistoryId, setExpandedOrderHistoryId] = useState<string | null>(null);
+  const [selectedOrderTracking, setSelectedOrderTracking] = useState<PedidoLoja | null>(null);
 
   // Checkout Form State
   const [checkoutData, setCheckoutData] = useState({
@@ -64,6 +70,29 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
       return false;
     });
   }, [db?.loja_pedidos, user]);
+
+  // Notifications and statuses for the member
+  const pedidosProntosParaRetirada = useMemo(() => {
+    return meusPedidos.filter(p => p.status_entrega === 'pronto_retirada');
+  }, [meusPedidos]);
+
+  const pedidosEmAndamento = useMemo(() => {
+    return meusPedidos.filter(p => p.status_entrega !== 'entregue' && p.status_entrega !== 'cancelado');
+  }, [meusPedidos]);
+
+  // Filtered orders for member tabs
+  const pedidosFiltrados = useMemo(() => {
+    if (orderStatusFilter === 'pronto') {
+      return meusPedidos.filter(p => p.status_entrega === 'pronto_retirada');
+    }
+    if (orderStatusFilter === 'andamento') {
+      return meusPedidos.filter(p => p.status_entrega !== 'entregue' && p.status_entrega !== 'cancelado');
+    }
+    if (orderStatusFilter === 'concluido') {
+      return meusPedidos.filter(p => p.status_entrega === 'entregue' || p.status_entrega === 'cancelado');
+    }
+    return meusPedidos;
+  }, [meusPedidos, orderStatusFilter]);
 
   // Filtered products
   const produtosFiltrados = useMemo(() => {
@@ -322,6 +351,34 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
         </div>
       </div>
 
+      {/* NOTIFICAÇÃO PROATIVA DE PEDIDO PRONTO PARA RETIRADA OU EM ANDAMENTO */}
+      {pedidosProntosParaRetirada.length > 0 && activeTab !== 'pedidos' && (
+        <div 
+          onClick={() => { setActiveTab('pedidos'); setOrderStatusFilter('pronto'); }}
+          className="p-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl shadow-md flex items-center justify-between gap-3 cursor-pointer hover:from-amber-600 hover:to-amber-700 transition-all animate-in slide-in-from-top-2"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-xl">
+              <Bell size={20} className="animate-bounce" />
+            </div>
+            <div>
+              <h4 className="font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                Aviso Importante do seu Pedido!
+                <span className="bg-white text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                  Pronto para Retirada
+                </span>
+              </h4>
+              <p className="text-xs text-amber-100 mt-0.5">
+                Você tem {pedidosProntosParaRetirada.length} pedido(s) pronto(s) para retirar na igreja ({pedidosProntosParaRetirada[0].local_retirada}).
+              </p>
+            </div>
+          </div>
+          <button className="px-3 py-1.5 bg-white text-amber-900 font-bold text-xs rounded-xl shadow-sm hover:bg-amber-50 shrink-0">
+            Ver Pedido & Retirar
+          </button>
+        </div>
+      )}
+
       {/* ABAS DO PORTAL: VITRINE OU MEUS PEDIDOS */}
       <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shrink-0">
         <div className="flex gap-1.5">
@@ -345,6 +402,11 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
             }`}
           >
             <Clock size={15} /> Meus Pedidos ({meusPedidos.length})
+            {pedidosProntosParaRetirada.length > 0 && (
+              <span className="bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                {pedidosProntosParaRetirada.length} pronto(s)
+              </span>
+            )}
           </button>
         </div>
 
@@ -514,84 +576,96 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
       {activeTab === 'pedidos' && (
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4">
-            <h3 className="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
-              <Clock size={18} className="text-amber-600" />
-              Histórico de Compras no Portal
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Acompanhe o andamento dos seus pedidos e veja as instruções para retirada na igreja.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Clock size={18} className="text-amber-600" />
+                  Meus Pedidos & Acompanhamento
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Veja a esteira de separação, instruções de retirada na igreja e notificações de cada pedido.
+                </p>
+              </div>
 
-            {meusPedidos.length === 0 ? (
-              <div className="py-12 text-center text-slate-400">
-                <ShoppingBag size={42} className="mx-auto mb-2 opacity-30 text-slate-400" />
-                <p className="text-xs font-bold">Você ainda não realizou nenhuma compra na loja.</p>
+              {/* Sub-filtros por status */}
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0 overflow-x-auto">
                 <button
-                  onClick={() => setActiveTab('vitrine')}
-                  className="mt-3 px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-amber-700"
+                  onClick={() => setOrderStatusFilter('todos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    orderStatusFilter === 'todos'
+                      ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
                 >
-                  Conhecer Produtos da Loja
+                  Todos ({meusPedidos.length})
+                </button>
+                <button
+                  onClick={() => setOrderStatusFilter('andamento')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    orderStatusFilter === 'andamento'
+                      ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Em Andamento ({pedidosEmAndamento.length})
+                </button>
+                <button
+                  onClick={() => setOrderStatusFilter('pronto')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    orderStatusFilter === 'pronto'
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Prontos ({pedidosProntosParaRetirada.length})
+                </button>
+                <button
+                  onClick={() => setOrderStatusFilter('concluido')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    orderStatusFilter === 'concluido'
+                      ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Concluídos
                 </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {meusPedidos.map((ped) => (
-                  <div
-                    key={ped.id}
-                    className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+            </div>
+
+            {pedidosFiltrados.length === 0 ? (
+              <div className="py-12 text-center text-slate-400">
+                <ShoppingBag size={42} className="mx-auto mb-2 opacity-30 text-slate-400" />
+                <p className="text-xs font-bold">
+                  {meusPedidos.length === 0 
+                    ? "Você ainda não realizou nenhuma compra na loja." 
+                    : "Nenhum pedido encontrado nesta categoria de status."}
+                </p>
+                {meusPedidos.length === 0 ? (
+                  <button
+                    onClick={() => setActiveTab('vitrine')}
+                    className="mt-3 px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-amber-700"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-black text-sm text-slate-800 dark:text-white">
-                          #{ped.numero_pedido}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${
-                          ped.status_entrega === 'entregue'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : ped.status_entrega === 'pronto_retirada'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}>
-                          {ped.status_entrega === 'entregue' ? '✅ Entregue' :
-                           ped.status_entrega === 'pronto_retirada' ? '📦 Pronto para Retirada' :
-                           '⏳ Em Processamento'}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-slate-500">
-                        {new Date(ped.data_pedido).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} • {ped.itens.length} {ped.itens.length === 1 ? 'item' : 'itens'}
-                      </p>
-
-                      <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                        Local de Retirada: <strong>{ped.local_retirada}</strong>
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 uppercase block">Valor Total</span>
-                        <span className="text-base font-black font-mono text-emerald-600">
-                          R$ {ped.valor_total.toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleNotifyChurchWhatsApp(ped)}
-                          className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-colors border border-emerald-200 cursor-pointer"
-                          title="Falar com a Loja no WhatsApp"
-                        >
-                          <MessageCircle size={15} />
-                        </button>
-                        <button
-                          onClick={() => setSelectedOrderReceipt(ped)}
-                          className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-xl transition-colors border border-indigo-200 cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Printer size={14} /> Comprovante
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    Conhecer Produtos da Loja
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setOrderStatusFilter('todos')}
+                    className="mt-3 px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-200"
+                  >
+                    Ver Todos os Pedidos
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pedidosFiltrados.map((ped) => (
+                  <LojaMembroPedidoCard
+                    key={ped.id}
+                    pedido={ped}
+                    onViewReceipt={(p) => setSelectedOrderReceipt(p)}
+                    onWhatsApp={handleNotifyChurchWhatsApp}
+                    churchName={db?.igreja?.nome || 'Igreja'}
+                  />
                 ))}
               </div>
             )}

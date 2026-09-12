@@ -5,18 +5,22 @@ import {
   AlertTriangle, DollarSign, ArrowUpRight, ArrowDownRight, Clock, User, 
   Phone, Mail, Calendar, Eye, Printer, MessageCircle, RefreshCw, 
   TrendingUp, BarChart3, Tag, FileText, Check, X, Upload, Image as ImageIcon,
-  ArrowRight, ShieldCheck, Truck, Store, Layers
+  ArrowRight, ShieldCheck, Truck, Store, Layers, ClipboardCheck
 } from 'lucide-react';
 import { 
   ProdutoLoja, PedidoLoja, MovimentacaoEstoque, 
-  CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS 
+  CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS,
+  HistoricoEventoPedido
 } from '../data/lojaVirtualData';
 import { Button } from '../utils/sharedHelpers';
+import LojaTratamentoModal from './LojaTratamentoModal';
+import LojaRecebimentoArea from './LojaRecebimentoArea';
+import LojaHistoricoPedidos from './LojaHistoricoPedidos';
 
 export default function ModuleLojaVirtualAdmin() {
   const { db, setDbState, addToast, user, dbFirestore, appId, setDoc, doc } = useContext(ChurchContext);
 
-  const [activeTab, setActiveTab] = useState<'produtos' | 'estoque' | 'pedidos' | 'metricas'>('produtos');
+  const [activeTab, setActiveTab] = useState<'recebimento' | 'pedidos' | 'produtos' | 'estoque' | 'historico' | 'metricas'>('recebimento');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState('todas');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -307,13 +311,25 @@ export default function ModuleLojaVirtualAdmin() {
     newDeliveryStatus?: PedidoLoja['status_entrega'], 
     newPaymentStatus?: PedidoLoja['status_pagamento']
   ) => {
+    const now = new Date().toISOString();
+    const operatorName = user?.nome || 'Operador do Sistema';
     const updatedOrders = pedidos.map(p => {
       if (p.id === orderId) {
+        const histEvent: HistoricoEventoPedido = {
+          id: `hist-${Date.now()}`,
+          status: newDeliveryStatus || p.status_entrega,
+          titulo: `Status alterado para ${(newDeliveryStatus || p.status_entrega).toUpperCase()}`,
+          descricao: `Atualizado por ${operatorName}. Pagamento: ${newPaymentStatus || p.status_pagamento}.`,
+          data: now,
+          responsavel: operatorName
+        };
+
         return {
           ...p,
           ...(newDeliveryStatus ? { status_entrega: newDeliveryStatus } : {}),
           ...(newPaymentStatus ? { status_pagamento: newPaymentStatus } : {}),
-          data_atualizacao: new Date().toISOString()
+          data_atualizacao: now,
+          historico_status: [histEvent, ...(p.historico_status || [])]
         };
       }
       return p;
@@ -324,6 +340,64 @@ export default function ModuleLojaVirtualAdmin() {
       setSelectedOrder(updatedOrders.find(p => p.id === orderId) || null);
     }
     addToast("Status do pedido atualizado!", "success");
+  };
+
+  // Full order treatment save handler with inventory return on cancel
+  const handleSaveTratamento = async (
+    updatedOrder: PedidoLoja,
+    eventTitle: string,
+    eventDesc: string
+  ) => {
+    const prevOrder = pedidos.find(p => p.id === updatedOrder.id);
+    let updatedProducts = [...produtos];
+    let updatedMovs = [...movimentacoes];
+    const now = new Date().toISOString();
+    const operatorName = user?.nome || 'Operador do Sistema';
+
+    // If order was cancelled and previous wasn't, return items to inventory
+    if (updatedOrder.status_entrega === 'cancelado' && prevOrder && prevOrder.status_entrega !== 'cancelado') {
+      (updatedOrder.itens || []).forEach(item => {
+        const prod = updatedProducts.find(p => p.id === item.produto_id);
+        if (prod) {
+          const newQty = prod.estoque_atual + item.quantidade;
+          updatedProducts = updatedProducts.map(p => p.id === prod.id ? { ...p, estoque_atual: newQty } : p);
+          updatedMovs.unshift({
+            id: `mov-estorno-${Date.now()}-${prod.id}`,
+            produto_id: prod.id,
+            produto_nome: prod.nome,
+            tipo: 'devolucao',
+            quantidade: item.quantidade,
+            estoque_anterior: prod.estoque_atual,
+            estoque_posterior: newQty,
+            motivo: `Estorno por Cancelamento do Pedido #${updatedOrder.numero_pedido}`,
+            responsavel: operatorName,
+            data: now
+          });
+        }
+      });
+      await syncProdutos(updatedProducts);
+      await syncMovimentacoes(updatedMovs);
+    }
+
+    const historyEvent: HistoricoEventoPedido = {
+      id: `hist-${Date.now()}`,
+      status: updatedOrder.status_entrega,
+      titulo: eventTitle,
+      descricao: eventDesc,
+      data: now,
+      responsavel: operatorName
+    };
+
+    const finalOrder: PedidoLoja = {
+      ...updatedOrder,
+      data_atualizacao: now,
+      historico_status: [historyEvent, ...(updatedOrder.historico_status || [])]
+    };
+
+    const updatedOrders = pedidos.map(p => p.id === finalOrder.id ? finalOrder : p);
+    await syncPedidos(updatedOrders);
+    setSelectedOrder(finalOrder);
+    addToast("Pedido atualizado com sucesso na esteira!", "success");
   };
 
   // Open WhatsApp contact
@@ -433,6 +507,22 @@ export default function ModuleLojaVirtualAdmin() {
       {/* ABAS PADRONIZADAS DO DESIGN SYSTEM */}
       <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-wrap gap-1.5 shrink-0">
         <button
+          onClick={() => { setActiveTab('recebimento'); setStatusFilter('todos'); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            activeTab === 'recebimento'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          <ClipboardCheck size={15} /> Recebimento & Separação
+          {metricas.pedidosPendentes > 0 && (
+            <span className="bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+              {metricas.pedidosPendentes}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => { setActiveTab('produtos'); setStatusFilter('todos'); }}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
             activeTab === 'produtos'
@@ -451,12 +541,7 @@ export default function ModuleLojaVirtualAdmin() {
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
           }`}
         >
-          <Package size={15} /> Pedidos de Compra ({pedidos.length})
-          {metricas.pedidosPendentes > 0 && (
-            <span className="bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">
-              {metricas.pedidosPendentes}
-            </span>
-          )}
+          <Package size={15} /> Pedidos em Aberto ({pedidos.length})
         </button>
 
         <button
@@ -471,6 +556,17 @@ export default function ModuleLojaVirtualAdmin() {
         </button>
 
         <button
+          onClick={() => { setActiveTab('historico'); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            activeTab === 'historico'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          <Calendar size={15} /> Histórico de Pedidos
+        </button>
+
+        <button
           onClick={() => { setActiveTab('metricas'); }}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
             activeTab === 'metricas'
@@ -482,8 +578,33 @@ export default function ModuleLojaVirtualAdmin() {
         </button>
       </div>
 
-      {/* FILTROS E PESQUISA */}
-      {activeTab !== 'metricas' && (
+      {/* ÁREA 0: RECEBIMENTO & SEPARAÇÃO OPERACIONAL */}
+      {activeTab === 'recebimento' && (
+        <LojaRecebimentoArea
+          pedidos={pedidos}
+          onOpenTratamento={(ped) => {
+            setSelectedOrder(ped);
+            setIsOrderDetailsOpen(true);
+          }}
+          onQuickUpdateStatus={handleUpdateOrderStatus}
+          churchName={db?.igreja?.nome || 'Igreja'}
+        />
+      )}
+
+      {/* ÁREA DE HISTÓRICO DE PEDIDOS */}
+      {activeTab === 'historico' && (
+        <LojaHistoricoPedidos
+          pedidos={pedidos}
+          onOpenTratamento={(ped) => {
+            setSelectedOrder(ped);
+            setIsOrderDetailsOpen(true);
+          }}
+          churchName={db?.igreja?.nome || 'Igreja'}
+        />
+      )}
+
+      {/* FILTROS E PESQUISA (PARA PRODUTOS, PEDIDOS E ESTOQUE) */}
+      {(activeTab === 'produtos' || activeTab === 'pedidos' || activeTab === 'estoque') && (
         <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="relative flex-1 w-full">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1231,160 +1352,16 @@ export default function ModuleLojaVirtualAdmin() {
         </div>
       )}
 
-      {/* MODAL: DETALHES E GESTÃO DO PEDIDO */}
+      {/* MODAL COMPLETO DE TRATAMENTO, CONFERÊNCIA, SEPARAÇÃO E AUDITORIA DO PEDIDO */}
       {isOrderDetailsOpen && selectedOrder && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
-              <div>
-                <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <Package size={18} className="text-indigo-600" />
-                  Pedido #{selectedOrder.numero_pedido}
-                </h3>
-                <span className="text-xs text-slate-400">
-                  Realizado em {new Date(selectedOrder.data_pedido).toLocaleString('pt-BR')}
-                </span>
-              </div>
-              <button onClick={() => setIsOrderDetailsOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* DADOS DO COMPRADOR */}
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <User size={13} /> Dados do Comprador
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Nome Completo:</span>
-                  <strong className="text-slate-800 dark:text-white text-sm">{selectedOrder.cliente_nome}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Telefone / WhatsApp:</span>
-                  <div className="flex items-center gap-2">
-                    <strong className="text-slate-800 dark:text-white">{selectedOrder.cliente_telefone}</strong>
-                    <button
-                      onClick={() => handleContactBuyerWhatsApp(selectedOrder)}
-                      className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100"
-                      title="Chamar no WhatsApp"
-                    >
-                      <MessageCircle size={13} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Tipo de Cliente:</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
-                    {selectedOrder.tipo_cliente === 'membro' ? 'Membro da Igreja' : 'Visitante'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Local de Retirada Definido:</span>
-                  <strong className="text-indigo-600 dark:text-indigo-400">{selectedOrder.local_retirada}</strong>
-                </div>
-              </div>
-              {selectedOrder.observacoes && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-400 block text-[10px]">Observações do Pedido:</span>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 italic">{selectedOrder.observacoes}</p>
-                </div>
-              )}
-            </div>
-
-            {/* ITENS DO PEDIDO */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <ShoppingBag size={13} /> Itens Comprados
-              </h4>
-              <div className="space-y-2">
-                {selectedOrder.itens.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs">
-                    <div className="flex items-center gap-2.5">
-                      {item.foto && (
-                        <img src={item.foto} alt={item.nome} className="w-9 h-9 object-cover rounded-lg border border-slate-200" />
-                      )}
-                      <div>
-                        <strong className="text-slate-800 dark:text-white">{item.nome}</strong>
-                        <span className="text-slate-400 block text-[11px]">
-                          {item.quantidade}x de R$ {item.preco_unitario.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <strong className="font-mono text-emerald-600 text-sm">
-                      R$ {item.subtotal.toFixed(2)}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-slate-700 mt-3">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Valor Total do Pedido:</span>
-                <strong className="text-lg font-black text-emerald-600 font-mono">
-                  R$ {selectedOrder.valor_total.toFixed(2)}
-                </strong>
-              </div>
-            </div>
-
-            {/* CONTROLES DE STATUS */}
-            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 space-y-3">
-              <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
-                Atualizar Andamento do Pedido
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                    Status da Entrega / Retirada:
-                  </label>
-                  <select
-                    value={selectedOrder.status_entrega}
-                    onChange={e => handleUpdateOrderStatus(selectedOrder.id, e.target.value as any, undefined)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none"
-                  >
-                    <option value="novo">Novo / Aguardando</option>
-                    <option value="separacao">Em Separação</option>
-                    <option value="pronto_retirada">📦 Pronto para Retirada na Igreja</option>
-                    <option value="entregue">✅ Entregue ao Comprador</option>
-                    <option value="cancelado">❌ Cancelado</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                    Status do Pagamento:
-                  </label>
-                  <select
-                    value={selectedOrder.status_pagamento}
-                    onChange={e => handleUpdateOrderStatus(selectedOrder.id, undefined, e.target.value as any)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none"
-                  >
-                    <option value="pendente">Pendente</option>
-                    <option value="pago">Confirmado / Pago</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <button
-                onClick={() => window.print()}
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Printer size={14} /> Imprimir Comprovante
-              </button>
-
-              <Button
-                onClick={() => setIsOrderDetailsOpen(false)}
-                variant="primary"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-5 rounded-xl cursor-pointer"
-              >
-                Fechar Detalhes
-              </Button>
-            </div>
-          </div>
-        </div>
+        <LojaTratamentoModal
+          order={selectedOrder}
+          onClose={() => setIsOrderDetailsOpen(false)}
+          onSaveOrder={handleSaveTratamento}
+          churchName={db?.igreja?.nome || 'Igreja'}
+          churchPhone={db?.igreja?.telefone || ''}
+          currentUser={user}
+        />
       )}
     </div>
   );

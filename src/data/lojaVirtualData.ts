@@ -24,6 +24,22 @@ export interface ItemPedidoLoja {
   foto?: string;
 }
 
+export interface ItemChecklistSeparacao {
+  produto_id: string;
+  separado: boolean;
+  separado_por?: string;
+  separado_em?: string;
+}
+
+export interface HistoricoEventoPedido {
+  id: string;
+  status: 'novo' | 'pagamento_confirmado' | 'separacao' | 'pronto_retirada' | 'entregue' | 'cancelado';
+  titulo: string;
+  descricao: string;
+  data: string;
+  responsavel?: string;
+}
+
 export interface PedidoLoja {
   id: string;
   numero_pedido: string;
@@ -42,6 +58,17 @@ export interface PedidoLoja {
   observacoes?: string;
   data_pedido: string;
   data_atualizacao?: string;
+  // Campos da esteira de tratamento e separação
+  checklist_separacao?: ItemChecklistSeparacao[];
+  historico_status?: HistoricoEventoPedido[];
+  responsavel_separacao?: string;
+  data_separacao?: string;
+  data_pagamento_confirmado?: string;
+  responsavel_pagamento?: string;
+  data_pronto_retirada?: string;
+  data_entrega?: string;
+  responsavel_entrega?: string;
+  notas_internas?: string;
 }
 
 export interface MovimentacaoEstoque {
