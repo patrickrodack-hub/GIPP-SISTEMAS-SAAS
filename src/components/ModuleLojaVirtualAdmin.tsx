@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
   ShoppingBag, Package, Plus, Search, Filter, Edit, Trash2, CheckCircle, 
   AlertTriangle, DollarSign, ArrowUpRight, ArrowDownRight, Clock, User, 
   Phone, Mail, Calendar, Eye, Printer, MessageCircle, RefreshCw, 
   TrendingUp, BarChart3, Tag, FileText, Check, X, Upload, Image as ImageIcon,
-  ArrowRight, ShieldCheck, Truck, Store, Layers, ClipboardCheck
+  ArrowRight, ShieldCheck, Truck, Store, Layers, ClipboardCheck, XCircle,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { 
   ProdutoLoja, PedidoLoja, MovimentacaoEstoque, 
@@ -16,9 +18,12 @@ import { Button } from '../utils/sharedHelpers';
 import LojaTratamentoModal from './LojaTratamentoModal';
 import LojaRecebimentoArea from './LojaRecebimentoArea';
 import LojaHistoricoPedidos from './LojaHistoricoPedidos';
+import LojaDocumentoFiscalModal from './LojaDocumentoFiscalModal';
+import { ConfirmModal } from './ConfirmModal';
+import { InteractiveWindow } from './InteractiveWindow';
 
 export default function ModuleLojaVirtualAdmin() {
-  const { db, setDbState, addToast, user, dbFirestore, appId, setDoc, doc } = useContext(ChurchContext);
+  const { db, setDbState, addToast, user, dbFirestore, appId, setDoc, doc, deleteDoc, logAction } = useContext(ChurchContext);
 
   const [activeTab, setActiveTab] = useState<'recebimento' | 'pedidos' | 'produtos' | 'estoque' | 'historico' | 'metricas'>('recebimento');
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +32,7 @@ export default function ModuleLojaVirtualAdmin() {
 
   // Modal states
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isProductModalMaximized, setIsProductModalMaximized] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProdutoLoja | null>(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [selectedStockProduct, setSelectedStockProduct] = useState<ProdutoLoja | null>(null);
@@ -35,6 +41,9 @@ export default function ModuleLojaVirtualAdmin() {
   const [stockMovementMotivo, setStockMovementMotivo] = useState('');
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PedidoLoja | null>(null);
+  const [quickFiscalDoc, setQuickFiscalDoc] = useState<{ order: PedidoLoja; tipo: 'nota_fiscal' | 'pedido_compra' } | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<PedidoLoja | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<PedidoLoja | null>(null);
 
   // Form states for Product
   const [formData, setFormData] = useState<Partial<ProdutoLoja>>({
@@ -400,6 +409,97 @@ export default function ModuleLojaVirtualAdmin() {
     addToast("Pedido atualizado com sucesso na esteira!", "success");
   };
 
+  // Direct cancel order handler with stock refund
+  const handleCancelOrderDirect = async (pedido: PedidoLoja) => {
+    const prevOrder = pedidos.find(p => p.id === pedido.id);
+    if (!prevOrder || prevOrder.status_entrega === 'cancelado') return;
+
+    let updatedProducts = [...produtos];
+    let updatedMovs = [...movimentacoes];
+    const now = new Date().toISOString();
+    const operatorName = user?.nome || 'Administrador';
+
+    // Devolve ao estoque
+    (pedido.itens || []).forEach(item => {
+      const prod = updatedProducts.find(p => p.id === item.produto_id);
+      if (prod) {
+        const newQty = prod.estoque_atual + item.quantidade;
+        updatedProducts = updatedProducts.map(p => p.id === prod.id ? { ...p, estoque_atual: newQty } : p);
+        updatedMovs.unshift({
+          id: `mov-estorno-${Date.now()}-${prod.id}`,
+          produto_id: prod.id,
+          produto_nome: prod.nome,
+          tipo: 'devolucao',
+          quantidade: item.quantidade,
+          estoque_anterior: prod.estoque_atual,
+          estoque_posterior: newQty,
+          motivo: `Cancelamento de Pedido #${pedido.numero_pedido} pelo Painel Administrativo`,
+          responsavel: operatorName,
+          data: now
+        });
+      }
+    });
+
+    const historyEvent: HistoricoEventoPedido = {
+      id: `hist-${Date.now()}`,
+      status: 'cancelado',
+      titulo: 'Pedido Cancelado',
+      descricao: `Cancelamento manual realizado por ${operatorName}. Estoque estornado com sucesso.`,
+      data: now,
+      responsavel: operatorName
+    };
+
+    const finalOrder: PedidoLoja = {
+      ...pedido,
+      status_entrega: 'cancelado',
+      status_pagamento: 'cancelado',
+      data_atualizacao: now,
+      historico_status: [historyEvent, ...(pedido.historico_status || [])]
+    };
+
+    const updatedOrders = pedidos.map(p => p.id === finalOrder.id ? finalOrder : p);
+    await syncProdutos(updatedProducts);
+    await syncMovimentacoes(updatedMovs);
+    await syncPedidos(updatedOrders);
+
+    if (selectedOrder && selectedOrder.id === finalOrder.id) {
+      setSelectedOrder(finalOrder);
+    }
+    setOrderToCancel(null);
+    addToast(`Pedido #${pedido.numero_pedido} cancelado e itens estornados ao estoque!`, "info");
+  };
+
+  // Direct delete order handler using system deletion engine
+  const handleDeleteOrderDirect = async (pedido: PedidoLoja) => {
+    try {
+      const updatedOrders = pedidos.filter(p => p.id !== pedido.id);
+      await syncPedidos(updatedOrders);
+
+      if (dbFirestore && appId && deleteDoc && doc) {
+        try {
+          await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_pedidos', pedido.id));
+        } catch (e) {
+          console.warn("Erro ao deletar pedido do Firestore:", e);
+        }
+      }
+
+      if (logAction) {
+        logAction('Exclusão de Pedido', `Pedido #${pedido.numero_pedido} (${pedido.cliente_nome} - R$ ${pedido.valor_total.toFixed(2)}) excluído definitivamente do sistema.`);
+      }
+
+      if (selectedOrder && selectedOrder.id === pedido.id) {
+        setIsOrderDetailsOpen(false);
+        setSelectedOrder(null);
+      }
+
+      setOrderToDelete(null);
+      addToast(`Pedido #${pedido.numero_pedido} excluído definitivamente do sistema!`, "success");
+    } catch (err) {
+      console.error("Erro ao excluir pedido:", err);
+      addToast("Erro ao excluir pedido.", "error");
+    }
+  };
+
   // Open WhatsApp contact
   const handleContactBuyerWhatsApp = (pedido: PedidoLoja) => {
     const phone = (pedido.cliente_telefone || '').replace(/\D/g, '');
@@ -418,7 +518,10 @@ export default function ModuleLojaVirtualAdmin() {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-5 animate-entrance overflow-y-auto custom-scrollbar p-1">
+    <div 
+      id="module-loja-virtual-container"
+      className="h-full flex flex-col space-y-5 animate-entrance overflow-y-auto custom-scrollbar p-1"
+    >
       {/* HEADER PRINCIPAL UNIFICADO */}
       <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -587,6 +690,8 @@ export default function ModuleLojaVirtualAdmin() {
             setIsOrderDetailsOpen(true);
           }}
           onQuickUpdateStatus={handleUpdateOrderStatus}
+          onCancelOrder={(ped) => setOrderToCancel(ped)}
+          onDeleteOrder={(ped) => setOrderToDelete(ped)}
           churchName={db?.igreja?.nome || 'Igreja'}
         />
       )}
@@ -599,6 +704,9 @@ export default function ModuleLojaVirtualAdmin() {
             setSelectedOrder(ped);
             setIsOrderDetailsOpen(true);
           }}
+          onViewFiscalDoc={(ped, tipo) => setQuickFiscalDoc({ order: ped, tipo })}
+          onCancelOrder={(ped) => setOrderToCancel(ped)}
+          onDeleteOrder={(ped) => setOrderToDelete(ped)}
           churchName={db?.igreja?.nome || 'Igreja'}
         />
       )}
@@ -880,6 +988,22 @@ export default function ModuleLojaVirtualAdmin() {
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
+                              type="button"
+                              onClick={() => setQuickFiscalDoc({ order: ped, tipo: 'nota_fiscal' })}
+                              title="Emitir / Imprimir Nota Fiscal (DAV)"
+                              className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors border border-indigo-200 cursor-pointer"
+                            >
+                              <FileText size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setQuickFiscalDoc({ order: ped, tipo: 'pedido_compra' })}
+                              title="Emitir / Imprimir Pedido de Compra Oficial"
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-700 cursor-pointer"
+                            >
+                              <Printer size={14} />
+                            </button>
+                            <button
                               onClick={() => handleContactBuyerWhatsApp(ped)}
                               title="Avisar no WhatsApp"
                               className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-colors border border-emerald-200 cursor-pointer"
@@ -892,6 +1016,22 @@ export default function ModuleLojaVirtualAdmin() {
                               className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-lg transition-colors border border-indigo-200 flex items-center gap-1 cursor-pointer"
                             >
                               <Eye size={13} /> Gerenciar
+                            </button>
+                            {ped.status_entrega !== 'cancelado' && (
+                              <button
+                                onClick={() => setOrderToCancel(ped)}
+                                title="Cancelar Pedido & Estornar Estoque"
+                                className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors border border-amber-200 cursor-pointer"
+                              >
+                                <XCircle size={14} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setOrderToDelete(ped)}
+                              title="Excluir Pedido Definitivamente (Motor de Exclusão)"
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-200 cursor-pointer"
+                            >
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </td>
@@ -1049,227 +1189,235 @@ export default function ModuleLojaVirtualAdmin() {
       )}
 
       {/* MODAL: CADASTRO / EDIÇÃO DE PRODUTO */}
-      {isProductModalOpen && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-slate-50 dark:bg-slate-800/80 px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 rounded-xl">
-                  <ShoppingBag size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                    {editingProduct ? 'Editar Dados do Produto' : 'Cadastrar Novo Produto na Loja'}
-                  </h3>
-                  <p className="text-xs text-slate-500">Configuração de catálogo e preços de venda</p>
-                </div>
-              </div>
-              <button 
+      {isProductModalOpen && createPortal(
+        <InteractiveWindow
+          id="loja_virtual_produto_modal"
+          title={editingProduct ? `Editar: ${formData.nome || 'Produto'}` : 'Cadastrar Novo Produto na Loja'}
+          subtitle="Catálogo & E-Commerce • Loja Virtual"
+          icon={ShoppingBag}
+          headerBg="from-indigo-600 via-indigo-700 to-slate-900"
+          onClose={() => setIsProductModalOpen(false)}
+          defaultWidth={780}
+          defaultHeight={700}
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button
+                type="button"
                 onClick={() => setIsProductModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               >
-                <X size={18} />
+                Cancelar
               </button>
+              <Button
+                type="button"
+                onClick={handleSaveProduct}
+                variant="primary"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-sm cursor-pointer"
+              >
+                Salvar Produto
+              </Button>
             </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Nome do Produto *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.nome || ''}
+                  onChange={e => setFormData({ ...formData, nome: e.target.value })}
+                  placeholder="Ex: Bíblia de Estudo Pentecostal, Camiseta do Congresso..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                />
+              </div>
 
-            <form onSubmit={handleSaveProduct} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Nome do Produto *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nome || ''}
-                    onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                    placeholder="Ex: Bíblia de Estudo Pentecostal, Camiseta do Congresso..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Código SKU / Barras
+                </label>
+                <input
+                  type="text"
+                  value={formData.sku || ''}
+                  onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                  placeholder="Ex: BIB-001"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Categoria *
+                </label>
+                <select
+                  value={formData.categoria || CATEGORIAS_LOJA[0]}
+                  onChange={e => setFormData({ ...formData, categoria: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {CATEGORIAS_LOJA.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Preço de Custo (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.preco_custo || 0}
+                  onChange={e => setFormData({ ...formData, preco_custo: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Preço de Venda (R$) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={formData.preco_venda || 0}
+                  onChange={e => setFormData({ ...formData, preco_venda: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/20 dark:bg-indigo-950/20 text-sm font-mono font-bold text-indigo-700 dark:text-indigo-400 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Quantidade em Estoque Inicial
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.estoque_atual || 0}
+                  onChange={e => setFormData({ ...formData, estoque_atual: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Estoque Mínimo de Alerta
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.estoque_minimo || 5}
+                  onChange={e => setFormData({ ...formData, estoque_minimo: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Foto do Produto
+                </label>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={formData.foto || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=150&q=80'}
+                    alt="Pré-visualização"
+                    className="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Código SKU / Barras
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sku || ''}
-                    onChange={e => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                    placeholder="Ex: BIB-001"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Categoria *
-                  </label>
-                  <select
-                    value={formData.categoria || CATEGORIAS_LOJA[0]}
-                    onChange={e => setFormData({ ...formData, categoria: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  >
-                    {CATEGORIAS_LOJA.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Preço de Custo (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.preco_custo || 0}
-                    onChange={e => setFormData({ ...formData, preco_custo: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Preço de Venda (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    required
-                    value={formData.preco_venda || 0}
-                    onChange={e => setFormData({ ...formData, preco_venda: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/20 dark:bg-indigo-950/20 text-sm font-mono font-bold text-indigo-700 dark:text-indigo-400 outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Quantidade em Estoque Inicial
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.estoque_atual || 0}
-                    onChange={e => setFormData({ ...formData, estoque_atual: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Estoque Mínimo de Alerta
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.estoque_minimo || 5}
-                    onChange={e => setFormData({ ...formData, estoque_minimo: parseInt(e.target.value) || 1 })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Foto do Produto
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={formData.foto || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=150&q=80'}
-                      alt="Pré-visualização"
-                      className="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100"
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
                     />
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={formData.foto || ''}
-                        onChange={e => setFormData({ ...formData, foto: e.target.value })}
-                        placeholder="Ou cole a URL da imagem (https://...)"
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={formData.foto || ''}
+                      onChange={e => setFormData({ ...formData, foto: e.target.value })}
+                      placeholder="Ou cole a URL da imagem (https://...)"
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none"
+                    />
                   </div>
                 </div>
+              </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Descrição Detalhada do Produto
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.descricao || ''}
-                    onChange={e => setFormData({ ...formData, descricao: e.target.value })}
-                    placeholder="Informe detalhes, medidas, acabamento e características da peça ou livro..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Descrição Detalhada do Produto
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.descricao || ''}
+                  onChange={e => setFormData({ ...formData, descricao: e.target.value })}
+                  placeholder="Informe detalhes, medidas, acabamento e características da peça ou livro..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div className="flex items-center gap-6 md:col-span-2">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.ativo}
+                    onChange={e => setFormData({ ...formData, ativo: e.target.checked })}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
                   />
-                </div>
+                  Ativo na Loja (Visível para os Membros)
+                </label>
 
-                <div className="flex items-center gap-6 md:col-span-2">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={formData.ativo}
-                      onChange={e => setFormData({ ...formData, ativo: e.target.checked })}
-                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Ativo na Loja (Visível para os Membros)
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={formData.destaque}
-                      onChange={e => setFormData({ ...formData, destaque: e.target.checked })}
-                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Destacar na Página Inicial da Loja
-                  </label>
-                </div>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.destaque}
+                    onChange={e => setFormData({ ...formData, destaque: e.target.checked })}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                  />
+                  Destacar na Página Inicial da Loja
+                </label>
               </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setIsProductModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-sm cursor-pointer"
-                >
-                  Salvar Produto
-                </Button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
+        </InteractiveWindow>,
+        document.body
       )}
 
       {/* MODAL: AJUSTE / MOVIMENTAÇÃO DE ESTOQUE */}
-      {isStockModalOpen && selectedStockProduct && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Layers size={18} className="text-indigo-600" />
-                Lançar Movimentação de Estoque
-              </h3>
-              <button onClick={() => setIsStockModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={16} />
+      {isStockModalOpen && selectedStockProduct && createPortal(
+        <InteractiveWindow
+          id="loja_virtual_estoque_modal"
+          title={`Movimentação de Estoque: ${selectedStockProduct.nome}`}
+          subtitle="Ajustes & Lançamentos • Loja Virtual"
+          icon={Layers}
+          headerBg="from-indigo-600 via-indigo-700 to-slate-900"
+          onClose={() => setIsStockModalOpen(false)}
+          defaultWidth={560}
+          defaultHeight={540}
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setIsStockModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Cancelar
               </button>
+              <Button
+                type="button"
+                onClick={handleConfirmStockMovement}
+                variant="primary"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-xl"
+              >
+                Confirmar Lançamento
+              </Button>
             </div>
-
+          }
+        >
+          <div className="space-y-4">
             <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
               <h4 className="font-bold text-xs text-slate-800 dark:text-white">{selectedStockProduct.nome}</h4>
               <p className="text-[11px] text-slate-500">Estoque Atual: <strong>{selectedStockProduct.estoque_atual} un.</strong></p>
@@ -1332,24 +1480,9 @@ export default function ModuleLojaVirtualAdmin() {
                 />
               </div>
             </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-              <button
-                onClick={() => setIsStockModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-              >
-                Cancelar
-              </button>
-              <Button
-                onClick={handleConfirmStockMovement}
-                variant="primary"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-xl"
-              >
-                Confirmar Lançamento
-              </Button>
-            </div>
           </div>
-        </div>
+        </InteractiveWindow>,
+        document.body
       )}
 
       {/* MODAL COMPLETO DE TRATAMENTO, CONFERÊNCIA, SEPARAÇÃO E AUDITORIA DO PEDIDO */}
@@ -1358,9 +1491,61 @@ export default function ModuleLojaVirtualAdmin() {
           order={selectedOrder}
           onClose={() => setIsOrderDetailsOpen(false)}
           onSaveOrder={handleSaveTratamento}
+          onDeleteOrder={(order) => {
+            setIsOrderDetailsOpen(false);
+            setOrderToDelete(order);
+          }}
           churchName={db?.igreja?.nome || 'Igreja'}
           churchPhone={db?.igreja?.telefone || ''}
           currentUser={user}
+          igreja={db?.igreja}
+        />
+      )}
+
+      {/* MOTOR DE EXCLUSÃO DE PEDIDO DEFINITIVO */}
+      <ConfirmModal
+        isOpen={!!orderToDelete}
+        onClose={() => setOrderToDelete(null)}
+        onCancel={() => setOrderToDelete(null)}
+        onConfirm={() => {
+          if (orderToDelete) handleDeleteOrderDirect(orderToDelete);
+        }}
+        title="Excluir Pedido Definitivamente"
+        message={`Deseja realmente EXCLUIR DEFINITIVAMENTE o Pedido #${orderToDelete?.numero_pedido} do cliente ${orderToDelete?.cliente_nome} (Valor: R$ ${orderToDelete?.valor_total.toFixed(2)})? Esta operação usa o motor de exclusão do sistema e não poderá ser desfeita.`}
+        confirmText="Sim, Excluir Pedido"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+
+      {/* CONFIRMAÇÃO DE CANCELAMENTO DE PEDIDO ADMINISTRATIVO */}
+      <ConfirmModal
+        isOpen={!!orderToCancel}
+        onClose={() => setOrderToCancel(null)}
+        onCancel={() => setOrderToCancel(null)}
+        onConfirm={() => {
+          if (orderToCancel) handleCancelOrderDirect(orderToCancel);
+        }}
+        title="Cancelar Pedido & Estornar Estoque"
+        message={`Deseja cancelar o Pedido #${orderToCancel?.numero_pedido} do cliente ${orderToCancel?.cliente_nome}? Todos os produtos serão automaticamente devolvidos e somados de volta ao estoque da loja.`}
+        confirmText="Sim, Cancelar e Estornar"
+        cancelText="Voltar"
+        variant="danger"
+      />
+
+      {/* MOTOR DE EMISSÃO DE NOTA FISCAL / PEDIDO DE COMPRA ADMINISTRATIVO */}
+      {quickFiscalDoc && (
+        <LojaDocumentoFiscalModal
+          pedido={quickFiscalDoc.order}
+          tipoDocumento={quickFiscalDoc.tipo}
+          igreja={db?.igreja}
+          onClose={() => setQuickFiscalDoc(null)}
+          onUpdateStatus={(updatedPed) => {
+            setDbState((prev: any) => {
+              const current = prev?.loja_pedidos || [];
+              const updatedList = current.map((p: any) => p.id === updatedPed.id ? updatedPed : p);
+              return { ...prev, loja_pedidos: updatedList };
+            });
+          }}
         />
       )}
     </div>

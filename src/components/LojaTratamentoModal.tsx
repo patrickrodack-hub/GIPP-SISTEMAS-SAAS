@@ -1,28 +1,36 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Package, User, Phone, MessageCircle, CheckCircle2, Clock, 
   Store, AlertCircle, Printer, X, Check, ShieldCheck, DollarSign,
-  ClipboardCheck, Calendar, FileText, ChevronRight
+  ClipboardCheck, Calendar, FileText, ChevronRight, Trash2, XCircle,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { PedidoLoja, ItemChecklistSeparacao, HistoricoEventoPedido } from '../data/lojaVirtualData';
 import { Button } from '../utils/sharedHelpers';
+import { InteractiveWindow } from './InteractiveWindow';
+import LojaDocumentoFiscalModal from './LojaDocumentoFiscalModal';
 
 interface LojaTratamentoModalProps {
   order: PedidoLoja;
   onClose: () => void;
   onSaveOrder: (updatedOrder: PedidoLoja, eventTitle: string, eventDesc: string) => Promise<void>;
+  onDeleteOrder?: (order: PedidoLoja) => void;
   churchName?: string;
   churchPhone?: string;
   currentUser?: any;
+  igreja?: any;
 }
 
 export default function LojaTratamentoModal({
   order,
   onClose,
   onSaveOrder,
+  onDeleteOrder,
   churchName = 'Igreja',
   churchPhone = '',
-  currentUser
+  currentUser,
+  igreja
 }: LojaTratamentoModalProps) {
   const [checklist, setChecklist] = useState<{ [productId: string]: boolean }>(() => {
     const map: { [productId: string]: boolean } = {};
@@ -38,6 +46,9 @@ export default function LojaTratamentoModal({
   const [notasInternas, setNotasInternas] = useState(order.notas_internas || '');
   const [responsavelSeparacao, setResponsavelSeparacao] = useState(order.responsavel_separacao || currentUser?.nome || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isModalMaximized, setIsModalMaximized] = useState(false);
+  const [showFiscalDoc, setShowFiscalDoc] = useState<'nota_fiscal' | 'pedido_compra' | null>(null);
 
   // Separation stats
   const totalItensCount = order.itens?.length || 0;
@@ -157,8 +168,8 @@ export default function LojaTratamentoModal({
     }
   };
 
-  const handleCancelOrder = async () => {
-    if (!window.confirm("Deseja realmente cancelar este pedido? Os itens serão estornados para o estoque.")) return;
+  const handleExecuteCancelOrder = async () => {
+    setShowCancelConfirm(false);
     setStatusEntrega('cancelado');
     setStatusPagamento('cancelado');
     setIsSaving(true);
@@ -172,7 +183,7 @@ export default function LojaTratamentoModal({
       };
       await onSaveOrder(
         updated,
-        'Pedido Cancelado',
+        'Pedido Cancelado pelo Administrador',
         `Pedido cancelado por ${currentUser?.nome || 'Operador'}. Itens estornados ao estoque.`
       );
     } finally {
@@ -300,57 +311,97 @@ export default function LojaTratamentoModal({
     }, 250);
   };
 
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/75 flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl max-h-[92vh] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden">
-        {/* TOPO / HEADER */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-sm">
-              <Package size={22} />
+  return createPortal(
+    <>
+      <InteractiveWindow
+        id={`loja_tratamento_modal_${order.id || order.numero_pedido}`}
+        title={`Tratamento do Pedido #${order.numero_pedido}`}
+        subtitle={`${order.cliente_nome || 'Membro'} • ${
+          statusEntrega === 'entregue' ? 'Entregue' :
+          statusEntrega === 'pronto_retirada' ? 'Pronto p/ Retirada' :
+          statusEntrega === 'separacao' ? 'Em Separação' :
+          statusEntrega === 'cancelado' ? 'Cancelado' : 'Recebido / Novo'
+        }`}
+        icon={Package}
+        headerBg="from-indigo-600 via-indigo-700 to-slate-900"
+        onClose={onClose}
+        defaultWidth={960}
+        defaultHeight={780}
+        footer={
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setShowFiscalDoc('nota_fiscal')}
+                title="Emitir e imprimir a Nota Fiscal / Recibo Oficial Quitado"
+                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <FileText size={15} /> Nota Fiscal (DAV)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowFiscalDoc('pedido_compra')}
+                title="Emitir e imprimir o Pedido de Compra Oficial"
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Printer size={15} /> Pedido de Compra
+              </button>
+
+              <button
+                type="button"
+                onClick={printSeparationSlip}
+                title="Imprimir Ficha de Separação de Estoque"
+                className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"
+              >
+                <ClipboardCheck size={15} /> Ficha Separação
+              </button>
+
+              {statusEntrega !== 'cancelado' && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  disabled={isSaving}
+                  className="px-3 py-2 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border border-amber-200"
+                >
+                  <XCircle size={14} /> Cancelar Pedido
+                </button>
+              )}
+
+              {onDeleteOrder && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteOrder(order)}
+                  disabled={isSaving}
+                  className="px-3 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border border-rose-200"
+                  title="Excluir este pedido definitivamente através do motor de exclusão"
+                >
+                  <Trash2 size={14} /> Excluir Pedido
+                </button>
+              )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black text-slate-800 dark:text-white">
-                  Tratamento do Pedido #{order.numero_pedido}
-                </h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                  statusEntrega === 'entregue' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' :
-                  statusEntrega === 'pronto_retirada' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300' :
-                  statusEntrega === 'separacao' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' :
-                  statusEntrega === 'cancelado' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300' :
-                  'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
-                }`}>
-                  {statusEntrega === 'entregue' ? '✅ Entregue' :
-                   statusEntrega === 'pronto_retirada' ? '📦 Pronto p/ Retirada' :
-                   statusEntrega === 'separacao' ? '⏳ Em Separação' :
-                   statusEntrega === 'cancelado' ? '❌ Cancelado' : '📥 Recebido / Novo'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-medium">
-                Recebido do Portal de Membros em {new Date(order.data_pedido).toLocaleString('pt-BR')}
-              </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 rounded-xl cursor-pointer"
+              >
+                Fechar
+              </button>
+              <Button
+                onClick={handleSaveAll}
+                disabled={isSaving}
+                variant="primary"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-5 rounded-xl cursor-pointer"
+              >
+                {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={printSeparationSlip}
-              title="Imprimir Guia de Separação / Comprovante"
-              className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 rounded-xl transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
-            >
-              <Printer size={18} />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* STEPPER VISUAL DA ESTEIRA */}
+        }
+      >
+        <div className="space-y-6">
         <div className="px-6 py-4 bg-indigo-50/40 dark:bg-indigo-950/20 border-b border-indigo-100 dark:border-indigo-900/30">
           <div className="flex items-center justify-between text-xs">
             {/* Etapa 1 */}
@@ -721,37 +772,56 @@ export default function LojaTratamentoModal({
             </div>
           </div>
         </div>
+      </div>
+    </InteractiveWindow>
 
-        {/* RODAPÉ COM AÇÕES */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleCancelOrder}
-            disabled={isSaving || statusEntrega === 'cancelado'}
-            className="px-3 py-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl text-xs font-bold transition-all cursor-pointer"
-          >
-            Cancelar Pedido & Estornar Estoque
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 rounded-xl cursor-pointer"
-            >
-              Fechar
-            </button>
-            <Button
-              onClick={handleSaveAll}
-              disabled={isSaving}
-              variant="primary"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-5 rounded-xl cursor-pointer"
-            >
-              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
+      {/* CONFIRMAÇÃO DE CANCELAMENTO */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[10003] bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 max-w-sm w-full shadow-2xl space-y-3 animate-in fade-in">
+            <div className="flex items-center gap-2 text-amber-600">
+              <AlertCircle size={22} />
+              <h4 className="font-black text-sm text-slate-800 dark:text-white">Confirmar Cancelamento</h4>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Deseja realmente cancelar o Pedido <strong>#{order.numero_pedido}</strong> de <strong>{order.cliente_nome}</strong>? Os itens do pedido serão estornados automaticamente ao estoque da loja.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteCancelOrder}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm cursor-pointer"
+              >
+                Sim, Cancelar Pedido
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+      {/* MOTOR DE EMISSÃO DE DOCUMENTO FISCAL / NOTA FISCAL / PEDIDO DE COMPRA */}
+      {showFiscalDoc && (
+        <LojaDocumentoFiscalModal
+          pedido={order}
+          tipoDocumento={showFiscalDoc}
+          igreja={igreja || { nome: churchName, telefone: churchPhone }}
+          onClose={() => setShowFiscalDoc(null)}
+          onUpdateStatus={async (updatedPed) => {
+            await onSaveOrder(
+              updatedPed, 
+              `Emissão de ${showFiscalDoc === 'nota_fiscal' ? 'Nota Fiscal' : 'Pedido de Compra'}`, 
+              `Documento emitido e impresso/enviado pelo painel administrativo.`
+            );
+          }}
+        />
+      )}
+    </>,
+    document.body
   );
 }

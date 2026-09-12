@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2, CheckCircle, Info } from 'lucide-react';
 import { Button } from '../utils/sharedHelpers';
 
@@ -26,7 +27,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   variant = "danger" 
 }) => { 
   if (!isOpen) return null; 
-  return ( 
+  return createPortal( 
     <div className="fixed inset-0 bg-slate-900/60 z-[10000] flex items-center justify-center p-4 animate-entrance backdrop-blur-md no-print"> 
       <div className="bg-white/90 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-white/50 ring-1 ring-white/20 relative"> 
         <div className="p-10 flex flex-col items-center text-center gap-6 relative z-10">
@@ -43,7 +44,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <Button variant={variant as any} onClick={(e) => { e.stopPropagation(); if (onConfirm) onConfirm(); onClose(); }} className="flex-1">{confirmText}</Button>
         </div> 
       </div> 
-    </div> 
+    </div>,
+    document.body
   ); 
 };
 

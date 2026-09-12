@@ -5,21 +5,25 @@ import {
 import { 
   CheckCircle2, Clock, Package, ShoppingBag, Store, MapPin, 
   MessageCircle, Printer, ChevronDown, ChevronUp, Bell, 
-  AlertCircle, Check, Sparkles, XCircle, ArrowRight
+  AlertCircle, Check, Sparkles, XCircle, ArrowRight, FileText, Download
 } from 'lucide-react';
 
 interface LojaMembroPedidoCardProps {
   key?: React.Key;
   pedido: PedidoLoja;
   onViewReceipt: (p: PedidoLoja) => void;
+  onViewFiscalDoc?: (p: PedidoLoja, tipo: 'nota_fiscal' | 'pedido_compra') => void;
   onWhatsApp: (p: PedidoLoja) => void;
+  onCancelOrder?: (p: PedidoLoja) => void;
   churchName: string;
 }
 
 export default function LojaMembroPedidoCard({
   pedido,
   onViewReceipt,
+  onViewFiscalDoc,
   onWhatsApp,
+  onCancelOrder,
   churchName
 }: LojaMembroPedidoCardProps) {
   const [showTimeline, setShowTimeline] = useState(false);
@@ -319,20 +323,47 @@ export default function LojaMembroPedidoCard({
       </div>
 
       {/* BOTÕES DE AÇÃO */}
-      <div className="flex items-center justify-end gap-2 mt-3 pt-2">
+      <div className="flex items-center justify-end gap-2 mt-3 pt-2 flex-wrap">
+        {onCancelOrder && pedido.status_entrega !== 'cancelado' && pedido.status_entrega !== 'entregue' && (
+          <button
+            type="button"
+            onClick={() => onCancelOrder(pedido)}
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 rounded-xl text-xs font-bold transition-colors border border-rose-200 dark:border-rose-800 flex items-center gap-1.5 cursor-pointer"
+            title="Cancelar este pedido e devolver itens ao estoque"
+          >
+            <XCircle size={14} /> Cancelar Pedido
+          </button>
+        )}
+
         <button
           onClick={() => onWhatsApp(pedido)}
           className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 rounded-xl text-xs font-bold transition-colors border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 cursor-pointer"
+          title="Falar com a equipe da igreja no WhatsApp"
         >
-          <MessageCircle size={14} /> Falar no WhatsApp
+          <MessageCircle size={14} /> WhatsApp
         </button>
 
         <button
-          onClick={() => onViewReceipt(pedido)}
-          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 cursor-pointer"
+          type="button"
+          onClick={() => onViewFiscalDoc ? onViewFiscalDoc(pedido, 'pedido_compra') : onViewReceipt(pedido)}
+          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 cursor-pointer shadow-xs"
+          title="Imprimir ou visualizar o Pedido de Compra Oficial"
         >
-          <Printer size={14} /> Comprovante
+          <Printer size={14} className="text-slate-600 dark:text-slate-300" />
+          <span>Pedido de Compra</span>
         </button>
+
+        {pedido.status_pagamento === 'pago' && (
+          <button
+            type="button"
+            onClick={() => onViewFiscalDoc ? onViewFiscalDoc(pedido, 'nota_fiscal') : onViewReceipt(pedido)}
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            title="Visualizar e emitir a Nota Fiscal / Recibo Quitado"
+          >
+            <FileText size={14} />
+            <span>Nota Fiscal (DAV)</span>
+          </button>
+        )}
       </div>
     </div>
   );

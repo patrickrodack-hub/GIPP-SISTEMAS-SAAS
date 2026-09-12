@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { 
   Package, Search, Filter, CheckCircle2, Clock, Store, 
   DollarSign, MessageCircle, Eye, Printer, ChevronRight,
-  ClipboardCheck, User, Phone, Check, AlertCircle, RefreshCw
+  ClipboardCheck, User, Phone, Check, AlertCircle, RefreshCw,
+  Trash2, XCircle
 } from 'lucide-react';
 import { PedidoLoja } from '../data/lojaVirtualData';
 
@@ -10,6 +11,8 @@ interface LojaRecebimentoAreaProps {
   pedidos: PedidoLoja[];
   onOpenTratamento: (pedido: PedidoLoja) => void;
   onQuickUpdateStatus: (pedidoId: string, statusEntrega?: PedidoLoja['status_entrega'], statusPagamento?: PedidoLoja['status_pagamento']) => void;
+  onCancelOrder?: (pedido: PedidoLoja) => void;
+  onDeleteOrder?: (pedido: PedidoLoja) => void;
   churchName?: string;
 }
 
@@ -17,6 +20,8 @@ export default function LojaRecebimentoArea({
   pedidos,
   onOpenTratamento,
   onQuickUpdateStatus,
+  onCancelOrder,
+  onDeleteOrder,
   churchName = 'Igreja'
 }: LojaRecebimentoAreaProps) {
   const [stageFilter, setStageFilter] = useState<'todos_abertos' | 'novo' | 'pago' | 'separacao' | 'pronto_retirada' | 'entregue' | 'cancelado'>('todos_abertos');
@@ -77,27 +82,6 @@ export default function LojaRecebimentoArea({
 
   return (
     <div className="space-y-4">
-      {/* BANNER DA ÁREA DE RECEBIMENTO & TRIAGEM */}
-      <div className="p-4 bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-white/10 rounded-2xl border border-white/20">
-            <ClipboardCheck size={26} className="text-amber-400" />
-          </div>
-          <div>
-            <h3 className="text-base font-black">Esteira de Recebimento, Separação e Entrega</h3>
-            <p className="text-xs text-indigo-200">
-              Receba os pedidos feitos no portal, confira o pagamento, faça a separação física e notifique o membro para retirada.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="bg-indigo-700/80 text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-indigo-500/30">
-            {counts.abertos} pedido(s) em aberto aguardando ação
-          </span>
-        </div>
-      </div>
-
       {/* ESTEIRA DE STATUS EM CARDS INTERATIVOS (PIPELINE) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         <button
@@ -374,6 +358,28 @@ export default function LojaRecebimentoArea({
                     >
                       <ClipboardCheck size={15} /> Tratar Pedido
                     </button>
+
+                    {onCancelOrder && ped.status_entrega !== 'cancelado' && (
+                      <button
+                        type="button"
+                        onClick={() => onCancelOrder(ped)}
+                        title="Cancelar Pedido & Estornar Estoque"
+                        className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition-all border border-amber-200 cursor-pointer"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    )}
+
+                    {onDeleteOrder && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteOrder(ped)}
+                        title="Excluir Pedido Definitivamente (Motor de Exclusão)"
+                        className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all border border-rose-200 cursor-pointer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

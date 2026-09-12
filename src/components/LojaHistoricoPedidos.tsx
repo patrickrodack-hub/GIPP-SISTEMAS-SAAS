@@ -1,19 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Package, Search, Filter, CheckCircle2, Clock, 
-  Store, DollarSign, Printer, Eye, Calendar, User, Phone, XCircle
+  Store, DollarSign, Printer, Eye, Calendar, User, Phone, XCircle, Trash2, FileText
 } from 'lucide-react';
 import { PedidoLoja } from '../data/lojaVirtualData';
 
 interface LojaHistoricoPedidosProps {
   pedidos: PedidoLoja[];
   onOpenTratamento: (pedido: PedidoLoja) => void;
+  onViewFiscalDoc?: (pedido: PedidoLoja, tipo: 'nota_fiscal' | 'pedido_compra') => void;
+  onCancelOrder?: (pedido: PedidoLoja) => void;
+  onDeleteOrder?: (pedido: PedidoLoja) => void;
   churchName?: string;
 }
 
 export default function LojaHistoricoPedidos({
   pedidos,
   onOpenTratamento,
+  onViewFiscalDoc,
+  onCancelOrder,
+  onDeleteOrder,
   churchName = 'Igreja'
 }: LojaHistoricoPedidosProps) {
   const [activeSubFilter, setActiveSubFilter] = useState<'todos' | 'em_aberto' | 'concluidos' | 'cancelados'>('todos');
@@ -299,12 +305,53 @@ export default function LojaHistoricoPedidos({
                         {ped.local_retirada}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onOpenTratamento(ped)}
-                          className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-lg transition-colors border border-indigo-200 flex items-center gap-1 ml-auto cursor-pointer"
-                        >
-                          <Eye size={13} /> Tratar
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          {onViewFiscalDoc && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => onViewFiscalDoc(ped, 'nota_fiscal')}
+                                title="Emitir / Imprimir Nota Fiscal (DAV)"
+                                className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors border border-indigo-200 cursor-pointer"
+                              >
+                                <FileText size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onViewFiscalDoc(ped, 'pedido_compra')}
+                                title="Emitir / Imprimir Pedido de Compra"
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-700 cursor-pointer"
+                              >
+                                <Printer size={14} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => onOpenTratamento(ped)}
+                            title="Ver detalhes do pedido"
+                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-lg transition-colors border border-indigo-200 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Eye size={13} /> Tratar
+                          </button>
+                          {onCancelOrder && ped.status_entrega !== 'cancelado' && (
+                            <button
+                              onClick={() => onCancelOrder(ped)}
+                              title="Cancelar Pedido & Estornar Estoque"
+                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors border border-amber-200 cursor-pointer"
+                            >
+                              <XCircle size={14} />
+                            </button>
+                          )}
+                          {onDeleteOrder && (
+                            <button
+                              onClick={() => onDeleteOrder(ped)}
+                              title="Excluir Pedido Definitivamente (Motor de Exclusão)"
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-200 cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
