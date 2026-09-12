@@ -21,8 +21,12 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
+  Folder, FolderPlus, FolderCheck, Bookmark, SlidersHorizontal
 } from 'lucide-react';
+import { 
+  transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
+} from '../utils/musicChords';
 
 import { 
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 
@@ -92,7 +96,10 @@ const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
 
 // Exporting component
 const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
-    const { db, openModal, setDoc, doc, dbFirestore, appId, addToast, callGeminiAI, user, addDoc, collection, deleteDoc, isOnline } = useContext(ChurchContext);
+    const { 
+        db, openModal, setDoc, doc, dbFirestore, appId, addToast, callGeminiAI, user, addDoc, collection, deleteDoc, isOnline,
+        setPrintMode, setPrintData, setPreviewOpen, setPrintOrientation, setPrintPalette, setPrintMarginType
+    } = useContext(ChurchContext);
     const [tab, setTab] = useState(initialTab);
     
     useEffect(() => {
@@ -124,6 +131,22 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             return [];
         }
     });
+    // Pastas de Repertório de Louvor (ex: Domingo, Casamento, Vigília, Santa Ceia)
+    const [pastasRepertorio, setPastasRepertorio] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('louvor_pastas_repertorio');
+            return saved ? JSON.parse(saved) : ['Domingo', 'Casamento', 'Vigília', 'Santa Ceia', 'Jovens', 'Especial'];
+        } catch (_) {
+            return ['Domingo', 'Casamento', 'Vigília', 'Santa Ceia', 'Jovens', 'Especial'];
+        }
+    });
+    const [selectedPasta, setSelectedPasta] = useState<string>('todas');
+    const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
+    const [newFolderName, setNewFolderName] = useState<string>('');
+
+    // Ajuste em tempo real de Tom e Tamanho de Fonte por música no painel de visualização
+    const [songTransposeMap, setSongTransposeMap] = useState<Record<string, number>>({});
+    const [songFontSizeMap, setSongFontSizeMap] = useState<Record<string, number>>({});
     const [escalas, setEscalas] = useState<any[]>(() => {
         try {
             const saved = localStorage.getItem('louvor_escalas');
@@ -234,6 +257,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
     const [songRitmo, setSongRitmo] = useState('Worship');
     const [songBpm, setSongBpm] = useState('72');
     const [songLetraCifra, setSongLetraCifra] = useState('');
+    const [songPasta, setSongPasta] = useState('Domingo');
     const [songArquivos, setSongArquivos] = useState<{nome: string, url: string}[]>([]);
     const [newArgNome, setNewArgNome] = useState('');
     const [newArgUrl, setNewArgUrl] = useState('');
@@ -414,6 +438,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             ritmo: songRitmo,
             bpm: songBpm,
             letra_cifra: songLetraCifra,
+            pasta: songPasta || 'Domingo',
             arquivos: songArquivos
         };
 
@@ -435,8 +460,52 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         addToast(editingSongId ? "Música atualizada!" : "Nova música adicionada!", "success");
         
         // Clean states
-        setSongTitulo(''); setSongArtista(''); setSongTom('G'); setSongRitmo('Worship'); setSongBpm('72'); setSongLetraCifra(''); setSongArquivos([]);
+        setSongTitulo(''); setSongArtista(''); setSongTom('G'); setSongRitmo('Worship'); setSongBpm('72'); setSongLetraCifra(''); setSongPasta('Domingo'); setSongArquivos([]);
         setShowAddSong(false); setEditingSongId(null);
+    };
+
+    const handleChangeSongPasta = async (songId: string, newPasta: string) => {
+        const targetSong = musicas.find(m => m.id === songId);
+        const songName = targetSong?.titulo || 'Música';
+        const updatedList = musicas.map(m => m.id === songId ? { ...m, pasta: newPasta } : m);
+        setMusicas(updatedList);
+        try { localStorage.setItem('louvor_musicas', JSON.stringify(updatedList)); } catch(_) {}
+        if (dbFirestore && appId) {
+            try {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas', songId), {
+                    pasta: newPasta,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (e) {
+                console.warn("Sync pasta error", e);
+            }
+        }
+        addToast(`"${songName}" movida para a pasta "${newPasta}"!`, "success");
+    };
+
+    const handleCreateFolder = (folderName: string) => {
+        const clean = folderName.trim();
+        if (!clean) return;
+        if (pastasRepertorio.some(p => p.toLowerCase() === clean.toLowerCase())) {
+            addToast("Esta pasta já existe no repertório!", "warning");
+            return;
+        }
+        const updated = [...pastasRepertorio, clean];
+        setPastasRepertorio(updated);
+        try { localStorage.setItem('louvor_pastas_repertorio', JSON.stringify(updated)); } catch(_) {}
+        addToast(`Pasta "${clean}" criada com sucesso!`, "success");
+        setSelectedPasta(clean);
+        setShowNewFolderModal(false);
+        setNewFolderName('');
+    };
+
+    const handleDeleteFolder = (folderName: string) => {
+        if (!confirm(`Deseja remover a pasta "${folderName}" do catálogo? As músicas não serão apagadas, passarão para "Sem pasta".`)) return;
+        const updated = pastasRepertorio.filter(p => p !== folderName);
+        setPastasRepertorio(updated);
+        try { localStorage.setItem('louvor_pastas_repertorio', JSON.stringify(updated)); } catch(_) {}
+        if (selectedPasta === folderName) setSelectedPasta('todas');
+        addToast(`Pasta "${folderName}" removida.`, "info");
     };
 
     const handleDeleteSong = (id: string) => {
@@ -512,8 +581,45 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         setSongRitmo(song.ritmo || 'Worship');
         setSongBpm(song.bpm || '72');
         setSongLetraCifra(song.letra_cifra || '');
+        setSongPasta(song.pasta || 'Domingo');
         setSongArquivos(song.arquivos || []);
         setShowAddSong(true);
+    };
+
+    const handleImprimirCifra = (song: any, semitones?: number, fontSize?: number) => {
+        if (!song) return;
+        if (!song.letra_cifra || !song.letra_cifra.trim()) {
+            addToast("Esta música ainda não possui cifra ou letra cadastrada para impressão.", "warning");
+            return;
+        }
+        const activeSemitones = semitones !== undefined ? semitones : (songTransposeMap[song.id] || 0);
+        const activeFontSize = fontSize !== undefined ? fontSize : (songFontSizeMap[song.id] || 12);
+
+        if (setPrintOrientation) {
+            setPrintOrientation('portrait');
+        }
+        if (setPrintPalette) {
+            setPrintPalette('cinza');
+        }
+        if (setPrintMarginType) {
+            setPrintMarginType('compacta');
+        }
+        if (setPrintMode && setPrintData && setPreviewOpen) {
+            setPrintMode('rel_cifra_musica');
+            setPrintData({
+                titulo: song.titulo || 'Cifra de Louvor',
+                subtitulo: `Artista: ${song.artista || 'Consagrado'} • Repertório: ${song.pasta || 'Geral'}`,
+                song: song,
+                semitones: activeSemitones,
+                fontSize: activeFontSize,
+                pasta: song.pasta || 'Domingo',
+                igreja: db.igreja || { nome: db.nome || 'Ministério de Louvor' }
+            });
+            setPreviewOpen(true);
+            addToast("Carregando cifra no motor de impressão e visualização...", "info");
+        } else {
+            window.print();
+        }
     };
 
     const handleSaveScale = async () => {
@@ -760,10 +866,14 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
         setDeleteConfirmInfo({ type: 'membro', id: ministerioId, membroIndex });
     };
 
-    const filteredSongs = musicas.filter(s => 
-        (s.titulo || '').toLowerCase().includes(searchSong.toLowerCase()) || 
-        (s.artista || '').toLowerCase().includes(searchSong.toLowerCase())
-    );
+    const filteredSongs = musicas.filter(s => {
+        const matchesSearch = (s.titulo || '').toLowerCase().includes(searchSong.toLowerCase()) || 
+                              (s.artista || '').toLowerCase().includes(searchSong.toLowerCase());
+        if (!matchesSearch) return false;
+        if (selectedPasta === 'todas') return true;
+        if (selectedPasta === 'sem_pasta') return !s.pasta || s.pasta === 'Sem pasta';
+        return (s.pasta || 'Sem pasta') === selectedPasta;
+    });
 
     const getMemberName = (membroId: string) => {
         const mem = db.membros.find((m: any) => m.id === membroId);
@@ -1522,22 +1632,102 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                         >
                                             <Printer size={14}/> Catálogo Repertório
                                         </button>
-                                        <Button onClick={() => { setEditingSongId(null); setSongTitulo(''); setSongArtista(''); setSongTom('G'); setSongRitmo('Worship'); setSongBpm('72'); setSongLetraCifra(''); setSongArquivos([]); setShowAddSong(true); }} variant="primary">
+                                        <Button onClick={() => { setEditingSongId(null); setSongTitulo(''); setSongArtista(''); setSongTom('G'); setSongRitmo('Worship'); setSongBpm('72'); setSongLetraCifra(''); setSongPasta(selectedPasta !== 'todas' && selectedPasta !== 'sem_pasta' ? selectedPasta : 'Domingo'); setSongArquivos([]); setShowAddSong(true); }} variant="primary">
                                             <Plus size={16}/> Nova Canção
                                         </Button>
                                     </div>
+                                </div>
+
+                                {/* Pastas de Repertório Bar (ex: Domingo, Casamento, Vigília) */}
+                                <div className="bg-slate-50/90 border border-slate-200/90 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 mr-1 flex items-center gap-1">
+                                            <Folder size={14} className="text-indigo-600" /> Pastas de Repertório:
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedPasta('todas')}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${selectedPasta === 'todas' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
+                                        >
+                                            Todas
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${selectedPasta === 'todas' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                {musicas.length}
+                                            </span>
+                                        </button>
+
+                                        {pastasRepertorio.map(pasta => {
+                                            const count = musicas.filter(m => (m.pasta || 'Sem pasta') === pasta).length;
+                                            const isSelected = selectedPasta === pasta;
+                                            return (
+                                                <div key={pasta} className="relative group flex items-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedPasta(pasta)}
+                                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
+                                                    >
+                                                        📁 {pasta}
+                                                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                            {count}
+                                                        </span>
+                                                    </button>
+                                                    {['Domingo', 'Casamento', 'Vigília'].indexOf(pasta) === -1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteFolder(pasta); }}
+                                                            className="hidden group-hover:flex items-center justify-center absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] hover:bg-rose-700"
+                                                            title="Remover pasta do repertório"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedPasta('sem_pasta')}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${selectedPasta === 'sem_pasta' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
+                                        >
+                                            Sem pasta
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${selectedPasta === 'sem_pasta' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                {musicas.filter(m => !m.pasta || m.pasta === 'Sem pasta').length}
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewFolderModal(true)}
+                                        className="flex items-center gap-1.5 text-xs font-extrabold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl transition shadow-2xs cursor-pointer"
+                                    >
+                                        <FolderPlus size={14} /> Nova Pasta
+                                    </button>
                                 </div>
 
                                 {/* Form Overlay for Song definition / Chords search with AI */}
                                 {showAddSong && (
                                     <div className="glass-panel p-6 rounded-3xl border border-indigo-100 bg-white mt-2 space-y-4">
                                         <h5 className="font-black text-indigo-700 uppercase tracking-wider text-sm">{editingSongId ? 'Editar Música' : 'Nova Música'}</h5>
-                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                                             <FormInput label="Título da Música" value={songTitulo} onChange={setSongTitulo} placeholder="E.g., Quão Grande é o Meu Deus" />
                                             <FormInput label="Artista / Cantor" value={songArtista} onChange={setSongArtista} placeholder="E.g., Soraya Moraes" />
                                             <FormSelect label="Tom Recomendado" value={songTom} onChange={setSongTom} options={['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B','Am','Bm','C#m','Dm','Em','F#m','G#m'].map(t=>({label:t,value:t}))} />
                                             <FormInput label="BPM" type="number" value={songBpm} onChange={setSongBpm} />
                                             <FormInput label="Estilo" value={songRitmo} onChange={setSongRitmo} placeholder="E.g., Worship" />
+                                            <div className="flex flex-col">
+                                                <label className="text-[11px] font-bold text-slate-600 mb-1">Pasta de Repertório</label>
+                                                <select 
+                                                    value={songPasta} 
+                                                    onChange={e => setSongPasta(e.target.value)} 
+                                                    className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-indigo-950"
+                                                >
+                                                    {pastasRepertorio.map(p => (
+                                                        <option key={p} value={p}>📁 {p}</option>
+                                                    ))}
+                                                    <option value="Sem pasta">📁 Sem pasta</option>
+                                                </select>
+                                            </div>
                                         </div>
 
                                         <div className="flex flex-col space-y-2">
@@ -1605,18 +1795,42 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                 <div>
                                                     <h5 className="font-extrabold text-lg text-slate-800 leading-tight">{s.titulo}</h5>
                                                     <p className="text-xs text-slate-500 font-bold mt-0.5">Artista: {s.artista || 'Consagrado'}</p>
-                                                    <div className="flex gap-2 mt-3">
+                                                    <div className="flex flex-wrap items-center gap-2 mt-3">
                                                         <span className="text-[10px] font-black bg-indigo-50 text-indigo-700 uppercase px-2 py-1 rounded-md">Tom: {s.tom || 'G'}</span>
                                                         {s.bpm && <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">{s.bpm} BPM</span>}
                                                         {s.ritmo && <span className="text-[10px] font-black bg-amber-50 text-amber-700 px-2 py-1 rounded-md">{s.ritmo}</span>}
+                                                        
+                                                        {/* Seletor de Pasta direto na listagem */}
+                                                        <div className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-0.5 transition" title="Mudar pasta de repertório desta música">
+                                                            <Folder size={11} className="text-indigo-600" />
+                                                            <select
+                                                                value={s.pasta || 'Sem pasta'}
+                                                                onChange={(e) => handleChangeSongPasta(s.id, e.target.value)}
+                                                                className="text-[10px] font-bold text-indigo-950 bg-transparent border-none outline-none cursor-pointer"
+                                                            >
+                                                                {pastasRepertorio.map(p => (
+                                                                    <option key={p} value={p}>{p}</option>
+                                                                ))}
+                                                                <option value="Sem pasta">Sem pasta</option>
+                                                            </select>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-1.5">
-                                                    <button onClick={() => setViewChordsSongId(viewChordsSongId === s.id ? null : s.id)} className="text-indigo-600 hover:text-indigo-800 p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-black">
+                                                <div className="flex gap-1.5 items-center">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleImprimirCifra(s)} 
+                                                        className="text-slate-600 hover:text-indigo-700 p-1.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                                                        title="Imprimir ou Gerar PDF da Cifra"
+                                                    >
+                                                        <Printer size={13} className="text-indigo-600" />
+                                                        <span className="hidden sm:inline text-[10px] font-black uppercase text-indigo-950">Imprimir / PDF</span>
+                                                    </button>
+                                                    <button onClick={() => setViewChordsSongId(viewChordsSongId === s.id ? null : s.id)} className="text-indigo-600 hover:text-indigo-800 p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-black cursor-pointer">
                                                         {viewChordsSongId === s.id ? 'Fechar Cifras' : 'Ver Cifras'}
                                                     </button>
-                                                    <button onClick={() => handleEditSong(s)} className="text-slate-400 hover:text-indigo-600 p-1"><Edit size={14}/></button>
-                                                    <button onClick={() => handleDeleteSong(s.id)} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={14}/></button>
+                                                    <button onClick={() => handleEditSong(s)} className="text-slate-400 hover:text-indigo-600 p-1 cursor-pointer" title="Editar Canção"><Edit size={14}/></button>
+                                                    <button onClick={() => handleDeleteSong(s.id)} className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer" title="Excluir Canção"><Trash2 size={14}/></button>
                                                 </div>
                                             </div>
 
@@ -1632,26 +1846,145 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                 </div>
                                             )}
 
-                                            {/* Stylized Chords Visualizer box */}
-                                            {viewChordsSongId === s.id && (
-                                                <div className="mt-4 pt-4 border-t border-indigo-100 space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs font-bold text-slate-500 uppercase">Letra & Acordes Cifrados</span>
-                                                        <button 
-                                                            onClick={async () => {
-                                                                await copyToClipboard(s.letra_cifra);
-                                                                addToast("Cifras copiadas para a área de transferência!", "success");
-                                                            }} 
-                                                            className="text-[10px] font-bold text-indigo-700 border border-indigo-200 bg-indigo-50 px-3 py-1 rounded"
+                                            {/* Stylized Chords Visualizer box with Real-Time Transposition and Font Size controls */}
+                                            {viewChordsSongId === s.id && (() => {
+                                                const semitones = songTransposeMap[s.id] || 0;
+                                                const fontSize = songFontSizeMap[s.id] || 12;
+                                                const originalKey = s.tom || 'G';
+                                                const currentKey = transposeNote(originalKey, semitones);
+                                                const transposedText = transposeChordSheet(s.letra_cifra || '', semitones, currentKey);
+
+                                                return (
+                                                    <div className="mt-4 pt-4 border-t border-indigo-100 space-y-3 bg-slate-50/90 p-4 rounded-2xl border border-slate-200">
+                                                        {/* Barra de Ajustes em Tempo Real da Cifra */}
+                                                        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                                                            {/* Transposição de Tom */}
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className="text-[10px] font-black uppercase text-indigo-700 flex items-center gap-1">
+                                                                    <Music size={12} /> Tom:
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [s.id]: semitones - 1 }))}
+                                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-2 py-0.5 rounded text-xs transition active:scale-95 cursor-pointer"
+                                                                    title="Baixar 1 semitom (-1)"
+                                                                >
+                                                                    -1
+                                                                </button>
+                                                                <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-950 px-2 py-0.5 rounded font-black text-xs">
+                                                                    <span>{currentKey}</span>
+                                                                    {semitones !== 0 && (
+                                                                        <span className="text-[9px] text-amber-700 bg-amber-100 px-1 rounded font-mono">
+                                                                            ({semitones > 0 ? `+${semitones}` : semitones}st)
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [s.id]: semitones + 1 }))}
+                                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-2 py-0.5 rounded text-xs transition active:scale-95 cursor-pointer"
+                                                                    title="Subir 1 semitom (+1)"
+                                                                >
+                                                                    +1
+                                                                </button>
+                                                                <select
+                                                                    value={currentKey}
+                                                                    onChange={(e) => {
+                                                                        const diff = getSemitoneDifference(originalKey, e.target.value);
+                                                                        setSongTransposeMap(prev => ({ ...prev, [s.id]: diff }));
+                                                                    }}
+                                                                    className="text-[11px] font-bold bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-800 outline-none cursor-pointer"
+                                                                    title="Mudar tom direto"
+                                                                >
+                                                                    {CHROMATIC_SHARPS.map(k => (
+                                                                        <option key={k} value={k}>{k}</option>
+                                                                    ))}
+                                                                </select>
+                                                                {semitones !== 0 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setSongTransposeMap(prev => ({ ...prev, [s.id]: 0 }))}
+                                                                        className="text-[9px] text-rose-600 font-bold hover:underline ml-1 cursor-pointer"
+                                                                    >
+                                                                        Resetar
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Seletor de Tamanho da Fonte */}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[10px] font-black uppercase text-indigo-700 flex items-center gap-1">
+                                                                    <TypeIcon size={12} /> Fonte:
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSongFontSizeMap(prev => ({ ...prev, [s.id]: Math.max(9, fontSize - 1) }))}
+                                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-2 py-0.5 rounded text-xs transition active:scale-95 cursor-pointer"
+                                                                    title="Diminuir fonte"
+                                                                >
+                                                                    A-
+                                                                </button>
+                                                                <span className="font-mono font-bold text-xs text-slate-700 px-1">
+                                                                    {fontSize}px
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSongFontSizeMap(prev => ({ ...prev, [s.id]: Math.min(20, fontSize + 1) }))}
+                                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-2 py-0.5 rounded text-xs transition active:scale-95 cursor-pointer"
+                                                                    title="Aumentar fonte"
+                                                                >
+                                                                    A+
+                                                                </button>
+                                                                <div className="flex gap-1 ml-1">
+                                                                    {[10, 12, 14, 16].map(sz => (
+                                                                        <button
+                                                                            key={sz}
+                                                                            type="button"
+                                                                            onClick={() => setSongFontSizeMap(prev => ({ ...prev, [s.id]: sz }))}
+                                                                            className={`text-[9px] px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${fontSize === sz ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                                                        >
+                                                                            {sz}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Ações de Impressão e Cópia */}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => handleImprimirCifra(s, semitones, fontSize)}
+                                                                    className="text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer"
+                                                                    title="Imprimir ou Gerar PDF com o tom e fonte selecionados"
+                                                                >
+                                                                    <Printer size={12}/>
+                                                                    Imprimir / PDF
+                                                                </button>
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={async () => {
+                                                                        await copyToClipboard(transposedText);
+                                                                        addToast(`Cifras em Tom de ${currentKey} copiadas!`, "success");
+                                                                    }} 
+                                                                    className="text-[10px] font-bold text-indigo-700 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                                                                    title="Copiar cifra transposta"
+                                                                >
+                                                                    <Copy size={11}/>
+                                                                    Copiar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Pré-visualização da Cifra com Acordes Transpostos */}
+                                                        <pre 
+                                                            className="bg-white border border-slate-200 text-slate-900 font-mono p-4 rounded-xl max-h-[350px] overflow-y-auto whitespace-pre leading-relaxed tracking-wider select-text shadow-inner"
+                                                            style={{ fontSize: `${fontSize}px` }}
                                                         >
-                                                            Copiar Cifra
-                                                        </button>
+                                                            {transposedText || 'Nenhuma cifra cadastrada para esta canção.'}
+                                                        </pre>
                                                     </div>
-                                                    <pre className="text-[11px] bg-slate-50 border border-slate-200 text-slate-800 font-mono p-4 rounded-xl max-h-[300px] overflow-y-auto whitespace-pre leading-relaxed tracking-wider">
-                                                        {s.letra_cifra || 'Nenhuma cifra cadastrada para esta canção.'}
-                                                    </pre>
-                                                </div>
-                                            )}
+                                                );
+                                            })()}
                                         </div>
                                     ))}
                                     {filteredSongs.length === 0 && <p className="text-slate-400 font-medium italic text-sm py-4">Nenhuma música cadastrada no repertório.</p>}
@@ -1836,6 +2169,54 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                         mediaBiblioteca={mediaBiblioteca} loadingMediaBiblioteca={loadingMediaBiblioteca}
                         mediaEquipamentos={mediaEquipamentos} loadingMediaEquipamentos={loadingMediaEquipamentos}
                     />
+                )}
+
+                {showNewFolderModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-indigo-100 animate-in fade-in zoom-in-95">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <FolderPlus size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900">Nova Pasta de Repertório</h3>
+                                    <p className="text-xs text-slate-500">Organize cifras por ocasião ou culto (ex: Domingo, Casamento, Vigília)</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1.5">Nome da Pasta</label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Ex: Casamento, Domingo Noite, Vigília..."
+                                        value={newFolderName}
+                                        onChange={(e) => setNewFolderName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleCreateFolder(newFolderName);
+                                        }}
+                                        className="w-full text-sm border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
+                                        className="text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition cursor-pointer"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCreateFolder(newFolderName)}
+                                        className="text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 px-5 py-2 rounded-xl shadow-md transition cursor-pointer"
+                                    >
+                                        Criar Pasta
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 )}
                 
                 {deleteConfirmInfo && (

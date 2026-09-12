@@ -5,11 +5,17 @@ import jsPDF from 'jspdf';
 import { ChurchContext } from '../context/ChurchContext';
 import { Button, FormInput, FormSelect } from '../utils/sharedHelpers';
 import { 
+  calcularINSSOficial, 
+  calcularIRRFOficial, 
+  calcularFGTS, 
+  calcularRescisaoTrabalhista 
+} from '../utils/dpCalculosTrabalhistas';
+import { 
   Users, DollarSign, Briefcase, Calendar, Building2, Printer, 
   FileText, CheckCircle, TrendingUp, Plus, Trash2, Edit, Search, 
   CreditCard, ArrowUpRight, ArrowDownRight, HelpCircle, Download, 
   UserCheck, Percent, ShieldAlert, Sparkles, RefreshCw, X, ChevronRight, ChevronDown, Check, AlertCircle, Eye, UserPlus,
-  Paperclip, Shield, ShieldCheck, Clock, Plane, Info, Database, BookOpen, Scale, Upload, FileSpreadsheet
+  Paperclip, Shield, ShieldCheck, Clock, Plane, Info, Database, BookOpen, Scale, Upload, FileSpreadsheet, Calculator
 } from 'lucide-react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell, Tooltip as RechartsTooltip
@@ -1237,6 +1243,25 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
   });
   const [showInAppFolhaPreview, setShowInAppFolhaPreview] = useState(false);
 
+  // Rescisão Trabalhista (TRCT Simulator) states
+  const [showRescisaoModal, setShowRescisaoModal] = useState(false);
+  const [rescisaoColabId, setRescisaoColabId] = useState<string>('');
+  const [rescisaoForm, setRescisaoForm] = useState<{
+    dataAdmissao: string;
+    dataDemissao: string;
+    motivo: 'sem_justa_causa' | 'com_justa_causa' | 'pedido_demissao' | 'acordo_mutuo';
+    avisoPrevio: 'trabalhado' | 'indenizado' | 'dispensado';
+    saldoFgtsAcumulado: number;
+    feriasVencidas: boolean;
+  }>({
+    dataAdmissao: '',
+    dataDemissao: getTodayDate(),
+    motivo: 'sem_justa_causa',
+    avisoPrevio: 'indenizado',
+    saldoFgtsAcumulado: 0,
+    feriasVencidas: false
+  });
+
   // Active DP lists
   const colaboradores = useMemo(() => db.dp_colaboradores || [], [db.dp_colaboradores]);
   const folhas = useMemo(() => db.dp_folhas || [], [db.dp_folhas]);
@@ -2012,46 +2037,91 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
         continue;
       }
 
-      // Calculate default simple tax estimations
-      // Clerics (Pastors) have simplified Prebenda without traditional CLT INSS unless checked, Prestadores have separate retention
+      // Calculate tax and remuneration according to Legal Regime
       const sal = parseFloat(c.salario_base) || 0;
-      const proventos = [
-        { 
-          descricao: c.tipo === 'pastor' ? 'Prebenda Pastoral / Sustento' : 'Salário Base', 
+      const proventos: any[] = [];
+      const descontos: any[] = [];
+
+      // Regime 1: VOLUNTÁRIO (Lei 9.608/98) - strictly non-remunerated, no labor encumbrances
+      if (c.tipo === 'colaborador' && sal === 0) {
+        proventos.push({
+          descricao: 'Atividade Voluntária Eclesiástica (Lei 9.608/98)',
+          valor: 0
+        });
+      } else if (c.tipo === 'pastor') {
+        // Regime 2: MINISTRO RELIGIOSO / PASTOR (Prebenda / Côngrua Pastoral)
+        // Isento de Cota Patronal (art. 22, § 13, Lei 8.212/91) e não sujeito a FGTS
+        proventos.push({ 
+          descricao: 'Prebenda Pastoral / Sustento Ministerial', 
           valor: sal 
+        });
+
+        if (c.beneficio_auxilio_moradia && parseFloat(c.beneficio_auxilio_moradia) > 0) {
+          proventos.push({ descricao: 'Auxílio Moradia Ministerial (Côngrua)', valor: parseFloat(c.beneficio_auxilio_moradia) });
         }
-      ];
+        if (c.beneficio_ajuda_custo && parseFloat(c.beneficio_ajuda_custo) > 0) {
+          proventos.push({ descricao: 'Ajuda de Custo Ministerial Eclesiástica', valor: parseFloat(c.beneficio_ajuda_custo) });
+        }
 
-      // Auto-inject benefits configured in profile
-      if (c.beneficio_auxilio_moradia && parseFloat(c.beneficio_auxilio_moradia) > 0) {
-        proventos.push({ descricao: 'Auxílio Moradia (Eclesiástico)', valor: parseFloat(c.beneficio_auxilio_moradia) });
-      }
-      if (c.beneficio_vale_transporte && parseFloat(c.beneficio_vale_transporte) > 0) {
-        proventos.push({ descricao: 'Vale Transporte (VT)', valor: parseFloat(c.beneficio_vale_transporte) });
-      }
-      if (c.beneficio_vale_refeicao && parseFloat(c.beneficio_vale_refeicao) > 0) {
-        proventos.push({ descricao: 'Vale Refeição (VR)', valor: parseFloat(c.beneficio_vale_refeicao) });
-      }
-      if (c.beneficio_ajuda_custo && parseFloat(c.beneficio_ajuda_custo) > 0) {
-        proventos.push({ descricao: 'Ajuda de Custo Ministerial', valor: parseFloat(c.beneficio_ajuda_custo) });
-      }
-      if (c.beneficio_plano_saude && parseFloat(c.beneficio_plano_saude) > 0) {
-        proventos.push({ descricao: 'Cota de Plano de Saúde', valor: parseFloat(c.beneficio_plano_saude) });
-      }
+        // IRRF sobre prebenda se aplicável (contribuinte individual na PF)
+        if (c.irpf && sal > 2259.20) {
+          const { valor: irrfVal } = calcularIRRFOficial(sal, 0, 0, 0);
+          if (irrfVal > 0) {
+            descontos.push({ descricao: 'IRRF Retido na Fonte (Tabela Progressiva)', valor: irrfVal });
+          }
+        }
+      } else if (c.tipo === 'prestador') {
+        // Regime 3: PRESTADOR TERCEIRIZADO (RPA / NFS-e)
+        proventos.push({ 
+          descricao: 'Honorários / Prestação de Serviços (RPA)', 
+          valor: sal 
+        });
 
-      const descontos = [];
-      
-      // Automatic INSS mock estimate (e.g. simplified Flat rate of 8% for simulation, if checked, maximum CLT thresholds can apply, let's keep simple 9%)
-      if (c.inss && sal > 0) {
-        const inssVal = Math.round((sal * 0.09) * 100) / 100;
-        descontos.push({ descricao: 'INSS Estimado', valor: inssVal });
-      }
+        // Retenção INSS Contribuinte Individual (11% com teto)
+        if (c.inss && sal > 0) {
+          const inssPrestador = Math.min(Math.round((sal * 0.11) * 100) / 100, 908.86);
+          descontos.push({ descricao: 'INSS Retido Contribuinte Individual (11%)', valor: inssPrestador });
+        }
+        if (c.irpf && sal > 2259.20) {
+          const inssVal = (c.inss && sal > 0) ? Math.min((sal * 0.11), 908.86) : 0;
+          const { valor: irrfVal } = calcularIRRFOficial(sal, inssVal, 0, 0);
+          if (irrfVal > 0) {
+            descontos.push({ descricao: 'IRRF Retido sobre Serviços', valor: irrfVal });
+          }
+        }
+      } else {
+        // Regime 4: CLT (Empregados Regulares)
+        proventos.push({ 
+          descricao: 'Salário Base Contratual (CLT)', 
+          valor: sal 
+        });
 
-      // Automatic IRRF mock estimate
-      if (c.irpf && sal > 2259.20) {
-        // Simple scale deduction (flat 7.5% as visual demonstration)
-        const irrfVal = Math.round((sal * 0.075) * 100) / 100;
-        descontos.push({ descricao: 'IRRF Retido', valor: irrfVal });
+        // Auto-inject CLT benefits configured in profile
+        if (c.beneficio_vale_transporte && parseFloat(c.beneficio_vale_transporte) > 0) {
+          proventos.push({ descricao: 'Vale Transporte (VT)', valor: parseFloat(c.beneficio_vale_transporte) });
+        }
+        if (c.beneficio_vale_refeicao && parseFloat(c.beneficio_vale_refeicao) > 0) {
+          proventos.push({ descricao: 'Vale Refeição (VR)', valor: parseFloat(c.beneficio_vale_refeicao) });
+        }
+        if (c.beneficio_plano_saude && parseFloat(c.beneficio_plano_saude) > 0) {
+          proventos.push({ descricao: 'Cota de Plano de Saúde', valor: parseFloat(c.beneficio_plano_saude) });
+        }
+
+        // Official progressive INSS calculation
+        let inssOficialValor = 0;
+        if (c.inss && sal > 0) {
+          const resINSS = calcularINSSOficial(sal);
+          inssOficialValor = resINSS.valor;
+          descontos.push({ descricao: `INSS Oficial (${resINSS.aliquotaEfetiva}%)`, valor: inssOficialValor });
+        }
+
+        // Official IRRF calculation
+        if (c.irpf && sal > 2259.20) {
+          const resIRRF = calcularIRRFOficial(sal, inssOficialValor, 0, 0);
+          if (resIRRF.valor > 0) {
+            descontos.push({ descricao: `IRRF Retido na Fonte (${resIRRF.aliquota}%)`, valor: resIRRF.valor });
+          }
+        }
       }
 
       const totProv = proventos.reduce((acc, cr) => acc + cr.valor, 0);
@@ -2823,212 +2893,16 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
       return;
     }
 
-    try {
-      const docPdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const igreja = db.igreja || {};
-      const numMes = slip.mes_referencia;
-      const dateParts = numMes.split('-');
-      const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, 15);
-      const mesReferenciaExtenso = dateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
-
-      const totProventos = (slip.proventos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
-      const totDescontos = (slip.descontos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
-      const valorLiquido = slip.valor_liquido || 0;
-
-      // Outer borders
-      docPdf.setDrawColor(40, 40, 40);
-      docPdf.setLineWidth(0.5);
-      docPdf.rect(10, 10, 190, 135);
-      docPdf.setLineWidth(0.1);
-      docPdf.rect(11, 11, 188, 133);
-
-      // Title Banner block
-      docPdf.setFillColor(240, 243, 246);
-      docPdf.rect(12, 12, 186, 18, 'F');
-      
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(10);
-      docPdf.setTextColor(30, 41, 59);
-      docPdf.text(igreja.nome?.toUpperCase() || "IGREJA SEDE PRINCIPAL", 15, 17);
-      
-      docPdf.setFont('Helvetica', 'normal');
-      docPdf.setFontSize(7.5);
-      docPdf.setTextColor(100, 110, 120);
-      docPdf.text(`CNPJ: ${igreja.cnpj || "00.000.000/0001-00"}`, 15, 21);
-      docPdf.text(igreja.endereco || "Endereco nao cadastrado", 15, 25);
-
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(9);
-      docPdf.setTextColor(79, 70, 229); // Indigo-600 colored text label
-      docPdf.text("RECIBO DE PAGAMENTO", 140, 17);
-      
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(8);
-      docPdf.setTextColor(40, 40, 40);
-      docPdf.text(`REF: ${mesReferenciaExtenso}`, 140, 21);
-      
-      docPdf.setFont('Helvetica', 'normal');
-      docPdf.setFontSize(7);
-      docPdf.setTextColor(120, 120, 120);
-      docPdf.text(`Status: ${slip.status?.toUpperCase() || 'RASCUNHO'}`, 140, 25);
-
-      docPdf.setDrawColor(200, 200, 200);
-      docPdf.line(12, 32, 198, 32);
-
-      // Collaborador Card
-      docPdf.setFillColor(248, 250, 252);
-      docPdf.rect(12, 34, 186, 17, 'F');
-      docPdf.setDrawColor(226, 232, 240);
-      docPdf.rect(12, 34, 186, 17);
-
-      docPdf.setFontSize(7);
-      docPdf.setTextColor(120, 120, 120);
-      docPdf.text("Colaborador:", 15, 38);
-      docPdf.text("CPF/RG:", 115, 38);
-      docPdf.text("Funcao:", 155, 38);
-
-      docPdf.text("Admissao:", 15, 47);
-      docPdf.text("Dados de Pagamento:", 55, 47);
-      docPdf.text("Vinculo:", 155, 47);
-
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(8.5);
-      docPdf.setTextColor(30, 41, 59);
-      docPdf.text(colab.nome?.toUpperCase() || "", 15, 42);
-      docPdf.text(`${colab.cpf || '-'} / ${colab.rg || '-'}`, 115, 42);
-      docPdf.text(colab.cargo?.toUpperCase() || "-", 155, 42);
-
-      const paymentInfoStr = colab.banco ? `BANCO: ${colab.banco} AG: ${colab.agencia || ''} C: ${colab.conta || ''} ${colab.pix ? `| PIX: ${colab.pix}` : ''}` : (colab.pix ? `PIX: ${colab.pix}` : 'CAIXA FISICO / DINHEIRO');
-      const vinculoText = colab.tipo === 'pastor' ? 'Prebenda Clerical' : colab.tipo === 'funcionario' ? 'CLT' : colab.tipo === 'prestador' ? 'Prestador' : 'Colaborador';
-
-      docPdf.text(colab.admissao || '-', 15, 51);
-      docPdf.setFontSize(7.5);
-      docPdf.text(paymentInfoStr.toUpperCase().substring(0, 52), 55, 51);
-      docPdf.text(vinculoText.toUpperCase(), 155, 51);
-
-      // Ledger Table
-      docPdf.setFillColor(15, 23, 42);
-      docPdf.rect(12, 54, 186, 6, 'F');
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(7);
-      docPdf.setTextColor(255, 255, 255);
-      docPdf.text("Cod.", 14, 58);
-      docPdf.text("Descricao do Lancamento", 30, 58);
-      docPdf.text("Ref.", 115, 58);
-      docPdf.text("Proventos (+)", 145, 58);
-      docPdf.text("Descontos (-)", 175, 58);
-
-      let currentY = 60;
-      docPdf.setTextColor(51, 65, 85);
-      docPdf.setFont('Helvetica', 'normal');
-      docPdf.setFontSize(7.5);
-
-      const items: any[] = [];
-      (slip.proventos || []).forEach((p: any, i: number) => {
-        items.push({ cod: `10${i}`, desc: p.descricao, ref: '30 dias', prov: p.valor, descnt: null });
-      });
-      (slip.descontos || []).forEach((d: any, i: number) => {
-        items.push({ cod: `20${i}`, desc: d.descricao, ref: colab.tipo === 'pastor' ? 'Clero' : 'CLT', prov: null, descnt: d.valor });
-      });
-
-      while (items.length < 5) {
-        items.push({ cod: '', desc: '', ref: '', prov: null, descnt: null });
-      }
-
-      items.forEach((item) => {
-        docPdf.setDrawColor(241, 245, 249);
-        docPdf.line(12, currentY + 5, 198, currentY + 5);
-
-        docPdf.setDrawColor(226, 232, 240);
-        docPdf.line(26, currentY, 26, currentY + 5);
-        docPdf.line(110, currentY, 110, currentY + 5);
-        docPdf.line(135, currentY, 135, currentY + 5);
-        docPdf.line(165, currentY, 165, currentY + 5);
-
-        if (item.cod) {
-          docPdf.setFont('Courier', 'normal');
-          docPdf.setFontSize(7);
-          docPdf.text(item.cod, 15, currentY + 3.5);
-          docPdf.setFont('Helvetica', 'bold');
-          docPdf.setFontSize(7.5);
-          docPdf.text(item.desc, 30, currentY + 3.5);
-          docPdf.setFont('Helvetica', 'normal');
-          docPdf.text(item.ref, 115, currentY + 3.5);
-          
-          if (item.prov !== null) {
-            docPdf.text(`R$ ${item.prov.toFixed(2)}`, 142, currentY + 3.5);
-          } else {
-            docPdf.text("-", 145, currentY + 3.5);
-          }
-
-          if (item.descnt !== null) {
-            docPdf.setFont('Helvetica', 'bold');
-            docPdf.setTextColor(190, 24, 74);
-            docPdf.text(`R$ ${item.descnt.toFixed(2)}`, 172, currentY + 3.5);
-            docPdf.setTextColor(51, 65, 85);
-            docPdf.setFont('Helvetica', 'normal');
-          } else {
-            docPdf.text("-", 175, currentY + 3.5);
-          }
-        }
-        
-        currentY += 5;
-      });
-
-      docPdf.setDrawColor(71, 85, 105);
-      docPdf.rect(12, currentY + 1, 186, 7);
-      
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(7.5);
-      docPdf.text(`Total Proventos: R$ ${totProventos.toFixed(2)}`, 15, currentY + 5.5);
-      docPdf.setTextColor(190, 24, 74);
-      docPdf.text(`Total Descontos: R$ ${totDescontos.toFixed(2)}`, 85, currentY + 5.5);
-      
-      docPdf.setFillColor(241, 245, 249);
-      docPdf.rect(150, currentY + 1.1, 47.9, 6.8, 'F');
-      
-      docPdf.setTextColor(15, 23, 42);
-      docPdf.setFontSize(8);
-      docPdf.text(`Liquido: R$ ${valorLiquido.toFixed(2)}`, 154, currentY + 5.5);
-
-      const declY = currentY + 12;
-      docPdf.setFont('Helvetica', 'normal');
-      docPdf.setFontSize(6.5);
-      docPdf.setTextColor(100, 110, 120);
-      
-      const statement = `Declaro ter recebido de ${igreja.nome || "IGREJA ADVENTISTA"} a importancia liquida discriminada neste recibo de pagamento administrativo, para a qual dou plena e irrevogavel quitacao.`;
-      const splitStatement = docPdf.splitTextToSize(statement, 85);
-      docPdf.text(splitStatement, 15, declY);
-
-      docPdf.line(15, declY + 18, 90, declY + 18);
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.text("Assinatura do Colaborador / Cooperador", 23, declY + 21);
-
-      const payDate = slip.data_pagamento ? new Date(slip.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.text(`Data de Pagamento: ${payDate}`, 115, declY);
-      docPdf.setFont('Helvetica', 'normal');
-      docPdf.setFontSize(6);
-      docPdf.text("Gerado eletronicamente via Modulo Eclesiastico DP / Contabil", 115, declY + 3);
-
-      docPdf.setDrawColor(180, 180, 180);
-      docPdf.line(115, declY + 18, 190, declY + 18);
-      docPdf.setFont('Helvetica', 'bold');
-      docPdf.setFontSize(6.5);
-      docPdf.text("Assinatura do Responsavel (Tesouraria)", 123, declY + 21);
-
-      const cleanName = colab.nome?.toLowerCase().replace(/\s+/g, '_') || 'colaborador';
-      docPdf.save(`contracheque_${cleanName}_${slip.mes_referencia}.pdf`);
-      addToast("Contracheque exportado em PDF com sucesso!", "success");
-    } catch (e: any) {
-      console.error(e);
-      addToast(`Erro ao gerar PDF: ${e.message}`, 'error');
-    }
+    // Abre o visualizador oficial de alta definição já configurado em Ultra HD com tipografia nítida
+    setPrintData({
+      slip,
+      colaborador: colab,
+      igreja: db.igreja,
+      mesReferenciaExtenso: new Date(slip.mes_referencia + '-15').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    });
+    setPrintMode('dp_contracheque');
+    setPreviewOpen(true);
+    addToast("Abrindo visualizador oficial em Ultra Resolução. Clique em 'Baixar PDF' para exportar com qualidade máxima!", "info");
   };
 
   // --- BATCH PRINT ALL SLIPS FOR THE CHOSEN REFERENCE MONTH ---
@@ -3056,227 +2930,16 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
       return;
     }
 
-    try {
-      const docPdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const igreja = db.igreja || {};
-      const numMes = selectedMonth;
-      const dateParts = numMes.split('-');
-      const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, 15);
-      const mesReferenciaExtenso = dateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
-
-      let pagesCount = 0;
-
-      currentMonthSlips.forEach((slip: any) => {
-        const colab = colaboradores.find((c: any) => c.id === slip.colaborador_id);
-        if (!colab) return;
-
-        if (pagesCount > 0) {
-          docPdf.addPage();
-        }
-        pagesCount++;
-
-        const totProventos = (slip.proventos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
-        const totDescontos = (slip.descontos || []).reduce((acc: number, item: any) => acc + item.valor, 0);
-        const valorLiquido = slip.valor_liquido || 0;
-
-        // Outer borders
-        docPdf.setDrawColor(40, 40, 40);
-        docPdf.setLineWidth(0.5);
-        docPdf.rect(10, 10, 190, 135);
-        docPdf.setLineWidth(0.1);
-        docPdf.rect(11, 11, 188, 133);
-
-        // Title Banner block
-        docPdf.setFillColor(240, 243, 246);
-        docPdf.rect(12, 12, 186, 18, 'F');
-        
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(10);
-        docPdf.setTextColor(30, 41, 59);
-        docPdf.text(igreja.nome?.toUpperCase() || "IGREJA SEDE PRINCIPAL", 15, 17);
-        
-        docPdf.setFont('Helvetica', 'normal');
-        docPdf.setFontSize(7.5);
-        docPdf.setTextColor(100, 110, 120);
-        docPdf.text(`CNPJ: ${igreja.cnpj || "00.000.000/0001-00"}`, 15, 21);
-        docPdf.text(igreja.endereco || "Endereco nao cadastrado", 15, 25);
-
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(9);
-        docPdf.setTextColor(79, 70, 229); // Indigo-600 colored text label
-        docPdf.text("RECIBO DE PAGAMENTO", 140, 17);
-        
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(8);
-        docPdf.setTextColor(40, 40, 40);
-        docPdf.text(`REF: ${mesReferenciaExtenso}`, 140, 21);
-        
-        docPdf.setFont('Helvetica', 'normal');
-        docPdf.setFontSize(7);
-        docPdf.setTextColor(120, 120, 120);
-        docPdf.text(`Status: ${slip.status?.toUpperCase() || 'RASCUNHO'}`, 140, 25);
-
-        docPdf.setDrawColor(200, 200, 200);
-        docPdf.line(12, 32, 198, 32);
-
-        // Collaborador Card
-        docPdf.setFillColor(248, 250, 252);
-        docPdf.rect(12, 34, 186, 17, 'F');
-        docPdf.setDrawColor(226, 232, 240);
-        docPdf.rect(12, 34, 186, 17);
-
-        docPdf.setFontSize(7);
-        docPdf.setTextColor(120, 120, 120);
-        docPdf.text("Colaborador:", 15, 38);
-        docPdf.text("CPF/RG:", 115, 38);
-        docPdf.text("Funcao:", 155, 38);
-
-        docPdf.text("Admissao:", 15, 47);
-        docPdf.text("Dados de Pagamento:", 55, 47);
-        docPdf.text("Vinculo:", 155, 47);
-
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(8.5);
-        docPdf.setTextColor(30, 41, 59);
-        docPdf.text(colab.nome?.toUpperCase() || "", 15, 42);
-        docPdf.text(`${colab.cpf || '-'} / ${colab.rg || '-'}`, 115, 42);
-        docPdf.text(colab.cargo?.toUpperCase() || "-", 155, 42);
-
-        const paymentInfoStr = colab.banco ? `BANCO: ${colab.banco} AG: ${colab.agencia || ''} C: ${colab.conta || ''} ${colab.pix ? `| PIX: ${colab.pix}` : ''}` : (colab.pix ? `PIX: ${colab.pix}` : 'CAIXA FISICO / DINHEIRO');
-        const vinculoText = colab.tipo === 'pastor' ? 'Prebenda Clerical' : colab.tipo === 'funcionario' ? 'CLT' : colab.tipo === 'prestador' ? 'Prestador' : 'Colaborador';
-
-        docPdf.text(colab.admissao || '-', 15, 51);
-        docPdf.setFontSize(7.5);
-        docPdf.text(paymentInfoStr.toUpperCase().substring(0, 52), 55, 51);
-        docPdf.text(vinculoText.toUpperCase(), 155, 51);
-
-        // Ledger Table
-        docPdf.setFillColor(15, 23, 42);
-        docPdf.rect(12, 54, 186, 6, 'F');
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(7);
-        docPdf.setTextColor(255, 255, 255);
-        docPdf.text("Cod.", 14, 58);
-        docPdf.text("Descricao do Lancamento", 30, 58);
-        docPdf.text("Ref.", 115, 58);
-        docPdf.text("Proventos (+)", 145, 58);
-        docPdf.text("Descontos (-)", 175, 58);
-
-        let currentY = 60;
-        docPdf.setTextColor(51, 65, 85);
-        docPdf.setFont('Helvetica', 'normal');
-        docPdf.setFontSize(7.5);
-
-        const items: any[] = [];
-        (slip.proventos || []).forEach((p: any, i: number) => {
-          items.push({ cod: `10${i}`, desc: p.descricao, ref: '30 dias', prov: p.valor, descnt: null });
-        });
-        (slip.descontos || []).forEach((d: any, i: number) => {
-          items.push({ cod: `20${i}`, desc: d.descricao, ref: colab.tipo === 'pastor' ? 'Clero' : 'CLT', prov: null, descnt: d.valor });
-        });
-
-        while (items.length < 5) {
-          items.push({ cod: '', desc: '', ref: '', prov: null, descnt: null });
-        }
-
-        items.forEach((item) => {
-          docPdf.setDrawColor(241, 245, 249);
-          docPdf.line(12, currentY + 5, 198, currentY + 5);
-
-          docPdf.setDrawColor(226, 232, 240);
-          docPdf.line(26, currentY, 26, currentY + 5);
-          docPdf.line(110, currentY, 110, currentY + 5);
-          docPdf.line(135, currentY, 135, currentY + 5);
-          docPdf.line(165, currentY, 165, currentY + 5);
-
-          if (item.cod) {
-            docPdf.setFont('Courier', 'normal');
-            docPdf.setFontSize(7);
-            docPdf.text(item.cod, 15, currentY + 3.5);
-            docPdf.setFont('Helvetica', 'bold');
-            docPdf.setFontSize(7.5);
-            docPdf.text(item.desc, 30, currentY + 3.5);
-            docPdf.setFont('Helvetica', 'normal');
-            docPdf.text(item.ref, 115, currentY + 3.5);
-            
-            if (item.prov !== null) {
-              docPdf.text(`R$ ${item.prov.toFixed(2)}`, 142, currentY + 3.5);
-            } else {
-              docPdf.text("-", 145, currentY + 3.5);
-            }
-
-            if (item.descnt !== null) {
-              docPdf.setFont('Helvetica', 'bold');
-              docPdf.setTextColor(190, 24, 74);
-              docPdf.text(`R$ ${item.descnt.toFixed(2)}`, 172, currentY + 3.5);
-              docPdf.setTextColor(51, 65, 85);
-              docPdf.setFont('Helvetica', 'normal');
-            } else {
-              docPdf.text("-", 175, currentY + 3.5);
-            }
-          }
-          currentY += 5;
-        });
-
-        docPdf.setDrawColor(71, 85, 105);
-        docPdf.rect(12, currentY + 1, 186, 7);
-        
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(7.5);
-        docPdf.text(`Total Proventos: R$ ${totProventos.toFixed(2)}`, 15, currentY + 5.5);
-        docPdf.setTextColor(190, 24, 74);
-        docPdf.text(`Total Descontos: R$ ${totDescontos.toFixed(2)}`, 85, currentY + 5.5);
-        
-        docPdf.setFillColor(241, 245, 249);
-        docPdf.rect(150, currentY + 1.1, 47.9, 6.8, 'F');
-        
-        docPdf.setTextColor(15, 23, 42);
-        docPdf.setFontSize(8);
-        docPdf.text(`Liquido: R$ ${valorLiquido.toFixed(2)}`, 154, currentY + 5.5);
-
-        const declY = currentY + 12;
-        docPdf.setFont('Helvetica', 'normal');
-        docPdf.setFontSize(6.5);
-        docPdf.setTextColor(100, 110, 120);
-        
-        const statement = `Declaro ter recebido de ${igreja.nome || "IGREJA ADVENTISTA"} a importancia liquida discriminada neste recibo de pagamento administrativo, para a qual dou plena e irrevogavel quitacao.`;
-        const splitStatement = docPdf.splitTextToSize(statement, 85);
-        docPdf.text(splitStatement, 15, declY);
-
-        docPdf.line(15, declY + 18, 90, declY + 18);
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.text("Assinatura do Colaborador / Cooperador", 23, declY + 21);
-
-        const payDate = slip.data_pagamento ? new Date(slip.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.text(`Data de Pagamento: ${payDate}`, 115, declY);
-        docPdf.setFont('Helvetica', 'normal');
-        docPdf.setFontSize(6);
-        docPdf.text("Gerado eletronicamente via Modulo Eclesiastico DP / Contabil", 115, declY + 3);
-
-        docPdf.setDrawColor(180, 180, 180);
-        docPdf.line(115, declY + 18, 190, declY + 18);
-        docPdf.setFont('Helvetica', 'bold');
-        docPdf.setFontSize(6.5);
-        docPdf.text("Assinatura do Responsavel (Tesouraria)", 123, declY + 21);
-      });
-
-      if (pagesCount === 0) {
-        addToast('Nenhum colaborador elegível para exportação.', 'warning');
-        return;
-      }
-
-      docPdf.save(`lote_contracheques_${selectedMonth}.pdf`);
-      addToast(`Lote com ${pagesCount} contracheques exportado em PDF com sucesso!`, 'success');
-    } catch (e: any) {
-      console.error(e);
-      addToast(`Erro ao exportar PDF em lote: ${e.message}`, 'error');
-    }
+    setPrintData({
+      slips: currentMonthSlips,
+      colaboradores,
+      igreja: db.igreja,
+      selectedMonth,
+      mesReferenciaExtenso: new Date(selectedMonth + '-15').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    });
+    setPrintMode('dp_contracheque_lote');
+    setPreviewOpen(true);
+    addToast("Abrindo contracheques em lote no visualizador em Ultra Resolução para download do PDF.", "info");
   };
 
   // --- FILTERED LIST FOR COLABORADORES TAB ---
@@ -3569,61 +3232,76 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
           </p>
         </div>
         
-        {/* TAB CONTROLS NAVIGATION */}
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner overflow-x-auto whitespace-nowrap hide-scrollbar">
+        {/* TAB CONTROLS NAVIGATION - ARQUITETURA DE 4 PILARES RH & DP */}
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner overflow-x-auto whitespace-nowrap hide-scrollbar gap-1">
           <button 
             onClick={() => setActiveTab('dashboard')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${activeTab === 'dashboard' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-600 hover:text-indigo-600'}`}
           >
             <TrendingUp size={14} /> Dashboard
           </button>
+
+          <div className="h-5 w-px bg-slate-250 self-center my-auto" />
+
+          {/* PILAR 1: PESSOAS & VÍNCULOS */}
           <button 
             onClick={() => setActiveTab('colaboradores')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'colaboradores' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${activeTab === 'colaboradores' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-600 hover:text-indigo-600'}`}
           >
-            <Users size={14} /> Colaboradores ({colaboradores.filter((c: any) => !c.deleted).length})
+            <Users size={14} /> 1. Pessoas & Vínculos ({colaboradores.filter((c: any) => !c.deleted).length})
           </button>
-          <button 
-            onClick={() => setActiveTab('ponto')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'ponto' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
-          >
-            <Clock size={14} /> Controle de Ponto
-          </button>
-          <button 
-            onClick={() => setActiveTab('ferias')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'ferias' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
-          >
-            <Plane size={14} /> Férias & Licenças
-          </button>
+
+          {/* PILAR 2: FOLHA & PREBENDAS */}
           <button 
             onClick={() => setActiveTab('folha')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'folha' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${activeTab === 'folha' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-600 hover:text-indigo-600'}`}
           >
-            <CreditCard size={14} /> Folha Pagamento
+            <CreditCard size={14} /> 2. Folha & Prebendas
           </button>
+
+          {/* PILAR 3: JORNADA & PONTO */}
+          <button 
+            onClick={() => setActiveTab('ponto')} 
+            className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${activeTab === 'ponto' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-600 hover:text-indigo-600'}`}
+          >
+            <Clock size={14} /> 3. Jornada & Ponto
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('ferias')} 
+            className={`px-3 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'ferias' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-indigo-600'}`}
+          >
+            <Plane size={13} /> Férias / Licenças
+          </button>
+
+          <div className="h-5 w-px bg-slate-250 self-center my-auto" />
+
+          {/* PILAR 4: OBRIGAÇÕES & RESCISÕES */}
           <button 
             onClick={() => setActiveTab('esocial')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'esocial' ? 'bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-200' : 'text-slate-600 hover:text-emerald-600'}`}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${activeTab === 'esocial' ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-300' : 'text-slate-600 hover:text-emerald-700'}`}
           >
-            <Shield size={14} /> eSocial / Obrigações
+            <Shield size={14} /> 4. Obrigações (eSocial / DCTFWeb)
           </button>
+
+          {/* APOIO E GESTÃO: RH ESTRATÉGICO & JURÍDICO */}
           <button 
             onClick={() => setActiveTab('rh')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'rh' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-3 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'rh' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-indigo-600'}`}
           >
-            <UserPlus size={14} /> Recursos Humanos
-          </button>
-          <button 
-            onClick={() => setActiveTab('relatorios')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'relatorios' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
-          >
-            <FileText size={14} /> Contabilidade & Relatórios
+            <UserPlus size={13} /> Gestão & Cargos
           </button>
           <button 
             onClick={() => setActiveTab('juridico')} 
-            className={`px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'juridico' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${activeTab === 'juridico' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
           >
-            <Scale size={14} /> Módulo Jurídico
+            <Scale size={14} /> Jurídico & TRCT
+          </button>
+          <button 
+            onClick={() => setActiveTab('relatorios')} 
+            className={`px-3 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer shrink-0 ${activeTab === 'relatorios' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-indigo-600'}`}
+          >
+            <FileText size={13} /> Relatórios
           </button>
         </div>
       </div>
@@ -3853,11 +3531,11 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                 onChange={(e: any) => setColabTypeFilter(e.target.value)}
                 className="bg-white border border-slate-250 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 cursor-pointer outline-hidden"
               >
-                <option value="todos">Todos os Tipos</option>
-                <option value="funcionario">Membros CLT</option>
-                <option value="colaborador">Pró-Labore / Voluntários</option>
-                <option value="prestador">Prestador de Serviços</option>
-                <option value="pastor">Clero / Pastor Pres.</option>
+                <option value="todos">Todos os Vínculos</option>
+                <option value="funcionario">1. Empregados CLT</option>
+                <option value="pastor">2. Ministros / Pastores (Prebenda)</option>
+                <option value="colaborador">3. Voluntários (Lei 9.608/98)</option>
+                <option value="prestador">4. Prestadores / PJ (RPA)</option>
               </select>
 
               <select 
@@ -3982,7 +3660,48 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                       <div className="text-[10px] text-slate-400 font-bold uppercase">
                         {c.pix ? `PIX: ${c.pix.slice(0,18)}...` : 'Pix Não cadastrado'}
                       </div>
-                      <div className="flex gap-1.5 opacity-100 sm:opacity-80 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1.5 opacity-100 sm:opacity-80 group-hover:opacity-100 transition-opacity items-center">
+                        {c.tipo === 'colaborador' && !isDeletedSec && (
+                          <button 
+                            onClick={() => {
+                              setPrintData({
+                                colaborador: c,
+                                contrato: {
+                                  titulo: `Termo de Trabalho Voluntário - ${c.nome}`,
+                                  tipo: 'Termo de Adesão de Voluntariado',
+                                  data_inicio: c.admissao || getTodayDate(),
+                                  clausulas: `Cláusula 1ª - Da Atividade Voluntária Eclesiástica\nO(A) VOLUNTÁRIO(A) prestará serviços voluntários não remunerados e sem subordinação jurídica à IGREJA, nos termos estritos da Lei Federal nº 9.608/1998, exercendo atividades de apoio pastoral, musical, litúrgico ou comunitário.\n\nCláusula 2ª - Da Inexistência de Vínculo Empregatício\nO serviço voluntário não gera vínculo de emprego com a entidade, nem obrigação de natureza trabalhista, previdenciária ou afim (Art. 1º, parágrafo único da Lei 9.608/98).`
+                                },
+                                igreja: db.igreja,
+                                dataImpressao: new Date().toLocaleDateString('pt-BR')
+                              });
+                              setPrintMode('dp_termo_voluntariado');
+                              setPreviewOpen(true);
+                            }}
+                            title="Gerar Termo de Adesão ao Serviço Voluntário (Lei 9.608/98)"
+                            className="p-1 px-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Printer size={10} /> Termo Voluntário
+                          </button>
+                        )}
+
+                        {c.tipo === 'funcionario' && !isDeletedSec && (
+                          <button 
+                            onClick={() => {
+                              setRescisaoColabId(c.id);
+                              setRescisaoForm(prev => ({
+                                ...prev,
+                                dataAdmissao: c.admissao || '2023-01-01'
+                              }));
+                              setActiveTab('juridico');
+                              setJuridicoActiveTab('rescisao_simulador');
+                            }}
+                            title="Simular Rescisão Trabalhista (TRCT)"
+                            className="p-1 px-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Calculator size={10} /> Simular TRCT
+                          </button>
+                        )}
                         {isDeletedSec ? (
                           <>
                             <button 
@@ -4166,10 +3885,27 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                           {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                         </button>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h5 className="text-xs font-black text-slate-755">{safeText(f.colaborador?.nome, 'Colaborador não encontrado')}</h5>
                             {f.colaborador?.tipo === 'pastor' && (
-                              <span className="text-[8px] bg-rose-50 text-rose-500 border border-rose-100 font-black tracking-widest uppercase px-1.5 py-0.5 rounded">Clero</span>
+                              <span className="text-[8px] bg-amber-50 text-amber-800 border border-amber-200 font-black tracking-widest uppercase px-1.5 py-0.5 rounded">
+                                Sustento Pastoral (Isento Patronal)
+                              </span>
+                            )}
+                            {f.colaborador?.tipo === 'funcionario' && (
+                              <span className="text-[8px] bg-blue-50 text-blue-800 border border-blue-200 font-black tracking-widest uppercase px-1.5 py-0.5 rounded">
+                                Empregado CLT
+                              </span>
+                            )}
+                            {f.colaborador?.tipo === 'colaborador' && (
+                              <span className="text-[8px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-black tracking-widest uppercase px-1.5 py-0.5 rounded">
+                                Voluntário (Lei 9.608/98)
+                              </span>
+                            )}
+                            {f.colaborador?.tipo === 'prestador' && (
+                              <span className="text-[8px] bg-purple-50 text-purple-800 border border-purple-200 font-black tracking-widest uppercase px-1.5 py-0.5 rounded">
+                                Prestador Terceirizado RPA
+                              </span>
                             )}
                           </div>
                           <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
@@ -7234,6 +6970,12 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                 Processos & Demandas Judiciais
               </button>
               <button 
+                onClick={() => setJuridicoActiveTab('rescisao_simulador')}
+                className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${juridicoActiveTab === 'rescisao_simulador' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              >
+                <Calculator size={14} /> Simulador de Rescisão (TRCT)
+              </button>
+              <button 
                 onClick={() => setJuridicoActiveTab('base_juridica')}
                 className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer ${juridicoActiveTab === 'base_juridica' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
               >
@@ -7361,7 +7103,31 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
-                                  <div className="flex gap-1.5 justify-center">
+                                  <div className="flex gap-1.5 justify-center items-center">
+                                    {(c.tipo.toLowerCase().includes('voluntariado') || linkedColab?.tipo === 'colaborador') && (
+                                      <button 
+                                        onClick={() => {
+                                          setPrintData({
+                                            colaborador: linkedColab || {
+                                              nome: c.titulo,
+                                              cpf: '',
+                                              rg: '',
+                                              cargo: 'Voluntário',
+                                              admissao: c.data_inicio || getTodayDate()
+                                            },
+                                            contrato: c,
+                                            igreja: db.igreja,
+                                            dataImpressao: new Date().toLocaleDateString('pt-BR')
+                                          });
+                                          setPrintMode('dp_termo_voluntariado');
+                                          setPreviewOpen(true);
+                                        }}
+                                        title="Imprimir Termo Oficial de Voluntariado (Lei 9.608/98)"
+                                        className="p-1 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-[10px] rounded cursor-pointer transition-colors flex items-center gap-1"
+                                      >
+                                        <Printer size={11} /> Termo Lei 9.608
+                                      </button>
+                                    )}
                                     <button 
                                       onClick={() => {
                                         setEditingContrato(c);
@@ -7634,6 +7400,272 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
               </div>
             )}
 
+            {/* 9d. SUBTAB SIMULADOR DE RESCISÃO TRABALHISTA (TRCT) */}
+            {juridicoActiveTab === 'rescisao_simulador' && (() => {
+              const cltColabs = colaboradores.filter((c: any) => c.tipo === 'funcionario' && !c.deleted);
+              const selectedColab = cltColabs.find((c: any) => c.id === rescisaoColabId) || cltColabs[0];
+              const salarioSimulacao = selectedColab ? (parseFloat(selectedColab.salario_base) || 0) : 0;
+              const dtAdm = rescisaoForm.dataAdmissao || (selectedColab ? selectedColab.admissao : '2023-01-01');
+
+              const resultado = calcularRescisaoTrabalhista({
+                salarioBase: salarioSimulacao,
+                dataAdmissao: dtAdm,
+                dataDemissao: rescisaoForm.dataDemissao,
+                motivo: rescisaoForm.motivo,
+                avisoPrevio: rescisaoForm.avisoPrevio,
+                saldoFgtsAcumulado: rescisaoForm.saldoFgtsAcumulado,
+                feriasVencidas: rescisaoForm.feriasVencidas
+              });
+
+              return (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <div className="bg-amber-50/60 border border-amber-200/80 p-4 rounded-xl flex items-start gap-3">
+                    <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-900">
+                      <span className="font-black uppercase tracking-wider block mb-0.5">
+                        Simulador Oficial de TRCT (Termo de Rescisão de Contrato de Trabalho)
+                      </span>
+                      Cálculo estritamente alinhado às regras da CLT (Artigos 477 a 487). Utilize para orçar custos rescisórios, conferir cálculos de contadorias externas e emitir a minuta de quitação com segurança jurídica.
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* PARÂMETROS DO CÁLCULO */}
+                    <div className="lg:col-span-1 bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+                        <Calculator size={15} className="text-indigo-600" /> Parâmetros da Demissão
+                      </h4>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Selecionar Funcionário CLT</label>
+                        <select
+                          value={selectedColab?.id || ''}
+                          onChange={(e) => {
+                            const newId = e.target.value;
+                            setRescisaoColabId(newId);
+                            const found = cltColabs.find((c: any) => c.id === newId);
+                            if (found && found.admissao) {
+                              setRescisaoForm(prev => ({ ...prev, dataAdmissao: found.admissao }));
+                            }
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                        >
+                          {cltColabs.map((c: any) => (
+                            <option key={c.id} value={c.id}>
+                              {c.nome} • {c.cargo || 'Funcionário'} ({formatBRL(parseFloat(c.salario_base) || 0)})
+                            </option>
+                          ))}
+                          {cltColabs.length === 0 && (
+                            <option value="">Nenhum funcionário CLT cadastrado</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Data de Admissão</label>
+                          <input 
+                            type="date"
+                            value={dtAdm}
+                            onChange={(e) => setRescisaoForm({ ...rescisaoForm, dataAdmissao: e.target.value })}
+                            className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono text-slate-700 outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Data de Demissão</label>
+                          <input 
+                            type="date"
+                            value={rescisaoForm.dataDemissao}
+                            onChange={(e) => setRescisaoForm({ ...rescisaoForm, dataDemissao: e.target.value })}
+                            className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono text-slate-700 outline-hidden"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Motivo do Desligamento</label>
+                        <select
+                          value={rescisaoForm.motivo}
+                          onChange={(e: any) => setRescisaoForm({ ...rescisaoForm, motivo: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                        >
+                          <option value="sem_justa_causa">Dispensa Sem Justa Causa (Iniciativa da Igreja)</option>
+                          <option value="pedido_demissao">Pedido de Demissão (Iniciativa do Empregado)</option>
+                          <option value="com_justa_causa">Demissão com Justa Causa (Art. 482 CLT)</option>
+                          <option value="acordo_mutuo">Acordo Mútuo entre as Partes (Art. 484-A CLT)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Modalidade do Aviso Prévio</label>
+                        <select
+                          value={rescisaoForm.avisoPrevio}
+                          onChange={(e: any) => setRescisaoForm({ ...rescisaoForm, avisoPrevio: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                        >
+                          <option value="indenizado">Aviso Prévio Indenizado (Pago na rescisão)</option>
+                          <option value="trabalhado">Aviso Prévio Trabalhado (Cumprido em serviço)</option>
+                          <option value="dispensado">Aviso Prévio Dispensado / Não Aplicável</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Saldo de FGTS para Multa Rescisória (R$)</label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          value={rescisaoForm.saldoFgtsAcumulado}
+                          onChange={(e) => setRescisaoForm({ ...rescisaoForm, saldoFgtsAcumulado: parseFloat(e.target.value) || 0 })}
+                          placeholder="Saldo extrato conectividade social"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-hidden"
+                        />
+                      </div>
+
+                      <div className="pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input 
+                            type="checkbox"
+                            checked={rescisaoForm.feriasVencidas}
+                            onChange={(e) => setRescisaoForm({ ...rescisaoForm, feriasVencidas: e.target.checked })}
+                            className="rounded border-slate-300 text-indigo-600 w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-slate-700">Possui 1 período de Férias Vencidas completo</span>
+                        </label>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrintData({
+                            colaborador: selectedColab || { nome: 'Funcionário CLT', cpf: '', cargo: '' },
+                            rescisao: {
+                              ...rescisaoForm,
+                              dataAdmissao: dtAdm,
+                              salarioBase: salarioSimulacao,
+                              resultado
+                            },
+                            igreja: db.igreja,
+                            dataImpressao: new Date().toLocaleDateString('pt-BR')
+                          });
+                          setPrintMode('dp_rescisao_trct');
+                          setPreviewOpen(true);
+                        }}
+                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all"
+                      >
+                        <Printer size={15} /> Imprimir TRCT Oficial em PDF
+                      </button>
+                    </div>
+
+                    {/* DEMONSTRATIVO DE VERBAS E ENCARGOS */}
+                    <div className="lg:col-span-2 space-y-4">
+                      {/* CARD RESUMO RÁPIDO */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase block">Total de Proventos</span>
+                          <span className="text-lg font-black text-emerald-700">{formatBRL(resultado.totalProventos)}</span>
+                          <span className="text-[10px] text-emerald-600 block mt-0.5">Saldo, férias, 13º e aviso</span>
+                        </div>
+                        <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl">
+                          <span className="text-[10px] font-bold text-rose-600 uppercase block">Total de Descontos</span>
+                          <span className="text-lg font-black text-rose-700">{formatBRL(resultado.totalDescontos)}</span>
+                          <span className="text-[10px] text-rose-600 block mt-0.5">INSS rescisório oficial</span>
+                        </div>
+                        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl">
+                          <span className="text-[10px] font-bold text-indigo-600 uppercase block">Líquido a Pagar (TRCT)</span>
+                          <span className="text-lg font-black text-indigo-800">{formatBRL(resultado.valorLiquidoRescisao)}</span>
+                          <span className="text-[10px] text-indigo-600 block mt-0.5">Prazo de 10 dias corridos</span>
+                        </div>
+                      </div>
+
+                      {/* TABELA DISCRIMINADA */}
+                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+                        <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                          <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                            Discriminação das Verbas Rescisórias (Art. 477 CLT)
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-500">
+                            Dias de Aviso Lei 12.506: <b>{resultado.diasAvisoIndenizado} dias</b>
+                          </span>
+                        </div>
+
+                        <div className="divide-y divide-slate-100 text-xs">
+                          <div className="p-3 flex justify-between items-center hover:bg-slate-50">
+                            <div>
+                              <span className="font-bold text-slate-800">Saldo de Salário</span>
+                              <span className="text-[10px] text-slate-400 block">{resultado.diasTrabalhadosMes} dias proporcionais no mês do desligamento</span>
+                            </div>
+                            <span className="font-mono font-bold text-slate-700">{formatBRL(resultado.saldoSalario)}</span>
+                          </div>
+
+                          {resultado.avisoPrevioIndenizadoValor > 0 && (
+                            <div className="p-3 flex justify-between items-center hover:bg-slate-50">
+                              <div>
+                                <span className="font-bold text-slate-800">Aviso Prévio Indenizado</span>
+                                <span className="text-[10px] text-slate-400 block">Proporcionalidade Lei nº 12.506/2011 ({resultado.diasAvisoIndenizado} dias apurados)</span>
+                              </div>
+                              <span className="font-mono font-bold text-slate-700">{formatBRL(resultado.avisoPrevioIndenizadoValor)}</span>
+                            </div>
+                          )}
+
+                          <div className="p-3 flex justify-between items-center hover:bg-slate-50">
+                            <div>
+                              <span className="font-bold text-slate-800">13º Salário Proporcional Rescisório</span>
+                              <span className="text-[10px] text-slate-400 block">{resultado.mesesDecimoTerceiro}/12 avos de direito</span>
+                            </div>
+                            <span className="font-mono font-bold text-slate-700">{formatBRL(resultado.decimoTerceiroProporcional)}</span>
+                          </div>
+
+                          <div className="p-3 flex justify-between items-center hover:bg-slate-50">
+                            <div>
+                              <span className="font-bold text-slate-800">Férias Proporcionais + 1/3 Constitucional</span>
+                              <span className="text-[10px] text-slate-400 block">{resultado.mesesFerias}/12 avos: {formatBRL(resultado.feriasProporcionais)} + 1/3 ({formatBRL(resultado.tercoFeriasProporcionais)})</span>
+                            </div>
+                            <span className="font-mono font-bold text-slate-700">
+                              {formatBRL(resultado.feriasProporcionais + resultado.tercoFeriasProporcionais)}
+                            </span>
+                          </div>
+
+                          {resultado.feriasVencidasValor > 0 && (
+                            <div className="p-3 flex justify-between items-center hover:bg-slate-50 bg-amber-50/30">
+                              <div>
+                                <span className="font-bold text-amber-900">Férias Vencidas + 1/3 Constitucional</span>
+                                <span className="text-[10px] text-amber-700 block">Período aquisitivo completo não gozado</span>
+                              </div>
+                              <span className="font-mono font-bold text-amber-900">
+                                {formatBRL(resultado.feriasVencidasValor + resultado.tercoFeriasVencidas)}
+                              </span>
+                            </div>
+                          )}
+
+                          {resultado.inssRescisao > 0 && (
+                            <div className="p-3 flex justify-between items-center hover:bg-slate-50 bg-rose-50/30">
+                              <div>
+                                <span className="font-bold text-rose-800">Dedução INSS Rescisório</span>
+                                <span className="text-[10px] text-rose-600 block">Retenção previdenciária oficial sobre saldo e 13º</span>
+                              </div>
+                              <span className="font-mono font-bold text-rose-700">- {formatBRL(resultado.inssRescisao)}</span>
+                            </div>
+                          )}
+
+                          <div className="p-3 flex justify-between items-center bg-indigo-50/50">
+                            <div>
+                              <span className="font-bold text-indigo-900">Multa Rescisória de FGTS (Guia GRRF)</span>
+                              <span className="text-[10px] text-indigo-700 block">
+                                {rescisaoForm.motivo === 'sem_justa_causa' ? '40% recolhido na CEF para saque pelo colaborador' : 
+                                 rescisaoForm.motivo === 'acordo_mutuo' ? '20% de multa no acordo mútuo (Art. 484-A CLT)' : 
+                                 'Isento de multa rescisória'}
+                              </span>
+                            </div>
+                            <span className="font-mono font-bold text-indigo-900">{formatBRL(resultado.multaFgtsValor)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
         </div>
       )}
@@ -7769,16 +7801,51 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                   />
 
                   <FormSelect 
-                    label="Tipo de Vínculo Contratual" 
+                    label="Tipo de Vínculo Contratual / Regime Jurídico" 
                     value={colabForm.tipo} 
-                    onChange={(val: any) => setColabForm({...colabForm, tipo: val})} 
+                    onChange={(val: any) => {
+                      // Adjust automatic defaults per regime
+                      if (val === 'colaborador') {
+                        setColabForm({ ...colabForm, tipo: val, inss: false, irpf: false, salario_base: 0 });
+                      } else if (val === 'pastor') {
+                        setColabForm({ ...colabForm, tipo: val, inss: false, irpf: true });
+                      } else if (val === 'funcionario') {
+                        setColabForm({ ...colabForm, tipo: val, inss: true, irpf: true });
+                      } else {
+                        setColabForm({ ...colabForm, tipo: val, inss: true, irpf: true });
+                      }
+                    }} 
                     options={[
-                      { value: 'funcionario', label: 'CLT (Funcionário sob as Leis CLT)' },
-                      { value: 'pastor', label: 'Clero / Pastor Titular (Acordo Cooperativo de Prebenda)' },
-                      { value: 'prestador', label: 'Prestador de Serviço Terceirizado (Recibo / NFS-e)' },
-                      { value: 'colaborador', label: 'Colaborador Orgânico / Pró-Labore Geral' }
+                      { value: 'funcionario', label: '1. Empregado CLT (Vínculo Trabalhista Integral)' },
+                      { value: 'pastor', label: '2. Ministro Religioso / Pastor (Prebenda Eclesiástica - Isento Patronal)' },
+                      { value: 'colaborador', label: '3. Voluntário Eclesiástico (Lei 9.608/98 - Sem Salário)' },
+                      { value: 'prestador', label: '4. Prestador Terceirizado PJ / Autônomo (RPA / NFS-e)' }
                     ]}
                   />
+                </div>
+
+                {/* Dynamic Regime Badge & Legal Guidance */}
+                <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+                  colabForm.tipo === 'funcionario' ? 'bg-blue-50/70 border-blue-200 text-blue-900' :
+                  colabForm.tipo === 'pastor' ? 'bg-amber-50/70 border-amber-200 text-amber-900' :
+                  colabForm.tipo === 'colaborador' ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' :
+                  'bg-purple-50/70 border-purple-200 text-purple-900'
+                }`}>
+                  <ShieldCheck size={18} className="shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-black uppercase tracking-wider text-[10px]">
+                      {colabForm.tipo === 'funcionario' && 'Regime Trabalhista CLT • Direitos Integrais'}
+                      {colabForm.tipo === 'pastor' && 'Regime Clerical Vocacional • Prebenda / Côngrua (Lei 8.212/91, Art. 22 § 13)'}
+                      {colabForm.tipo === 'colaborador' && 'Regime de Voluntariado • Lei Federal nº 9.608/1998 (Inexistência de Vínculo)'}
+                      {colabForm.tipo === 'prestador' && 'Regime Civil Terceirizado • Contrato de Prestação de Serviços (RPA / Nota Fiscal)'}
+                    </div>
+                    <p className="text-[11px] mt-0.5 opacity-90">
+                      {colabForm.tipo === 'funcionario' && 'Obrigatório controle de ponto, FGTS (8%), INSS progressivo oficial e emissão de Holerite formal com assinatura.'}
+                      {colabForm.tipo === 'pastor' && 'Sustento pastoral desprovido de relação de emprego. Isento de cota patronal previdenciária. Tributação exclusiva de IRPF na fonte.'}
+                      {colabForm.tipo === 'colaborador' && 'Atividade não remunerada prestada por membros e líderes voluntários. Exige Termo de Adesão assinado arquivado no DP para blindagem jurídica.'}
+                      {colabForm.tipo === 'prestador' && 'Profissional autônomo ou empresa contratada para reparos, som, advocacia ou assessoria. Não compõe a folha de empregados.'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
@@ -7797,12 +7864,18 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                   />
 
                   <FormInput 
-                    label={colabForm.tipo === 'pastor' ? 'Prebenda Ministerial Básica (R$)' : 'Salário Base (R$)'} 
+                    label={
+                      colabForm.tipo === 'pastor' ? 'Prebenda Ministerial Básica (R$)' : 
+                      colabForm.tipo === 'colaborador' ? 'Remuneração (R$ 0,00 - Voluntário)' :
+                      colabForm.tipo === 'prestador' ? 'Honorários Contratados (R$)' :
+                      'Salário Base CLT (R$)'
+                    } 
                     type="number" 
                     step="0.01" 
-                    value={colabForm.salario_base} 
+                    value={colabForm.tipo === 'colaborador' ? 0 : colabForm.salario_base} 
                     onChange={(val: any) => setColabForm({...colabForm, salario_base: val})} 
                     placeholder="0.00" 
+                    disabled={colabForm.tipo === 'colaborador'}
                   />
                 </div>
 

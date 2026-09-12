@@ -215,7 +215,6 @@ const ModuleConfigVisual = () => {
                             { id: 'macos_tahoe', name: 'macOS 26 Tahoe (Elegante) ', label: 'macOS', desc: 'Tema exuberante com barra superior translúcida, dock flutuante com zoom, Launchpad e cantos super-arredondados.' },
                             { id: 'win95', name: 'Windows 95 (Retro 95)', label: 'Win95', desc: 'Bordas chanfradas clássicas de 16 bits, cinza neutro e estética industrial.' },
                             { id: 'gipp_clipper', name: 'GIPP CLIPPER (CA-Clipper 5.3)', label: 'Clipper', desc: 'Ambiente autêntico de sistemas desenvolvidos em Clipper / Summer 87 / DOS com molduras ASCII duplas, telas de consulta DBF, teclas de função [F1..F10], beep do PC Speaker e dot-prompt interativo.' },
-                            { id: 'portal_cyber_dark', name: 'Cyber Faith (Portal de Membros Gamificado ⚡📱)', label: 'Cyber Faith', desc: 'Design esportivo e gamificado dark teal com ciano neon e pódio 3D para o Portal de Membros, inspirado no visual de aplicativos modernos e desafios de fé.' },
                             { id: 'linux', name: 'Linux Ubuntu (GNOME)', label: 'Linux', desc: 'Soberbo tema inspirado na elegância do Ubuntu e do ecossistema GNOME, com gradientes aubergine e detalhes em laranja Yaru.' },
                             { id: 'premium_black', name: 'Premium Black & Gold', label: 'Luxo', desc: 'Tema escuro requintado com contrastes profundos e acabamentos em dourado.' },
                             { id: 'futuristic', name: 'GIPP Sci-Fi Futurista', label: 'Futurista', desc: 'Estética cibernética de alta performance com realces neon ciano/rosa e acabamento holográfico.' }
@@ -270,7 +269,6 @@ const ModuleConfigVisual = () => {
                             previewTheme === 'win11' ? 'bg-gradient-to-tr from-[#9ec2e6] to-[#d6e5f5]' :
                             previewTheme === 'win81' ? 'bg-[#004f7c]' :
                             previewTheme === 'win95' ? 'bg-[#008080]' : /* classic teal */
-                            previewTheme === 'portal_cyber_dark' ? 'bg-[#091115] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#123844] via-[#0D191F] to-[#070D10]' :
                             previewTheme === 'gipp_clipper' ? 'bg-[#0000aa]' :
                             previewTheme === 'linux' ? 'bg-[#1f0b1a]' : /* aubergine */
                             previewTheme === 'premium_black' ? 'bg-[#1a1a1a]' :
@@ -293,7 +291,6 @@ const ModuleConfigVisual = () => {
                                 previewTheme === 'win11' ? 'bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/50 p-1.5 shadow-lg text-slate-800' :
                                 previewTheme === 'win81' ? 'bg-[#1f1f1f] rounded-none border border-white/20 p-1 shadow-2xl text-slate-100' :
                                 previewTheme === 'gipp_clipper' ? 'bg-[#0000aa] border-4 border-double border-white p-2 text-white font-mono text-[11px] shadow-[6px_6px_0px_#000]' :
-                                previewTheme === 'portal_cyber_dark' ? 'bg-[#0F1D24] border border-cyan-400/40 p-2 rounded-2xl shadow-[0_0_20px_rgba(56,225,237,0.3)] text-white' :
                                 previewTheme === 'linux' ? 'bg-[#221820] rounded-2xl border border-white/10 p-1 shadow-2xl text-slate-100' :
                                 previewTheme === 'premium_black' ? 'bg-[#0a0a0a] border border-[#D4AF37] p-2 text-slate-100' :
                                 previewTheme === 'futuristic' ? 'bg-black/90 border border-[#00f0ff] p-2 text-slate-100 shadow-[0_0_15px_rgba(0,240,255,0.25)]' :
@@ -318,7 +315,6 @@ const ModuleConfigVisual = () => {
                                     previewTheme === 'win11' ? 'bg-slate-50/50 rounded-lg p-1.5 text-slate-700 font-bold' :
                                     previewTheme === 'win81' ? 'bg-[#004f7c] rounded-none p-1.5 text-white font-semibold' :
                                     previewTheme === 'gipp_clipper' ? 'bg-[#000080] border-b-2 border-white pb-1 mb-2 font-mono text-[#ffff55] font-bold uppercase tracking-wider' :
-                                    previewTheme === 'portal_cyber_dark' ? 'bg-gradient-to-r from-[#0C1B22] to-[#122A35] border-b border-cyan-400/30 p-1.5 rounded-xl text-cyan-300 font-black flex items-center justify-between' :
                                     previewTheme === 'linux' ? 'bg-[#1b1118] rounded-t-xl p-2 border-b border-white/5 text-white font-bold' :
                                     previewTheme === 'premium_black' ? 'bg-gradient-to-r from-[#111] to-[#222] border-b border-[#D4AF37]/40 pb-1 mb-2 text-[#D4AF37] font-bold' :
                                     previewTheme === 'futuristic' ? 'bg-gradient-to-r from-[#03001e] to-[#120012] border-b border-[#00f0ff]/40 pb-1 mb-2 text-[#00f0ff] font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' :

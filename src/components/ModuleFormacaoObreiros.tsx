@@ -43,6 +43,11 @@ import { TabBancoQuestoesProvas } from './formacao/TabBancoQuestoesProvas';
 import { TabDossiePastoral } from './formacao/TabDossiePastoral';
 import { TabDocumentosOficiais } from './formacao/TabDocumentosOficiais';
 import { TabEstagioSupervisionado } from './formacao/TabEstagioSupervisionado';
+import { TabAlunoPainel } from './formacao/TabAlunoPainel';
+import { TabAlunoFrequencia } from './formacao/TabAlunoFrequencia';
+import { TabProfessorCorrecoes } from './formacao/TabProfessorCorrecoes';
+import { TabProfessorEstagios } from './formacao/TabProfessorEstagios';
+import { TabProfessorPainel } from './formacao/TabProfessorPainel';
 import { BibleReferenceModal } from './BibleReferenceModal';
 
 interface ModuleFormacaoObreirosProps {
@@ -69,31 +74,143 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
     };
 
     // ==========================================
-    // ESTADOS PRINCIPAIS DE NAVEGAÇÃO & VISÃO
+    // ESTADOS PRINCIPAIS DE NAVEGAÇÃO & 3 PERFIS
     // ==========================================
-    const [viewMode, setViewMode] = useState<'coordenador' | 'candidato'>(initialViewMode || (candidateUser ? 'candidato' : 'coordenador'));
+    // Papéis: 'aluno' (Candidato/Obreiro) | 'professor' (Docente/Tutor) | 'gestor' (Diretor/Pastor)
+    const [role, setRole] = useState<'aluno' | 'professor' | 'gestor'>(() => {
+        if (candidateUser || initialViewMode === 'candidato') return 'aluno';
+        return 'gestor';
+    });
+
+    const [alunoTab, setAlunoTab] = useState<
+        | 'aluno_painel' 
+        | 'aluno_estudos' 
+        | 'aluno_provas' 
+        | 'aluno_trabalhos' 
+        | 'aluno_estagio' 
+        | 'aluno_frequencia' 
+        | 'aluno_financeiro' 
+        | 'aluno_mentoria'
+    >('aluno_painel');
+
+    const [profTab, setProfTab] = useState<
+        | 'prof_painel' 
+        | 'prof_diario' 
+        | 'prof_correcoes' 
+        | 'prof_estagio' 
+        | 'prof_banco' 
+        | 'prof_avisos' 
+        | 'prof_mentoria'
+    >('prof_painel');
+
+    const [gestorTab, setGestorTab] = useState<
+        | 'gestor_dashboard' 
+        | 'gestor_turmas' 
+        | 'gestor_dossie' 
+        | 'gestor_docentes' 
+        | 'gestor_financeiro' 
+        | 'gestor_analytics' 
+        | 'gestor_consagracao' 
+        | 'gestor_documentos'
+    >('gestor_dashboard');
+
+    const viewMode = role === 'aluno' ? 'candidato' : 'coordenador';
+    const setViewMode = (mode: 'coordenador' | 'candidato') => {
+        if (mode === 'candidato') setRole('aluno');
+        else setRole('gestor');
+    };
+
     const [isHubMaximized, setIsHubMaximized] = useState(false);
-    const [showWelcomeScreen, setShowWelcomeScreen] = useState(true);
-    const [activeTab, setActiveTab] = useState<
-        | 'dashboard' 
-        | 'dossie'
-        | 'documentos'
-        | 'turmas' 
-        | 'tutores' 
-        | 'frequencia' 
-        | 'financeiro' 
-        | 'avisos' 
-        | 'relatorios_lms' 
-        | 'banco_questoes' 
-        | 'teoria' 
-        | 'provas' 
-        | 'trabalhos' 
-        | 'estagio' 
-        | 'mentoria' 
-        | 'workflow'
-    >('dashboard');
+    const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
     const [selectedNivelId, setSelectedNivelId] = useState<'auxiliar' | 'diacono' | 'presbitero' | 'evangelista' | 'pastor'>('diacono');
     const [selectedCandidatoId, setSelectedCandidatoId] = useState<string>('cand_001');
+
+    // Navegação unificada entre abas e papéis
+    const navigateToTab = (tabKey: string) => {
+        if (tabKey.startsWith('aluno_')) {
+            setRole('aluno');
+            setAlunoTab(tabKey as any);
+        } else if (tabKey.startsWith('prof_')) {
+            setRole('professor');
+            setProfTab(tabKey as any);
+        } else if (tabKey.startsWith('gestor_')) {
+            setRole('gestor');
+            setGestorTab(tabKey as any);
+        } else {
+            // Compatibilidade com atalhos legados
+            switch (tabKey) {
+                case 'teoria':
+                    setRole('aluno');
+                    setAlunoTab('aluno_estudos');
+                    break;
+                case 'provas':
+                    setRole('aluno');
+                    setAlunoTab('aluno_provas');
+                    break;
+                case 'trabalhos':
+                    setRole('aluno');
+                    setAlunoTab('aluno_trabalhos');
+                    break;
+                case 'estagio':
+                    setRole('aluno');
+                    setAlunoTab('aluno_estagio');
+                    break;
+                case 'mentoria':
+                    setRole('aluno');
+                    setAlunoTab('aluno_mentoria');
+                    break;
+                case 'financeiro':
+                    setRole('aluno');
+                    setAlunoTab('aluno_financeiro');
+                    break;
+                case 'turmas':
+                    setRole('gestor');
+                    setGestorTab('gestor_turmas');
+                    break;
+                case 'tutores':
+                    setRole('gestor');
+                    setGestorTab('gestor_docentes');
+                    break;
+                case 'frequencia':
+                    setRole('professor');
+                    setProfTab('prof_diario');
+                    break;
+                case 'avisos':
+                    setRole('professor');
+                    setProfTab('prof_avisos');
+                    break;
+                case 'banco_questoes':
+                    setRole('professor');
+                    setProfTab('prof_banco');
+                    break;
+                case 'relatorios_lms':
+                    setRole('gestor');
+                    setGestorTab('gestor_analytics');
+                    break;
+                case 'dossie':
+                    setRole('gestor');
+                    setGestorTab('gestor_dossie');
+                    break;
+                case 'documentos':
+                    setRole('gestor');
+                    setGestorTab('gestor_documentos');
+                    break;
+                case 'workflow':
+                    setRole('gestor');
+                    setGestorTab('gestor_consagracao');
+                    break;
+                case 'dashboard':
+                    if (role === 'aluno') setAlunoTab('aluno_painel');
+                    else if (role === 'professor') setProfTab('prof_painel');
+                    else setGestorTab('gestor_dashboard');
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+    const setActiveTab = navigateToTab;
+    const activeTab = role === 'aluno' ? alunoTab : role === 'professor' ? profTab : gestorTab;
 
     // Ref e rolagem suave das abas
     const tabsScrollRef = useRef<HTMLDivElement>(null);
@@ -1181,22 +1298,48 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
         }
     };
 
-    const handleAtualizarPresenca = async (encontroId: string, alunoId: string, presente: boolean) => {
+    const handleAtualizarPresenca = async (encontroId: string, alunoId: string, presente: boolean | 'presente' | 'ausente' | 'justificado') => {
         const updated = encontros.map(enc => {
             if (enc.id === encontroId) {
-                const lista = enc.presencas || [];
-                const existPres = lista.find(p => p.candidatoId === alunoId);
+                // Se for objeto Record
+                if (enc.presencas && typeof enc.presencas === 'object' && !Array.isArray(enc.presencas)) {
+                    const statusStr: 'presente' | 'ausente' | 'justificado' = typeof presente === 'string' 
+                        ? presente 
+                        : (presente ? 'presente' : 'ausente');
+                    return {
+                        ...enc,
+                        presencas: {
+                            ...enc.presencas,
+                            [alunoId]: statusStr
+                        }
+                    };
+                }
+                // Se for Array
+                const lista = Array.isArray(enc.presencas) ? enc.presencas : [];
+                const existPres = lista.find((p: any) => p && (p.candidatoId === alunoId || p.alunoId === alunoId));
                 let novaLista;
+                const boolPres = typeof presente === 'boolean' ? presente : (presente === 'presente' || presente === 'justificado');
                 if (existPres) {
-                    novaLista = lista.map(p => p.candidatoId === alunoId ? { ...p, presente } : p);
+                    novaLista = lista.map((p: any) => (p.candidatoId === alunoId || p.alunoId === alunoId) ? { ...p, presente: boolPres } : p);
                 } else {
-                    novaLista = [...lista, { candidatoId: alunoId, presente }];
+                    novaLista = [...lista, { candidatoId: alunoId, presente: boolPres }];
                 }
                 return { ...enc, presencas: novaLista };
             }
             return enc;
         });
-        setEncontros(updated);
+        setEncontros(updated as any);
+
+        if (dbFirestore && appId) {
+            const target = updated.find(e => e.id === encontroId);
+            if (target) {
+                try {
+                    await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'formacao_encontros', encontroId), target, { merge: true });
+                } catch (err) {
+                    console.error("Erro ao salvar presença no Firestore:", err);
+                }
+            }
+        }
     };
 
     const handleSalvarRegistroFinanceiro = async (reg: FinanceiroCandidato) => {
@@ -1529,29 +1672,40 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                     </div>
                 </div>
 
-                {/* Perfil Switcher (Coordenador / Pastor vs. Obreiro Candidato) */}
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                {/* Perfil Switcher (Gestor / Professor / Aluno) */}
+                <div className="flex flex-wrap items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
                     <button
-                        onClick={() => setViewMode('coordenador')}
+                        onClick={() => setRole('gestor')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                            viewMode === 'coordenador'
+                            role === 'gestor'
                                 ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
                                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
                         }`}
                     >
                         <Award size={14} />
-                        <span>Visão Pastoral / Gestão LMS</span>
+                        <span className="hidden sm:inline">Gestão LMS</span>
                     </button>
                     <button
-                        onClick={() => setViewMode('candidato')}
+                        onClick={() => setRole('professor')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                            viewMode === 'candidato'
-                                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            role === 'professor'
+                                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
                                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
                         }`}
                     >
-                        <Users size={14} />
-                        <span>Visão do Aluno / Obreiro</span>
+                        <BookCheck size={14} />
+                        <span className="hidden sm:inline">Portal Docente</span>
+                    </button>
+                    <button
+                        onClick={() => setRole('aluno')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            role === 'aluno'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                        }`}
+                    >
+                        <GraduationCap size={14} />
+                        <span className="hidden sm:inline">Área do Aluno</span>
                     </button>
                 </div>
             </div>
@@ -1614,46 +1768,68 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
                     className="flex-1 flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar scroll-smooth focus:outline-none"
                     style={{ scrollbarWidth: 'thin' }}
                 >
-                    {[
-                        { id: 'dashboard', label: 'Painel Geral', icon: Layers },
-                        { id: 'dossie', label: 'Dossiê Canônico (1 Tm 3)', icon: Shield },
-                        { id: 'documentos', label: 'Diplomas & Atas Oficiais', icon: Award },
-                        { id: 'estagio', label: 'Estágio do Altar', icon: Clock },
-                        { id: 'turmas', label: '1. Turmas & Cronograma', icon: Calendar },
-                        { id: 'tutores', label: '2. Docentes & Fila Correção', icon: BookCheck },
-                        { id: 'frequencia', label: '3. Diário & QR Code', icon: QrCode },
-                        { id: 'financeiro', label: '4. Financeiro & Taxas', icon: DollarSign },
-                        { id: 'avisos', label: '5. Mural & WhatsApp', icon: Bell },
-                        { id: 'relatorios_lms', label: '6. Analytics & Ata PDF', icon: BarChart2 },
-                        { id: 'banco_questoes', label: '7. Banco & Provas', icon: HelpCircle },
-                        { id: 'teoria', label: 'Apostilas & Aulas', icon: BookOpen },
-                        { id: 'provas', label: 'Provas & Notas', icon: CheckSquare },
-                        { id: 'trabalhos', label: 'Trabalhos Acadêmicos', icon: FileText },
-                        { id: 'mentoria', label: 'Mentoria Pastoral', icon: UserCheck },
-                        { id: 'workflow', label: 'Consagração Final', icon: CheckCircle2 }
-                    ].map(tab => {
-                        const IconComp = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={(e) => {
-                                    setActiveTab(tab.id as any);
-                                    setSelectedDisciplina(null);
-                                    setSelectedLicao(null);
-                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                                }}
-                                className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${
-                                    isActive
-                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-600/20'
-                                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                                }`}
-                            >
-                                <IconComp size={15} />
-                                <span>{tab.label}</span>
-                            </button>
-                        );
-                    })}
+                    {(() => {
+                        let tabs = [];
+                        if (role === 'aluno') {
+                            tabs = [
+                                { id: 'aluno_painel', label: 'Meu Painel', icon: Layers },
+                                { id: 'aluno_estudos', label: 'Sala de Aula (Apostilas)', icon: BookOpen },
+                                { id: 'aluno_provas', label: 'Provas & Avaliações', icon: CheckSquare },
+                                { id: 'aluno_trabalhos', label: 'Trabalhos & Artigos', icon: FileText },
+                                { id: 'aluno_estagio', label: 'Estágio do Altar', icon: Clock },
+                                { id: 'aluno_frequencia', label: 'Frequência', icon: QrCode },
+                                { id: 'aluno_financeiro', label: 'Financeiro', icon: DollarSign },
+                                { id: 'aluno_mentoria', label: 'Mentoria Ministerial', icon: UserCheck }
+                            ];
+                        } else if (role === 'professor') {
+                            tabs = [
+                                { id: 'prof_painel', label: 'Painel do Docente', icon: Layers },
+                                { id: 'prof_diario', label: 'Diário de Classe & QR Code', icon: QrCode },
+                                { id: 'prof_correcoes', label: 'Fila de Correção', icon: BookCheck },
+                                { id: 'prof_estagio', label: 'Estágios Supervisionados', icon: Clock },
+                                { id: 'prof_banco', label: 'Banco de Questões', icon: HelpCircle },
+                                { id: 'prof_avisos', label: 'Mural de Avisos', icon: Bell },
+                                { id: 'prof_mentoria', label: 'Mentoria', icon: UserCheck }
+                            ];
+                        } else {
+                            tabs = [
+                                { id: 'gestor_dashboard', label: 'Dashboard Coordenação', icon: Layers },
+                                { id: 'gestor_turmas', label: 'Turmas & Cronograma', icon: Calendar },
+                                { id: 'gestor_dossie', label: 'Dossiê Canônico (1 Tm 3)', icon: Shield },
+                                { id: 'gestor_docentes', label: 'Docentes & Corretores', icon: BookCheck },
+                                { id: 'gestor_financeiro', label: 'Gestão Financeira', icon: DollarSign },
+                                { id: 'gestor_analytics', label: 'Analytics & Atas (LMS)', icon: BarChart2 },
+                                { id: 'gestor_documentos', label: 'Diplomas & Atas Oficiais', icon: Award },
+                                { id: 'gestor_consagracao', label: 'Consagração Final', icon: CheckCircle2 }
+                            ];
+                        }
+
+                        const currentActiveTab = role === 'aluno' ? alunoTab : role === 'professor' ? profTab : gestorTab;
+
+                        return tabs.map(tab => {
+                            const IconComp = tab.icon;
+                            const isActive = currentActiveTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={(e) => {
+                                        setActiveTab(tab.id as any);
+                                        setSelectedDisciplina(null);
+                                        setSelectedLicao(null);
+                                        e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                                    }}
+                                    className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${
+                                        isActive
+                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-600/20'
+                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                                    }`}
+                                >
+                                    <IconComp size={15} />
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        });
+                    })()}
                 </div>
 
                 {/* Botão de Rolar para a Direita */}
@@ -1710,7 +1886,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             {/* ========================================== */}
 
             {/* --- MELHORIA 1: TURMAS & CRONOGRAMAS --- */}
-            {activeTab === 'turmas' && (
+            {activeTab === 'gestor_turmas' && (
                 <TabTurmasCronograma
                     turmas={turmas}
                     candidatos={candidatos}
@@ -1723,7 +1899,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- MELHORIA 2: TUTORES & FILA DE CORREÇÃO --- */}
-            {activeTab === 'tutores' && (
+            {activeTab === 'gestor_docentes' && (
                 <TabTutoresDocentes
                     tutores={tutores}
                     trabalhos={trabalhos}
@@ -1742,7 +1918,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- MELHORIA 3: FREQUÊNCIA & QR CODE --- */}
-            {activeTab === 'frequencia' && (
+            {activeTab === 'prof_diario' && (
                 <TabFrequenciaEncontros
                     turmas={turmas}
                     encontros={encontros}
@@ -1755,7 +1931,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- MELHORIA 4: FINANCEIRO & TAXAS --- */}
-            {activeTab === 'financeiro' && (
+            {activeTab === 'gestor_financeiro' && (
                 <TabFinanceiroFormacao
                     financeiroList={financeiroList}
                     candidatos={candidatos}
@@ -1766,7 +1942,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- MELHORIA 5: MURAL DE AVISOS & WHATSAPP --- */}
-            {activeTab === 'avisos' && (
+            {activeTab === 'prof_avisos' && (
                 <TabAvisosLembretes
                     avisos={avisos}
                     turmas={turmas}
@@ -1778,7 +1954,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- MELHORIA 6: ANALYTICS & ATA DA TURMA --- */}
-            {activeTab === 'relatorios_lms' && (
+            {activeTab === 'gestor_analytics' && (
                 <TabAnalyticsAtaTurma
                     turmas={turmas}
                     candidatos={candidatos}
@@ -1790,7 +1966,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- MELHORIA 7: BANCO DE QUESTÕES & PROVAS --- */}
-            {activeTab === 'banco_questoes' && (
+            {activeTab === 'prof_banco' && (
                 <TabBancoQuestoesProvas
                     bancoQuestoes={bancoQuestoes}
                     provasCustomizadas={provasCustomizadas}
@@ -1865,8 +2041,72 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             {/* CONTEÚDO DINÂMICO DAS ABAS                 */}
             {/* ========================================== */}
 
+            {activeTab === 'aluno_painel' && (
+                <TabAlunoPainel 
+                    candidato={candidatoAtivo}
+                    nivel={nivelAtivo}
+                    totalHorasAprovadas={totalHorasAprovadas}
+                    encontros={encontros}
+                    avisos={avisos}
+                    onNavigateTab={navigateToTab}
+                    igrejaNome={db?.igreja?.nome || 'Igreja Sede'}
+                    turmaAtiva={turmas.find(t => t.nivelId === selectedNivelId)}
+                    disciplinas={disciplinasDoNivel}
+                />
+            )}
+
+            {activeTab === 'prof_painel' && (
+                <TabProfessorPainel
+                    tutorAtivo={tutores.find(t => t.email === user?.email) || tutores[0]}
+                    turmas={turmas}
+                    encontros={encontros}
+                    trabalhos={trabalhos}
+                    estagios={estagios}
+                    candidatos={candidatos}
+                    onNavigateTab={navigateToTab}
+                />
+            )}
+
+            {activeTab === 'prof_correcoes' && (
+                <TabProfessorCorrecoes
+                    trabalhos={trabalhos}
+                    candidatos={candidatos}
+                    disciplinas={disciplinasDoNivel}
+                    onAvaliarTrabalho={handleAvaliarTrabalhoRapido}
+                    addToast={addToast}
+                />
+            )}
+
+            {activeTab === 'prof_estagio' && (
+                <TabProfessorEstagios
+                    estagios={estagios}
+                    candidatos={candidatos}
+                    onAprovarEstagio={handleAprovarEstagioRapido}
+                    addToast={addToast}
+                />
+            )}
+
+            {activeTab === 'aluno_frequencia' && (
+                <TabAlunoFrequencia
+                    candidato={candidatoAtivo}
+                    nivel={nivelAtivo}
+                    encontros={encontros}
+                    onAtualizarPresenca={handleAtualizarPresenca}
+                    addToast={addToast}
+                    igrejaNome={db?.igreja?.nome || 'Igreja Sede'}
+                    turmaAtiva={turmas.find(t => t.nivelId === selectedNivelId)}
+                />
+            )}
+
+            {activeTab === 'aluno_financeiro' && (
+                <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-xs border border-slate-200 dark:border-slate-800">
+                    <h3 className="text-lg font-black">Meu Financeiro</h3>
+                    <p className="text-slate-500 text-sm">Acompanhe suas taxas e pagamentos do curso de formação.</p>
+                </div>
+            )}
+
             {/* --- ABA 1: DASHBOARD & FICHA DO CANDIDATO --- */}
-            {activeTab === 'dashboard' && (
+            {activeTab === 'gestor_dashboard' && (
                 <div className="space-y-4">
                     {/* Status Geral / Métricas */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1984,7 +2224,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA 2: APOSTILAS & AULAS TEÓRICAS (LEITOR CGADB) --- */}
-            {activeTab === 'teoria' && (
+            {activeTab === 'aluno_estudos' && (
                 <div className="space-y-4">
                     {!selectedLicao ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2545,7 +2785,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA 3: PROVAS & AVALIAÇÕES TEOLÓGICAS --- */}
-            {activeTab === 'provas' && (
+            {activeTab === 'aluno_provas' && (
                 <div className="space-y-4">
                     <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
                         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -2596,7 +2836,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA 4: TRABALHOS ACADÊMICOS & RESENHAS --- */}
-            {activeTab === 'trabalhos' && (
+            {activeTab === 'aluno_trabalhos' && (
                 <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -2689,7 +2929,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA: DOSSIÊ CANÔNICO & PARECER DE IDONEIDADE (1 TM 3 E TITO 1) --- */}
-            {activeTab === 'dossie' && (
+            {activeTab === 'gestor_dossie' && (
                 <TabDossiePastoral
                     candidato={candidatoAtivo}
                     nivel={nivelAtivo}
@@ -2701,7 +2941,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA: DOCUMENTOS OFICIAIS, DIPLOMAS, HISTÓRICO & ATAS --- */}
-            {activeTab === 'documentos' && (
+            {activeTab === 'gestor_documentos' && (
                 <TabDocumentosOficiais
                     candidato={candidatoAtivo}
                     nivel={nivelAtivo}
@@ -2719,7 +2959,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA 5: ESTÁGIO PRÁTICO MINISTERIAL & CHECKLIST DO ALTAR --- */}
-            {activeTab === 'estagio' && (
+            {activeTab === 'aluno_estagio' && (
                 <TabEstagioSupervisionado
                     candidato={candidatoAtivo}
                     nivel={nivelAtivo}
@@ -2731,7 +2971,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA 6: MENTORIA MINISTERIAL & CARÁTER --- */}
-            {activeTab === 'mentoria' && (
+            {(activeTab === 'aluno_mentoria' || activeTab === 'prof_mentoria') && (
                 <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -2804,7 +3044,7 @@ export default function ModuleFormacaoObreiros({ initialViewMode = 'coordenador'
             )}
 
             {/* --- ABA 7: WORKFLOW DE CONSAGRAÇÃO (ADMINISTRATIVO) --- */}
-            {activeTab === 'workflow' && (
+            {activeTab === 'gestor_consagracao' && (
                 <div className="space-y-4">
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4 border-slate-100 dark:border-slate-800">

@@ -23,7 +23,7 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowLeft, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -56,6 +56,9 @@ import {
     isValidCPF, formatCPF, copyToClipboard, resizeImageAndCompress, 
     playMenuSound, playNotificationSound 
 } from './utils/sharedHelpers';
+import { 
+    transposeCifraText, transposeChord, isChordLine, CHROMATIC_SCALE_SHARP, getSemitoneDifference 
+} from './utils/musicChords';
 
 // --- MODULARIZED IMPORTS ---
 import { Win11PropertiesModal } from './components/Win11PropertiesModal';
@@ -66,7 +69,6 @@ import { Windows11Layout } from './components/Windows11Layout';
 import { NewGippLayout } from './components/NewGippLayout';
 import { GippCppLayout } from './components/GippCppLayout';
 import { ClipperLayout } from './components/ClipperLayout';
-import { PortalCyberLayout } from './components/PortalCyberLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS } from './constants/portalPermissions';
@@ -294,6 +296,18 @@ const DynamicPrintStyles = ({ orientation, marginType, mode }: { orientation: 'p
         left = '0mm';
         bottom = '0mm';
         right = '0mm';
+    } else if (marginType && marginType.startsWith('custom:')) {
+        const parts = marginType.replace('custom:', '').split(',').map(Number);
+        top = `${parts[0] !== undefined ? parts[0] : 10}mm`;
+        bottom = `${parts[1] !== undefined ? parts[1] : 10}mm`;
+        left = `${parts[2] !== undefined ? parts[2] : 10}mm`;
+        right = `${parts[3] !== undefined ? parts[3] : 10}mm`;
+    } else if (marginType === 'zero') {
+        top = '0mm'; left = '0mm'; bottom = '0mm'; right = '0mm';
+    } else if (marginType === 'minima') {
+        top = '5mm'; left = '5mm'; bottom = '5mm'; right = '5mm';
+    } else if (marginType === 'compacta') {
+        top = '10mm'; left = '10mm'; bottom = '10mm'; right = '10mm';
     } else if (marginType === 'moderada') {
         top = '20mm'; left = '20mm'; bottom = '20mm'; right = '20mm';
     } else if (marginType === 'estreita') {
@@ -1458,7 +1472,6 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         if (theme === 'gipp_retro') return "bg-[#E2E6EA]";
         if (theme === 'gipp_clipper') return "bg-[#0000aa]";
         if (theme === 'premium_black') return "bg-[#050505]";
-        if (theme === 'portal_cyber_dark') return "bg-[#091115] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#123844] via-[#0D191F] to-[#070D10]";
         if (theme === 'linux') return "bg-[#1f0b1a]";
         if (theme === 'futuristic') return "bg-[#03001e]";
         if (isLightTheme) {
@@ -1481,7 +1494,7 @@ const ThemeBackground = ({ theme, isSplash = false }) => {
         </div>
     );
 
-    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic' || osTheme === 'linux' || theme === 'linux' || osTheme === 'portal_cyber_dark' || theme === 'portal_cyber_dark';
+    const isDarkTheme = osTheme === 'dark' || osTheme === 'premium_black' || theme === 'premium_black' || osTheme === 'futuristic' || osTheme === 'linux' || theme === 'linux';
 
     return (
         <div className={`absolute inset-0 overflow-hidden ${papelParede ? '' : getBaseThemeStyles()}`}>
@@ -1821,7 +1834,6 @@ const OsThemeToggle = ({ variant = 'default', className = "" }) => {
         { id: 'gipp_retro', label: 'GIPP RETRO (Delphi 13) ⚡' },
         { id: 'win95', label: 'Windows 95' },
         { id: 'macos_tahoe', label: 'macOS 26 Tahoe ' },
-        { id: 'portal_cyber_dark', label: 'Cyber Faith (Portal Membro) ⚡📱' },
         { id: 'linux', label: 'Linux Ubuntu' },
         { id: 'premium_black', label: 'Premium Black' },
         { id: 'futuristic', label: 'GIPP Sci-Fi' }
@@ -4550,6 +4562,18 @@ export const PageBoundaryIndicators = ({ marginType, targetHeight, contentRef }:
     const currentWidth = isLandscape ? 1123 : 794;
     
     const getPrintMarginsPx = (type: string) => {
+        if (type && type.startsWith('custom:')) {
+            const parts = type.replace('custom:', '').split(',').map(Number);
+            return {
+                top: Math.round((parts[0] !== undefined ? parts[0] : 10) * 3.78),
+                bottom: Math.round((parts[1] !== undefined ? parts[1] : 10) * 3.78),
+                left: Math.round((parts[2] !== undefined ? parts[2] : 10) * 3.78),
+                right: Math.round((parts[3] !== undefined ? parts[3] : 10) * 3.78)
+            };
+        }
+        if (type === 'zero') return { top: 0, bottom: 0, left: 0, right: 0 };
+        if (type === 'minima') return { top: 19, bottom: 19, left: 19, right: 19 }; // 5mm
+        if (type === 'compacta') return { top: 38, bottom: 38, left: 38, right: 38 }; // 10mm
         if (type === 'moderada') return { top: 76, bottom: 76, left: 76, right: 76 };
         if (type === 'estreita') return { top: 57, bottom: 57, left: 57, right: 57 };
         return { top: 113, bottom: 76, left: 113, right: 76 }; // abnt / padrão
@@ -4600,11 +4624,12 @@ export const DocumentPreviewModal = ({
     contentScale,
     setContentScale
 }) => {
-    const { addToast } = useContext(ChurchContext);
+    const { addToast, setPrintData } = useContext(ChurchContext);
     const contentRef = useRef<HTMLDivElement>(null);
     const [renderProgress, setRenderProgress] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
     const [isAutoFit, setIsAutoFit] = useState<boolean>(false);
+    const [pdfQuality, setPdfQuality] = useState<'normal' | 'alta' | 'ultra'>('ultra');
 
     const [showWatermark, setShowWatermark] = useState<boolean>(false);
     const [includeSignatures, setIncludeSignatures] = useState<boolean>(false);
@@ -4613,8 +4638,66 @@ export const DocumentPreviewModal = ({
     const [signatureName2, setSignatureName2] = useState<string>("");
     const [signatureTitle2, setSignatureTitle2] = useState<string>("");
 
+    // Custom margins state
+    const [showCustomMarginModal, setShowCustomMarginModal] = useState<boolean>(false);
+    const [customMarginUniform, setCustomMarginUniform] = useState<number>(() => {
+        if (marginType && marginType.startsWith('custom:')) {
+            const parts = marginType.replace('custom:', '').split(',').map(Number);
+            return parts[0] || 10;
+        }
+        return 10;
+    });
+    const [customTop, setCustomTop] = useState<number>(10);
+    const [customBottom, setCustomBottom] = useState<number>(10);
+    const [customLeft, setCustomLeft] = useState<number>(10);
+    const [customRight, setCustomRight] = useState<number>(10);
+
+    // Cifra & Music Real-time Controls
+    const isCifraMode = mode === 'rel_cifra_musica';
+    const currentSong = data?.song || data?.item || data;
+    const songTomOriginal = currentSong?.tom || 'G';
+    const semitones = typeof data?.semitones === 'number' ? data.semitones : 0;
+    const fontSize = typeof data?.fontSize === 'number' ? data.fontSize : 13;
+    const currentTom = semitones !== 0 ? transposeChord(songTomOriginal, semitones) : songTomOriginal;
+
+    const handleUpdateSemitones = (deltaOrTarget: number | string) => {
+        let newSemi = semitones;
+        if (typeof deltaOrTarget === 'number') {
+            newSemi = semitones + deltaOrTarget;
+        } else {
+            newSemi = getSemitoneDifference(songTomOriginal, deltaOrTarget);
+        }
+        if (setPrintData) {
+            setPrintData((prev: any) => ({
+                ...prev,
+                semitones: newSemi
+            }));
+        }
+    };
+
+    const handleResetSemitones = () => {
+        if (setPrintData) {
+            setPrintData((prev: any) => ({
+                ...prev,
+                semitones: 0
+            }));
+        }
+    };
+
+    const handleUpdateFontSize = (newSize: number) => {
+        const clamped = Math.max(9, Math.min(26, newSize));
+        if (setPrintData) {
+            setPrintData((prev: any) => ({
+                ...prev,
+                fontSize: clamped
+            }));
+        }
+    };
+
     // States for pre-defined digital signatures tab & manager
-    const [previewTab, setPreviewTab] = useState<'layout' | 'signatures_manager'>('layout');
+    const [previewTab, setPreviewTab] = useState<'layout' | 'signatures_manager' | 'cifra_controls'>(() => {
+        return mode === 'rel_cifra_musica' ? 'cifra_controls' : 'layout';
+    });
     const [savedSignatures, setSavedSignatures] = useState<Array<{id: string, name: string, title: string}>>(() => {
         try {
             const local = localStorage.getItem("gipp_predefined_signatures");
@@ -4637,8 +4720,11 @@ export const DocumentPreviewModal = ({
             setSignatureTitle1("Pastor Presidente");
             setSignatureName2(data.igreja?.tesoureiro1 || "");
             setSignatureTitle2("Coordenador Financeiro");
+            if (mode === 'rel_cifra_musica') {
+                setPreviewTab('cifra_controls');
+            }
         }
-    }, [isOpen, data]);
+    }, [isOpen, data, mode]);
 
     if (!isOpen) return null;
 
@@ -4720,10 +4806,19 @@ export const DocumentPreviewModal = ({
             // Delay para o browser recalcular reflow de fontes e imagens
             await new Promise(r => setTimeout(r, 450));
 
-            setRenderProgress("Processando vetorização do documento e fontes...");
+            // Configuração de qualidade e amostragem de alta definição
+            const qualityConfig = {
+                normal: { pixelRatio: 2.0, jpegQuality: 0.98, usePng: false },
+                alta: { pixelRatio: 2.5, jpegQuality: 0.99, usePng: false },
+                ultra: { pixelRatio: 3.2, jpegQuality: 1.0, usePng: true }
+            }[pdfQuality] || { pixelRatio: 3.0, jpegQuality: 1.0, usePng: true };
+
+            setRenderProgress(`Vetorizando documento em Ultra Resolução (${qualityConfig.pixelRatio}x DPI)...`);
             const dataUrl = await toPng(targetEl, {
-                quality: 0.98,
+                quality: 1.0,
+                pixelRatio: qualityConfig.pixelRatio,
                 backgroundColor: '#ffffff',
+                cacheBust: true,
                 filter: (node: any) => {
                     if (node && node.classList && (node.classList.contains('no-print') || node.classList.contains('page-boundary-overlay'))) {
                         return false;
@@ -4760,11 +4855,20 @@ export const DocumentPreviewModal = ({
             
             // 1. Obter margens em pixels com base no marginType selecionado
             const getPrintMarginsPx = (type: string) => {
-                if (type === 'moderada') {
-                    return { top: 76, bottom: 76, left: 76, right: 76 };
-                } else if (type === 'estreita') {
-                    return { top: 57, bottom: 57, left: 57, right: 57 };
+                if (type && type.startsWith('custom:')) {
+                    const parts = type.replace('custom:', '').split(',').map(Number);
+                    return {
+                        top: Math.round((parts[0] !== undefined ? parts[0] : 10) * 3.78),
+                        bottom: Math.round((parts[1] !== undefined ? parts[1] : 10) * 3.78),
+                        left: Math.round((parts[2] !== undefined ? parts[2] : 10) * 3.78),
+                        right: Math.round((parts[3] !== undefined ? parts[3] : 10) * 3.78)
+                    };
                 }
+                if (type === 'zero') return { top: 0, bottom: 0, left: 0, right: 0 };
+                if (type === 'minima') return { top: 19, bottom: 19, left: 19, right: 19 }; // 5mm
+                if (type === 'compacta') return { top: 38, bottom: 38, left: 38, right: 38 }; // 10mm
+                if (type === 'moderada') return { top: 76, bottom: 76, left: 76, right: 76 };
+                if (type === 'estreita') return { top: 57, bottom: 57, left: 57, right: 57 };
                 // padrão / abnt (Superior/Esquerda: 3cm [113px], Inferior/Direita: 2cm [76px])
                 return { top: 113, bottom: 76, left: 113, right: 76 };
             };
@@ -4794,21 +4898,22 @@ export const DocumentPreviewModal = ({
                 .filter(r => r.height > 0 && r.top >= 0)
                 .sort((a, b) => a.top - b.top);
 
+            const pr = qualityConfig.pixelRatio;
             let srcY = 0;
             let pageIndex = 0;
-            const totalHeight = img.height || 0;
-            const approxTotalPages = Math.max(1, Math.ceil(totalHeight / maxSliceHeight));
+            const totalCssHeight = targetEl.scrollHeight || (img.height / pr);
+            const approxTotalPages = Math.max(1, Math.ceil(totalCssHeight / maxSliceHeight));
 
-            while (srcY + 5 < totalHeight) {
+            while (srcY + 5 < totalCssHeight) {
                 if (pageIndex > 0) {
                     pdf.addPage();
                 }
 
-                setRenderProgress(`Compilando página ${pageIndex + 1} de ${approxTotalPages}...`);
-                let currentSliceHeight = Math.min(totalHeight - srcY, maxSliceHeight);
+                setRenderProgress(`Compilando página ${pageIndex + 1} de ${approxTotalPages} em Alta Definição...`);
+                let currentSliceHeight = Math.min(totalCssHeight - srcY, maxSliceHeight);
 
                 // Evitar cortar linhas ou títulos no meio se houver espaço remanescente razoável na página
-                if (srcY + currentSliceHeight < totalHeight) {
+                if (srcY + currentSliceHeight < totalCssHeight) {
                     const idealCutY = srcY + currentSliceHeight;
                     let adjustedCutY = idealCutY;
 
@@ -4823,26 +4928,36 @@ export const DocumentPreviewModal = ({
                     currentSliceHeight = Math.max(1, adjustedCutY - srcY);
                 }
 
-                // Criar canvas de corte intermediário para desenhar o pedaço da página
+                // Criar canvas de corte intermediário para desenhar o pedaço da página com DPI nativo de alta definição
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = targetWidth;
-                tempCanvas.height = targetHeight;
+                tempCanvas.width = Math.round(targetWidth * pr);
+                tempCanvas.height = Math.round(targetHeight * pr);
 
-                const tempCtx = tempCanvas.getContext('2d');
+                const tempCtx = tempCanvas.getContext('2d', { alpha: false });
                 if (tempCtx) {
+                    tempCtx.imageSmoothingEnabled = true;
+                    tempCtx.imageSmoothingQuality = 'high';
                     tempCtx.fillStyle = '#ffffff';
-                    tempCtx.fillRect(0, 0, targetWidth, targetHeight);
-                    // Desenha o conteúdo escalado centralizado entre as margens
+                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    
+                    // Desenha a fatia de alta resolução mapeando coordenadas com o pixelRatio
                     tempCtx.drawImage(
                         img,
-                        0, srcY, img.width || targetWidth, currentSliceHeight, 
-                        margins.left, margins.top, Math.max(1, targetWidth - margins.left - margins.right), Math.max(1, currentSliceHeight * scaleX)
+                        0, Math.round(srcY * pr), Math.round(targetWidth * pr), Math.round(currentSliceHeight * pr), 
+                        Math.round(margins.left * pr), Math.round(margins.top * pr), 
+                        Math.round(Math.max(1, targetWidth - margins.left - margins.right) * pr), 
+                        Math.round(Math.max(1, currentSliceHeight * scaleX) * pr)
                     );
                 }
 
-                const pageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
+                const isLossless = qualityConfig.usePng;
+                const pageDataUrl = isLossless 
+                    ? tempCanvas.toDataURL('image/png') 
+                    : tempCanvas.toDataURL('image/jpeg', qualityConfig.jpegQuality);
                 if (pdfWidth > 0 && pdfHeight > 0) {
-                    pdf.addImage(pageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, 'FAST');
+                    const format = isLossless ? 'PNG' : 'JPEG';
+                    const compressionMode = (pdfQuality === 'ultra' || pdfQuality === 'alta') ? 'SLOW' : 'FAST';
+                    pdf.addImage(pageDataUrl, format, 0, 0, pdfWidth, pdfHeight, `page_${pageIndex}`, compressionMode);
                 }
 
                 pageIndex++;
@@ -4937,24 +5052,46 @@ export const DocumentPreviewModal = ({
                             </span>
                             <button 
                                 onClick={() => setMarginType('abnt')}
-                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'abnt' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'abnt' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
                                 title="Margem Padrão (Superior: 3cm / Esquerda: 3cm / Inferior: 2cm / Direita: 2cm)"
                             >
                                 Padrão
                             </button>
                             <button 
                                 onClick={() => setMarginType('moderada')}
-                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'moderada' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'moderada' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
                                 title="Margem Média (2.0 cm em todas)"
                             >
                                 Média
                             </button>
                             <button 
                                 onClick={() => setMarginType('estreita')}
-                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'estreita' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'estreita' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
                                 title="Margem Estreita (1.5 cm em todas)"
                             >
                                 Estreita
+                            </button>
+                            <button 
+                                onClick={() => setMarginType('compacta')}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'compacta' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Margem Compacta (1.0 cm em todas)"
+                            >
+                                Compacta
+                            </button>
+                            <button 
+                                onClick={() => setMarginType('minima')}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${marginType === 'minima' ? 'bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 shadow-sm font-black' : 'text-slate-400 hover:text-white'}`}
+                                title="Margem Mínima (0.5 cm em todas - Economiza espaço)"
+                            >
+                                Mínima
+                            </button>
+                            <button 
+                                onClick={() => setShowCustomMarginModal(true)}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg flex items-center gap-1 ${marginType.startsWith('custom:') ? 'bg-purple-600/40 text-purple-250 border border-purple-500/40 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Configurar margem personalizada em milímetros"
+                            >
+                                <Sliders size={12} className={marginType.startsWith('custom:') ? 'text-purple-300' : 'text-slate-400'} />
+                                <span>{marginType.startsWith('custom:') ? 'Personalizada*' : 'Custom'}</span>
                             </button>
                         </div>
 
@@ -5041,6 +5178,35 @@ export const DocumentPreviewModal = ({
                             </button>
                         </div>
 
+                        {/* Seletor de Qualidade do PDF */}
+                        <div className="flex items-center bg-slate-800 border border-slate-700/50 rounded-xl p-1 gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase px-2 flex items-center gap-1 select-none md:inline hidden" title="Definição e nitidez da renderização do PDF">
+                                Nitidez:
+                            </span>
+                            <button 
+                                onClick={() => setPdfQuality('ultra')}
+                                className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all rounded-lg flex items-center gap-1 ${pdfQuality === 'ultra' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Qualidade Máxima Ultra HD (3x DPI / Nitidez Vetorial Máxima)"
+                            >
+                                <Sparkles size={11} className={pdfQuality === 'ultra' ? 'text-amber-400' : 'text-slate-400'} />
+                                Ultra HD
+                            </button>
+                            <button 
+                                onClick={() => setPdfQuality('alta')}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${pdfQuality === 'alta' ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                title="Alta Qualidade (2.2x DPI)"
+                            >
+                                Alta
+                            </button>
+                            <button 
+                                onClick={() => setPdfQuality('normal')}
+                                className={`px-2 py-1 text-[11px] font-black uppercase transition-all rounded-lg ${pdfQuality === 'normal' ? 'bg-slate-700 text-white shadow-sm border border-slate-600/50' : 'text-slate-400 hover:text-white'}`}
+                                title="Padrão (Mais rápido)"
+                            >
+                                Padrão
+                            </button>
+                        </div>
+
                         <Button variant="ghost" onClick={onClose} className="border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700/50 hover:border-transparent py-2 px-4 transition-all text-xs">
                             Fechar
                         </Button>
@@ -5057,6 +5223,19 @@ export const DocumentPreviewModal = ({
                 <div className="bg-slate-850 border-b border-slate-800 flex flex-col z-10 select-none">
                     {/* Tab Navigation Controls */}
                     <div className="flex border-b border-slate-800/85 bg-slate-900/60 overflow-x-auto scrollbar-none shrink-0">
+                        {isCifraMode && (
+                            <button
+                                type="button"
+                                onClick={() => setPreviewTab('cifra_controls')}
+                                className={`px-6 py-3.5 text-xs font-extrabold uppercase tracking-widest border-b-2 flex items-center gap-2 transition-all shrink-0 ${previewTab === 'cifra_controls' ? 'border-amber-500 text-amber-300 bg-slate-800/60 shadow-xs' : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'}`}
+                            >
+                                <Music size={14} className={previewTab === 'cifra_controls' ? 'text-amber-400' : 'text-slate-400'} /> 
+                                Ajuste da Cifra (Tom & Fonte)
+                                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/35 text-[9px] font-black px-2 py-0.5 rounded-full ml-1">
+                                    Ao Vivo
+                                </span>
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={() => setPreviewTab('layout')}
@@ -5292,6 +5471,140 @@ export const DocumentPreviewModal = ({
                             </div>
                         </div>
                     )}
+
+                    {/* Tab 3: Cifra & Louvor Real-time Controls */}
+                    {previewTab === 'cifra_controls' && isCifraMode && (
+                        <div className="px-8 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+                            <div className="flex items-center gap-4 flex-wrap">
+                                {/* Bloco de Transposição de Tom */}
+                                <div className="flex items-center gap-1.5 bg-slate-900 border border-indigo-500/30 rounded-xl p-1.5 shadow-sm">
+                                    <span className="text-[10px] text-indigo-400 font-extrabold uppercase tracking-wider px-2 flex items-center gap-1.5">
+                                        <Music size={12} /> Tom da Cifra:
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUpdateSemitones(-1)}
+                                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-black text-xs rounded-lg border border-slate-700 transition-all shadow-xs cursor-pointer"
+                                        title="Descer 1 Semitom (-1/2 tom)"
+                                    >
+                                        -1 Semitom
+                                    </button>
+                                    <div className="px-3 py-1 bg-indigo-950 border border-indigo-500/50 rounded-lg flex items-center gap-1.5">
+                                        <span className="text-xs font-black text-indigo-200 font-mono tracking-wider">{currentTom}</span>
+                                        {semitones !== 0 && (
+                                            <span className="text-[9px] font-bold text-amber-400 font-mono">
+                                                ({semitones > 0 ? `+${semitones}` : semitones}st)
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUpdateSemitones(1)}
+                                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-black text-xs rounded-lg border border-slate-700 transition-all shadow-xs cursor-pointer"
+                                        title="Subir 1 Semitom (+1/2 tom)"
+                                    >
+                                        +1 Semitom
+                                    </button>
+                                    {/* Seletor Cromático Direto */}
+                                    <select
+                                        value={currentTom}
+                                        onChange={(e) => handleUpdateSemitones(e.target.value)}
+                                        className="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                        title="Mudar para Tom Específico"
+                                    >
+                                        {CHROMATIC_SCALE_SHARP.map((t) => (
+                                            <option key={t} value={t} className="bg-slate-900 text-white">
+                                                {t} {t === songTomOriginal ? '(Original)' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {semitones !== 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleResetSemitones()}
+                                            className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-white underline hover:no-underline transition-all cursor-pointer"
+                                            title="Restaurar Tom Original"
+                                        >
+                                            Reset ({songTomOriginal})
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Bloco de Tamanho de Fonte */}
+                                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700/50 rounded-xl p-1.5 shadow-sm">
+                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider px-2 flex items-center gap-1.5">
+                                        <Type size={12} className="text-amber-400" /> Tamanho da Fonte:
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUpdateFontSize(fontSize - 1)}
+                                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs rounded-lg border border-slate-700 transition-all cursor-pointer"
+                                        title="Diminuir Fonte (A-)"
+                                    >
+                                        A-
+                                    </button>
+                                    <span className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono font-bold text-amber-300">
+                                        {fontSize}px
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUpdateFontSize(fontSize + 1)}
+                                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs rounded-lg border border-slate-700 transition-all cursor-pointer"
+                                        title="Aumentar Fonte (A+)"
+                                    >
+                                        A+
+                                    </button>
+                                    {/* Chips de tamanhos rápidos */}
+                                    <div className="hidden sm:flex items-center gap-1 border-l border-slate-800 pl-2">
+                                        {[10, 11, 12, 13, 14, 16].map((sz) => (
+                                            <button
+                                                key={sz}
+                                                type="button"
+                                                onClick={() => handleUpdateFontSize(sz)}
+                                                className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded cursor-pointer ${fontSize === sz ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40' : 'text-slate-400 hover:text-white bg-slate-800/60'}`}
+                                            >
+                                                {sz}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Bloco de Otimização de Espaço / Margem para Cifra */}
+                                <div className="flex items-center gap-1.5 bg-slate-900 border border-emerald-500/30 rounded-xl p-1.5 shadow-sm">
+                                    <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wider px-2 flex items-center gap-1.5">
+                                        <Sparkles size={12} /> Otimizar Espaço:
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('minima');
+                                            addToast("Margem Mínima (0.5cm) aplicada para máximo aproveitamento!", "success");
+                                        }}
+                                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${marginType === 'minima' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-800 text-emerald-300 hover:bg-slate-700 border border-emerald-500/30'}`}
+                                        title="Aplicar Margem Mínima de 0.5cm para caber mais estrofes por página"
+                                    >
+                                        Margem Mínima (0.5cm)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('compacta');
+                                            addToast("Margem Compacta (1.0cm) aplicada!", "info");
+                                        }}
+                                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${marginType === 'compacta' ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'}`}
+                                        title="Aplicar Margem Compacta de 1.0cm"
+                                    >
+                                        Compacta (1.0cm)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                                <Info size={13} className="text-amber-400 shrink-0" />
+                                <span>Os ajustes de tom, fonte e margem são sincronizados instantaneamente no PDF.</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Área Interna de Preview com Centralização */}
@@ -5348,6 +5661,217 @@ export const DocumentPreviewModal = ({
                         </div>
                     </div>
                 )}
+
+                {/* Dialog de Margens Personalizadas */}
+                {showCustomMarginModal && (
+                    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[14000] animate-fadeIn">
+                        <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl text-white space-y-5">
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
+                                        <Sliders size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-white">Margens Personalizadas</h3>
+                                        <p className="text-xs text-slate-400 font-medium">Configure as dimensões exatas de margem da página em milímetros</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowCustomMarginModal(false)}
+                                    className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Modelos Rápidos:</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('zero');
+                                            setCustomTop(0); setCustomBottom(0); setCustomLeft(0); setCustomRight(0);
+                                            setCustomMarginUniform(0);
+                                            addToast("Margem Zero (0mm) configurada!", "info");
+                                        }}
+                                        className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${marginType === 'zero' ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                    >
+                                        Sem Margem (0mm)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('minima');
+                                            setCustomTop(5); setCustomBottom(5); setCustomLeft(5); setCustomRight(5);
+                                            setCustomMarginUniform(5);
+                                            addToast("Margem Mínima (5mm) configurada!", "info");
+                                        }}
+                                        className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${marginType === 'minima' ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                    >
+                                        Mínima (5mm)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('compacta');
+                                            setCustomTop(10); setCustomBottom(10); setCustomLeft(10); setCustomRight(10);
+                                            setCustomMarginUniform(10);
+                                            addToast("Margem Compacta (10mm) configurada!", "info");
+                                        }}
+                                        className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${marginType === 'compacta' ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                    >
+                                        Compacta (10mm)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('estreita');
+                                            setCustomTop(15); setCustomBottom(15); setCustomLeft(15); setCustomRight(15);
+                                            setCustomMarginUniform(15);
+                                            addToast("Margem Estreita (15mm) configurada!", "info");
+                                        }}
+                                        className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${marginType === 'estreita' ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                    >
+                                        Estreita (15mm)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('moderada');
+                                            setCustomTop(20); setCustomBottom(20); setCustomLeft(20); setCustomRight(20);
+                                            setCustomMarginUniform(20);
+                                            addToast("Margem Média (20mm) configurada!", "info");
+                                        }}
+                                        className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${marginType === 'moderada' ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                    >
+                                        Média (20mm)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMarginType('abnt');
+                                            setCustomTop(30); setCustomBottom(20); setCustomLeft(30); setCustomRight(20);
+                                            addToast("Margem Padrão ABNT configurada!", "info");
+                                        }}
+                                        className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${marginType === 'abnt' ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                    >
+                                        Padrão (30/20mm)
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Margem Uniforme Slider */}
+                            <div className="space-y-2 bg-slate-800/60 p-4 rounded-2xl border border-slate-800">
+                                <div className="flex justify-between items-center text-xs font-bold">
+                                    <span className="text-slate-300">Margem Uniforme (Todos os Lados):</span>
+                                    <span className="text-indigo-400 font-mono font-black">{customMarginUniform} mm</span>
+                                </div>
+                                <input 
+                                    type="range"
+                                    min="0"
+                                    max="40"
+                                    value={customMarginUniform}
+                                    onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        setCustomMarginUniform(val);
+                                        setCustomTop(val);
+                                        setCustomBottom(val);
+                                        setCustomLeft(val);
+                                        setCustomRight(val);
+                                        setMarginType(`custom:${val},${val},${val},${val}`);
+                                    }}
+                                    className="w-full accent-indigo-500 cursor-pointer"
+                                />
+                                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                                    <span>0mm (Sem margem)</span>
+                                    <span>10mm</span>
+                                    <span>20mm</span>
+                                    <span>40mm</span>
+                                </div>
+                            </div>
+
+                            {/* Ajuste Individual por Lado */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Ajuste Específico por Lado (mm):</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">Superior (Topo):</label>
+                                        <input 
+                                            type="number"
+                                            min="0"
+                                            max="60"
+                                            value={customTop}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Number(e.target.value) || 0);
+                                                setCustomTop(val);
+                                                setMarginType(`custom:${val},${customBottom},${customLeft},${customRight}`);
+                                            }}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:border-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">Inferior (Base):</label>
+                                        <input 
+                                            type="number"
+                                            min="0"
+                                            max="60"
+                                            value={customBottom}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Number(e.target.value) || 0);
+                                                setCustomBottom(val);
+                                                setMarginType(`custom:${customTop},${val},${customLeft},${customRight}`);
+                                            }}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:border-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">Esquerda:</label>
+                                        <input 
+                                            type="number"
+                                            min="0"
+                                            max="60"
+                                            value={customLeft}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Number(e.target.value) || 0);
+                                                setCustomLeft(val);
+                                                setMarginType(`custom:${customTop},${customBottom},${val},${customRight}`);
+                                            }}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:border-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">Direita:</label>
+                                        <input 
+                                            type="number"
+                                            min="0"
+                                            max="60"
+                                            value={customRight}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Number(e.target.value) || 0);
+                                                setCustomRight(val);
+                                                setMarginType(`custom:${customTop},${customBottom},${customLeft},${val}`);
+                                            }}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:border-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomMarginModal(false)}
+                                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer"
+                                >
+                                    Concluir e Aplicar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -5370,12 +5894,24 @@ export const PrintSystem = ({
     if (!mode || !data) return null;
 
     // Configuração de margens dinâmicas de acordo com o seletor de layout
-    const marginStyles = {
-        abnt: { paddingTop: '30mm', paddingLeft: '30mm', paddingBottom: '20mm', paddingRight: '20mm' },
-        moderada: { paddingTop: '20mm', paddingLeft: '20mm', paddingBottom: '20mm', paddingRight: '20mm' },
-        estreita: { paddingTop: '15mm', paddingLeft: '15mm', paddingBottom: '15mm', paddingRight: '15mm' }
+    const getMarginStyle = (mType: string) => {
+        if (mType && mType.startsWith('custom:')) {
+            const parts = mType.replace('custom:', '').split(',').map(Number);
+            return {
+                paddingTop: `${parts[0] !== undefined ? parts[0] : 10}mm`,
+                paddingBottom: `${parts[1] !== undefined ? parts[1] : 10}mm`,
+                paddingLeft: `${parts[2] !== undefined ? parts[2] : 10}mm`,
+                paddingRight: `${parts[3] !== undefined ? parts[3] : 10}mm`
+            };
+        }
+        if (mType === 'zero') return { paddingTop: '0mm', paddingLeft: '0mm', paddingBottom: '0mm', paddingRight: '0mm' };
+        if (mType === 'minima') return { paddingTop: '5mm', paddingLeft: '5mm', paddingBottom: '5mm', paddingRight: '5mm' };
+        if (mType === 'compacta') return { paddingTop: '10mm', paddingLeft: '10mm', paddingBottom: '10mm', paddingRight: '10mm' };
+        if (mType === 'estreita') return { paddingTop: '15mm', paddingLeft: '15mm', paddingBottom: '15mm', paddingRight: '15mm' };
+        if (mType === 'moderada') return { paddingTop: '20mm', paddingLeft: '20mm', paddingBottom: '20mm', paddingRight: '20mm' };
+        return { paddingTop: '30mm', paddingLeft: '30mm', paddingBottom: '20mm', paddingRight: '20mm' }; // abnt / padrão
     };
-    const selectedMargin = marginStyles[marginType as 'abnt' | 'moderada' | 'estreita'] || marginStyles.abnt;
+    const selectedMargin = getMarginStyle(marginType);
 
     // Paleta de cores para customização de Layout do Cabeçalho e Títulos de Relatórios
     const colorMap = {
@@ -8868,6 +9404,214 @@ export const PrintSystem = ({
         );
     }
 
+    // --- TERMO DE ADESÃO AO SERVIÇO VOLUNTÁRIO (LEI Nº 9.608/1998) ---
+    if (mode === 'dp_termo_voluntariado') {
+        const { colaborador, igreja } = data;
+        const hojeExtenso = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        return (
+            <div className="w-full bg-white print-block relative flex flex-col mx-auto p-12 font-serif text-slate-900 leading-relaxed text-sm" style={{ minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
+                <div className="text-center border-b-2 border-slate-900 pb-4 mb-6 font-sans">
+                    <h1 className="text-lg font-black uppercase text-slate-900">{igreja?.nome || 'ORGANIZAÇÃO RELIGIOSA'}</h1>
+                    <p className="text-xs text-slate-600 font-semibold">CNPJ: {igreja?.cnpj || '00.000.000/0001-00'} • {igreja?.endereco || 'Endereço Eclesiástico'}</p>
+                    <div className="mt-3 inline-block bg-slate-100 border border-slate-350 px-4 py-1 rounded text-xs font-black uppercase tracking-wider">
+                        Termo de Adesão ao Serviço Voluntário Eclesiástico
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1 italic">(Fundamentado na Lei Federal nº 9.608, de 18 de fevereiro de 1998)</p>
+                </div>
+
+                <div className="space-y-4 text-justify text-xs font-sans leading-relaxed">
+                    <p>
+                        Pelo presente instrumento particular, de um lado <strong>{igreja?.nome || 'A ORGANIZAÇÃO RELIGIOSA'}</strong>, pessoa jurídica de direito privado sem fins lucrativos, inscrita no CNPJ sob o nº <strong>{igreja?.cnpj || '00.000.000/0001-00'}</strong>, doravante denominada <strong>ENTIDADE BENEFICIÁRIA</strong>, e de outro lado:
+                    </p>
+
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs font-sans space-y-1">
+                        <p><strong>Nome do Voluntário:</strong> {colaborador?.nome || 'Membro / Voluntário'}</p>
+                        <p><strong>CPF:</strong> {colaborador?.cpf || 'Não informado'} • <strong>RG:</strong> {colaborador?.rg || 'Não informado'}</p>
+                        <p><strong>Departamento / Atividade:</strong> {colaborador?.cargo || 'Atividades Eclesiásticas e Comunitárias'}</p>
+                        <p><strong>Congregação:</strong> {colaborador?.congregacao_id === 'sede' ? 'Sede Geral' : 'Congregação Filial'}</p>
+                    </div>
+
+                    <p>
+                        Têm, entre si, justo e acordado o presente <strong>TERMO DE ADESÃO AO SERVIÇO VOLUNTÁRIO</strong>, mediante as seguintes cláusulas:
+                    </p>
+
+                    <p>
+                        <strong>CLÁUSULA PRIMEIRA – DO OBJETO:</strong> O(A) VOLUNTÁRIO(A) prestará serviços voluntários e espontâneos de assistência religiosa, social, litúrgica ou comunitária no departamento designado, sem subordinação hierárquica típica de vínculo empregatício.
+                    </p>
+
+                    <p>
+                        <strong>CLÁUSULA SEGUNDA – DA INEXISTÊNCIA DE VÍNCULO EMPREGATÍCIO (ART. 1º, § ÚNICO DA LEI 9.608/98):</strong> O serviço prestado de forma voluntária <em>NÃO GERA VÍNCULO EMPREGATÍCIO</em>, nem qualquer obrigação de natureza trabalhista, previdenciária ou afim com a ENTIDADE BENEFICIÁRIA, sendo vedada a cobrança de qualquer contraprestação pecuniária a título de salário ou remuneração.
+                    </p>
+
+                    <p>
+                        <strong>CLÁUSULA TERCEIRA – DO RESSARCIMENTO DE DESPESAS (ART. 3º DA LEI 9.608/98):</strong> O(A) prestador(a) poderá ser ressarcido(a) exclusivamente pelas despesas expressa e previamente autorizadas que comprovadamente realizar no desempenho das atividades voluntárias, mediante apresentação de notas fiscais hábeis.
+                    </p>
+
+                    <p>
+                        <strong>CLÁUSULA QUARTA – DO PRAZO E RESCISÃO:</strong> Este termo tem prazo indeterminado e poderá ser cancelado ou suspenso a qualquer momento por iniciativa de qualquer das partes, bastando comunicação prévia, sem necessidade de aviso prévio ou indenização rescisória.
+                    </p>
+
+                    <p>
+                        E, por estarem assim justos e contratados, assinam o presente em 02 (duas) vias de igual teor e forma para os devidos fins de direito.
+                    </p>
+                </div>
+
+                <div className="mt-16 pt-6 text-center text-xs font-sans">
+                    <p className="mb-12 text-slate-600 font-semibold">{igreja?.cidade || 'Localidade'}, {hojeExtenso}.</p>
+                    
+                    <div className="grid grid-cols-2 gap-12 pt-4">
+                        <div className="text-center">
+                            <div className="border-b border-slate-500 w-3/4 mx-auto mb-2"></div>
+                            <p className="font-bold uppercase text-[10px] text-slate-800">{colaborador?.nome || 'ASSINATURA DO VOLUNTÁRIO'}</p>
+                            <p className="text-[9px] text-slate-500">Voluntário(a) Aderente</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="border-b border-slate-500 w-3/4 mx-auto mb-2"></div>
+                            <p className="font-bold uppercase text-[10px] text-slate-800">{igreja?.nome || 'REPRESENTANTE DA IGREJA'}</p>
+                            <p className="text-[9px] text-slate-500">Diretoria / Pastor Presidente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- DEMONSTRATIVO DE RESCISÃO TRABALHISTA (TRCT SIMULADOR) ---
+    if (mode === 'dp_rescisao_trct') {
+        const { colaborador, simulacao, igreja } = data;
+        const hojeExtenso = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        return (
+            <div className="w-full bg-white print-block relative flex flex-col mx-auto p-8 font-sans text-slate-900 text-xs" style={{ minHeight: '297mm', boxSizing: 'border-box', ...selectedMargin }}>
+                <div className="border-2 border-slate-900 p-4 rounded-xl space-y-4">
+                    <div className="flex justify-between items-center border-b-2 border-slate-900 pb-3">
+                        <div>
+                            <h1 className="text-sm font-black uppercase text-slate-900">{igreja?.nome || 'ORGANIZAÇÃO RELIGIOSA'}</h1>
+                            <p className="text-[10px] text-slate-500 font-semibold">CNPJ: {igreja?.cnpj || '00.000.000/0001-00'}</p>
+                        </div>
+                        <div className="text-right">
+                            <h2 className="text-xs font-black uppercase text-indigo-700">Simulador de Rescisão de Contrato (TRCT)</h2>
+                            <p className="text-[10px] text-slate-400">Em conformidade com a CLT e Lei 12.506/2011</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-50 p-3 rounded border border-slate-200 text-[11px]">
+                        <div><span className="text-[9px] text-slate-400 font-bold block">Colaborador</span><strong>{colaborador?.nome}</strong></div>
+                        <div><span className="text-[9px] text-slate-400 font-bold block">CPF</span><span>{colaborador?.cpf}</span></div>
+                        <div><span className="text-[9px] text-slate-400 font-bold block">Cargo</span><span>{colaborador?.cargo}</span></div>
+                        <div><span className="text-[9px] text-slate-400 font-bold block">Salário Base</span><strong>R$ {parseFloat(colaborador?.salario_base || 0).toFixed(2)}</strong></div>
+                    </div>
+
+                    <table className="w-full border-collapse border border-slate-300 text-[11px]">
+                        <thead>
+                            <tr className="bg-slate-800 text-white font-bold text-[9px] uppercase">
+                                <th className="p-2 border border-slate-400 text-left">Rubrica Rescisória</th>
+                                <th className="p-2 border border-slate-400 text-center w-28">Referência</th>
+                                <th className="p-2 border border-slate-400 text-right w-32">Proventos (R$)</th>
+                                <th className="p-2 border border-slate-400 text-right w-32">Descontos (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="border-b border-slate-200">
+                                <td className="p-2 border-r font-semibold">Saldo de Salário (dias trabalhados)</td>
+                                <td className="p-2 border-r text-center">Dias do mês</td>
+                                <td className="p-2 border-r text-right font-mono">R$ {simulacao?.saldoSalario?.toFixed(2) || '0.00'}</td>
+                                <td className="p-2 text-right font-mono text-slate-400">-</td>
+                            </tr>
+                            <tr className="border-b border-slate-200">
+                                <td className="p-2 border-r font-semibold">13º Salário Proporcional</td>
+                                <td className="p-2 border-r text-center">Meses no ano</td>
+                                <td className="p-2 border-r text-right font-mono">R$ {simulacao?.decimoTerceiro?.toFixed(2) || '0.00'}</td>
+                                <td className="p-2 text-right font-mono text-slate-400">-</td>
+                            </tr>
+                            <tr className="border-b border-slate-200">
+                                <td className="p-2 border-r font-semibold">Férias Proporcionais</td>
+                                <td className="p-2 border-r text-center">Período aquisitivo</td>
+                                <td className="p-2 border-r text-right font-mono">R$ {simulacao?.feriasProp?.toFixed(2) || '0.00'}</td>
+                                <td className="p-2 text-right font-mono text-slate-400">-</td>
+                            </tr>
+                            {simulacao?.feriasVenc > 0 && (
+                                <tr className="border-b border-slate-200">
+                                    <td className="p-2 border-r font-semibold">Férias Vencidas Integrais</td>
+                                    <td className="p-2 border-r text-center">12 meses</td>
+                                    <td className="p-2 border-r text-right font-mono">R$ {simulacao.feriasVenc.toFixed(2)}</td>
+                                    <td className="p-2 text-right font-mono text-slate-400">-</td>
+                                </tr>
+                            )}
+                            <tr className="border-b border-slate-200">
+                                <td className="p-2 border-r font-semibold">1/3 Constitucional sobre Férias</td>
+                                <td className="p-2 border-r text-center">Art. 7º, XVII CF</td>
+                                <td className="p-2 border-r text-right font-mono">R$ {simulacao?.tercoConstitucional?.toFixed(2) || '0.00'}</td>
+                                <td className="p-2 text-right font-mono text-slate-400">-</td>
+                            </tr>
+                            {simulacao?.valorAviso > 0 && (
+                                <tr className="border-b border-slate-200">
+                                    <td className="p-2 border-r font-semibold">Aviso Prévio Indenizado (Lei 12.506/11)</td>
+                                    <td className="p-2 border-r text-center">{simulacao.diasAviso} dias</td>
+                                    <td className="p-2 border-r text-right font-mono">R$ {simulacao.valorAviso.toFixed(2)}</td>
+                                    <td className="p-2 text-right font-mono text-slate-400">-</td>
+                                </tr>
+                            )}
+                            {simulacao?.multaFgts > 0 && (
+                                <tr className="border-b border-slate-200 bg-amber-50/40">
+                                    <td className="p-2 border-r font-semibold text-amber-900">Multa Rescisória FGTS (Depositada via GRRF)</td>
+                                    <td className="p-2 border-r text-center font-bold text-amber-800">40% / 20%</td>
+                                    <td className="p-2 border-r text-right font-mono font-bold text-amber-900">R$ {simulacao.multaFgts.toFixed(2)}</td>
+                                    <td className="p-2 text-right font-mono text-slate-400">-</td>
+                                </tr>
+                            )}
+                            {simulacao?.inssSaldo > 0 && (
+                                <tr className="border-b border-slate-200">
+                                    <td className="p-2 border-r font-semibold text-rose-700">INSS Retido sobre Saldo de Salário</td>
+                                    <td className="p-2 border-r text-center text-rose-600">Tabela MTE</td>
+                                    <td className="p-2 border-r text-right text-slate-400">-</td>
+                                    <td className="p-2 text-right font-mono font-bold text-rose-700">R$ {simulacao.inssSaldo.toFixed(2)}</td>
+                                </tr>
+                            )}
+                            {simulacao?.inss13o > 0 && (
+                                <tr className="border-b border-slate-200">
+                                    <td className="p-2 border-r font-semibold text-rose-700">INSS Retido sobre 13º Proporcional</td>
+                                    <td className="p-2 border-r text-center text-rose-600">Tabela MTE</td>
+                                    <td className="p-2 border-r text-right text-slate-400">-</td>
+                                    <td className="p-2 text-right font-mono font-bold text-rose-700">R$ {simulacao.inss13o.toFixed(2)}</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+                    <div className="grid grid-cols-3 border border-slate-400 text-xs">
+                        <div className="p-2.5 border-r border-slate-400">
+                            <span className="text-[9px] text-slate-500 font-bold block uppercase">Total de Proventos Brutos</span>
+                            <strong className="text-slate-800 font-mono text-sm">R$ {simulacao?.totalProventos?.toFixed(2) || '0.00'}</strong>
+                        </div>
+                        <div className="p-2.5 border-r border-slate-400">
+                            <span className="text-[9px] text-slate-500 font-bold block uppercase">Total de Descontos</span>
+                            <strong className="text-rose-600 font-mono text-sm">R$ {simulacao?.totalDescontos?.toFixed(2) || '0.00'}</strong>
+                        </div>
+                        <div className="p-2.5 bg-slate-50">
+                            <span className="text-[9px] text-slate-600 font-black block uppercase">Líquido Rescisório a Pagar</span>
+                            <strong className="text-slate-950 font-mono text-base">R$ {simulacao?.valorLiquido?.toFixed(2) || '0.00'}</strong>
+                        </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-dotted border-slate-400 grid grid-cols-2 gap-8 text-center text-[10px]">
+                        <div>
+                            <div className="border-b border-slate-500 w-3/4 mx-auto mb-2 pt-6"></div>
+                            <p className="font-bold uppercase text-slate-800">{colaborador?.nome || 'ASSINATURA DO EMPREGADO'}</p>
+                            <p className="text-slate-400">Empregado(a)</p>
+                        </div>
+                        <div>
+                            <div className="border-b border-slate-500 w-3/4 mx-auto mb-2 pt-6"></div>
+                            <p className="font-bold uppercase text-slate-800">{igreja?.nome || 'REPRESENTANTE LEGAL'}</p>
+                            <p className="text-slate-400">Empregador / Entidade</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // --- NOVA NOTA FISCAL DE SERVIÇO (SaaS) COM QRCODE PIX ---
     if (mode === 'nf_servico') {
         const { tenant, valor } = data;
@@ -9586,6 +10330,125 @@ export const PrintSystem = ({
                     {/* Footer */}
                     <div className="pt-12 text-center text-xs font-sans font-bold text-slate-400 uppercase tracking-widest avoid-break">
                         <p>Faculdade Teológica Integrada GIPP — Doutrina Reformada Pentecostal</p>
+                    </div>
+                </div>
+            </PageContainer>
+        );
+    }
+
+    // 10 - CIFRA DE LOUVOR & MÚSICA (MOTOR OFICIAL DE IMPRESSÃO GIPP)
+    if (mode === 'rel_cifra_musica') {
+        const { song, igreja } = data;
+        const s = song || data.item || data;
+        const semitones = typeof data.semitones === 'number' ? data.semitones : 0;
+        const fontSize = typeof data.fontSize === 'number' ? data.fontSize : 13;
+        const rawCifra = s.letra_cifra || s.cifra || '';
+
+        // Transposição musical do tom e da letra cifrada
+        const originalTom = s.tom || 'G';
+        const currentTom = semitones !== 0 ? transposeChord(originalTom, semitones) : originalTom;
+        const processedCifra = semitones !== 0 ? transposeCifraText(rawCifra, semitones) : rawCifra;
+
+        // Separar a cifra em blocos (estrofes, refrões, etc) para evitar cortes no meio de frases em A4
+        const rawBlocks = processedCifra.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
+
+        return (
+            <PageContainer 
+                title={s.titulo || "Cifra de Louvor"} 
+                subtitle={`Artista / Ministério: ${s.artista || 'Consagrado'} • Repertório Oficial de Louvor`}
+            >
+                <div className="space-y-6 text-slate-800">
+                    {/* Barra de Metadados da Música (Tom, BPM, Ritmo, Pasta, Ministério) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl avoid-break shadow-2xs">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-950 px-3 py-1.5 rounded-lg">
+                                <span className="text-[10px] font-bold uppercase text-indigo-600">Tom:</span>
+                                <span className="text-xs font-black uppercase text-indigo-900">{currentTom}</span>
+                                {semitones !== 0 && (
+                                    <span className="text-[9px] font-bold text-indigo-500 ml-1">
+                                        (Orig: {originalTom} {semitones > 0 ? `+${semitones}` : semitones}st)
+                                    </span>
+                                )}
+                            </div>
+                            {s.bpm && (
+                                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-950 px-3 py-1.5 rounded-lg">
+                                    <span className="text-[10px] font-bold uppercase text-emerald-700">Andamento:</span>
+                                    <span className="text-xs font-black text-emerald-900">{s.bpm} BPM</span>
+                                </div>
+                            )}
+                            {s.ritmo && (
+                                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-950 px-3 py-1.5 rounded-lg">
+                                    <span className="text-[10px] font-bold uppercase text-amber-700">Estilo:</span>
+                                    <span className="text-xs font-black text-amber-900">{s.ritmo}</span>
+                                </div>
+                            )}
+                            {s.pasta && (
+                                <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 text-purple-950 px-3 py-1.5 rounded-lg">
+                                    <span className="text-[10px] font-bold uppercase text-purple-700">Pasta:</span>
+                                    <span className="text-xs font-black text-purple-900">{s.pasta}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 block">
+                                Ministério de Louvor & Adoração
+                            </span>
+                            <span className="text-[9px] font-semibold text-slate-400">
+                                Emissão em {new Date().toLocaleDateString('pt-BR')} • GIPP System
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Blocos de Letra & Acordes Cifrados com Tamanho de Fonte Customizável */}
+                    {rawBlocks.length > 0 ? (
+                        <div className="space-y-4">
+                            {rawBlocks.map((block: string, bIdx: number) => {
+                                const lines = block.split('\n');
+                                return (
+                                    <div key={bIdx} className="avoid-break bg-slate-50/40 border border-slate-200/90 rounded-xl p-4 transition-all">
+                                        <div 
+                                            className="font-mono whitespace-pre text-slate-900 tracking-wide select-text overflow-x-auto"
+                                            style={{ 
+                                                fontSize: `${fontSize}px`, 
+                                                lineHeight: `${Math.max(16, Math.round(fontSize * 1.55))}px` 
+                                            }}
+                                        >
+                                            {lines.map((line: string, lIdx: number) => {
+                                                const trimmed = line.trim();
+                                                // Identificação de tags de seção como [Intro], [Verso], [Refrão], [Coro], [Ponte], [Solo], [Final]
+                                                const isHeaderTag = /^\[.*?\]/.test(trimmed);
+                                                if (isHeaderTag) {
+                                                    return (
+                                                        <div key={lIdx} className="font-sans font-black text-xs text-indigo-900 bg-indigo-100/80 border border-indigo-200 px-3 py-1 rounded-md inline-block my-1.5 shadow-2xs">
+                                                            {line}
+                                                        </div>
+                                                    );
+                                                }
+                                                const isChords = isChordLine(line);
+                                                return (
+                                                    <div 
+                                                        key={lIdx} 
+                                                        className={isChords ? "font-bold text-indigo-700 font-mono tracking-wider" : "text-slate-900 font-mono"}
+                                                    >
+                                                        {line || '\u00A0'}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="avoid-break bg-slate-50 border border-slate-200 rounded-xl p-8 text-center text-slate-500 font-medium italic text-sm">
+                            Nenhuma letra ou cifra cadastrada para esta música.
+                        </div>
+                    )}
+
+                    {/* Observações / Rodapé do documento de música */}
+                    <div className="pt-4 border-t border-slate-200 text-slate-400 text-[10px] flex justify-between items-center avoid-break font-sans">
+                        <span>Arquivo de Repertório Litúrgico • Partitura & Cifra Oficial para Ensaios e Cultos</span>
+                        <span>{data.igreja?.nome || 'Igreja'} • Sistema de Gestão GIPP</span>
                     </div>
                 </div>
             </PageContainer>
@@ -11665,7 +12528,7 @@ const PortalPerfil = ({ user, db, setView }) => {
 
 // --- PORTAL DO MEMBRO (AUTOATENDIMENTO) ---
 const PortalHome = ({ user, db, setView }) => {
-    const { notifications, clearAllNotifications, setOsTheme } = useContext(ChurchContext);
+    const { notifications, clearAllNotifications } = useContext(ChurchContext);
     const hojeObj = new Date();
     const hoje = hojeObj.toISOString().split('T')[0];
     const currentMonthStr = hojeObj.toISOString().slice(0, 7);
@@ -12058,34 +12921,6 @@ const PortalHome = ({ user, db, setView }) => {
     return (
         <div className="space-y-4 sm:space-y-6 animate-entrance pb-12">
             
-            {/* BANNER ATIVAR NOVO TEMA CYBER FAITH (APP GAMIFICADO) */}
-            <div className="rounded-3xl bg-gradient-to-r from-[#0C1A20] via-[#102731] to-[#0C1A20] border border-cyan-400/40 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_4px_25px_rgba(56,225,237,0.15)] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="flex items-center gap-3.5 relative z-10 w-full md:w-auto">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black shadow-[0_0_15px_rgba(56,225,237,0.4)] shrink-0 group-hover:scale-105 transition-transform">
-                        <Zap size={24} className="fill-current" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[10px] font-black tracking-wider text-cyan-300 uppercase">Novo Tema do Portal ⚡📱</span>
-                            <span className="text-[9px] px-2 py-0.2 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold">Cyber Faith</span>
-                        </div>
-                        <h3 className="text-sm sm:text-base font-black text-white">Visual Gamificado com Alvo Diário & Pódio 3D</h3>
-                        <p className="text-xs text-slate-300">Layout escuro atlético ciano neon com MyCredits, micro-ondas estatísticas e classificação de membros.</p>
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setOsTheme('portal_cyber_dark');
-                    }}
-                    className="w-full md:w-auto py-3 px-6 rounded-2xl bg-[#38E1ED] hover:bg-[#58e7f2] active:scale-95 text-[#08151A] font-black text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(56,225,237,0.35)] transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2"
-                >
-                    <Smartphone size={16} />
-                    Ativar Tema Cyber Faith
-                </button>
-            </div>
-
             {/* HERO COM STATUS DO PERFIL (RESPONSIVO E COMPACTO) */}
             <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-xl relative overflow-hidden border border-slate-800 p-4 sm:p-6 md:p-7 flex flex-col md:flex-row items-center gap-4 sm:gap-6 group">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full blur-[100px] opacity-30 -mr-20 -mt-20 pointer-events-none transition-all duration-1000 group-hover:opacity-50"></div>
@@ -16346,11 +17181,11 @@ const WebPushNotificationTrigger = () => {
 };
 
 const MemberPortalLayout = () => {
-    const { view, setView, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme, setOsTheme, callGeminiAI } = useContext(ChurchContext);
+    const { view, setView, user, db, logout, handleLogoutRequest, setDoc, doc, dbFirestore, appId, addToast, osTheme } = useContext(ChurchContext);
     const [verificandoPix, setVerificandoPix] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-    const isThemeDark = osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux' || osTheme === 'gipp_cristal' || osTheme === 'portal_cyber_dark';
+    const isThemeDark = osTheme === 'premium_black' || osTheme === 'gipp_clipper' || osTheme === 'dark' || osTheme === 'futuristic' || osTheme === 'linux' || osTheme === 'gipp_cristal';
 
     const handleVerificarPagamento = async () => {
         setVerificandoPix(true);
@@ -16427,9 +17262,6 @@ const MemberPortalLayout = () => {
     }
 
     const getHeaderStyles = () => {
-        if (osTheme === 'portal_cyber_dark') {
-            return "bg-[#09151B]/90 border-b border-cyan-400/30 text-white backdrop-blur-xl shadow-[0_4px_25px_rgba(56,225,237,0.15)]";
-        }
         if (osTheme === 'gipp_cristal') {
             return "bg-sky-500/20 border-b border-white/30 text-white backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,180,255,0.2)]";
         }
@@ -16443,9 +17275,6 @@ const MemberPortalLayout = () => {
     };
 
     const getFooterStyles = () => {
-        if (osTheme === 'portal_cyber_dark') {
-            return "bg-[#09151B]/95 border-t border-cyan-400/30 text-white/90 backdrop-blur-xl shadow-[0_-4px_25px_rgba(56,225,237,0.15)]";
-        }
         if (osTheme === 'gipp_cristal') {
             return "bg-sky-500/20 border-t border-white/30 text-white/90 backdrop-blur-2xl shadow-[0_-4px_20px_rgba(0,180,255,0.2)]";
         }
@@ -16459,9 +17288,6 @@ const MemberPortalLayout = () => {
     };
 
     const getBottomSheetStyles = () => {
-        if (osTheme === 'portal_cyber_dark') {
-            return "bg-[#09151B]/95 text-white border-t border-cyan-400/30 backdrop-blur-xl shadow-[0_-4px_25px_rgba(56,225,237,0.15)]";
-        }
         if (osTheme === 'gipp_cristal') {
             return "bg-sky-950/80 text-white border-t border-white/25 backdrop-blur-2xl";
         }
@@ -16694,19 +17520,6 @@ const MemberPortalLayout = () => {
 
     const isInterativoMode = view === 'portal_interativo';
 
-    // Se o usuário selecionou o tema exclusivo Cyber Faith e está na tela inicial do portal, renderiza o App completo
-    if (osTheme === 'portal_cyber_dark' && (view === 'portal_home' || view === 'portal_cyber_layout')) {
-        return (
-            <PortalCyberLayout
-                user={user}
-                db={db}
-                setView={setView}
-                onExitTheme={() => setOsTheme('default')}
-                callGeminiAI={callGeminiAI}
-            />
-        );
-    }
-
     return (
         <div className="flex flex-col md:flex-row w-full overflow-hidden relative font-sans text-slate-900" style={{ height: '100dvh' }}>
             <div className="absolute inset-0 z-0 pointer-events-none">
@@ -16801,27 +17614,6 @@ const MemberPortalLayout = () => {
                     : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-3 sm:p-5 md:p-8 pb-20 md:pb-8"} 
             >
                 <div className={isInterativoMode ? "w-full h-full" : "max-w-[1800px] mx-auto"}>
-                    {/* Botão de retorno ao Cyber Faith App quando navegando em páginas internas */}
-                    {osTheme === 'portal_cyber_dark' && view !== 'portal_home' && (
-                        <div className="mb-4 p-3 sm:p-4 rounded-2xl bg-[#09151B]/95 border border-cyan-400/40 flex items-center justify-between shadow-[0_0_20px_rgba(56,225,237,0.15)] text-white relative z-30">
-                            <div className="flex items-center gap-3">
-                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#38e1ed]" />
-                                <div>
-                                    <span className="text-xs font-black text-cyan-300 uppercase tracking-wider block">Tema Cyber Faith Ativo ⚡</span>
-                                    <span className="text-[11px] text-slate-300 hidden sm:inline">Você está navegando em um módulo interno do portal.</span>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setView('portal_home')}
-                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-cyan-400/25 active:scale-95 shrink-0"
-                            >
-                                <ArrowLeft size={16} />
-                                Voltar ao App Cyber Faith
-                            </button>
-                        </div>
-                    )}
-
                     {/* Desktop Header Panel */}
                     {!isInterativoMode && (
                         <header className="hidden md:flex justify-between items-center pb-3 border-b border-slate-200/40 mb-4 shrink-0 relative z-20">

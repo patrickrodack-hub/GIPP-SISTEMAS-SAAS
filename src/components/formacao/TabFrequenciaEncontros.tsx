@@ -82,12 +82,28 @@ export const TabFrequenciaEncontros: React.FC<TabFrequenciaEncontrosProps> = ({
         addToast("Token de Presença copiado!", "info");
     };
 
+    const getStatusPresenca = (enc: EncontroAula, alunoId: string): 'presente' | 'justificado' | 'ausente' => {
+        if (!enc.presencas) return 'ausente';
+        if (Array.isArray(enc.presencas)) {
+            const p = (enc.presencas as any[]).find((item: any) => item && (item.candidatoId === alunoId || item.alunoId === alunoId));
+            if (p) return p.presente ? 'presente' : (p.justificativa ? 'justificado' : 'ausente');
+            return 'ausente';
+        }
+        if (typeof enc.presencas === 'object') {
+            const val = (enc.presencas as Record<string, any>)[alunoId];
+            if (val === 'presente' || val === 'justificado' || val === 'ausente') return val;
+            if (typeof val === 'boolean') return val ? 'presente' : 'ausente';
+            if (typeof val === 'object' && val !== null) return val.presente ? 'presente' : (val.justificativa ? 'justificado' : 'ausente');
+        }
+        return 'ausente';
+    };
+
     // Calcular estatísticas de frequência por aluno na turma
     const getFrequenciaAluno = (alunoId: string) => {
         if (encontrosDaTurma.length === 0) return { percent: 100, totalPresencas: 0, totalAulas: 0 };
         let presencasCount = 0;
         encontrosDaTurma.forEach(enc => {
-            const st = enc.presencas[alunoId];
+            const st = getStatusPresenca(enc, alunoId);
             if (st === 'presente' || st === 'justificado') presencasCount++;
         });
         const percent = Math.round((presencasCount / encontrosDaTurma.length) * 100);
@@ -221,7 +237,7 @@ export const TabFrequenciaEncontros: React.FC<TabFrequenciaEncontrosProps> = ({
                                     <span className="text-[11px] font-bold text-slate-400 uppercase">Registro de Chamada Individual:</span>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                                         {alunosDaTurma.map(al => {
-                                            const statusPresenca = enc.presencas[al.id] || 'ausente';
+                                            const statusPresenca = getStatusPresenca(enc, al.id);
                                             return (
                                                 <div key={al.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
                                                     <span className="font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{al.nome}</span>
