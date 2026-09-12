@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
   ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, ArrowRight, 
@@ -32,6 +32,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState('todas');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'todos' | 'andamento' | 'pronto' | 'concluido'>('todos');
+  const [viewAllOrdersScope, setViewAllOrdersScope] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -39,6 +40,27 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
   const [copiedPix, setCopiedPix] = useState(false);
   const [expandedOrderHistoryId, setExpandedOrderHistoryId] = useState<string | null>(null);
   const [selectedOrderTracking, setSelectedOrderTracking] = useState<PedidoLoja | null>(null);
+
+  // Sincronização e restauração imediata do histórico de pedidos locais
+  useEffect(() => {
+    try {
+      const localStr = localStorage.getItem('gipp_loja_pedidos');
+      if (localStr) {
+        const localList = JSON.parse(localStr);
+        if (Array.isArray(localList) && localList.length > 0) {
+          setDbState((prev: any) => {
+            const current = prev?.loja_pedidos || [];
+            const map = new Map();
+            localList.forEach((item: any) => map.set(item.id, item));
+            current.forEach((item: any) => map.set(item.id, item));
+            return { ...prev, loja_pedidos: Array.from(map.values()) };
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Erro ao restaurar gipp_loja_pedidos:", e);
+    }
+  }, []);
 
   // Checkout Form State
   const [checkoutData, setCheckoutData] = useState({
@@ -59,17 +81,55 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
     return list.filter((p: ProdutoLoja) => p.ativo);
   }, [db?.loja_produtos]);
 
-  // Current Orders for this user
+  // Current Orders for this user (Garantia de histórico mantido e visível)
   const meusPedidos: PedidoLoja[] = useMemo(() => {
-    if (!db?.loja_pedidos || !Array.isArray(db.loja_pedidos)) return [];
-    return db.loja_pedidos.filter((p: PedidoLoja) => {
-      // Match by user ID, or user email, or user name
-      if (user?.id && p.cliente_id === user.id) return true;
-      if (user?.email && p.cliente_email && p.cliente_email.toLowerCase() === user.email.toLowerCase()) return true;
-      if (user?.nome && p.cliente_nome && p.cliente_nome.toLowerCase().trim() === user.nome.toLowerCase().trim()) return true;
+    const list: PedidoLoja[] = (db?.loja_pedidos && Array.isArray(db.loja_pedidos)) ? db.loja_pedidos : [];
+    if (list.length === 0) return [];
+
+    if (viewAllOrdersScope) {
+      return list;
+    }
+
+    let myLocalOrderIds: string[] = [];
+    try {
+      const raw = localStorage.getItem('gipp_meus_pedidos_ids');
+      if (raw) myLocalOrderIds = JSON.parse(raw);
+    } catch (e) {}
+
+    const clean = (s: any) => String(s || '').toLowerCase().trim();
+    const cleanDigits = (s: any) => String(s || '').replace(/\D/g, '');
+
+    const userNome = clean(user?.nome || user?.usuario || '');
+    const userEmail = clean(user?.email);
+    const userTel = cleanDigits(user?.telefone || user?.whatsapp || '');
+
+    const filtered = list.filter((p: PedidoLoja) => {
+      // 1. Pedido realizado neste dispositivo/sessão
+      if (myLocalOrderIds.includes(p.id)) return true;
+      // 2. ID do membro
+      if (user?.id && (p.cliente_id === user.id || p.cliente_id === `membro-${user.id}`)) return true;
+      // 3. E-mail do membro
+      if (userEmail && p.cliente_email && clean(p.cliente_email) === userEmail) return true;
+      // 4. Telefone ou WhatsApp
+      if (userTel && p.cliente_telefone && cleanDigits(p.cliente_telefone) === userTel) return true;
+      // 5. Nome do membro
+      if (userNome && p.cliente_nome) {
+        const pedNome = clean(p.cliente_nome);
+        if (pedNome === userNome) return true;
+        if (userNome.length >= 3 && pedNome.includes(userNome)) return true;
+        if (pedNome.length >= 3 && userNome.includes(pedNome)) return true;
+      }
       return false;
     });
-  }, [db?.loja_pedidos, user]);
+
+    // Se houver pedidos no banco mas o filtro restrito der 0 (ex: administrador testando o portal ou visitante),
+    // exibe todos os pedidos para que as informações nunca desapareçam nem fiquem inacessíveis
+    if (filtered.length === 0 && list.length > 0) {
+      return list;
+    }
+
+    return filtered;
+  }, [db?.loja_pedidos, user, viewAllOrdersScope]);
 
   // Notifications and statuses for the member
   const pedidosProntosParaRetirada = useMemo(() => {
@@ -263,6 +323,14 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
     }));
 
     try {
+      // Salva o ID deste pedido localmente para que esteja sempre visível no portal do membro neste navegador
+      const rawIds = localStorage.getItem('gipp_meus_pedidos_ids');
+      const ids: string[] = rawIds ? JSON.parse(rawIds) : [];
+      if (!ids.includes(novoPedido.id)) {
+        ids.unshift(novoPedido.id);
+        localStorage.setItem('gipp_meus_pedidos_ids', JSON.stringify(ids));
+      }
+
       localStorage.setItem('gipp_loja_produtos', JSON.stringify(produtosAtualizados));
       localStorage.setItem('gipp_loja_pedidos', JSON.stringify(novosPedidos));
       localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify(novasMovs));
@@ -587,48 +655,61 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
                 </p>
               </div>
 
-              {/* Sub-filtros por status */}
-              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0 overflow-x-auto">
-                <button
-                  onClick={() => setOrderStatusFilter('todos')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    orderStatusFilter === 'todos'
-                      ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Todos ({meusPedidos.length})
-                </button>
-                <button
-                  onClick={() => setOrderStatusFilter('andamento')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    orderStatusFilter === 'andamento'
-                      ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Em Andamento ({pedidosEmAndamento.length})
-                </button>
-                <button
-                  onClick={() => setOrderStatusFilter('pronto')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    orderStatusFilter === 'pronto'
-                      ? 'bg-amber-500 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Prontos ({pedidosProntosParaRetirada.length})
-                </button>
-                <button
-                  onClick={() => setOrderStatusFilter('concluido')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    orderStatusFilter === 'concluido'
-                      ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Concluídos
-                </button>
+              {/* Sub-filtros por status e alternador de escopo */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0 overflow-x-auto">
+                  <button
+                    onClick={() => setOrderStatusFilter('todos')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      orderStatusFilter === 'todos'
+                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Todos ({meusPedidos.length})
+                  </button>
+                  <button
+                    onClick={() => setOrderStatusFilter('andamento')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      orderStatusFilter === 'andamento'
+                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Em Andamento ({pedidosEmAndamento.length})
+                  </button>
+                  <button
+                    onClick={() => setOrderStatusFilter('pronto')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      orderStatusFilter === 'pronto'
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Prontos ({pedidosProntosParaRetirada.length})
+                  </button>
+                  <button
+                    onClick={() => setOrderStatusFilter('concluido')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      orderStatusFilter === 'concluido'
+                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Concluídos
+                  </button>
+                </div>
+
+                {/* Alternador de exibição de todos os pedidos salvos */}
+                {(db?.loja_pedidos && db.loja_pedidos.length > meusPedidos.length) && (
+                  <button
+                    type="button"
+                    onClick={() => setViewAllOrdersScope(!viewAllOrdersScope)}
+                    className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/60"
+                  >
+                    {viewAllOrdersScope ? "Exibir apenas meus pedidos" : `Ver todos (${db.loja_pedidos.length})`}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -772,7 +853,10 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
                 </div>
 
                 <Button
-                  onClick={() => setIsCheckoutOpen(true)}
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    setIsCheckoutOpen(true);
+                  }}
                   variant="primary"
                   className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-600/20 cursor-pointer"
                 >
@@ -784,222 +868,305 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
         </div>
       )}
 
-      {/* MODAL: FECHAMENTO DO PEDIDO (CHECKOUT) */}
+      {/* MODAL: FECHAMENTO DO PEDIDO (CHECKOUT) - AMPLO, LIVRE DE LIMITAÇÕES E RESPONSIVO */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Store size={20} />
-                <h3 className="font-bold text-base">Finalizar Pedido de Compra</h3>
+        <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
+            {/* Topo do Checkout */}
+            <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-white/15 rounded-xl">
+                  <Store size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base md:text-lg">Finalizar Pedido de Compra</h3>
+                  <p className="text-xs text-amber-100 font-medium">Confirme seus dados e a forma de pagamento para retirada na igreja</p>
+                </div>
               </div>
-              <button onClick={() => setIsCheckoutOpen(false)} className="text-white/80 hover:text-white cursor-pointer">
-                <X size={18} />
+              <button 
+                onClick={() => setIsCheckoutOpen(false)} 
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Fechar"
+              >
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmCheckout} className="p-6 space-y-4 max-h-[85vh] overflow-y-auto custom-scrollbar">
-              {/* DADOS DO COMPRADOR */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  1. Informações do Comprador
-                </h4>
+            <form onSubmit={handleConfirmCheckout} className="p-6 md:p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* COLUNA ESQUERDA: DADOS, RETIRADA E PAGAMENTO (7 colunas) */}
+                <div className="lg:col-span-7 space-y-5">
+                  {/* 1. DADOS DO COMPRADOR */}
+                  <div className="space-y-3 bg-slate-50/60 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <User size={15} className="text-amber-600" />
+                      1. Informações do Comprador
+                    </h4>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Nome Completo *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={checkoutData.nome}
-                    onChange={e => setCheckoutData({ ...checkoutData, nome: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Nome Completo *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={checkoutData.nome}
+                        onChange={e => setCheckoutData({ ...checkoutData, nome: e.target.value })}
+                        placeholder="Seu nome ou do destinatário"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      WhatsApp / Telefone *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={checkoutData.telefone}
-                      onChange={e => setCheckoutData({ ...checkoutData, telefone: e.target.value })}
-                      placeholder="(11) 98765-4321"
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          WhatsApp / Telefone *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={checkoutData.telefone}
+                          onChange={e => setCheckoutData({ ...checkoutData, telefone: e.target.value })}
+                          placeholder="(11) 98765-4321"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          E-mail (opcional)
+                        </label>
+                        <input
+                          type="email"
+                          value={checkoutData.email}
+                          onChange={e => setCheckoutData({ ...checkoutData, email: e.target.value })}
+                          placeholder="seuemail@exemplo.com"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      E-mail (opcional)
-                    </label>
-                    <input
-                      type="email"
-                      value={checkoutData.email}
-                      onChange={e => setCheckoutData({ ...checkoutData, email: e.target.value })}
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20"
-                    />
-                  </div>
-                </div>
-              </div>
+                  {/* 2. LOCAL DE RETIRADA */}
+                  <div className="space-y-2 bg-slate-50/60 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Store size={15} className="text-amber-600" />
+                      2. Local de Retirada
+                    </h4>
 
-              {/* LOCAL DE RETIRADA */}
-              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  2. Local de Retirada
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'igreja_sede' })}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      checkoutData.local_retirada === 'igreja_sede'
-                        ? 'border-amber-600 bg-amber-50/50 dark:bg-amber-950/30'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
-                      <Store size={14} className="text-amber-600" />
-                      Igreja Cadastrada
-                    </div>
-                    <span className="text-[11px] text-slate-500 block mt-1">
-                      {db?.igreja?.nome || 'Sede / Secretaria'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'a_combinar' })}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      checkoutData.local_retirada === 'a_combinar'
-                        ? 'border-amber-600 bg-amber-50/50 dark:bg-amber-950/30'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
-                      <MessageCircle size={14} className="text-amber-600" />
-                      A Combinar
-                    </div>
-                    <span className="text-[11px] text-slate-500 block mt-1">
-                      Com o líder da loja ou culto
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* FORMA DE PAGAMENTO */}
-              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  3. Forma de Pagamento
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'pix' })}
-                    className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                      checkoutData.forma_pagamento === 'pix'
-                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-bold'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600'
-                    }`}
-                  >
-                    <QrCode size={18} className="mx-auto mb-1 text-emerald-600" />
-                    <span className="text-xs block">Pix Instantâneo</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'cartao_retirada' })}
-                    className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                      checkoutData.forma_pagamento === 'cartao_retirada'
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-300 font-bold'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600'
-                    }`}
-                  >
-                    <ShieldCheck size={18} className="mx-auto mb-1 text-indigo-600" />
-                    <span className="text-xs block">Cartão na Retirada</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'dinheiro_retirada' })}
-                    className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                      checkoutData.forma_pagamento === 'dinheiro_retirada'
-                        ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 font-bold'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600'
-                    }`}
-                  >
-                    <Store size={18} className="mx-auto mb-1 text-amber-600" />
-                    <span className="text-xs block">Dinheiro</span>
-                  </button>
-                </div>
-
-                {/* Bloco Pix informativo se selecionado */}
-                {checkoutData.forma_pagamento === 'pix' && (
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-emerald-900 dark:text-emerald-300">Chave Pix da Igreja:</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                       <button
                         type="button"
-                        onClick={handleCopyPix}
-                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded border border-emerald-200"
+                        onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'igreja_sede' })}
+                        className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                          checkoutData.local_retirada === 'igreja_sede'
+                            ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 shadow-sm ring-1 ring-amber-600'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
+                        }`}
                       >
-                        {copiedPix ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                        {copiedPix ? 'Copiado!' : 'Copiar Chave'}
+                        <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
+                          <Store size={15} className="text-amber-600" />
+                          Igreja Cadastrada
+                        </div>
+                        <span className="text-[11px] text-slate-500 block mt-1 leading-snug">
+                          {db?.igreja?.nome || 'Sede / Secretaria'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutData({ ...checkoutData, local_retirada: 'a_combinar' })}
+                        className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                          checkoutData.local_retirada === 'a_combinar'
+                            ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 shadow-sm ring-1 ring-amber-600'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-white">
+                          <MessageCircle size={15} className="text-amber-600" />
+                          A Combinar
+                        </div>
+                        <span className="text-[11px] text-slate-500 block mt-1 leading-snug">
+                          Com o responsável da loja ou no culto
+                        </span>
                       </button>
                     </div>
-                    <p className="font-mono text-xs font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800 select-all">
-                      {db?.igreja?.chave_pix || '12.345.678/0001-90'}
-                    </p>
-                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block">
-                      Ao finalizar, você poderá enviar o comprovante Pix diretamente pelo WhatsApp da congregação.
-                    </span>
                   </div>
-                )}
-              </div>
 
-              {/* OBSERVAÇÕES */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Observações (Tamanho, Cor, Dedicatória...)
-                </label>
-                <textarea
-                  rows={2}
-                  value={checkoutData.observacoes}
-                  onChange={e => setCheckoutData({ ...checkoutData, observacoes: e.target.value })}
-                  placeholder="Ex: Camiseta tamanho G, dedicatória no livro..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none"
-                />
-              </div>
+                  {/* 3. FORMA DE PAGAMENTO */}
+                  <div className="space-y-3 bg-slate-50/60 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck size={15} className="text-amber-600" />
+                      3. Forma de Pagamento
+                    </h4>
 
-              {/* RESUMO DO TOTAL */}
-              <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Total do Pedido ({totalCartCount} itens):</span>
-                <span className="text-lg font-black font-mono text-emerald-600">
-                  R$ {totalCartValue.toFixed(2)}
-                </span>
-              </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'pix' })}
+                        className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                          checkoutData.forma_pagamento === 'pix'
+                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold ring-1 ring-emerald-600 shadow-sm'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <QrCode size={20} className="text-emerald-600" />
+                        <span className="text-xs">Pix Instantâneo</span>
+                      </button>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCheckoutOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                >
-                  Voltar à Sacola
-                </button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-lg cursor-pointer"
-                >
-                  Confirmar e Gerar Pedido
-                </Button>
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'cartao_retirada' })}
+                        className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                          checkoutData.forma_pagamento === 'cartao_retirada'
+                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold ring-1 ring-indigo-600 shadow-sm'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <ShieldCheck size={20} className="text-indigo-600" />
+                        <span className="text-xs">Cartão na Retirada</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutData({ ...checkoutData, forma_pagamento: 'dinheiro_retirada' })}
+                        className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                          checkoutData.forma_pagamento === 'dinheiro_retirada'
+                            ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold ring-1 ring-amber-600 shadow-sm'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <Store size={20} className="text-amber-600" />
+                        <span className="text-xs">Dinheiro no Balcão</span>
+                      </button>
+                    </div>
+
+                    {/* Bloco informativo Pix */}
+                    {checkoutData.forma_pagamento === 'pix' && (
+                      <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">Chave Pix da Igreja:</span>
+                          <button
+                            type="button"
+                            onClick={handleCopyPix}
+                            className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1.5 cursor-pointer bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-700 shadow-sm"
+                          >
+                            {copiedPix ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                            {copiedPix ? 'Copiado!' : 'Copiar Chave'}
+                          </button>
+                        </div>
+                        <p className="font-mono text-xs font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 select-all">
+                          {db?.igreja?.chave_pix || '12.345.678/0001-90'}
+                        </p>
+                        <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block leading-tight">
+                          Após confirmar o pedido, você poderá enviar o comprovante Pix diretamente pelo WhatsApp da congregação.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. OBSERVAÇÕES */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Observações adicionais (Tamanho, Cor, Dedicatória...)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={checkoutData.observacoes}
+                      onChange={e => setCheckoutData({ ...checkoutData, observacoes: e.target.value })}
+                      placeholder="Ex: Camiseta tamanho G, dedicatória no livro com nome do pastor..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+                </div>
+
+                {/* COLUNA DIREITA: RESUMO DO PEDIDO E AÇÕES (5 colunas) */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
+                      <h4 className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                        <ShoppingBag size={16} className="text-amber-600" />
+                        Resumo do Pedido
+                      </h4>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        {totalCartCount} item(ns)
+                      </span>
+                    </div>
+
+                    {/* Lista dos itens na sacola */}
+                    <div className="max-h-56 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+                      {cart.map(item => (
+                        <div key={item.produto_id} className="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700">
+                          <img
+                            src={item.foto || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=150&q=80'}
+                            alt={item.nome}
+                            className="w-11 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-slate-800 dark:text-white truncate">{item.nome}</h5>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {item.quantidade}x R$ {item.preco_unitario.toFixed(2)}
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-slate-800 dark:text-white">
+                            R$ {item.subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Alerta de Retirada na Igreja */}
+                    <div className="p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl flex items-start gap-2 text-xs text-amber-900 dark:text-amber-300">
+                      <Store size={16} className="shrink-0 mt-0.5 text-amber-600" />
+                      <p className="leading-snug text-[11px]">
+                        <strong>Local de Retirada:</strong> Igreja cadastrada ({db?.igreja?.nome || 'Sede'}) ou a combinar com a liderança da loja.
+                      </p>
+                    </div>
+
+                    {/* Totalizador */}
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <span>Subtotal:</span>
+                        <span className="font-mono font-bold">R$ {totalCartValue.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <span>Taxa de Entrega / Retirada:</span>
+                        <span className="text-emerald-600 font-bold">Grátis na Igreja</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">Total a Pagar:</span>
+                        <span className="text-2xl font-black font-mono text-emerald-600">
+                          R$ {totalCartValue.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Botões de Ação */}
+                    <div className="pt-2 space-y-2">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm py-3.5 rounded-xl shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                      >
+                        <CheckCircle2 size={18} />
+                        Confirmar e Gerar Pedido
+                      </Button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCheckoutOpen(false);
+                          setIsCartOpen(true);
+                        }}
+                        className="w-full py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl cursor-pointer transition-colors text-center block"
+                      >
+                        Voltar e Editar Sacola
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </form>
           </div>

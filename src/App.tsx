@@ -20762,6 +20762,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [db, _setDbState] = useState(() => {
+      let initialDb: any = MOCK_DB;
       try {
           const cached = localStorage.getItem('gipp_portal_db_cache');
           if (cached) {
@@ -20770,13 +20771,41 @@ export default function App() {
                   if (Array.isArray(parsed.membros)) {
                       parsed.membros.sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
                   }
-                  return parsed;
+                  initialDb = { ...MOCK_DB, ...parsed };
               }
           }
       } catch (err) {
           console.warn("Could not read local DB cache from localStorage:", err);
       }
-      return MOCK_DB;
+
+      // Restaurar e assegurar integridade permanente dos dados da Loja Virtual
+      try {
+          const pedidosCached = localStorage.getItem('gipp_loja_pedidos');
+          if (pedidosCached) {
+              const parsedP = JSON.parse(pedidosCached);
+              if (Array.isArray(parsedP) && parsedP.length > 0) {
+                  initialDb = { ...initialDb, loja_pedidos: parsedP };
+              }
+          }
+          const produtosCached = localStorage.getItem('gipp_loja_produtos');
+          if (produtosCached) {
+              const parsedPr = JSON.parse(produtosCached);
+              if (Array.isArray(parsedPr) && parsedPr.length > 0) {
+                  initialDb = { ...initialDb, loja_produtos: parsedPr };
+              }
+          }
+          const movsCached = localStorage.getItem('gipp_loja_movimentacoes');
+          if (movsCached) {
+              const parsedM = JSON.parse(movsCached);
+              if (Array.isArray(parsedM) && parsedM.length > 0) {
+                  initialDb = { ...initialDb, loja_movimentacoes: parsedM };
+              }
+          }
+      } catch (e) {
+          console.warn("Erro ao restaurar loja virtual inicial do localStorage:", e);
+      }
+
+      return initialDb;
   });
 
   const setDbState = (val: any) => {
@@ -20796,8 +20825,17 @@ export default function App() {
 
   useEffect(() => {
       try {
-          if (db && db !== MOCK_DB && db.igreja && db.igreja.nome !== "GIPP - GESTÃO DE IGREJA") {
+          if (db && db !== MOCK_DB && db.igreja) {
               localStorage.setItem('gipp_portal_db_cache', JSON.stringify(db));
+          }
+          if (db?.loja_pedidos && Array.isArray(db.loja_pedidos)) {
+              localStorage.setItem('gipp_loja_pedidos', JSON.stringify(db.loja_pedidos));
+          }
+          if (db?.loja_produtos && Array.isArray(db.loja_produtos)) {
+              localStorage.setItem('gipp_loja_produtos', JSON.stringify(db.loja_produtos));
+          }
+          if (db?.loja_movimentacoes && Array.isArray(db.loja_movimentacoes)) {
+              localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify(db.loja_movimentacoes));
           }
       } catch (err) {
           console.warn("Could not sync DB state to localStorage cache:", err);
@@ -21953,11 +21991,11 @@ export default function App() {
       if (!authUser) return;
       
       // [ C ] BLINDAGEM MULTI-TENANT E OTIMIZAÇÃO DE STARTUP
-      // Coleções fundamentais sempre carregadas (necessárias para o login e menus)
-      const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos'];
+      // Coleções fundamentais sempre carregadas (necessárias para o login, menus e loja virtual em todos os perfis)
+      const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos', 'loja_produtos', 'loja_pedidos', 'loja_movimentacoes'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos', 'loja_produtos', 'loja_pedidos', 'loja_movimentacoes'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -22024,6 +22062,45 @@ export default function App() {
                                   const [p, ch] = stateKey.split('.'); 
                                   if(!newState[p]) newState[p] = {};
                                   newState[p] = { ...newState[p], [ch]: uList }; 
+                              } else if (stateKey === 'loja_pedidos') {
+                                  let localPedidos: any[] = [];
+                                  try {
+                                      const raw = localStorage.getItem('gipp_loja_pedidos');
+                                      if (raw) localPedidos = JSON.parse(raw);
+                                  } catch (e) {}
+                                  const map = new Map();
+                                  (Array.isArray(localPedidos) ? localPedidos : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(prev.loja_pedidos) ? prev.loja_pedidos : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(uList) ? uList : []).forEach((p: any) => map.set(p.id, p));
+                                  const mergedOrders = Array.from(map.values());
+                                  newState[stateKey] = mergedOrders;
+                                  try { localStorage.setItem('gipp_loja_pedidos', JSON.stringify(mergedOrders)); } catch (e) {}
+                              } else if (stateKey === 'loja_produtos') {
+                                  let localProds: any[] = [];
+                                  try {
+                                      const raw = localStorage.getItem('gipp_loja_produtos');
+                                      if (raw) localProds = JSON.parse(raw);
+                                  } catch (e) {}
+                                  const map = new Map();
+                                  (Array.isArray(localProds) ? localProds : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(prev.loja_produtos) ? prev.loja_produtos : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(uList) ? uList : []).forEach((p: any) => map.set(p.id, p));
+                                  const mergedProds = Array.from(map.values());
+                                  newState[stateKey] = mergedProds.length > 0 ? mergedProds : (prev.loja_produtos || []);
+                                  try { localStorage.setItem('gipp_loja_produtos', JSON.stringify(newState[stateKey])); } catch (e) {}
+                              } else if (stateKey === 'loja_movimentacoes') {
+                                  let localMovs: any[] = [];
+                                  try {
+                                      const raw = localStorage.getItem('gipp_loja_movimentacoes');
+                                      if (raw) localMovs = JSON.parse(raw);
+                                  } catch (e) {}
+                                  const map = new Map();
+                                  (Array.isArray(localMovs) ? localMovs : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(prev.loja_movimentacoes) ? prev.loja_movimentacoes : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(uList) ? uList : []).forEach((p: any) => map.set(p.id, p));
+                                  const mergedMovs = Array.from(map.values());
+                                  newState[stateKey] = mergedMovs;
+                                  try { localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify(mergedMovs)); } catch (e) {}
                               } else { 
                                   newState[stateKey] = uList; 
                               } 
