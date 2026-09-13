@@ -7,7 +7,7 @@ import {
   Phone, Mail, Calendar, Eye, Printer, MessageCircle, RefreshCw, 
   TrendingUp, BarChart3, Tag, FileText, Check, X, Upload, Image as ImageIcon,
   ArrowRight, ShieldCheck, Truck, Store, Layers, ClipboardCheck, XCircle,
-  Maximize2, Minimize2
+  Maximize2, Minimize2, Sparkles
 } from 'lucide-react';
 import { 
   ProdutoLoja, PedidoLoja, MovimentacaoEstoque, 
@@ -60,12 +60,12 @@ export default function ModuleLojaVirtualAdmin() {
     destaque: false
   });
 
-  // Safe collections getter with defaults
+  // Safe collections getter with defaults - Somente produtos reais do banco / cadastrados pelos usuários
   const produtos: ProdutoLoja[] = useMemo(() => {
-    if (db && Array.isArray(db.loja_produtos) && db.loja_produtos.length > 0) {
+    if (db && Array.isArray(db.loja_produtos)) {
       return db.loja_produtos;
     }
-    return PRODUTOS_LOJA_INICIAIS;
+    return [];
   }, [db?.loja_produtos]);
 
   const pedidos: PedidoLoja[] = useMemo(() => {
@@ -541,7 +541,23 @@ export default function ModuleLojaVirtualAdmin() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          {user?.nivel === 'master' && produtos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Atenção: Deseja limpar todos os produtos de modelo/teste e zerar o catálogo da loja para manter apenas cadastros reais de usuários?")) {
+                  syncProdutos([]);
+                  addToast("Catálogo da loja zerado com sucesso. Apenas produtos reais de usuários serão exibidos.", "info");
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-800 transition-all cursor-pointer shadow-sm"
+              title="Zerar catálogo de teste e manter apenas cadastros reais"
+            >
+              <Trash2 size={14} /> Limpar Modelos de Teste
+            </button>
+          )}
+
           <Button 
             onClick={handleOpenNewProduct} 
             variant="primary"
@@ -786,7 +802,43 @@ export default function ModuleLojaVirtualAdmin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {produtosFiltrados.length === 0 ? (
+                {produtos.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center">
+                      <div className="max-w-md mx-auto flex flex-col items-center justify-center p-6 text-center space-y-3">
+                        <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shadow-inner">
+                          <ShoppingBag size={32} />
+                        </div>
+                        <h4 className="text-base font-extrabold text-slate-800 dark:text-white">Nenhum Produto no Catálogo</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                          A loja da igreja está pronta para operar. Apenas os produtos cadastrados pelos usuários serão exibidos nesta versão. Comece adicionando seus itens oficiais (Bíblias, Harpas, Livros ou Artigos).
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={handleOpenNewProduct}
+                            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+                          >
+                            <Plus size={16} /> Cadastrar Primeiro Produto
+                          </button>
+                          {user?.nivel === 'master' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                syncProdutos(PRODUTOS_LOJA_INICIAIS);
+                                addToast("Modelos de demonstração CPAD carregados para testes com sucesso!", "info");
+                              }}
+                              className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
+                              title="Carregar itens modelo para testes de desenvolvimento"
+                            >
+                              <Sparkles size={14} className="text-amber-500" /> Carregar Modelos de Demonstração
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : produtosFiltrados.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400">
                       <ShoppingBag size={36} className="mx-auto mb-2 opacity-40" />

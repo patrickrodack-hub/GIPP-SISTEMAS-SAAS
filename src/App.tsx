@@ -9273,7 +9273,7 @@ export const PrintSystem = ({
                     <div className="space-y-4">
                         <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-250 pb-2 flex justify-between items-center">
                             <span>Demonstrativo Contábil • Folha Analítica Consolidada de Pessoal</span>
-                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 10.0.0 Ultimate Platinum v15</span>
+                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 11.0.0 Ultimate Platinum v16</span>
                         </h2>
                         
                         {/* Parameters summary description */}
@@ -17524,7 +17524,7 @@ const MemberPortalLayout = () => {
             case 'portal_informativo': return <ModuleBoletim />;
             case 'portal_loja': return (
                 <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin text-amber-600 mx-auto" size={32}/></div>}>
-                    <PortalLojaMembro user={user} db={db} setView={setView} />
+                    <PortalLojaMembro user={user} db={db} setView={setView} onClose={() => setView('portal_home')} />
                 </Suspense>
             );
             case 'portal_interativo': return <ModuleInterativo onClose={() => setView('portal_home')} />;
@@ -17532,7 +17532,7 @@ const MemberPortalLayout = () => {
         }
     };
 
-    const isInterativoMode = view === 'portal_interativo';
+    const isInterativoMode = view === 'portal_interativo' || view === 'portal_loja';
 
     return (
         <div className="flex flex-col md:flex-row w-full overflow-hidden relative font-sans text-slate-900" style={{ height: '100dvh' }}>
@@ -20451,7 +20451,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                 <div className="relative flex flex-col items-center justify-center p-6 bg-[#f0f0f0] border-2 border-t-white border-l-white border-r-[#404040] border-b-[#404040] shadow-2xl rounded-xs min-w-[340px]">
                     <div className="w-full bg-gradient-to-r from-[#005a9e] via-[#0078d7] to-[#0063b1] text-white px-3 py-1 font-bold text-xs flex items-center justify-between mb-6 shadow-xs">
                         <span>GIPP - C++ (Win32 Enterprise)</span>
-                        <span className="font-mono text-[10px]">v10.0.0 (1.1.8689)</span>
+                        <span className="font-mono text-[10px]">v11.0.0 (1.1.8689)</span>
                     </div>
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-12 h-12 bg-gradient-to-br from-slate-200 to-slate-400 border border-slate-500 rounded-sm flex items-center justify-center shadow-md">
@@ -20525,7 +20525,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
                         <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>{saasSettings?.saas_versao_sistema || "Versão 10.0.0 Ultimate Platinum v15"}</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 11.0.0 Ultimate Platinum v16"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -23532,7 +23532,7 @@ export default function App() {
                             </div>
                             <div className="text-center lg:text-left">
                                 <h2 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1">{db.igreja?.nome || "Igreja Local"}</h2>
-                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 10.0.0 Ultimate Platinum v15</p>
+                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 11.0.0 Ultimate Platinum v16</p>
                             </div>
                         </div>
                         <div>

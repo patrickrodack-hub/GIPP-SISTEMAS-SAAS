@@ -5,7 +5,8 @@ import {
   ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, ArrowRight, ArrowLeft,
   Store, ShieldCheck, Clock, QrCode, Copy, Check, ChevronRight, 
   Tag, Filter, Heart, MessageCircle, AlertCircle, Printer, X, Sparkles,
-  Package, Bell, Truck, CheckSquare, ChevronDown, ChevronUp, MapPin, User, Info, XCircle, FileText
+  Package, Bell, Truck, CheckSquare, ChevronDown, ChevronUp, MapPin, User, Info, XCircle, FileText,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { 
   ProdutoLoja, PedidoLoja, ItemPedidoLoja, MovimentacaoEstoque, 
@@ -22,13 +23,14 @@ interface PortalLojaMembroProps {
   user?: any;
   db?: any;
   setView?: (view: string) => void;
+  onClose?: () => void;
 }
 
 interface CartItem extends ItemPedidoLoja {
   estoque_maximo: number;
 }
 
-export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembroProps) {
+export default function PortalLojaMembro({ user, db, setView, onClose }: PortalLojaMembroProps) {
   const { setDbState, addToast, dbFirestore, appId, setDoc, doc } = useContext(ChurchContext);
 
   // States
@@ -49,6 +51,15 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
   const [selectedOrderTracking, setSelectedOrderTracking] = useState<PedidoLoja | null>(null);
   const [orderToCancel, setOrderToCancel] = useState<PedidoLoja | null>(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+  const [isHubMaximized, setIsHubMaximized] = useState(false);
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else if (setView) {
+      setView('portal_home');
+    }
+  };
 
   // Sincronização e restauração imediata do histórico de pedidos locais
   useEffect(() => {
@@ -81,11 +92,11 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
     observacoes: ''
   });
 
-  // Current Products
+  // Current Products - Apenas produtos reais do banco cadastrados pelos usuários
   const produtos: ProdutoLoja[] = useMemo(() => {
-    const list = db?.loja_produtos && Array.isArray(db.loja_produtos) && db.loja_produtos.length > 0
+    const list = db?.loja_produtos && Array.isArray(db.loja_produtos)
       ? db.loja_produtos
-      : PRODUTOS_LOJA_INICIAIS;
+      : [];
     // Only active products in the member portal
     return list.filter((p: ProdutoLoja) => p.ativo);
   }, [db?.loja_produtos]);
@@ -295,7 +306,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
     // Baixa automática no estoque dos produtos
     const currentProducts: ProdutoLoja[] = db?.loja_produtos && Array.isArray(db.loja_produtos)
       ? db.loja_produtos
-      : PRODUTOS_LOJA_INICIAIS;
+      : [];
 
     const novasMovimentacoes: MovimentacaoEstoque[] = [];
     const produtosAtualizados = currentProducts.map(p => {
@@ -402,9 +413,9 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
 
     try {
       // 1. Estornar produtos ao estoque
-      const currentProducts = (db?.loja_produtos && Array.isArray(db.loja_produtos) && db.loja_produtos.length > 0)
+      const currentProducts = (db?.loja_produtos && Array.isArray(db.loja_produtos))
         ? db.loja_produtos
-        : PRODUTOS_LOJA_INICIAIS;
+        : [];
       
       let updatedProducts = [...currentProducts];
       const newDevolucaoMovs: MovimentacaoEstoque[] = [];
@@ -499,8 +510,80 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
   };
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-entrance overflow-y-auto custom-scrollbar p-1 pb-20 md:pb-6">
-      {/* BANNER PRINCIPAL DA LOJA */}
+    <div 
+      id="module-loja-membro-container" 
+      className={`w-full bg-slate-100/50 dark:bg-slate-950 flex flex-col font-sans transition-all duration-300 ${
+        isHubMaximized 
+          ? 'fixed inset-0 z-[99999] w-screen h-screen overflow-y-auto custom-scrollbar bg-slate-100 dark:bg-slate-950' 
+          : 'min-h-full h-full relative overflow-y-auto custom-scrollbar'
+      }`}
+    >
+      {/* BARRA SUPERIOR DE CONTROLE E NAVEGAÇÃO DO MÓDULO (SISTEMA INTERATIVO / INDEPENDENTE) */}
+      <div className="w-full bg-slate-900/95 border-b border-slate-800/90 px-4 md:px-8 py-3 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shrink-0 shadow-lg text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold shadow-inner shrink-0">
+            <ShoppingBag size={18} />
+          </div>
+          <div>
+            <h2 className="font-extrabold text-xs sm:text-sm text-white tracking-wide uppercase flex items-center gap-2">
+              Livraria & Loja Virtual Eclesiástica
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider hidden xs:inline-block">
+                Portal do Membro
+              </span>
+              {isHubMaximized && (
+                <span className="hidden sm:inline-flex text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                  Tela Cheia
+                </span>
+              )}
+            </h2>
+            <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Bíblias, Livros Teológicos, Uniformes, Pedidos de Compra & Documentos Fiscais</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Abrir sacola de compras"
+          >
+            <ShoppingBag size={14} />
+            <span className="hidden sm:inline">Sacola</span>
+            <span className="bg-amber-900/60 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-black">
+              {totalCartCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setIsHubMaximized(!isHubMaximized)}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-extrabold flex items-center gap-2 transition-all border border-slate-700/60 cursor-pointer shadow-sm active:scale-95"
+            title={isHubMaximized ? "Restaurar layout padrão" : "Maximizar tela sobrepondo menus (Sistema Independente)"}
+          >
+            {isHubMaximized ? (
+              <>
+                <Minimize2 size={14} className="text-amber-400" />
+                <span className="hidden md:inline">Restaurar</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 size={14} className="text-amber-400" />
+                <span className="hidden md:inline">Maximizar</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleClose}
+            className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-extrabold flex items-center gap-1.5 transition-all border border-rose-500/30 cursor-pointer shadow-sm active:scale-95"
+            title="Voltar ao início do portal"
+          >
+            <ArrowLeft size={14} />
+            <span className="hidden sm:inline">Voltar ao Início</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 w-full max-w-[1800px] mx-auto p-3 sm:p-5 md:p-6 space-y-4 animate-entrance pb-20 md:pb-8">
+        {/* BANNER PRINCIPAL DA LOJA */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-amber-700 to-indigo-900 text-white p-6 md:p-8 shadow-md">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
@@ -655,7 +738,17 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
           </div>
 
           {/* GRID DE PRODUTOS */}
-          {produtosFiltrados.length === 0 ? (
+          {produtos.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-12 text-center text-slate-400 max-w-2xl mx-auto shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <ShoppingBag size={32} />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white">Livraria & Cantina em Atualização</h3>
+              <p className="text-xs mt-2 text-slate-500 dark:text-slate-400 leading-relaxed">
+                No momento não há artigos ou materiais à venda na livraria oficial da igreja. A liderança disponibilizará os novos itens e lançamentos em breve!
+              </p>
+            </div>
+          ) : produtosFiltrados.length === 0 ? (
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-12 text-center text-slate-400">
               <ShoppingBag size={48} className="mx-auto mb-3 opacity-30 text-amber-600" />
               <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">Nenhum produto encontrado</h3>
@@ -1550,6 +1643,7 @@ export default function PortalLojaMembro({ user, db, setView }: PortalLojaMembro
         cancelText="Não, Manter Pedido"
         variant="danger"
       />
+      </div>
     </div>
   );
 }

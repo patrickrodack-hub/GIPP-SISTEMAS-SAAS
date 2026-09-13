@@ -23,7 +23,7 @@ import {
   LayoutTemplate, MousePointerClick, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, Instagram, Facebook,
-  Fingerprint, FileSignature, ShieldAlert, CheckCircle2, Scale
+  Fingerprint, FileSignature, ShieldAlert, CheckCircle2, Scale, ShoppingBag
 } from 'lucide-react';
 
 import { 
@@ -45,6 +45,7 @@ import {
 
 import { SAAS_MODULES_LIST, generateSaaSMarketingMessages } from './ModuleDivulgacaoData';
 import { DiagnosticsDashboard } from './DiagnosticsDashboard';
+import { PRODUTOS_LOJA_INICIAIS } from '../data/lojaVirtualData';
 
 // Exporting component
 const ModuleDesenvolvedor = () => {
@@ -228,7 +229,7 @@ const ModuleDesenvolvedor = () => {
             saas_nome_sistema: "GIPP"
         };
         const metadata = `// =================================================================
-// DEPOSIT DOSSIER - SYSTEM GIPP v10.0.0
+// DEPOSIT DOSSIER - SYSTEM GIPP v11.0.0
 // OWNER: \${igrejaData.nome}
 // CNPJ: \${igrejaData.cnpj}
 // DOMAIN: \${typeof window !== 'undefined' ? window.location.origin : 'localhost'}
@@ -276,7 +277,7 @@ CNPJ/CPF (se houver): \${suspectCnpj || "NÃO CADASTRADO"}
 
 Prezado(a) Senhor(a),
     
-Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v10.0.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
+Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v11.0.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
 
 Constatou-se o uso não autorizado, engenharia reversa, plágio ou cópia idêntica de porções fundamentais de nosso código-fonte, banco de dados ou layout estético do sistema GIPP na seguinte esfera:
 "\${unauthorizedDetails || "Cópia não autorizada do painel eclesiástico e banco de dados."}"
@@ -499,9 +500,9 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
     };
 
     const defaultPlanos = {
-        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
-        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
-        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom']
+        basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'loja_virtual', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
+        standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'loja_virtual', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'],
+        avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'loja_virtual', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom']
     };
 
     const defaultValores = { basico: 97, standard: 147, avancado: 197 };
@@ -520,6 +521,8 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         {id: 'visitantes', label: 'Visitantes & CRM'},
         {id: 'cad_igreja', label: 'Igreja Sede & Filiais'},
         {id: 'cad_patrimonio', label: 'Patrimônio Total'},
+        {id: 'controle_frotas', label: 'Controle de Frotas'},
+        {id: 'loja_virtual', label: 'Loja Virtual & Retaguarda Comercial'},
         {id: 'cad_celula', label: 'Células e Grupos'},
         {id: 'cad_usuario', label: 'Usuários e Níveis'},
         {id: 'acessos_portal', label: 'Acessos do Portal'},
@@ -3759,6 +3762,82 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                 {/* === ABA: ROTINAS DEV === */}
                 {tab === 'rotinas' && (
                     <div className="space-y-8 animate-fadeIn">
+                        {/* GESTÃO DE DADOS DE TESTE DA LOJA VIRTUAL */}
+                        <div className="bg-slate-900 text-white p-8 rounded-[2rem] border-2 border-slate-800 shadow-xl relative overflow-hidden">
+                            <div className="absolute -right-4 -bottom-4 text-amber-500/10 pointer-events-none transform scale-150"><ShoppingBag size={120}/></div>
+                            <div className="relative z-10 space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold">
+                                        <ShoppingBag size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-lg text-white uppercase tracking-wider flex items-center gap-2">
+                                            Loja Virtual & Livraria: Gestão de Modelos de Demonstração
+                                        </h3>
+                                        <p className="text-xs text-slate-400 font-medium">Controle para ambiente de desenvolvedor e garantia de banco limpo para produção.</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-xs text-slate-300 space-y-2 leading-relaxed">
+                                    <p>
+                                        <strong className="text-amber-300">Regra de Produção:</strong> Fora do Módulo Desenvolvedor, o sistema <strong>NÃO</strong> injeta produtos modelo automaticamente. Apenas produtos reais cadastrados pelos usuários são mantidos e exibidos para a congregação.
+                                    </p>
+                                    <p className="text-[11px] text-slate-400">
+                                        Status Atual do Catálogo: <strong className="text-white font-mono">{db?.loja_produtos?.length || 0} produtos</strong> cadastrados | <strong className="text-white font-mono">{db?.loja_pedidos?.length || 0} pedidos</strong> registrados.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-3 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                const novosProds = PRODUTOS_LOJA_INICIAIS;
+                                                localStorage.setItem('gipp_loja_produtos', JSON.stringify(novosProds));
+                                                if (dbFirestore && appId) {
+                                                    for (const prod of novosProds) {
+                                                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', prod.id), prod);
+                                                    }
+                                                }
+                                                window.dispatchEvent(new CustomEvent('gipp_db_reload', { detail: { loja_produtos: novosProds } }));
+                                                addToast("6 Produtos modelo CPAD injetados para testes com sucesso!", "success");
+                                            } catch (e) {
+                                                addToast("Erro ao injetar modelos de produtos.", "error");
+                                            }
+                                        }}
+                                        className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+                                    >
+                                        <Sparkles size={16} /> Injetar 6 Produtos Modelo CPAD
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            if (window.confirm("Deseja realmente limpar todos os produtos e pedidos de teste da Loja Virtual? Esta ação deixará o banco zerado para que somente cadastros reais de usuários sejam usados.")) {
+                                                try {
+                                                    localStorage.setItem('gipp_loja_produtos', JSON.stringify([]));
+                                                    localStorage.setItem('gipp_loja_pedidos', JSON.stringify([]));
+                                                    localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify([]));
+                                                    if (dbFirestore && appId) {
+                                                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'loja_reset'), {
+                                                            last_reset: new Date().toISOString()
+                                                        }, { merge: true });
+                                                    }
+                                                    window.dispatchEvent(new CustomEvent('gipp_db_reload', { detail: { loja_produtos: [], loja_pedidos: [], loja_movimentacoes: [] } }));
+                                                    addToast("Catálogo da loja zerado com sucesso. Base pronta para produção com cadastros reais!", "info");
+                                                } catch (e) {
+                                                    addToast("Erro ao zerar dados da loja.", "error");
+                                                }
+                                            }
+                                        }}
+                                        className="px-5 py-3 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all border border-rose-500/40 active:scale-95 cursor-pointer"
+                                    >
+                                        <Trash2 size={16} /> Limpar Todos os Produtos & Zerar Loja
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="bg-amber-50 p-8 rounded-[2rem] border-2 border-amber-200 shadow-sm relative overflow-hidden">
                             <div className="absolute -right-4 -bottom-4 text-amber-500/10 pointer-events-none transform scale-150"><Activity size={120}/></div>
                             <div className="relative z-10">
@@ -4086,7 +4165,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
 
                                 <div className="bg-slate-50 border p-5 rounded-2xl space-y-3 font-medium text-xs text-slate-650 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
                                     <h4 className="font-black text-center text-slate-900 uppercase">CONTRATO DE LICENÇA DE USO DE SOFTWARE E PRESTAÇÃO DE SERVIÇOS</h4>
-                                    <p className="text-center font-bold text-[10px] text-slate-500">VERSÃO 10.0.0 — PROTEÇÃO INTELLECTUAL ASSEMBLEIA DE DEUS GIPP</p>
+                                    <p className="text-center font-bold text-[10px] text-slate-500">VERSÃO 11.0.0 — PROTEÇÃO INTELLECTUAL ASSEMBLEIA DE DEUS GIPP</p>
                                     <p>
                                         Este Contrato de Licença de Usuário Final ("EULA") é um acordo legal entre o Licenciado, operando sob o CNPJ <strong className="text-slate-900">{igrejaData.cnpj}</strong>, e a desenvolvedora eclesiástica titular do ecossistema GIPP.
                                     </p>
@@ -4112,7 +4191,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v10.0.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
+                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v11.0.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
                                             navigator.clipboard.writeText(eulaText);
                                             addToast("Termo de EULA copiado para a área de transferência!", "success");
                                         }}
@@ -4161,7 +4240,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                         
                         doc.setFontSize(9);
                         doc.setTextColor(52, 211, 153); // emerald-400
-                        doc.text("SISTEMA GIPP v10.0.0 • DOSSIÊ DE AUDITORIA E COMPLIANCE GOOGLE CLOUD", 105, 24, { align: 'center' });
+                        doc.text("SISTEMA GIPP v11.0.0 • DOSSIÊ DE AUDITORIA E COMPLIANCE GOOGLE CLOUD", 105, 24, { align: 'center' });
                         
                         doc.setDrawColor(79, 70, 229);
                         doc.setLineWidth(0.5);
@@ -4177,7 +4256,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                         doc.setTextColor(51, 65, 85);
                         
                         const infoLines = [
-                            `Nome Comercial do Ativo: GIPP - Gestão Integrada Pastoral e Patrimonial v10.0.0`,
+                            `Nome Comercial do Ativo: GIPP - Gestão Integrada Pastoral e Patrimonial v11.0.0`,
                             `Natureza Técnica: Software Aplicativo ERP/SaaS de Governança Eclesiástica Multitenant`,
                             `Engenharia de Execução: Dual-Sync Híbrido (Hospedagem Cloud Run + Execução Local PC Desktop)`,
                             `Proprietário do Cadastro Mestre: ${igrejaData.nome}`,

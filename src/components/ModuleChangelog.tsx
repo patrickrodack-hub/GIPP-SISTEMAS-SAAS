@@ -47,11 +47,26 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 10.0.0 */}
-            <div className="relative pl-8 border-l-2 border-emerald-500 animate-entrance"> 
-                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-emerald-950 font-[Outfit]">v10.0.0 - Divisão Oficial Google Integração, Ícones Oficiais do Google Workspace, Selo com Pulso Ativo & Gestão de Formulários</h3>
-                <p className="text-xs text-emerald-600 font-black uppercase mb-3 tracking-wider">Agosto 2026 (Atual)</p>
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 11.0.0 */}
+            <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance"> 
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v11.0.0 - Loja Virtual Eclesiástica, Emissão de Documentos Fiscais / DAV, Pedidos de Compra com QR Code & Janelas Interativas</h3>
+                <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Setembro 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Emissão de Documentos Fiscais / DAV & Pedidos de Compra:</strong> Motor completo de geração de Documentos Fiscais / DAV (Documento Auxiliar de Venda) e Pedidos de Compra Oficiais para a Loja Virtual da congregação. Inclui chave de acesso digital de 44 dígitos formatada, código de autenticação, discriminação de alíquotas de tributos, formas de pagamento, dados completos do comprador/igreja e QR Code para validação pública instantânea.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Validação de Pagamento & Liberação Segura no Portal do Membro:</strong> Barreira de conformidade fiscal e eclesiástica onde a Nota Fiscal / Recibo Oficial (DAV) somente fica liberada para visualização, download em PDF e impressão no Portal do Membro após a efetiva confirmação e baixa do pagamento pelo operador no painel administrativo da Loja Virtual.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Envio Multicanal (WhatsApp, E-mail & Portal):</strong> Notificação instantânea com mensagem formatada para WhatsApp e e-mail com dados da compra, chave de autenticação, endereço da igreja e link direto para o membro consultar o Pedido de Compra e o Documento Fiscal no portal.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Padronização em Janelas Interativas (`InteractiveWindow`):</strong> 100% dos formulários e fluxos da Loja Virtual no Portal do Membro (Sacola de Compras, Checkout de Fechamento de Pedido, Comprovante de Pedido Realizado e Modais de Confirmação) migrados para o padrão de janelas portais flutuantes/responsivas, eliminando limitações de overflow ou corte de visualização em qualquer resolução.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Retaguarda Comercial & Controle de Estoque:</strong> Painel administrativo com cadastro de produtos, controle de estoque mínimo, movimentações de entrada/saída, esteira de separação de pedidos com filtros por status e estorno automático de estoque em caso de cancelamento.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Atualização Geral de Pacotes, Planos & Permissões:</strong> Homologação da Loja Virtual e retaguarda em todos os planos SaaS (Básico, Standard e Avançado) e inclusão da permissão <code className="text-indigo-700 font-bold bg-indigo-50 px-1 py-0.5 rounded text-xs">access_loja_virtual</code> na matriz de perfis de operadores e usuários do sistema.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO DA VERSÃO 10.0.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300 opacity-90"> 
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-extrabold text-lg text-slate-800 font-[Outfit]">v10.0.0 - Divisão Oficial Google Integração, Ícones Oficiais do Google Workspace, Selo com Pulso Ativo & Gestão de Formulários</h3>
+                <p className="text-xs text-slate-500 font-black uppercase mb-3 tracking-wider">Agosto 2026 (Anterior)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Divisão Exclusiva "Google Integração":</strong> Criação de uma seção dedicada e proeminente no menu lateral administrativo, painel desktop e Portal do Membro com a logo oficial do Google (G multicolor) e badge "Autorizado", agrupando de forma harmoniosa e clara os 8 serviços integrados da suíte Google Workspace.</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Ícones Oficiais do Google Workspace:</strong> Implementação de componentes de ícones vetoriais multi-cor de alta fidelidade para Google Meet, Google Sheets, Google Docs, Google Tasks, Google Calendar, Gmail Eclesiástico, Google Forms e Google Classroom em todo o sistema.</li>

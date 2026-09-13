@@ -24,6 +24,7 @@ const CATEGORIAS_PERMISSOES = [
       { id: 'access_igreja', label: 'Sede & Congregações' },
       { id: 'access_patrimonio', label: 'Patrimônio & Bens' },
       { id: 'access_frotas', label: 'Controle de Frotas & Veículos' },
+      { id: 'access_loja_virtual', label: 'Loja Virtual, DAV & Retaguarda Comercial' },
       { id: 'access_celulas', label: 'Células & Pequenos Grupos' },
       { id: 'access_ministerios', label: 'Departamentos & Ministérios Gerais' }
     ]
@@ -38,6 +39,21 @@ const CATEGORIAS_PERMISSOES = [
       { id: 'access_ministerio_familia', label: 'Ministério da Família & Aconselhamento' },
       { id: 'access_salinha_kids', label: 'Salinha Kids & Berçário (Check-In)' },
       { id: 'access_missoes', label: 'Departamento de Missões & Projetos' }
+    ]
+  },
+  {
+    titulo: "Google Workspace & Nuvem Oficial",
+    desc: "Google Meet, Sheets, Docs, Tasks, Calendar, Gmail, Forms e Classroom",
+    icon: Globe,
+    opcoes: [
+      { id: 'access_google_meet', label: 'Google Meet (Salas Virtuais & Videoconferências)' },
+      { id: 'access_google_sheets', label: 'Google Sheets (Planilhas Eclesiásticas na Nuvem)' },
+      { id: 'access_google_docs', label: 'Google Docs (Documentos e Ofícios Oficiais)' },
+      { id: 'access_google_tasks', label: 'Google Tasks (Metas e Checklist da Igreja)' },
+      { id: 'access_google_calendar', label: 'Google Calendar (Agenda Oficial Integrada)' },
+      { id: 'access_gmail_oficial', label: 'Gmail Eclesiástico Oficial' },
+      { id: 'access_google_forms', label: 'Google Forms (Formulários & Enquetes no Drive)' },
+      { id: 'access_google_classroom', label: 'Google Classroom (Classes de Discipulado & EAD)' }
     ]
   },
   {

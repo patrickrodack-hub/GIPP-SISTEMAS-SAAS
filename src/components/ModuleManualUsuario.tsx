@@ -6,7 +6,8 @@ import {
   AlertTriangle, Lightbulb, Phone, Mail, FileText, FileBarChart, Award, 
   Sparkles, Layers, Cpu, CheckSquare, RefreshCw, Printer, Trash2, Heart,
   Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database,
-  Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2, Table, Video, Globe
+  Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2, Table, Video, Globe,
+  CreditCard, ShoppingBag
 } from 'lucide-react';
 import { GoogleGLogo, GoogleAuthorizedBadge } from './GoogleIcons';
 import { jsPDF } from 'jspdf';
@@ -1225,7 +1226,12 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     { id: 'g5', name: 'Google Calendar - Agenda Eclesiástica Unificada', category: 'google', desc: 'Sincronização de cultos, vigílias, conferências e eventos do ministério.' },
     { id: 'g6', name: 'Gmail Eclesiástico - Comunicação Ministerial Oficial', category: 'google', desc: 'Envio e recebimento de comunicados oficiais pelo correio do Google.' },
     { id: 'g7', name: 'Google Forms - Inscrições, Enquetes & Gestão na Nuvem', category: 'google', desc: 'Criação, gestão e exclusão definitiva de formulários do Google Drive.' },
-    { id: 'g8', name: 'Google Classroom - Discipulado e Salas de Aula Teológicas', category: 'google', desc: 'Classes digitais para EBD, formação ministerial e cursos teológicos.' }
+    { id: 'g8', name: 'Google Classroom - Discipulado e Salas de Aula Teológicas', category: 'google', desc: 'Classes digitais para EBD, formação ministerial e cursos teológicos.' },
+    // LOJA VIRTUAL & RETAGUARDA FISCAL EXPANDED (v11.0.0)
+    { id: 'lj1', name: 'Loja Virtual Eclesiástica & Vitrine Online', category: 'secretaria', desc: 'Catálogo de livros, bíblias, uniformes e artigos com sacola interativa e checkout no Portal do Membro.' },
+    { id: 'lj2', name: 'Emissão de Documento Fiscal / DAV & Chave Digital', category: 'financeiro', desc: 'Geração de Documentos Auxiliares de Venda (DAV) com chave de 44 dígitos, QR Code e cálculo de tributos.' },
+    { id: 'lj3', name: 'Pedidos de Compra & Motor de Impressão Oficial', category: 'secretaria', desc: 'Emissão de Pedido de Compra timbrado com QR Code, resumo de itens e envio multicanal (WhatsApp/E-mail).' },
+    { id: 'lj4', name: 'Retaguarda Comercial, Estoque & Esteira de Separação', category: 'financeiro', desc: 'Controle de estoque mínimo, movimentações, conferência de pagamentos e estorno automático.' }
   ], []);
 
   const filteredDirectory = useMemo(() => {
@@ -1264,7 +1270,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                   <span className="w-3 h-3 rounded-full bg-amber-500 block" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500 block" />
                 </div>
-                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v10.0.0 Ultimate Platinum v15</span>
+                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v11.0.0 Ultimate Platinum v16</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1827,7 +1833,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 10.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB) e na ministração estruturada e litúrgica de ordem pastoral.
+            O GIPP Versão 11.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB), na Loja Virtual com emissão de DAV/Nota Fiscal e na ministração estruturada e litúrgica de ordem pastoral.
           </p>
 
           <div className="bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200/80 rounded-2xl p-4 space-y-3 text-slate-900 shadow-xs">
@@ -1934,7 +1940,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
             </div>
 
             <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              O GIPP v10.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
+              O GIPP v11.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
@@ -2058,8 +2064,89 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       )
     },
     {
+      id: 'loja_virtual_fiscal',
+      title: '14. Loja Virtual Eclesiástica, Emissão de DAV / Nota Fiscal & Retaguarda Comercial',
+      shortTitle: 'Loja Virtual & Fiscal',
+      icon: CreditCard,
+      category: 'Financeiro',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 rounded-3xl p-6 shadow-xs relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-250/60 pb-4 mb-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <CreditCard className="text-emerald-600" size={22} />
+                  Loja Virtual Eclesiástica & Emissão de Documentos Fiscais / DAV
+                </h3>
+                <p className="text-xs text-emerald-800 font-semibold mt-0.5">Retaguarda de Vendas, Estoque, Pedidos de Compra e Notas Fiscais Auxiliares (DAV)</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                Novo v11.0.0
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">
+              A **Loja Virtual Eclesiástica GIPP** permite que a igreja disponibilize para seus membros bíblias, livros teológicos, uniformes, camisetas de congressos e artigos com catálogo interativo, checkout transparente e motor completo de emissão de documentos.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Emissão de Nota Fiscal / DAV
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Geração automática do **Documento Auxiliar de Venda (DAV)** contendo número sequencial, série 001, chave de acesso digital de 44 dígitos, discriminação detalhada de produtos, alíquotas de impostos e QR Code de autenticação.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span> Pedido de Compra Oficial
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Impressão e envio multicanal de **Pedido de Compra** estruturado com dados completos do comprador, dados da igreja sede/filial e esteira de expedição.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span> Controle Rígido de Visualização
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  No Portal do Membro, a Nota Fiscal / DAV fica bloqueada com selo informativo até que a administração da igreja aprove e confirme o recebimento do pagamento.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-teal-500"></span> Envio Multicanal (WhatsApp / E-mail)
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Envio instantâneo do resumo da nota fiscal e do pedido diretamente para o WhatsApp do cliente ou pelo Webmail integrado, com link direto e comprovante.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+              <CheckCircle size={16} className="text-emerald-600" />
+              Fluxo Operacional de Venda e Emissão
+            </h4>
+            <ol className="list-decimal list-inside text-xs text-slate-600 space-y-1.5 leading-relaxed font-medium">
+              <li>O membro navega na Loja Virtual no Portal de Membros e realiza o pedido escolhendo a forma de pagamento (PIX, Cartão ou Boleto).</li>
+              <li>O membro pode imprimir ou visualizar seu <strong>Pedido de Compra</strong> imediatamente.</li>
+              <li>A tesouraria/secretaria confere o pagamento na Retaguarda Administrativa e clica em <strong>Confirmar Pagamento</strong>.</li>
+              <li>O sistema emite e libera o <strong>Documento Fiscal / DAV</strong> no portal do membro e permite o envio por WhatsApp e E-mail.</li>
+              <li>O produto segue para separação e entrega com baixa automática no controle de estoque.</li>
+            </ol>
+          </div>
+        </div>
+      )
+    },
+    {
       id: 'faq_geral',
-      title: '14. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
+      title: '15. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
       shortTitle: 'Perguntas Frequentes (FAQ)',
       icon: HelpCircle,
       category: 'Suporte',
