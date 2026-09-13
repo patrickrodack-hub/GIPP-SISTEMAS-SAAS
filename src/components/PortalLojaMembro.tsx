@@ -2,11 +2,11 @@ import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
-  ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, ArrowRight, ArrowLeft,
+  ShoppingBag, Search, Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ArrowLeft,
   Store, ShieldCheck, Clock, QrCode, Copy, Check, ChevronRight, 
   Tag, Filter, Heart, MessageCircle, AlertCircle, Printer, X, Sparkles,
-  Package, Bell, Truck, CheckSquare, ChevronDown, ChevronUp, MapPin, User, Info, XCircle, FileText,
-  Maximize2, Minimize2
+  Package, PackageCheck, Bell, Truck, CheckSquare, ChevronDown, ChevronUp, MapPin, User, Info, XCircle, FileText,
+  Maximize2, Minimize2, Layers
 } from 'lucide-react';
 import { 
   ProdutoLoja, PedidoLoja, ItemPedidoLoja, MovimentacaoEstoque, 
@@ -653,10 +653,10 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
 
       {/* ABAS DO PORTAL: VITRINE OU MEUS PEDIDOS */}
       <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shrink-0">
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('vitrine')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
               activeTab === 'vitrine'
                 ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
@@ -667,13 +667,13 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
 
           <button
             onClick={() => setActiveTab('pedidos')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
               activeTab === 'pedidos'
                 ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
             }`}
           >
-            <Clock size={15} /> Meus Pedidos ({meusPedidos.length})
+            <Clock size={15} /> Meus Pedidos & Acompanhamento ({meusPedidos.length})
             {pedidosProntosParaRetirada.length > 0 && (
               <span className="bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
                 {pedidosProntosParaRetirada.length} pronto(s)
@@ -686,7 +686,7 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
         {totalCartCount > 0 && (
           <button
             onClick={() => setIsCartOpen(true)}
-            className="hidden sm:flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 rounded-xl border border-amber-200/80 cursor-pointer"
+            className="hidden sm:flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 rounded-xl border border-amber-200/80 cursor-pointer whitespace-nowrap shrink-0"
           >
             <ShoppingBag size={14} /> {totalCartCount} item(ns) na sacola
           </button>
@@ -873,61 +873,89 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
                 </p>
               </div>
 
-              {/* Sub-filtros por status e alternador de escopo */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0 overflow-x-auto">
+              {/* Barra de botões do menu com barra de rolagem horizontal */}
+              <div className="w-full sm:w-auto overflow-x-auto custom-scrollbar pb-1.5 pt-0.5">
+                <div className="flex items-center gap-1.5 bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shrink-0 min-w-max">
                   <button
                     onClick={() => setOrderStatusFilter('todos')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       orderStatusFilter === 'todos'
-                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm border border-slate-200/60 dark:border-slate-600'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50'
                     }`}
                   >
-                    Todos ({meusPedidos.length})
+                    <Layers size={14} className={orderStatusFilter === 'todos' ? 'text-amber-600' : 'text-slate-400'} />
+                    Todos
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                      orderStatusFilter === 'todos'
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    }`}>
+                      {meusPedidos.length}
+                    </span>
                   </button>
+
                   <button
                     onClick={() => setOrderStatusFilter('andamento')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       orderStatusFilter === 'andamento'
-                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm border border-slate-200/60 dark:border-slate-600'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50'
                     }`}
                   >
-                    Em Andamento ({pedidosEmAndamento.length})
+                    <Clock size={14} className={orderStatusFilter === 'andamento' ? 'text-blue-500' : 'text-slate-400'} />
+                    Em Andamento
+                    {pedidosEmAndamento.length > 0 && (
+                      <span className="bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                        {pedidosEmAndamento.length}
+                      </span>
+                    )}
                   </button>
+
                   <button
                     onClick={() => setOrderStatusFilter('pronto')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       orderStatusFilter === 'pronto'
-                        ? 'bg-amber-500 text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
+                        ? 'bg-amber-500 text-white shadow-sm border border-amber-600'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50'
                     }`}
                   >
-                    Prontos ({pedidosProntosParaRetirada.length})
+                    <PackageCheck size={14} className={orderStatusFilter === 'pronto' ? 'text-white' : 'text-amber-600'} />
+                    Prontos para Retirada
+                    {pedidosProntosParaRetirada.length > 0 && (
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                        orderStatusFilter === 'pronto'
+                          ? 'bg-white text-amber-900 animate-pulse'
+                          : 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300'
+                      }`}>
+                        {pedidosProntosParaRetirada.length}
+                      </span>
+                    )}
                   </button>
+
                   <button
                     onClick={() => setOrderStatusFilter('concluido')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       orderStatusFilter === 'concluido'
-                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm border border-slate-200/60 dark:border-slate-600'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50'
                     }`}
                   >
-                    Concluídos
+                    <CheckCircle size={14} className={orderStatusFilter === 'concluido' ? 'text-emerald-500' : 'text-slate-400'} />
+                    Concluídos / Retirados
                   </button>
-                </div>
 
-                {/* Alternador de exibição de todos os pedidos salvos */}
-                {(db?.loja_pedidos && db.loja_pedidos.length > meusPedidos.length) && (
-                  <button
-                    type="button"
-                    onClick={() => setViewAllOrdersScope(!viewAllOrdersScope)}
-                    className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/60"
-                  >
-                    {viewAllOrdersScope ? "Exibir apenas meus pedidos" : `Ver todos (${db.loja_pedidos.length})`}
-                  </button>
-                )}
+                  {/* Alternador de exibição de todos os pedidos salvos */}
+                  {(db?.loja_pedidos && db.loja_pedidos.length > meusPedidos.length) && (
+                    <button
+                      type="button"
+                      onClick={() => setViewAllOrdersScope(!viewAllOrdersScope)}
+                      className="ml-1 text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800/60 whitespace-nowrap shrink-0"
+                    >
+                      {viewAllOrdersScope ? "Apenas meus pedidos" : `Ver todos salvos (${db.loja_pedidos.length})`}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

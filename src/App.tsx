@@ -80,7 +80,7 @@ const ModuleChangelog = lazy(() => import('./components/ModuleChangelog'));
 const ModuleIgreja = lazy(() => import('./components/ModuleIgreja'));
 const ModuleDesenvolvedor = lazy(() => import('./components/ModuleDesenvolvedor'));
 const ModuleAssistenteAI = lazy(() => import('./components/ModuleAssistenteAI'));
-const FloatingChatWidget = lazy(() => import('./components/ModuleAssistenteAI').then(m => ({ default: m.FloatingChatWidget })));
+const FloatingChatWidget = lazy(() => import('./components/FloatingChatWidget'));
 import { FloatingActionButton } from './components/FloatingActionButton';
 const ModuleDevSuporte = lazy(() => import('./components/ModuleDevSuporte'));
 const ModuleBiblia = lazy(() => import('./components/ModuleBiblia'));
@@ -1939,7 +1939,7 @@ export const safeText = (val) => {
     return String(val);
 };
 
-const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [], secretaria_contatos: [], portal_acessos: [], loja_produtos: [], loja_pedidos: [], loja_movimentacoes: [] };
+const MOCK_DB = { igreja: { nome: "GIPP - GESTÃO DE IGREJA", cnpj: "12.345.678/0001-90", endereco: "Rua das Oliveiras, 123", cidade: "São Paulo", uf: "SP", telefone: "(11) 98765-4321", email: "contato@adnovavida.com.br", site: "www.adnovavida.com.br", dataFundacao: "", pastor: "Pr. João Silva", vicePresidente1: "", vicePresidente2: "", tesoureiro1: "", tesoureiro2: "", secretario1: "", secretario2: "", contador: "", logo: null, chave_pix: "12.345.678/0001-90" }, membros: [], celulas: [], congregacoes: [], fornecedores: [], departamentos: [], centro_custo: [], usuarios: [ { id: 'admin-master', nome: "Administrador Master", usuario: "ADM", senha: "123", nivel: "master", permissoes: [] } ], financeiro: [], carnes: [], ebd: { turmas: [], professores: [], alunos: [], licoes: [] }, missoes: { missionarios: [], agencias: [], colaboradores: [], agenda: [] }, agenda: [], tarefas: [], projetos_midia: [], solicitacoes: [], trash: {}, auditoria: [], visitantes: [], patrimonio: [], emails: [], mural: [], pastor_agenda: [], pastor_mensagens: [], pastor_esbocos: [], pastor_atas: [], pastor_liturgias: [], support_chats: [], orcamentos: [], kids_criancas: [], kids_presencas: [], kids_ocorrencias: [], dp_colaboradores: [], dp_folhas: [], frotas_veiculos: [], frotas_motoristas: [], frotas_despesas: [], frotas_multas: [], secretaria_contatos: [], portal_acessos: [], loja_produtos: [], loja_pedidos: [], loja_movimentacoes: [], loja_transferencias: [] };
 
 export const ICON_MAP = { Sun, Book, Mic, Flame, BookOpen, Droplets, Globe, Heart, Star, Calendar, Clock, Users, Shield, MapPin, Target, Activity, Music: Mic, Megaphone, Newspaper };
 export const getIcon = (name) => ICON_MAP[name] || Star;
@@ -20802,6 +20802,13 @@ export default function App() {
                   initialDb = { ...initialDb, loja_movimentacoes: parsedM };
               }
           }
+          const transferenciasCached = localStorage.getItem('gipp_loja_transferencias');
+          if (transferenciasCached) {
+              const parsedT = JSON.parse(transferenciasCached);
+              if (Array.isArray(parsedT) && parsedT.length > 0) {
+                  initialDb = { ...initialDb, loja_transferencias: parsedT };
+              }
+          }
       } catch (e) {
           console.warn("Erro ao restaurar loja virtual inicial do localStorage:", e);
       }
@@ -20837,6 +20844,9 @@ export default function App() {
           }
           if (db?.loja_movimentacoes && Array.isArray(db.loja_movimentacoes)) {
               localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify(db.loja_movimentacoes));
+          }
+          if (db?.loja_transferencias && Array.isArray(db.loja_transferencias)) {
+              localStorage.setItem('gipp_loja_transferencias', JSON.stringify(db.loja_transferencias));
           }
       } catch (err) {
           console.warn("Could not sync DB state to localStorage cache:", err);
@@ -21993,7 +22003,7 @@ export default function App() {
       
       // [ C ] BLINDAGEM MULTI-TENANT E OTIMIZAÇÃO DE STARTUP
       // Coleções fundamentais sempre carregadas (necessárias para o login, menus e loja virtual em todos os perfis)
-      const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos', 'loja_produtos', 'loja_pedidos', 'loja_movimentacoes'];
+      const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos', 'loja_produtos', 'loja_pedidos', 'loja_movimentacoes', 'loja_transferencias'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
       const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos'];
@@ -22102,6 +22112,19 @@ export default function App() {
                                   const mergedMovs = Array.from(map.values());
                                   newState[stateKey] = mergedMovs;
                                   try { localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify(mergedMovs)); } catch (e) {}
+                              } else if (stateKey === 'loja_transferencias') {
+                                  let localTransfs: any[] = [];
+                                  try {
+                                      const raw = localStorage.getItem('gipp_loja_transferencias');
+                                      if (raw) localTransfs = JSON.parse(raw);
+                                  } catch (e) {}
+                                  const map = new Map();
+                                  (Array.isArray(localTransfs) ? localTransfs : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(prev.loja_transferencias) ? prev.loja_transferencias : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(uList) ? uList : []).forEach((p: any) => map.set(p.id, p));
+                                  const mergedTransfs = Array.from(map.values());
+                                  newState[stateKey] = mergedTransfs;
+                                  try { localStorage.setItem('gipp_loja_transferencias', JSON.stringify(mergedTransfs)); } catch (e) {}
                               } else { 
                                   newState[stateKey] = uList; 
                               } 

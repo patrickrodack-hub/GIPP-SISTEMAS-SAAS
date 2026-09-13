@@ -84,6 +84,27 @@ export interface MovimentacaoEstoque {
   data: string;
 }
 
+export interface TransferenciaCaixaLoja {
+  id: string;
+  numero_comprovante: string;
+  valor: number;
+  data_transferencia: string;
+  origem?: 'caixa_loja_virtual';
+  destino_conta: string;
+  centro_custo_id?: string;
+  congregacao_id?: string;
+  categoria_financeiro: string;
+  forma_transferencia: 'transferencia_interna' | 'pix' | 'deposito' | 'dinheiro';
+  responsavel_nome: string;
+  responsavel_id?: string;
+  observacoes?: string;
+  financeiro_id?: string;
+  status: 'confirmada' | 'estornada';
+  saldo_anterior: number;
+  saldo_posterior: number;
+  criado_em?: string;
+}
+
 export const CATEGORIAS_LOJA = [
   'Bíblias & Manuais',
   'Livros & Apostilas CPAD',

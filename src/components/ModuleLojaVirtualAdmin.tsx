@@ -7,10 +7,10 @@ import {
   Phone, Mail, Calendar, Eye, Printer, MessageCircle, RefreshCw, 
   TrendingUp, BarChart3, Tag, FileText, Check, X, Upload, Image as ImageIcon,
   ArrowRight, ShieldCheck, Truck, Store, Layers, ClipboardCheck, XCircle,
-  Maximize2, Minimize2, Sparkles
+  Maximize2, Minimize2, Sparkles, Landmark, Receipt
 } from 'lucide-react';
 import { 
-  ProdutoLoja, PedidoLoja, MovimentacaoEstoque, 
+  ProdutoLoja, PedidoLoja, MovimentacaoEstoque, TransferenciaCaixaLoja,
   CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS,
   HistoricoEventoPedido
 } from '../data/lojaVirtualData';
@@ -19,13 +19,15 @@ import LojaTratamentoModal from './LojaTratamentoModal';
 import LojaRecebimentoArea from './LojaRecebimentoArea';
 import LojaHistoricoPedidos from './LojaHistoricoPedidos';
 import LojaDocumentoFiscalModal from './LojaDocumentoFiscalModal';
+import LojaFinanceiroCaixa from './LojaFinanceiroCaixa';
+import LojaComprovanteTransferenciaModal from './LojaComprovanteTransferenciaModal';
 import { ConfirmModal } from './ConfirmModal';
 import { InteractiveWindow } from './InteractiveWindow';
 
 export default function ModuleLojaVirtualAdmin() {
   const { db, setDbState, addToast, user, dbFirestore, appId, setDoc, doc, deleteDoc, logAction } = useContext(ChurchContext);
 
-  const [activeTab, setActiveTab] = useState<'recebimento' | 'pedidos' | 'produtos' | 'estoque' | 'historico' | 'metricas'>('recebimento');
+  const [activeTab, setActiveTab] = useState<'recebimento' | 'pedidos' | 'produtos' | 'estoque' | 'historico' | 'metricas' | 'financeiro'>('recebimento');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState('todas');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -82,6 +84,13 @@ export default function ModuleLojaVirtualAdmin() {
     return [];
   }, [db?.loja_movimentacoes]);
 
+  const transferencias: TransferenciaCaixaLoja[] = useMemo(() => {
+    if (db && Array.isArray(db.loja_transferencias)) {
+      return db.loja_transferencias;
+    }
+    return [];
+  }, [db?.loja_transferencias]);
+
   // Persist helper
   const syncProdutos = async (newList: ProdutoLoja[]) => {
     setDbState((prev: any) => ({ ...prev, loja_produtos: newList }));
@@ -122,6 +131,125 @@ export default function ModuleLojaVirtualAdmin() {
       }
     } catch (e) {
       console.warn("Storage sync error:", e);
+    }
+  };
+
+  const syncTransferencias = async (newList: TransferenciaCaixaLoja[]) => {
+    setDbState((prev: any) => ({ ...prev, loja_transferencias: newList }));
+    try {
+      localStorage.setItem('gipp_loja_transferencias', JSON.stringify(newList));
+      if (dbFirestore && appId) {
+        for (const item of newList) {
+          await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_transferencias', item.id), item);
+        }
+      }
+    } catch (e) {
+      console.warn("Storage sync error (transferencias):", e);
+    }
+  };
+
+  // Efetuar transferência de saldo do caixa da loja para a conta/tesouraria da igreja
+  const handleEfetuarTransferencia = async (dados: {
+    valor: number;
+    destino_conta: string;
+    centro_custo_id?: string;
+    congregacao_id?: string;
+    categoria_financeiro: string;
+    forma_transferencia: 'transferencia_interna' | 'pix' | 'deposito' | 'dinheiro';
+    observacoes?: string;
+    data_transferencia: string;
+  }): Promise<TransferenciaCaixaLoja | null> => {
+    try {
+      const nowIso = new Date().toISOString();
+      const seqNum = transferencias.length + 1;
+      const numComprovante = `TRF-LOJA-${new Date().getFullYear()}-${String(seqNum).padStart(4, '0')}`;
+
+      // Calcular saldo anterior e posterior
+      const totalVendasPagas = pedidos
+        .filter(p => p.status_pagamento === 'pago')
+        .reduce((acc, p) => acc + (p.valor_total || 0), 0);
+      const totalJaTransferido = transferencias
+        .filter(t => t.status !== 'estornada')
+        .reduce((acc, t) => acc + (t.valor || 0), 0);
+      const saldoAnterior = Math.max(0, totalVendasPagas - totalJaTransferido);
+      const saldoPosterior = Math.max(0, saldoAnterior - dados.valor);
+
+      const novaTransferencia: TransferenciaCaixaLoja = {
+        id: `trf-loja-${Date.now()}`,
+        numero_comprovante: numComprovante,
+        valor: dados.valor,
+        saldo_anterior: saldoAnterior,
+        saldo_posterior: saldoPosterior,
+        data_transferencia: dados.data_transferencia ? `${dados.data_transferencia}T${new Date().toTimeString().split(' ')[0]}` : nowIso,
+        destino_conta: dados.destino_conta,
+        centro_custo_id: dados.centro_custo_id || 'sede',
+        congregacao_id: dados.congregacao_id || user?.congregacao_id || 'sede',
+        categoria_financeiro: dados.categoria_financeiro || 'Vendas Loja Virtual / Cantina / Livraria',
+        forma_transferencia: dados.forma_transferencia,
+        responsavel_id: user?.id || 'admin',
+        responsavel_nome: user?.nome || 'Operador da Loja Virtual',
+        observacoes: dados.observacoes || '',
+        status: 'confirmada',
+        criado_em: nowIso
+      };
+
+      // 1. Atualizar coleção loja_transferencias
+      const novaListaTrf = [novaTransferencia, ...transferencias];
+      await syncTransferencias(novaListaTrf);
+
+      // 2. Criar e sincronizar lançamento de ENTRADA no Financeiro Geral da Igreja
+      const novoLancamentoFinanceiro = {
+        id: `fin-trf-${novaTransferencia.id}`,
+        tipo: 'entrada',
+        descricao: `Receita Loja Virtual - Repasse de Caixa (${numComprovante})`,
+        valor: dados.valor,
+        data_competencia: dados.data_transferencia || nowIso.split('T')[0],
+        data_vencimento: dados.data_transferencia || nowIso.split('T')[0],
+        data_pagamento: dados.data_transferencia || nowIso.split('T')[0],
+        status: 'pago',
+        categoria: dados.categoria_financeiro || 'Vendas Loja Virtual / Cantina / Livraria',
+        forma_pagamento: dados.forma_transferencia === 'pix' ? 'pix' : dados.forma_transferencia === 'dinheiro' ? 'dinheiro' : 'transferencia',
+        conta_bancaria: dados.destino_conta,
+        centro_custo_id: dados.centro_custo_id || 'sede',
+        congregacao_id: dados.congregacao_id || user?.congregacao_id || 'sede',
+        observacoes: dados.observacoes || `Transferência de saldo de vendas da Loja Virtual. Comprovante: ${numComprovante}`,
+        origem: 'loja_virtual',
+        referencia_id: novaTransferencia.id,
+        criado_por: user?.nome || 'Operador Loja Virtual',
+        criado_em: nowIso
+      };
+
+      const listaFinanceiroAtual = Array.isArray(db?.financeiro) ? db.financeiro : [];
+      const novaListaFinanceiro = [novoLancamentoFinanceiro, ...listaFinanceiroAtual];
+
+      setDbState((prev: any) => ({
+        ...prev,
+        financeiro: novaListaFinanceiro,
+        loja_transferencias: novaListaTrf
+      }));
+
+      try {
+        localStorage.setItem('gipp_financeiro', JSON.stringify(novaListaFinanceiro));
+        if (dbFirestore && appId) {
+          await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro', novoLancamentoFinanceiro.id), novoLancamentoFinanceiro);
+        }
+      } catch (e) {
+        console.warn("Storage sync error (financeiro):", e);
+      }
+
+      if (logAction) {
+        logAction(
+          'Repasse de Caixa da Loja Virtual',
+          `Transferência de R$ ${dados.valor.toFixed(2)} da Loja Virtual para ${dados.destino_conta} (Comprovante: ${numComprovante}) registrada como entrada no Financeiro da Igreja.`
+        );
+      }
+
+      addToast(`Saldo de R$ ${dados.valor.toFixed(2)} transferido e lançado no Financeiro da Igreja com sucesso!`, "success");
+      return novaTransferencia;
+    } catch (err) {
+      console.error("Erro ao efetuar transferência:", err);
+      addToast("Erro ao processar transferência de caixa.", "error");
+      return null;
     }
   };
 
@@ -623,11 +751,11 @@ export default function ModuleLojaVirtualAdmin() {
         </div>
       </div>
 
-      {/* ABAS PADRONIZADAS DO DESIGN SYSTEM */}
-      <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-wrap gap-1.5 shrink-0">
+      {/* ABAS PADRONIZADAS DO DESIGN SYSTEM COM ROLAGEM HORIZONTAL */}
+      <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1.5 shrink-0">
         <button
           onClick={() => { setActiveTab('recebimento'); setStatusFilter('todos'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
             activeTab === 'recebimento'
               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -643,7 +771,7 @@ export default function ModuleLojaVirtualAdmin() {
 
         <button
           onClick={() => { setActiveTab('produtos'); setStatusFilter('todos'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
             activeTab === 'produtos'
               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -654,7 +782,7 @@ export default function ModuleLojaVirtualAdmin() {
 
         <button
           onClick={() => { setActiveTab('pedidos'); setStatusFilter('todos'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
             activeTab === 'pedidos'
               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -665,7 +793,7 @@ export default function ModuleLojaVirtualAdmin() {
 
         <button
           onClick={() => { setActiveTab('estoque'); setStatusFilter('todos'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
             activeTab === 'estoque'
               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -676,7 +804,7 @@ export default function ModuleLojaVirtualAdmin() {
 
         <button
           onClick={() => { setActiveTab('historico'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
             activeTab === 'historico'
               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -686,8 +814,24 @@ export default function ModuleLojaVirtualAdmin() {
         </button>
 
         <button
+          onClick={() => { setActiveTab('financeiro'); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            activeTab === 'financeiro'
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+              : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+          }`}
+        >
+          <Landmark size={15} /> Controle Financeiro & Caixa da Loja
+          {transferencias.length > 0 && (
+            <span className="bg-emerald-100 text-emerald-900 text-[10px] font-black px-1.5 py-0.2 rounded-full">
+              {transferencias.length} repasses
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => { setActiveTab('metricas'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
             activeTab === 'metricas'
               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -1238,6 +1382,23 @@ export default function ModuleLojaVirtualAdmin() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ÁREA 6: CONTROLE FINANCEIRO, HISTÓRICO COMPLETO & REPASSE DE CAIXA PARA A IGREJA */}
+      {activeTab === 'financeiro' && (
+        <LojaFinanceiroCaixa
+          pedidos={pedidos}
+          transferencias={transferencias}
+          igrejaData={db?.igreja}
+          user={user}
+          centrosCusto={db?.centro_custo || []}
+          congregacoes={db?.congregacoes || []}
+          onEfetuarTransferencia={handleEfetuarTransferencia}
+          onOpenOrderDetails={(ped) => {
+            setSelectedOrder(ped);
+            setIsOrderDetailsOpen(true);
+          }}
+        />
       )}
 
       {/* MODAL: CADASTRO / EDIÇÃO DE PRODUTO */}
