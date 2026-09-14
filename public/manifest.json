@@ -1,23 +1,47 @@
 {
-  "name": "GIPP",
+  "id": "/",
+  "name": "GIPP - Gestão Eclesiástica Integrada",
   "short_name": "GIPP",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "description": "Sistema de Gestão Eclesiástica Integrada GIPP",
+  "orientation": "any",
+  "description": "Sistema de Gestão Eclesiástica Integrada GIPP para Igrejas e Membros",
+  "categories": ["productivity", "business", "utilities"],
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Portal de Acesso",
+      "url": "/",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/3004/3004613.png", "sizes": "192x192" }]
     }
   ]
 }

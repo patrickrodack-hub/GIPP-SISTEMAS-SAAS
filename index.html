@@ -22,29 +22,15 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        // No ambiente de desenvolvimento ou no preview do iframe do AI Studio,
-        // cancelamos o registro de Service Workers antigos para evitar travamento de cache de módulos Vite
-        const isDevOrIframe = window.self !== window.top || location.hostname === 'localhost' || location.hostname.includes('run.app');
-        if (isDevOrIframe) {
-          navigator.serviceWorker.getRegistrations().then(registrations => {
-            for (const registration of registrations) {
-              registration.unregister();
-            }
-          });
-          if ('caches' in window) {
-            caches.keys().then(keys => {
-              for (const key of keys) {
-                caches.delete(key);
-              }
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => {
+              console.log('[GIPP PWA] Service Worker registrado com sucesso:', reg.scope);
+            })
+            .catch(err => {
+              console.warn('[GIPP PWA] O registro do SW falhou:', err);
             });
-          }
-        } else {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(err => {
-              console.log('O registro do SW falhou: ', err);
-            });
-          });
-        }
+        });
       }
     </script>
   </body>

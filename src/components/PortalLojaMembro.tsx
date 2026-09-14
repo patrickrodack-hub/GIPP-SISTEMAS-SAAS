@@ -653,7 +653,7 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
 
       {/* ABAS DO PORTAL: VITRINE OU MEUS PEDIDOS */}
       <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto loja-menu-scrollbar scroll-smooth touch-pan-x pb-1.5 sm:pb-0 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('vitrine')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
@@ -874,7 +874,7 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
               </div>
 
               {/* Barra de botões do menu com barra de rolagem horizontal */}
-              <div className="w-full sm:w-auto overflow-x-auto custom-scrollbar pb-1.5 pt-0.5">
+              <div className="w-full sm:w-auto overflow-x-auto loja-menu-scrollbar scroll-smooth touch-pan-x pb-2 pt-0.5">
                 <div className="flex items-center gap-1.5 bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shrink-0 min-w-max">
                   <button
                     onClick={() => setOrderStatusFilter('todos')}

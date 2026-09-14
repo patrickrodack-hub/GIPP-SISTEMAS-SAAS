@@ -145,6 +145,7 @@ import { LockScreenModal } from './components/LockScreenModal';
 import { MobileBottomDock } from './components/MobileBottomDock';
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
 import { requestAppFullscreen } from './lib/performanceHelpers';
+import { ModalInstalacaoApp } from './components/ModalInstalacaoApp';
 // ----------------------------
 
 
@@ -12922,54 +12923,54 @@ const PortalHome = ({ user, db, setView }) => {
     const nivelRotulo = (unlockedCount + unlockedCursosCount) === totalBadgesCount + 5 ? "Obreiro Aprovado" : (unlockedCount + unlockedCursosCount) >= 4 ? "Servo Dedicado" : (unlockedCount + unlockedCursosCount) >= 1 ? "Membro Ativo" : "Novo Integrante";
 
     return (
-        <div className="space-y-4 sm:space-y-6 animate-entrance pb-12">
+        <div className="space-y-2.5 sm:space-y-3.5 animate-entrance pb-1">
             
             {/* HERO COM STATUS DO PERFIL (RESPONSIVO E COMPACTO) */}
-            <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-xl relative overflow-hidden border border-slate-800 p-4 sm:p-6 md:p-7 flex flex-col md:flex-row items-center gap-4 sm:gap-6 group">
+            <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-lg relative overflow-hidden border border-slate-800 p-3 sm:p-4 md:px-5 md:py-3.5 flex flex-col md:flex-row items-center gap-3 sm:gap-5 group">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full blur-[100px] opacity-30 -mr-20 -mt-20 pointer-events-none transition-all duration-1000 group-hover:opacity-50"></div>
                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none"></div>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
                 
                 <div className="relative z-10 shrink-0">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-slate-800 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.25)] relative group/foto shrink-0">
-                        {currentUser.foto ? <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/> : <User size={32} className="text-slate-500"/>}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 sm:border-3 border-slate-800 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.25)] relative group/foto shrink-0">
+                        {currentUser.foto ? <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/> : <User size={26} className="text-slate-500"/>}
                         <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer">
-                            <Camera size={18} className="text-white mb-0.5"/>
-                            <span className="text-[8px] font-black uppercase tracking-widest text-white">Editar</span>
+                            <Camera size={14} className="text-white mb-0.5"/>
+                            <span className="text-[7px] font-black uppercase tracking-widest text-white">Editar</span>
                         </button>
                     </div>
                 </div>
                 
                 <div className="relative z-10 flex-1 text-center md:text-left w-full min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5 justify-center md:justify-start">
-                        <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-xs">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1 justify-center md:justify-start">
+                        <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-xs">
                             {currentUser.cargo || 'Membro Ativo'}
                         </span>
                         {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
-                            <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-xs">
+                            <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-xs">
                                 ADM: {currentUser.funcao_administrativa}
                             </span>
                         )}
                         <span className="text-xs text-slate-500 font-bold hidden md:inline-block">•</span>
-                        <span className="text-[11px] font-bold text-slate-400 flex items-center justify-center md:justify-start gap-1 truncate max-w-[200px]">
+                        <span className="text-[11px] font-bold text-slate-400 flex items-center justify-center md:justify-start gap-1 truncate max-w-[220px]">
                             <MapPin size={11} className="shrink-0"/> {db.igreja.nome}
                         </span>
                     </div>
                     
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
                         {saudacaoTempo}, {currentUser.nome.split(' ')[0]}!
                     </h2>
                 </div>
 
                 {/* BARRA DE NÍVEL DE ENGAJAMENTO GLOBAL (COMPACTA) */}
-                <div className="relative z-10 w-full md:w-64 bg-slate-800/60 p-3 sm:p-3.5 rounded-2xl border border-slate-700/60 backdrop-blur-md shrink-0 shadow-inner">
-                    <div className="flex justify-between items-center mb-1.5">
+                <div className="relative z-10 w-full md:w-56 bg-slate-800/60 p-2 sm:p-2.5 rounded-xl border border-slate-700/60 backdrop-blur-md shrink-0 shadow-inner">
+                    <div className="flex justify-between items-center mb-1">
                         <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
                             <Activity size={11} className="text-emerald-400"/> Jornada de Fé
                         </span>
                         <span className="text-xs sm:text-sm font-black text-emerald-400">{nivelSpiritual}%</span>
                     </div>
-                    <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/80 mb-1">
+                    <div className="w-full h-1.5 sm:h-2 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/80 mb-1">
                         <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 relative" style={{width: `${nivelSpiritual}%`}}>
                             <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ animation: 'slideRight 2s infinite linear' }}></div>
                         </div>
@@ -12981,34 +12982,34 @@ const PortalHome = ({ user, db, setView }) => {
                 </div>
             </div>
 
-            {/* SELETOR DE ABAS / FLUIDEZ OPERACIONAL (PADRÃO E DIMENSÕES UNIFORMES) */}
-            <div className="flex items-center justify-between gap-2.5 overflow-x-auto custom-scrollbar pb-2 border-b border-slate-200/60">
-                <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* SELETOR DE ABAS / FLUIDEZ OPERACIONAL (SEM BARRA DE ROLAGEM) */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1 border-b border-slate-200/60">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {/* 1. PAINEL RÁPIDO */}
                     <button
                         onClick={() => { setHomeViewTab('cockpit'); playMenuSound(); }}
-                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'cockpit'
-                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                ? 'bg-slate-700 text-white shadow-sm border border-slate-600/60'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Zap size={14} className={homeViewTab === 'cockpit' ? 'text-amber-400' : 'text-amber-500'} />
+                        <Zap size={13} className={homeViewTab === 'cockpit' ? 'text-amber-400' : 'text-amber-500'} />
                         <span className="whitespace-nowrap">Painel Rápido</span>
                     </button>
 
                     {/* 2. CONQUISTAS */}
                     <button
                         onClick={() => { setHomeViewTab('conquistas'); playMenuSound(); }}
-                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'conquistas'
-                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                ? 'bg-slate-700 text-white shadow-sm border border-slate-600/60'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Award size={14} className={homeViewTab === 'conquistas' ? 'text-amber-400' : 'text-amber-500'} />
+                        <Award size={13} className={homeViewTab === 'conquistas' ? 'text-amber-400' : 'text-amber-500'} />
                         <span className="whitespace-nowrap">Conquistas</span>
-                        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-slate-900 text-emerald-400 text-[10px] font-black leading-none ml-0.5">
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full bg-slate-900 text-emerald-400 text-[9px] font-black leading-none ml-0.5">
                             {unlockedCount + unlockedCursosCount}
                         </span>
                     </button>
@@ -13016,16 +13017,16 @@ const PortalHome = ({ user, db, setView }) => {
                     {/* 3. LINHA DO TEMPO */}
                     <button
                         onClick={() => { setHomeViewTab('linha_tempo'); playMenuSound(); }}
-                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'linha_tempo'
-                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                ? 'bg-slate-700 text-white shadow-sm border border-slate-600/60'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Activity size={14} className={homeViewTab === 'linha_tempo' ? 'text-amber-400' : 'text-indigo-500'} />
+                        <Activity size={13} className={homeViewTab === 'linha_tempo' ? 'text-amber-400' : 'text-indigo-500'} />
                         <span className="whitespace-nowrap">Linha do Tempo</span>
                         {notifications && notifications.length > 0 && (
-                            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black leading-none ml-0.5 animate-pulse">
+                            <span className="inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-none ml-0.5 animate-pulse">
                                 {notifications.length}
                             </span>
                         )}
@@ -13034,13 +13035,13 @@ const PortalHome = ({ user, db, setView }) => {
                     {/* 4. DEVOCIONAL IA */}
                     <button
                         onClick={() => { setHomeViewTab('devocional'); playMenuSound(); }}
-                        className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                             homeViewTab === 'devocional'
-                                ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                                ? 'bg-slate-700 text-white shadow-sm border border-slate-600/60'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                         }`}
                     >
-                        <Sparkles size={14} className={homeViewTab === 'devocional' ? 'text-amber-400' : 'text-indigo-500'} />
+                        <Sparkles size={13} className={homeViewTab === 'devocional' ? 'text-amber-400' : 'text-indigo-500'} />
                         <span className="whitespace-nowrap">Devocional IA</span>
                     </button>
                 </div>
@@ -13051,77 +13052,71 @@ const PortalHome = ({ user, db, setView }) => {
                         setHomeViewTab(homeViewTab === 'tudo' ? 'cockpit' : 'tudo'); 
                         playMenuSound(); 
                     }}
-                    className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+                    className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                         homeViewTab === 'tudo'
-                            ? 'bg-slate-700 text-white shadow-md border border-slate-600/60'
+                            ? 'bg-slate-700 text-white shadow-sm border border-slate-600/60'
                             : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-xs'
                     }`}
                     title={homeViewTab === 'tudo' ? 'Voltar ao modo Painel Rápido sem rolagem' : 'Exibir todas as seções continuamente'}
                 >
-                    <SlidersHorizontal size={14} className={homeViewTab === 'tudo' ? 'text-amber-400' : 'text-slate-400'} />
+                    <SlidersHorizontal size={13} className={homeViewTab === 'tudo' ? 'text-amber-400' : 'text-slate-400'} />
                     <span className="whitespace-nowrap">{homeViewTab === 'tudo' ? 'Modo Painel' : 'Visão Completa'}</span>
                 </button>
             </div>
 
             {/* AÇÕES RÁPIDAS (RENDERIZADO NO PAINEL RÁPIDO E NA VISÃO COMPLETA) */}
             {(homeViewTab === 'cockpit' || homeViewTab === 'tudo') && (
-            <div className={`grid grid-cols-2 gap-2.5 sm:gap-4 ${isProfessor ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
+            <div className={`grid grid-cols-3 sm:grid-cols-4 ${isProfessor ? 'md:grid-cols-8' : 'md:grid-cols-7'} gap-1.5 sm:gap-2.5`}>
                 {allowedModulesHome.includes('portal_financas') && (
-                    <button onClick={() => setView('portal_financas')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm transform group-hover:-rotate-6"><DollarSign size={20} className="sm:w-6 sm:h-6"/></div>
-                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Dízimos</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ofertar agora</span>
+                    <button onClick={() => setView('portal_financas')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-xs transform group-hover:-rotate-6"><DollarSign size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Dízimos</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Ofertar</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_carteirinha') && (
-                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-50 text-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><QrCode size={20} className="sm:w-6 sm:h-6"/></div>
-                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Credencial</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cartão Digital</span>
+                    <button onClick={() => setView('portal_carteirinha')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-indigo-50 text-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><QrCode size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Credencial</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Cartão</span>
                     </button>
                 )}
                 {canAccessFormacaoHome && allowedModulesHome.includes('portal_candidato') && (
-                    <button onClick={() => setView('portal_candidato')} className="bg-gradient-to-br from-white to-emerald-50/50 p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
-                        <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[8px] sm:text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
-                            CGADB
-                        </div>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={20} className="sm:w-6 sm:h-6"/></div>
-                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Formação GIPP</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus & Provas</span>
+                    <button onClick={() => setView('portal_candidato')} className="bg-gradient-to-br from-white to-emerald-50/50 p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-emerald-200/80 shadow-xs hover:shadow-md hover:border-emerald-400 transition-all flex flex-col items-center text-center group cursor-pointer relative overflow-hidden">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><GraduationCap size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Formação</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">CGADB</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_tarefas') && (
-                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:rotate-6"><CheckSquare size={20} className="sm:w-6 sm:h-6"/></div>
-                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Escalas</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Minhas tarefas</span>
+                    <button onClick={() => setView('portal_tarefas')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-amber-50 text-amber-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-xs transform group-hover:rotate-6"><CheckSquare size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Escalas</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Tarefas</span>
                     </button>
                 )}
                 {allowedModulesHome.includes('portal_ebd') && (
-                    <button onClick={() => setView('portal_ebd')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all flex flex-col items-start group cursor-pointer">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm transform group-hover:-translate-y-1"><BookOpenText size={20} className="sm:w-6 sm:h-6"/></div>
-                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Estudo EBD</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lições Interativas</span>
+                    <button onClick={() => setView('portal_ebd')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-blue-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-xs transform group-hover:-translate-y-0.5"><BookOpenText size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Estudo EBD</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Lições</span>
                     </button>
                 )}
-                <button onClick={() => setView('portal_meet')} className="bg-gradient-to-br from-white to-emerald-50/60 p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-emerald-200/80 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col items-start group cursor-pointer relative overflow-hidden">
-                    <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[8px] sm:text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
-                        Google Meet
-                    </div>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><Video size={20} className="sm:w-6 sm:h-6"/></div>
-                    <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Google Meet</span>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Videoconferências</span>
+                <button onClick={() => setView('portal_meet')} className="bg-gradient-to-br from-white to-emerald-50/60 p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-emerald-200/80 shadow-xs hover:shadow-md hover:border-emerald-400 transition-all flex flex-col items-center text-center group cursor-pointer relative overflow-hidden">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><Video size={16} className="sm:w-5 sm:h-5"/></div>
+                    <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Meet</span>
+                    <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Vídeo</span>
                 </button>
-                <button onClick={() => setView('portal_loja')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all flex flex-col items-start group cursor-pointer">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><ShoppingBag size={20} className="sm:w-6 sm:h-6"/></div>
-                    <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Loja da Igreja</span>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Produtos & Livros</span>
+                <button onClick={() => setView('portal_loja')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-amber-50 text-amber-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><ShoppingBag size={16} className="sm:w-5 sm:h-5"/></div>
+                    <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Loja</span>
+                    <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Produtos</span>
                 </button>
                 {isProfessor && (
-                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-violet-300 transition-all flex flex-col items-start group col-span-2 md:col-span-1 cursor-pointer">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-50 text-violet-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-sm transform group-hover:scale-110"><GraduationCap size={20} className="sm:w-6 sm:h-6"/></div>
-                        <span className="font-black text-slate-800 text-sm sm:text-base mb-0.5 sm:mb-1">Sala do Professor</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">EBD Painel</span>
+                    <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-violet-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-violet-50 text-violet-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><GraduationCap size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Professor</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">EBD</span>
                     </button>
                 )}
             </div>
@@ -13129,27 +13124,27 @@ const PortalHome = ({ user, db, setView }) => {
 
             {/* PAINEL RÁPIDO: WIDGETS COMPACTOS DE ALTA FLUIDEZ (ZERO SCROLL) */}
             {homeViewTab === 'cockpit' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-5 animate-entrance">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 animate-entrance">
                     {/* WIDGET 1: RESUMO DE CONQUISTAS */}
-                    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                    <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 p-3 sm:p-3.5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
-                                        <Award size={18} />
+                                    <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+                                        <Award size={16} />
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-slate-800 text-sm">Conquistas & Distintivos</h4>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Engajamento Mensal</p>
+                                        <h4 className="font-black text-slate-800 text-xs sm:text-sm leading-tight">Conquistas & Distintivos</h4>
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Engajamento Mensal</p>
                                     </div>
                                 </div>
-                                <span className="text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
-                                    {unlockedCount + unlockedCursosCount} conquistadas
+                                <span className="text-[10px] sm:text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                                    {unlockedCount + unlockedCursosCount} desbloqueadas
                                 </span>
                             </div>
 
                             {/* Mini visualizador de distintivos */}
-                            <div className="grid grid-cols-5 gap-1.5 sm:gap-2 py-3.5">
+                            <div className="grid grid-cols-5 gap-1 sm:gap-1.5 py-2">
                                 {BADGE_DEFS.map((b) => {
                                     const isUnlocked = badges.includes(b.id);
                                     const IconComp = b.icon;
@@ -13157,91 +13152,91 @@ const PortalHome = ({ user, db, setView }) => {
                                         <div 
                                             key={b.id} 
                                             title={`${b.title}: ${isUnlocked ? 'Desbloqueado!' : 'Pendente'}`}
-                                            className={`flex flex-col items-center justify-center p-2 rounded-xl text-center border transition-all ${
+                                            className={`flex flex-col items-center justify-center p-1.5 rounded-lg text-center border transition-all ${
                                                 isUnlocked 
                                                     ? 'bg-gradient-to-b from-amber-50 to-orange-50 border-amber-200 text-amber-700 shadow-xs' 
                                                     : 'bg-slate-50/70 border-slate-200/60 text-slate-300 opacity-60'
                                             }`}
                                         >
-                                            <IconComp size={16} className={isUnlocked ? 'text-amber-600' : 'text-slate-400'} />
-                                            <span className="text-[9px] font-bold mt-1 truncate max-w-full leading-tight">{b.title}</span>
+                                            <IconComp size={14} className={isUnlocked ? 'text-amber-600' : 'text-slate-400'} />
+                                            <span className="text-[8px] sm:text-[9px] font-bold mt-0.5 truncate max-w-full leading-tight">{b.title}</span>
                                         </div>
                                     );
                                 })}
                             </div>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-bold text-slate-400">Nível: {nivelRotulo}</span>
+                        <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400">Nível: {nivelRotulo}</span>
                             <button
                                 onClick={() => { setHomeViewTab('conquistas'); playMenuSound(); }}
-                                className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                                className="text-[11px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
                             >
-                                <span>Ver Galeria Completa</span>
-                                <ArrowRight size={13} />
+                                <span>Ver Galeria</span>
+                                <ArrowRight size={12} />
                             </button>
                         </div>
                     </div>
 
                     {/* WIDGET 2: AVISOS & DEVOCIONAL RÁPIDO */}
-                    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                    <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 p-3 sm:p-3.5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
-                                        <Sparkles size={18} />
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                                        <Sparkles size={16} />
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-slate-800 text-sm">Palavra & Avisos</h4>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Comunicação Pastoral</p>
+                                        <h4 className="font-black text-slate-800 text-xs sm:text-sm leading-tight">Palavra & Avisos</h4>
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Comunicação Pastoral</p>
                                     </div>
                                 </div>
                                 {notifications && notifications.length > 0 ? (
-                                    <span className="text-xs font-black text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-full animate-pulse">
+                                    <span className="text-[10px] sm:text-xs font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full animate-pulse">
                                         {notifications.length} avisos
                                     </span>
                                 ) : (
-                                    <span className="text-xs font-black text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">
+                                    <span className="text-[10px] sm:text-xs font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
                                         Em dia
                                     </span>
                                 )}
                             </div>
 
                             {/* Conteúdo rápido */}
-                            <div className="py-3">
+                            <div className="py-2">
                                 {inboxItems.length > 0 ? (
                                     <div 
                                         onClick={inboxItems[0].action}
-                                        className="p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-100 hover:border-indigo-200 transition-all cursor-pointer flex items-center justify-between gap-2"
+                                        className="p-2 sm:p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-100 hover:border-indigo-200 transition-all cursor-pointer flex items-center justify-between gap-2"
                                     >
                                         <div className="min-w-0">
-                                            <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider block">{inboxItems[0].sender}</span>
+                                            <span className="text-[8px] sm:text-[9px] font-black uppercase text-indigo-600 tracking-wider block leading-none mb-0.5">{inboxItems[0].sender}</span>
                                             <p className="font-bold text-slate-800 text-xs truncate">{inboxItems[0].subject}</p>
                                         </div>
-                                        <span className="text-[10px] text-slate-400 shrink-0">{inboxItems[0].date === hoje ? 'Hoje' : formatDateLocal(inboxItems[0].date)}</span>
+                                        <span className="text-[9px] sm:text-[10px] text-slate-400 shrink-0">{inboxItems[0].date === hoje ? 'Hoje' : formatDateLocal(inboxItems[0].date)}</span>
                                     </div>
                                 ) : (
-                                    <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                                        <CheckCircle2 size={16} className="text-emerald-500 shrink-0"/>
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                                        <CheckCircle2 size={15} className="text-emerald-500 shrink-0"/>
                                         <span>Sem pendências ou escalas conflitantes no momento!</span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2">
                             <button
                                 onClick={() => { setHomeViewTab('linha_tempo'); playMenuSound(); }}
-                                className="text-xs font-black text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+                                className="text-[11px] font-black text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
                             >
-                                <Activity size={13} className="text-indigo-500" />
-                                <span>Ver Linha do Tempo</span>
+                                <Activity size={12} className="text-indigo-500" />
+                                <span>Linha do Tempo</span>
                             </button>
                             <button
                                 onClick={() => { setHomeViewTab('devocional'); playMenuSound(); }}
-                                className="text-xs font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                                className="text-[11px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                             >
-                                <Sparkles size={13} />
+                                <Sparkles size={12} />
                                 <span>Devocional IA</span>
                             </button>
                         </div>
@@ -17547,10 +17542,10 @@ const MemberPortalLayout = () => {
                          <h2 className="font-black text-lg text-slate-800 tracking-tight leading-tight">{db.igreja.nome}</h2>
                          <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1 bg-emerald-50 py-1 px-3 rounded-full inline-block">Portal do Membro</p>
                     </div>
-                    <nav className="flex-1 p-5 space-y-2 overflow-y-auto custom-scrollbar">
+                    <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto no-scrollbar">
                         {navItems.map(item => (
-                            <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all group ${view === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transform scale-[1.02]' : 'text-slate-500 hover:bg-emerald-50 hover:text-slate-800'}`}>
-                                <item.icon size={20} className={`transition-transform duration-300 ${view === item.id ? 'text-white' : `${item.hoverColor || ''} group-hover:scale-110`}`}/> {item.label}
+                            <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-3.5 p-3 rounded-xl font-bold transition-all group ${view === item.id ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30 transform scale-[1.01]' : 'text-slate-500 hover:bg-emerald-50 hover:text-slate-800'}`}>
+                                <item.icon size={18} className={`transition-transform duration-300 ${view === item.id ? 'text-white' : `${item.hoverColor || ''} group-hover:scale-110`}`}/> <span className="text-xs">{item.label}</span>
                             </button>
                         ))}
 
@@ -17625,12 +17620,14 @@ const MemberPortalLayout = () => {
             <main 
                 className={isInterativoMode 
                     ? "flex-1 min-h-0 min-w-0 p-0 m-0 w-full h-full overflow-y-auto relative z-10" 
-                    : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-3 sm:p-5 md:p-8 pb-20 md:pb-8"} 
+                    : view === 'portal_home'
+                        ? "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto no-scrollbar relative z-10 p-2.5 sm:p-3 md:p-4 lg:p-5 pb-16 md:pb-3"
+                        : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-3 sm:p-5 md:p-8 pb-20 md:pb-8"} 
             >
                 <div className={isInterativoMode ? "w-full h-full" : "max-w-[1800px] mx-auto"}>
                     {/* Desktop Header Panel */}
                     {!isInterativoMode && (
-                        <header className="hidden md:flex justify-between items-center pb-3 border-b border-slate-200/40 mb-4 shrink-0 relative z-20">
+                        <header className={`hidden md:flex justify-between items-center ${view === 'portal_home' ? 'pb-1.5 mb-2.5' : 'pb-3 mb-4'} border-b border-slate-200/40 shrink-0 relative z-20`}>
                             {view === 'portal_home' ? (
                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
                                     <span className="text-slate-500 font-black tracking-wider uppercase text-[11px]">Portal do Membro</span>
@@ -21629,59 +21626,13 @@ export default function App() {
       }
       appleIcon.href = logoUrl;
 
-      // 2. Criar e injetar um manifesto PWA dinâmico (Blob) para forçar a adoção do logotipo na instalação
-      const manifestObj = {
-          "name": "GIPP",
-          "short_name": "GIPP",
-          "start_url": window.location.origin + "/",
-          "display": "standalone",
-          "orientation": "any",
-          "background_color": theme === 'dark' ? '#0f172a' : '#ffffff',
-          "theme_color": theme === 'dark' ? '#0f172a' : '#1e293b',
-          "description": "Sistema de Gestão Integrado para Igrejas e Pastores Digitais",
-          "icons": [
-              {
-                  "src": logoUrl,
-                  "sizes": "192x192",
-                  "type": "image/png",
-                  "purpose": "any maskable"
-              },
-              {
-                  "src": logoUrl,
-                  "sizes": "256x256",
-                  "type": "image/png",
-                  "purpose": "any maskable"
-              },
-              {
-                  "src": logoUrl,
-                  "sizes": "384x384",
-                  "type": "image/png",
-                  "purpose": "any"
-              },
-              {
-                  "src": logoUrl,
-                  "sizes": "512x512",
-                  "type": "image/png",
-                  "purpose": "any"
-              }
-          ]
-      };
-
-      const stringManifest = JSON.stringify(manifestObj);
-      const blob = new Blob([stringManifest], { type: 'application/json' });
-      const manifestUrl = URL.createObjectURL(blob);
-
       let manifestLink = document.querySelector("link[rel='manifest']") as HTMLLinkElement | null;
       if (!manifestLink) {
           manifestLink = document.createElement('link');
           manifestLink.rel = 'manifest';
           document.head.appendChild(manifestLink);
       }
-      manifestLink.href = manifestUrl;
-
-      return () => {
-          URL.revokeObjectURL(manifestUrl);
-      };
+      manifestLink.href = '/manifest.json';
   }, [db.igreja?.logo, db.igreja?.nome, theme]);
 
   useEffect(() => {
@@ -23445,7 +23396,14 @@ export default function App() {
     }
   };
 
-  const ctxValues = useMemo(() => ({ db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission, globalOpenFile, setGlobalOpenFile, isScreenLocked, setIsScreenLocked, lockScreen: () => setIsScreenLocked(true) }), [db, user, view, showHelpHub, sidebarOpen, dismissedAnnouncement, modalOpen, modalType, formData, printMode, printData, toasts, editingItem, authUser, theme, isOnline, osTheme, animBgEnabled, printPalette, printMarginType, printOrientation, printContentScale, notifications, clearedNotifications, fcmToken, fcmStatus, fcmPermission, globalOpenFile, isScreenLocked]);
+  const ctxValues = useMemo(() => ({ 
+    db, user, setUser, view, setView, showHelpHub, setShowHelpHub, sidebarOpen, setSidebarOpen, dismissedAnnouncement, setDismissedAnnouncement, modalOpen, setModalOpen, modalType, formData, setFormData, printMode, setPrintMode, printData, setPrintData, toasts, addToast, removeToast, deleteItem, openModal, editingItem, dbFirestore, appId, authUser, setConfirmDialog, updateDoc, doc, addDoc, collection, hasPermission, setDbState, setDoc, logout: handleLogout, startExport: handleExportRequest, handleImportRequest, handleLogoutRequest, setPreviewOpen, deleteDoc, logAction, theme, setTheme, toggleTheme, isOnline, osTheme, setOsTheme, animBgEnabled, setAnimBgEnabled, callGeminiAI, printPalette, setPrintPalette, printMarginType, setPrintMarginType, printOrientation, setPrintOrientation, printContentScale, setPrintContentScale, notifications, clearedNotifications, setClearedNotifications, clearAllNotifications, fcmToken, fcmStatus, fcmPermission, requestFcmPermission, globalOpenFile, setGlobalOpenFile, isScreenLocked, setIsScreenLocked, lockScreen: () => setIsScreenLocked(true),
+    showInstallGuide, setShowInstallGuide, installDeviceType, setInstallDeviceType, installPrompt, setInstallPrompt,
+    openInstallGuide: (deviceType?: 'smartphone' | 'desktop') => {
+      if (deviceType) setInstallDeviceType(deviceType);
+      setShowInstallGuide(true);
+    }
+  }), [db, user, view, showHelpHub, sidebarOpen, dismissedAnnouncement, modalOpen, modalType, formData, printMode, printData, toasts, editingItem, authUser, theme, isOnline, osTheme, animBgEnabled, printPalette, printMarginType, printOrientation, printContentScale, notifications, clearedNotifications, fcmToken, fcmStatus, fcmPermission, globalOpenFile, isScreenLocked, showInstallGuide, installDeviceType, installPrompt]);
 
   if (isHalted) {
     return (
@@ -23741,513 +23699,16 @@ export default function App() {
           </div>
 
         {/* MODAL DE GUIA DE INSTALAÇÃO DA APP */}
-        {showInstallGuide && (
-            <div className="fixed inset-0 bg-slate-900/85 z-[11000] flex items-center justify-center p-4 backdrop-blur-md animate-entrance overflow-y-auto">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative border border-white/20 flex flex-col my-8"
-                >
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white p-8 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-10 -mb-10 blur-xl"></div>
-                        
-                        <button 
-                            type="button" 
-                            onClick={() => setShowInstallGuide(false)} 
-                            className="absolute top-6 right-6 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all cursor-pointer z-10"
-                        >
-                            <X size={18} />
-                        </button>
-
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="p-2 bg-white/10 rounded-xl">
-                                <DownloadCloud size={24} className="text-white animate-bounce" />
-                            </span>
-                            <span className="text-xs font-bold tracking-widest uppercase bg-indigo-500/55 px-2.5 py-1 rounded-full text-indigo-100">Portal SaaS Certificado</span>
-                        </div>
-                        <h3 className="text-2xl font-black tracking-tight mt-1">Assistente de Instalação GIPP</h3>
-                        <p className="text-indigo-100/90 text-xs font-medium mt-1 leading-relaxed">
-                            Configure seu aplicativo dedicado ao seu domínio SaaS e ative notificações em tempo real.
-                        </p>
-
-                        {/* Step indicators */}
-                        <div className="flex items-center justify-between mt-8 relative">
-                            {/* Line connector */}
-                            <div className="absolute top-4 left-[10%] right-[10%] h-[2px] bg-indigo-400/30 z-0"></div>
-                            {/* Line connector progress */}
-                            <div 
-                                className="absolute top-4 left-[10%] h-[2px] bg-indigo-200 transition-all duration-350 z-0"
-                                style={{ width: installStep === 1 ? '0%' : installStep === 2 ? '40%' : '85%' }}
-                            ></div>
-
-                            <div className="flex flex-col items-center z-10 relative cursor-pointer" onClick={() => setInstallStep(1)}>
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${installStep >= 1 ? 'bg-white text-indigo-700 font-extrabold ring-4 ring-indigo-500/30' : 'bg-indigo-500/50 text-indigo-200'}`}>
-                                    1
-                                </div>
-                                <span className="text-[10px] font-bold mt-1 tracking-wider uppercase text-indigo-100">Dispositivo</span>
-                            </div>
-
-                            <div className="flex flex-col items-center z-10 relative cursor-pointer" onClick={() => installDeviceType ? setInstallStep(2) : null}>
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${installStep >= 2 ? 'bg-white text-indigo-700 font-extrabold ring-4 ring-indigo-500/30' : 'bg-indigo-500/50 text-indigo-200'}`}>
-                                    2
-                                </div>
-                                <span className="text-[10px] font-bold mt-1 tracking-wider uppercase text-indigo-100">Notificações</span>
-                            </div>
-
-                            <div className="flex flex-col items-center z-10 relative cursor-pointer" onClick={() => (installDeviceType && isNotificationConfirmed) ? setInstallStep(3) : null}>
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${installStep >= 3 ? 'bg-white text-indigo-700 font-extrabold ring-4 ring-indigo-500/30' : 'bg-indigo-500/50 text-indigo-200'}`}>
-                                    3
-                                </div>
-                                <span className="text-[10px] font-bold mt-1 tracking-wider uppercase text-indigo-100">Instalação</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Body contents */}
-                    <div className="p-8 flex-1 bg-slate-50/50">
-                        <AnimatePresence mode="wait">
-                            {installStep === 1 && (
-                                <motion.div 
-                                    key="step1" 
-                                    initial={{ opacity: 0, x: 20 }} 
-                                    animate={{ opacity: 1, x: 0 }} 
-                                    exit={{ opacity: 0, x: -20 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="space-y-6"
-                                >
-                                    <div>
-                                        <h4 className="text-slate-800 font-black text-lg">Qual o seu dispositivo de acesso?</h4>
-                                        <p className="text-slate-500 text-xs font-medium mt-1">Escolha a plataforma abaixo para que o assistente possa gerar as instruções exatas e o instalador específico.</p>
-                                    </div>
-
-                                    {/* Main Selection Options */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* Smartphone/Tablet Card */}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setInstallDeviceType('smartphone');
-                                            }}
-                                            className={`p-6 rounded-[2rem] text-left border-2 transition-all cursor-pointer flex flex-col gap-4 relative group hover:shadow-lg ${installDeviceType === 'smartphone' ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                                        >
-                                            <div className={`p-4 rounded-xl w-fit ${installDeviceType === 'smartphone' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'} transition-all`}>
-                                                <Smartphone size={24} />
-                                            </div>
-                                            <div>
-                                                <h5 className="font-extrabold text-slate-800 text-base">Smartphone / Tablet</h5>
-                                                <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">Dispositivos móveis, telefones celulares e tablets Android ou Apple iOS.</p>
-                                            </div>
-                                            {installDeviceType === 'smartphone' && (
-                                                <div className="absolute top-6 right-6 bg-emerald-500 text-white rounded-full p-1 shadow-sm">
-                                                    <Check size={14} className="stroke-[3]" />
-                                                </div>
-                                            )}
-                                        </button>
-
-                                        {/* Desktop Card */}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setInstallDeviceType('desktop');
-                                                setInstallMobileOS(null);
-                                                setInstallStep(2); // Automatically forward to stage 2 since desktop needs no OS splits
-                                            }}
-                                            className={`p-6 rounded-[2rem] text-left border-2 transition-all cursor-pointer flex flex-col gap-4 relative group hover:shadow-lg ${installDeviceType === 'desktop' ? 'border-indigo-500 bg-indigo-50/40 shadow-sm ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                                        >
-                                            <div className={`p-4 rounded-xl w-fit ${installDeviceType === 'desktop' ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'} transition-all`}>
-                                                <Cpu size={24} />
-                                            </div>
-                                            <div>
-                                                <h5 className="font-extrabold text-slate-800 text-base">Computador / Portátil</h5>
-                                                <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">Computadores de secretária ou laptops rodando Windows, macOS ou Linux.</p>
-                                            </div>
-                                            {installDeviceType === 'desktop' && (
-                                                <div className="absolute top-6 right-6 bg-indigo-500 text-white rounded-full p-1 shadow-sm">
-                                                    <Check size={14} className="stroke-[3]" />
-                                                </div>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    {/* Sub options if Smartphone is selected */}
-                                    {installDeviceType === 'smartphone' && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="space-y-3 p-5 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/70"
-                                        >
-                                            <label className="block text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Especifique o Sistema Operacional:</label>
-                                            <div className="flex flex-col sm:flex-row gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setInstallMobileOS('android');
-                                                        setInstallStep(2);
-                                                    }}
-                                                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border-2 transition-all cursor-pointer ${installMobileOS === 'android' ? 'bg-emerald-500 border-emerald-500 text-white shadow-emerald-500/20 shadow-md' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-                                                >
-                                                    <Smartphone size={16} /> Android (Samsung/Outros)
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setInstallMobileOS('ios');
-                                                        setInstallStep(2);
-                                                    }}
-                                                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border-2 transition-all cursor-pointer ${installMobileOS === 'ios' ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-600/20 shadow-md' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-                                                >
-                                                    <Apple size={16} /> Apple iOS (iPhone/iPad)
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    )}
-
-                                    {/* SaaS Context Alert */}
-                                    <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200/60 leading-relaxed text-left">
-                                        <strong className="text-slate-800 text-xs flex items-center gap-1.5 font-bold mb-1">
-                                            <Globe size={14} className="text-indigo-500" /> Domínio SaaS Identificado
-                                        </strong>
-                                        <p className="text-[11px] text-slate-500 font-medium">
-                                            Como o GIPP é uma solução SaaS, sua instalação está acoplada a este link exclusivo do sistema. Pode partilhar ou salvar o link abaixo:
-                                        </p>
-                                        <div className="mt-3 flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-200/80">
-                                            <code className="text-xs text-indigo-705 font-mono font-bold select-all truncate flex-1">{window.location.href}</code>
-                                            <button 
-                                                type="button"
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(window.location.href);
-                                                    addToast("Link SaaS copiado com sucesso!", "success");
-                                                }}
-                                                className="p-1 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 text-[10px] uppercase tracking-wider font-extrabold rounded-lg border border-indigo-150 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                                            >
-                                                <Copy size={12} /> Copiar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {installStep === 2 && (
-                                <motion.div 
-                                    key="step2" 
-                                    initial={{ opacity: 0, x: 20 }} 
-                                    animate={{ opacity: 1, x: 0 }} 
-                                    exit={{ opacity: 0, x: -20 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="space-y-6"
-                                >
-                                    <div>
-                                        <h4 className="text-slate-800 font-black text-lg">Habilitar Alertas e Notificações</h4>
-                                        <p className="text-slate-500 text-xs font-medium mt-1">Esteja sempre atualizado com eventos urgentes, tarefas, comunicados da igreja e relatórios emitidos diretamente no seu dispositivo.</p>
-                                    </div>
-
-                                    {/* Live notification mock layout */}
-                                    <div className="bg-slate-900 rounded-2xl p-4 shadow-xl border border-slate-800 relative overflow-hidden max-w-sm mx-auto">
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-9 h-9 bg-indigo-650 rounded-xl flex items-center justify-center border border-indigo-500/20 text-white text-xs shrink-0 font-black animate-pulse">
-                                                GIPP
-                                            </div>
-                                            <div className="flex-1 min-w-0 text-left">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-black text-slate-200">Avisos da Comunidade</span>
-                                                    <span className="text-[9px] font-medium text-slate-500 font-mono">Agora</span>
-                                                </div>
-                                                <p className="text-xs text-slate-200 font-bold mt-0.5 truncate">🔔 Alerta Importante!</p>
-                                                <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">Dispositivo configurado. O aplicativo está pronto para receber notificações de alta prioridade.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Prompter box */}
-                                    <div className="bg-indigo-50/50 p-5 rounded-[2rem] border border-indigo-100 flex flex-col items-center text-center gap-4">
-                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
-                                            <Bell size={24} className="animate-bounce" />
-                                        </div>
-                                        <div>
-                                            <h5 className="font-extrabold text-slate-800 text-sm">Passo Importante: Ativar Alertas do Navegador</h5>
-                                            <p className="text-xs text-slate-500 leading-relaxed mt-1">Clique no botão abaixo para autorizar o navegador a exibir alertas na sua tela de bloqueio e central de atividades.</p>
-                                        </div>
-                                        
-                                        <button 
-                                            type="button" 
-                                            onClick={async () => {
-                                                try {
-                                                    if ('Notification' in window) {
-                                                        const res = await Notification.requestPermission();
-                                                        if (res === 'granted') {
-                                                            setIsNotificationConfirmed(true);
-                                                            addToast("Notificações autorizadas com sucesso no dispositivo!", "success");
-                                                        } else {
-                                                            setIsNotificationConfirmed(true); // Força a confirmação visual de aceitação no fluxo
-                                                            addToast("Seu navegador requer desbloqueio manual de notificações.", "info");
-                                                        }
-                                                    } else {
-                                                        setIsNotificationConfirmed(true);
-                                                        addToast("Modo offline simulado de notificações ativado!", "success");
-                                                    }
-                                                } catch (err) {
-                                                    console.error(err);
-                                                    setIsNotificationConfirmed(true);
-                                                }
-                                            }}
-                                            className={`py-3 px-6 rounded-2xl font-extrabold text-xs flex items-center gap-2 cursor-pointer transition-all shadow-md active:scale-95 ${isNotificationConfirmed ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-750 text-white shadow-indigo-500/20'}`}
-                                        >
-                                            {isNotificationConfirmed ? <CheckCircle size={16} /> : <Bell size={16} />} 
-                                            {isNotificationConfirmed ? 'Notificações Autorizadas & Confirmadas' : 'Testar & Ativar Notificações no Dispositivo'}
-                                        </button>
-                                    </div>
-
-                                    {/* Obligatory confirmation checklist for forcing the confirmation */}
-                                    <div className={`p-4 rounded-2xl border transition-all text-left ${isNotificationConfirmed ? 'bg-emerald-50/40 border-emerald-250 text-emerald-800' : 'bg-amber-50/40 border-amber-250 text-amber-800'}`}>
-                                        <label className="flex items-start gap-3 cursor-pointer select-none">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={isNotificationConfirmed} 
-                                                onChange={(e) => setIsNotificationConfirmed(e.target.checked)} 
-                                                className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mt-0.5 cursor-pointer"
-                                            />
-                                            <div className="text-left">
-                                                <strong className="text-xs font-black block">Declaro que desejo receber alertas</strong>
-                                                <span className="text-[11px] font-medium leading-relaxed block text-slate-500 mt-0.5">
-                                                    Ao marcar, declaro consentimento para o recebimento de avisos de reuniões, escala e comunicados oficiais no Smartphone / Tablet. (Dispositivo atual: <b className="text-slate-700 capitalize">{installDeviceType || 'Computador'}</b>)
-                                                </span>
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    {/* Action row with back and continue buttons */}
-                                    <div className="flex gap-3 pt-2">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setInstallStep(1)} 
-                                            className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
-                                        >
-                                            Voltar
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setInstallStep(3)} 
-                                            className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5 ${isNotificationConfirmed ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-indigo-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-250'}`}
-                                        >
-                                            Seguinte <ChevronRight size={14} />
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {installStep === 3 && (
-                                <motion.div 
-                                    key="step3" 
-                                    initial={{ opacity: 0, x: 20 }} 
-                                    animate={{ opacity: 1, x: 0 }} 
-                                    exit={{ opacity: 0, x: -20 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="space-y-6"
-                                >
-                                    <div className="text-left">
-                                        <span className="text-[9px] font-extrabold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full tracking-wider uppercase">Fase Final</span>
-                                        <h4 className="text-slate-800 font-black text-lg mt-1">Siga o Guia do Dispositivo</h4>
-                                        <p className="text-slate-500 text-xs font-medium mt-0.5">O seu acesso exclusivo já foi otimizado para o seu domínio SaaS específico.</p>
-                                    </div>
-
-                                    {/* COMPLEMENTARY LINK AND QR CONTAINER */}
-                                    <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 leading-relaxed text-left space-y-2">
-                                        <strong className="text-slate-800 text-xs flex items-center gap-1.5 font-bold">
-                                            <ShieldCheck size={14} className="text-indigo-600" /> Confirmação de Link de Segurança SaaS
-                                        </strong>
-                                        <code className="text-xs text-indigo-800 font-mono font-bold block select-all bg-white p-2 rounded-xl text-center border border-slate-200/50 truncate">
-                                            {window.location.href}
-                                        </code>
-                                        <button 
-                                            type="button"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(window.location.href);
-                                                addToast("Link do sistema copiado!", "success");
-                                            }}
-                                            className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold rounded-lg border border-indigo-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                                        >
-                                            <Copy size={12} /> Copiar Link Ativo para Colar no Smartphone
-                                        </button>
-                                    </div>
-
-                                    {/* CONDITIONAL INSTALL GUIDES */}
-                                    {installDeviceType === 'desktop' ? (
-                                        <div className="space-y-4">
-                                            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 p-5 rounded-2xl border border-slate-200 text-left space-y-4">
-                                                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                                                    <span className="p-1 px-2.5 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-lg">Computador (PC/Mac)</span>
-                                                    <span className="text-xs font-semibold text-slate-500">Chrome / Edge / Safari</span>
-                                                </div>
-                                                
-                                                {/* PWA Direct install button trigger if available */}
-                                                {installPrompt && (
-                                                    <div className="bg-white p-4 rounded-xl border border-indigo-200 flex items-center justify-between gap-3 shadow-inner">
-                                                        <div className="min-w-0">
-                                                            <strong className="text-xs font-black text-slate-800 block">Atalho de um Clique Ativo</strong>
-                                                            <span className="text-[10px] text-slate-500 leading-normal block mt-0.5">O navegador suporta e ativou a instalação automática nesta sessão.</span>
-                                                        </div>
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={async () => {
-                                                                if (installPrompt) {
-                                                                    try {
-                                                                        installPrompt.prompt();
-                                                                        const { outcome } = await installPrompt.userChoice;
-                                                                        if (outcome === 'accepted') setInstallPrompt(null);
-                                                                    } catch (e) {
-                                                                        console.error(e);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-755 text-white font-extrabold text-[11px] uppercase tracking-wide rounded-lg flex items-center gap-1 shadow-md cursor-pointer transition-colors shrink-0"
-                                                        >
-                                                            <DownloadCloud size={14} /> Instalar Agora
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                <ul className="space-y-3.5 text-xs text-slate-600 font-medium">
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
-                                                        <p>Verifique a barra de endereços do navegador no topo, ao lado direito do link.</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
-                                                        <p>Clique no ícone de <b>Instalação</b> de aplicativo (geralmente uma caixa com uma seta para baixo ou sinal de mais <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-[9px] text-slate-600 inline-block align-middle font-mono font-bold shadow-sm">[+]</kbd>).</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
-                                                        <p>Alternativamente, toque nos <b>Três Pontos</b> de ferramentas adicionais de configuração e clique em <b>"Instalar Aplicação..."</b>.</p>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    ) : installMobileOS === 'android' ? (
-                                        <div className="space-y-4">
-                                            <div className="bg-gradient-to-r from-slate-50 to-emerald-50/30 p-5 rounded-2xl border border-slate-200 text-left space-y-4">
-                                                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                                                    <span className="p-1 px-2.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-lg">Android Smartphone / Tablet</span>
-                                                    <span className="text-xs font-semibold text-slate-500">Navegador Chrome</span>
-                                                </div>
-
-                                                {installPrompt && (
-                                                    <div className="bg-white p-4 rounded-xl border border-emerald-250 flex items-center justify-between gap-3 shadow-inner">
-                                                        <div className="min-w-0">
-                                                            <strong className="text-xs font-black text-slate-800 block">Autodetecção Android Ativa</strong>
-                                                            <span className="text-[10px] text-slate-500 leading-normal block mt-0.5">Toque no atalho certificado para efetuar a instalação instantânea.</span>
-                                                        </div>
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={async () => {
-                                                                if (installPrompt) {
-                                                                    try {
-                                                                        installPrompt.prompt();
-                                                                        const { outcome } = await installPrompt.userChoice;
-                                                                        if (outcome === 'accepted') setInstallPrompt(null);
-                                                                    } catch (e) {
-                                                                        console.error(e);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] uppercase tracking-wide rounded-lg flex items-center gap-1 shadow-md cursor-pointer transition-colors shrink-0"
-                                                        >
-                                                            <DownloadCloud size={14} /> Instalar Agora
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                <ul className="space-y-3.5 text-xs text-slate-600 font-medium">
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
-                                                        <p>Abra o <b>Google Chrome</b> do aparelho e use exatamente o link do seu SaaS corporativo.</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
-                                                        <p>Toque no ícone de <b>Menu (Três Pontos)</b> no canto superior direito do navegador Chrome.</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
-                                                        <p>Selecione a opção <b>"Instalar Aplicativo"</b> ou <b>"Adicionar ao Ecrã Inicial"</b>.</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
-                                                        <p>Confirme a operação de atalho seguro e o aplicativo funcionará isolado das abas normais!</p>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <div className="bg-gradient-to-r from-slate-50 to-indigo-50/20 p-5 rounded-2xl border border-slate-200 text-left space-y-4">
-                                                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                                                    <span className="p-1 px-2.5 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-lg">Apple iOS (iPhone / iPad)</span>
-                                                    <span className="text-xs font-semibold text-slate-500">Navegador Safari Estrito</span>
-                                                </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-indigo-150 leading-relaxed">
-                                                    <p className="text-[10px] text-amber-700 flex items-start gap-1 font-extrabold leading-normal">
-                                                        <AlertTriangle size={14} className="shrink-0 mt-0.5" /> Atenção: No iPhone/iPad, a Apple restringe a instalação PWA automática. Obrigatoriamente, utilize o navegador Safari nativo para habilitar.
-                                                    </p>
-                                                </div>
-
-                                                <ul className="space-y-3.5 text-xs text-slate-600 font-medium">
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
-                                                        <p>Abra o navegador oficial de sistema <b>Safari</b> no seu iPhone/iPad.</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
-                                                        <p>Aceda ao link da igreja (exibido e copiado acima no assistente).</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
-                                                        <p>Clique no botão central de <b>Partilha / Compartilhamento <Share2 size={12} className="inline inline-block text-indigo-600 ml-1" /></b> (ícone de um quadrado com uma seta vertical para cima).</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
-                                                        <p>Role o menu inferior para baixo e toque em <b>"Adicionar ao Ecrã Principal"</b> (Add to Home Screen).</p>
-                                                    </li>
-                                                    <li className="flex gap-2 items-start">
-                                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 mt-0.5">5</span>
-                                                        <p>Escolha o nome desejado e clique em <b>"Adicionar"</b> no canto superior direito para fixar.</p>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Action row with back and close buttons */}
-                                    <div className="flex gap-3 pt-2">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setInstallStep(2)} 
-                                            className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
-                                        >
-                                            Voltar ao Alerta
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => {
-                                                setShowInstallGuide(false);
-                                                addToast("Assistente concluído! Siga os passos acima no seu dispositivo para concluir o acesso completo.", "success");
-                                            }} 
-                                            className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20 text-center flex items-center justify-center gap-1.5"
-                                        >
-                                            <CheckCheck size={16} /> Entendi e Concluí
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </motion.div>
-            </div>
-        )}
+        <ModalInstalacaoApp
+          isOpen={showInstallGuide}
+          onClose={() => setShowInstallGuide(false)}
+          installPrompt={installPrompt}
+          setInstallPrompt={setInstallPrompt}
+          addToast={addToast}
+          churchName={db.igreja?.nome || 'GIPP'}
+          logoUrl={db.igreja?.logo || 'https://cdn-icons-png.flaticon.com/512/3004/3004613.png'}
+          initialDeviceType={installDeviceType}
+        />
 
         </div> 
       </ChurchContext.Provider>
@@ -24409,6 +23870,18 @@ export default function App() {
                 </div>
             </div>
         )}
+
+        {/* Modal de Instalação Global (Acessível também com usuário autenticado) */}
+        <ModalInstalacaoApp
+          isOpen={showInstallGuide}
+          onClose={() => setShowInstallGuide(false)}
+          installPrompt={installPrompt}
+          setInstallPrompt={setInstallPrompt}
+          addToast={addToast}
+          churchName={db.igreja?.nome || 'GIPP'}
+          logoUrl={db.igreja?.logo || 'https://cdn-icons-png.flaticon.com/512/3004/3004613.png'}
+          initialDeviceType={installDeviceType}
+        />
     </ChurchContext.Provider>
   );
 }

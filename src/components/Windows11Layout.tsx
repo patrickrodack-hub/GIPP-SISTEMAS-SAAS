@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useContext } from 'react';
 import { 
   LayoutDashboard, Users, Building2, CreditCard, FileText, Settings, 
   LogOut, Plus, Search, X, BookOpen, GraduationCap, Shield, Database, 
@@ -11,12 +11,13 @@ import {
   HelpCircle, Eye, EyeOff, Folder, Terminal, Battery, CloudSun, CloudRain,
   CloudLightning, Cloud, MapPin, Maximize2, Minimize2, SlidersHorizontal,
   Airplay, Bluetooth, Radio, Coffee, Laptop, HardDrive, Smartphone, Layers,
-  Pin, PinOff, Move, ChevronLeft
+  Pin, PinOff, Move, ChevronLeft, DownloadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
 import { Win11PropertiesModal } from './Win11PropertiesModal';
 import { SYSTEM_DIVISIONS, groupModulesByDivision, getDivisionForModule } from '../constants/systemDivisions';
+import { ChurchContext } from '../context/ChurchContext';
 
 export const Win11Logo = ({ size = 18, className = "", isCristal = false }: { size?: number; className?: string; isCristal?: boolean }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`shrink-0 ${className}`}>
@@ -203,6 +204,7 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
   setMinimizedModules,
   addToast = (_msg?: string, _type?: any) => {}
 }) => {
+  const churchCtx = useContext(ChurchContext);
   // Local fallbacks if parent states are not provided
   const [localMinimized, setLocalMinimized] = useState<string[]>([]);
   const [localOpened, setLocalOpened] = useState<string[]>([]);
@@ -1813,19 +1815,43 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                   )}
                 </div>
 
-                {/* Power Menu Button */}
-                <div className="relative">
+                {/* Quick Actions & Power Menu */}
+                <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => setPowerMenuOpen(!powerMenuOpen)}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                    onClick={() => {
+                      setStartMenuOpen(false);
+                      if (churchCtx?.openInstallGuide) {
+                        churchCtx.openInstallGuide('desktop');
+                      } else if (churchCtx?.setShowInstallGuide) {
+                        churchCtx.setShowInstallGuide(true);
+                      }
+                    }}
+                    className={`h-9 px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
                       isCristal 
-                        ? 'hover:bg-white/20 text-white shadow-[0_0_12px_rgba(56,189,248,0.3)] bg-white/5 border border-white/10'
-                        : 'hover:bg-white/10 text-white/80 hover:text-white'
+                        ? 'hover:bg-cyan-500/25 text-cyan-200 shadow-[0_0_14px_rgba(56,189,248,0.3)] bg-cyan-500/15 border border-cyan-400/30'
+                        : isLight
+                          ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                          : 'bg-white/10 hover:bg-white/20 text-indigo-300'
                     }`}
-                    title="Ligar / Desligar"
+                    title="Instalar Sistema no Computador / Criar Atalho na Área de Trabalho (Desktop)"
                   >
-                    <Power size={17} className={isCristal ? 'text-cyan-300' : ''} />
+                    <DownloadCloud size={15} />
+                    <span className="hidden sm:inline">Instalar no Desktop</span>
                   </button>
+
+                  {/* Power Menu Button */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setPowerMenuOpen(!powerMenuOpen)}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                        isCristal 
+                          ? 'hover:bg-white/20 text-white shadow-[0_0_12px_rgba(56,189,248,0.3)] bg-white/5 border border-white/10'
+                          : 'hover:bg-white/10 text-white/80 hover:text-white'
+                      }`}
+                      title="Ligar / Desligar"
+                    >
+                      <Power size={17} className={isCristal ? 'text-cyan-300' : ''} />
+                    </button>
 
                   {/* Power Popup */}
                   {powerMenuOpen && (
@@ -1863,7 +1889,8 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
           </div>
         )}
       </AnimatePresence>

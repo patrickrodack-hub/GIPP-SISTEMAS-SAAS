@@ -66,6 +66,7 @@ export default function LojaFinanceiroCaixa({
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
   const [selectedComprovante, setSelectedComprovante] = useState<TransferenciaCaixaLoja | null>(null);
   const [fiscalDocModal, setFiscalDocModal] = useState<{ order: PedidoLoja; tipo: 'nota_fiscal' | 'pedido_compra' } | null>(null);
+  const [showMonthlyBreakdown, setShowMonthlyBreakdown] = useState(true);
 
   // Form State para Transferência
   const [transferValor, setTransferValor] = useState<string>('');
@@ -244,6 +245,77 @@ export default function LojaFinanceiroCaixa({
       topProdutos
     };
   }, [pedidosFiltrados]);
+
+  // 3.1 ANÁLISE TEMPORAL (HOJE / MÊS ATUAL / CONSOLIDADO MÊS A MÊS)
+  const analiseTemporal = useMemo(() => {
+    const hojeStr = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const anoAtual = d.getFullYear();
+    const mesAtualPrefix = `${anoAtual}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+    let qtdHoje = 0;
+    let valorHoje = 0;
+    let qtdMesAtual = 0;
+    let valorMesAtual = 0;
+
+    const mapaMeses: { [mesAno: string]: { mesAno: string; rotulo: string; qtd: number; total: number; itens: number } } = {};
+    const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+    pedidos.forEach(p => {
+      const dataStr = (p.data_pedido || '').split('T')[0];
+      const isPago = p.status_pagamento === 'pago';
+      const valor = p.valor_total || 0;
+      const numItens = (p.itens || []).reduce((acc, it) => acc + (it.quantidade || 0), 0);
+
+      if (dataStr === hojeStr) {
+        qtdHoje++;
+        if (isPago) valorHoje += valor;
+      }
+
+      if (dataStr.startsWith(mesAtualPrefix)) {
+        qtdMesAtual++;
+        if (isPago) valorMesAtual += valor;
+      }
+
+      if (dataStr.length >= 7) {
+        const chaveMes = dataStr.substring(0, 7);
+        const [ano, mes] = chaveMes.split('-');
+        const mesIdx = parseInt(mes, 10) - 1;
+        const rotulo = `${mesesNomes[mesIdx] || mes}/${ano}`;
+
+        if (!mapaMeses[chaveMes]) {
+          mapaMeses[chaveMes] = { mesAno: chaveMes, rotulo, qtd: 0, total: 0, itens: 0 };
+        }
+        mapaMeses[chaveMes].qtd++;
+        if (isPago) {
+          mapaMeses[chaveMes].total += valor;
+        }
+        mapaMeses[chaveMes].itens += numItens;
+      }
+    });
+
+    const listaMeses = Object.values(mapaMeses).sort((a, b) => b.mesAno.localeCompare(a.mesAno));
+
+    return {
+      qtdHoje,
+      valorHoje,
+      qtdMesAtual,
+      valorMesAtual,
+      listaMeses
+    };
+  }, [pedidos]);
+
+  // Filtrar mês específico ao clicar
+  const handleSelectMonth = (mesAno: string) => {
+    const [ano, mes] = mesAno.split('-');
+    const primeiroDia = `${ano}-${mes}-01`;
+    const ultimoDiaNum = new Date(parseInt(ano, 10), parseInt(mes, 10), 0).getDate();
+    const ultimoDia = `${ano}-${mes}-${String(ultimoDiaNum).padStart(2, '0')}`;
+    
+    setDataInicio(primeiroDia);
+    setDataFim(ultimoDia);
+    setPeriodoPreset('custom');
+  };
 
   // Handlers para Abertura do Modal de Transferência
   const handleOpenTransferModal = () => {
@@ -546,62 +618,139 @@ export default function LojaFinanceiroCaixa({
             </div>
           </div>
 
-          {/* 4. CARDS DE DESEMPENHO NO PERÍODO SELECIONADO */}
+          {/* 4. CARDS DE DESEMPENHO: HOJE (DIA), MÊS ATUAL E PERÍODO SELECIONADO */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Vendas de Hoje */}
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendas no Período</p>
-                <h3 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
-                  {metricasPeriodo.totalVendasPeriodo} pedidos
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendas Hoje (Dia)</p>
+                </div>
+                <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                  {analiseTemporal.qtdHoje} {analiseTemporal.qtdHoje === 1 ? 'venda' : 'vendas'}
                 </h3>
-                <span className="text-[10px] text-slate-500 font-medium">
-                  {metricasPeriodo.totalItensVendidos} itens comercializados
-                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300">
+                    R$ {analiseTemporal.valorHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handlePresetChange('hoje')}
+                    className="text-[10px] text-indigo-600 hover:underline font-bold cursor-pointer"
+                  >
+                    Filtrar
+                  </button>
+                </div>
               </div>
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 rounded-xl">
-                <ShoppingBag size={22} />
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-xl">
+                <Clock size={22} />
               </div>
             </div>
 
+            {/* Vendas do Mês Atual */}
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Faturado no Período</p>
-                <h3 className="text-2xl font-black text-emerald-600 mt-1 font-mono">
-                  R$ {metricasPeriodo.faturamentoPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendas Este Mês</p>
+                <h3 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
+                  {analiseTemporal.qtdMesAtual} {analiseTemporal.qtdMesAtual === 1 ? 'venda' : 'vendas'}
                 </h3>
-                <span className="text-[10px] text-slate-500 font-medium">Pagamentos confirmados</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300">
+                    R$ {analiseTemporal.valorMesAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handlePresetChange('mes_atual')}
+                    className="text-[10px] text-indigo-600 hover:underline font-bold cursor-pointer"
+                  >
+                    Filtrar
+                  </button>
+                </div>
               </div>
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-xl">
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 rounded-xl">
+                <Calendar size={22} />
+              </div>
+            </div>
+
+            {/* Faturado no Período Selecionado */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filtro Selecionado</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {metricasPeriodo.totalVendasPeriodo} pedidos
+                </h3>
+                <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 block">
+                  R$ {metricasPeriodo.faturamentoPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} pagos
+                </span>
+              </div>
+              <div className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl">
                 <DollarSign size={22} />
               </div>
             </div>
 
+            {/* Ticket Médio */}
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ticket Médio</p>
                 <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
                   R$ {metricasPeriodo.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </h3>
-                <span className="text-[10px] text-slate-500 font-medium">Por compra realizada</span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {metricasPeriodo.totalItensVendidos} itens comercializados
+                </span>
               </div>
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-600 rounded-xl">
                 <TrendingUp size={22} />
               </div>
             </div>
-
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pendente no Período</p>
-                <h3 className="text-2xl font-black text-slate-700 dark:text-slate-300 mt-1 font-mono">
-                  R$ {metricasPeriodo.faturamentoPendentePeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </h3>
-                <span className="text-[10px] text-slate-500 font-medium">Aguardando recebimento</span>
-              </div>
-              <div className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl">
-                <Clock size={22} />
-              </div>
-            </div>
           </div>
+
+          {/* 4.1 COMPARATIVO & HISTÓRICO DE VENDAS MÊS A MÊS */}
+          {analiseTemporal.listaMeses.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="text-indigo-600" size={17} />
+                  <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                    Demonstrativo e Volume de Vendas Mês a Mês
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMonthlyBreakdown(!showMonthlyBreakdown)}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  {showMonthlyBreakdown ? 'Ocultar Meses' : `Exibir (${analiseTemporal.listaMeses.length} meses)`}
+                </button>
+              </div>
+
+              {showMonthlyBreakdown && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 pt-2">
+                  {analiseTemporal.listaMeses.map((m) => (
+                    <div
+                      key={m.mesAno}
+                      onClick={() => handleSelectMonth(m.mesAno)}
+                      className="p-3 bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 border border-slate-200/70 dark:border-slate-700/70 hover:border-indigo-300 dark:hover:border-indigo-700 rounded-xl transition-all cursor-pointer group"
+                      title="Clique para filtrar apenas este mês"
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-black text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                        <span>{m.rotulo}</span>
+                        <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600" />
+                      </div>
+                      <div className="mt-1 text-sm font-black text-slate-900 dark:text-white font-mono">
+                        R$ {m.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-[10px] text-slate-500 flex items-center justify-between mt-0.5">
+                        <span>{m.qtd} {m.qtd === 1 ? 'venda' : 'vendas'}</span>
+                        <span>{m.itens} itens</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 5. DISTRIBUIÇÃO POR FORMA DE PAGAMENTO E PRODUTOS MAIS VENDIDOS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
