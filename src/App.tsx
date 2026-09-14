@@ -12932,16 +12932,16 @@ const PortalHome = ({ user, db, setView }) => {
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
                 
                 {/* FOTO DO USUÁRIO COM ESPAÇO AMPLIADO E DESTAQUE */}
-                <div className="relative z-10 shrink-0 flex items-center justify-center p-1 sm:p-1.5">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-2 sm:border-3 border-emerald-500/50 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.35)] relative group/foto shrink-0 ring-4 ring-emerald-500/10">
+                <div className="relative z-10 shrink-0 flex items-center justify-center p-0.5 sm:p-1">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-3 sm:border-4 border-emerald-500/60 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)] relative group/foto shrink-0 ring-4 ring-emerald-500/15">
                         {currentUser.foto ? (
                             <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/>
                         ) : (
-                            <User size={46} className="text-slate-400"/>
+                            <User size={52} className="text-slate-400"/>
                         )}
                         <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer">
-                            <Camera size={18} className="text-white mb-0.5"/>
-                            <span className="text-[7px] font-black uppercase tracking-widest text-white">Editar</span>
+                            <Camera size={20} className="text-white mb-0.5"/>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-white">Editar</span>
                         </button>
                     </div>
                 </div>
