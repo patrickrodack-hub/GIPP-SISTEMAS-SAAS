@@ -63,6 +63,9 @@ export function FloatingActionButton() {
     osTheme
   } = context;
 
+  // Membros comuns usam o Portal do Membro dedicado e não devem ter o botão flutuante administrativo
+  if (!user || user.tipo === 'membro') return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [quickModal, setQuickModal] = useState<'none' | 'membro' | 'financeiro' | 'visitante' | 'evento' | 'oracao'>('none');
   const [saving, setSaving] = useState(false);

@@ -238,7 +238,7 @@ Gere uma resposta de suporte operacional muito educada, curta (máximo de 2 par�
     const hasUnread = lastMsgAlt && lastMsgAlt.sender_type !== 'user';
 
     return (
-        <div className="fixed bottom-24 md:bottom-6 right-6 z-[9999]" style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}>
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[9999]" style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}>
             {isOpen && (
                 <div className="bg-white border text-slate-800 shadow-2xl rounded-3xl w-[360px] h-[520px] flex flex-col mb-4 overflow-hidden animate-entrance right-0 origin-bottom-right">
                     {/* Header estilo telecomunicações */}

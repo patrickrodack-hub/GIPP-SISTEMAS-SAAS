@@ -12926,57 +12926,65 @@ const PortalHome = ({ user, db, setView }) => {
         <div className="space-y-2.5 sm:space-y-3.5 animate-entrance pb-1">
             
             {/* HERO COM STATUS DO PERFIL (RESPONSIVO E COMPACTO) */}
-            <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-lg relative overflow-hidden border border-slate-800 p-3 sm:p-4 md:px-5 md:py-3.5 flex flex-col md:flex-row items-center gap-3 sm:gap-5 group">
+            <div className="rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-lg relative overflow-hidden border border-slate-800 p-3 sm:p-4 md:px-5 md:py-3.5 flex flex-col md:flex-row items-center gap-2.5 sm:gap-4 group">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full blur-[100px] opacity-30 -mr-20 -mt-20 pointer-events-none transition-all duration-1000 group-hover:opacity-50"></div>
                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none"></div>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
                 
-                <div className="relative z-10 shrink-0">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 sm:border-3 border-slate-800 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.25)] relative group/foto shrink-0">
-                        {currentUser.foto ? <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/> : <User size={26} className="text-slate-500"/>}
-                        <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer">
-                            <Camera size={14} className="text-white mb-0.5"/>
-                            <span className="text-[7px] font-black uppercase tracking-widest text-white">Editar</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <div className="relative z-10 flex-1 text-center md:text-left w-full min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 mb-1 justify-center md:justify-start">
-                        <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-xs">
-                            {currentUser.cargo || 'Membro Ativo'}
-                        </span>
-                        {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
-                            <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-xs">
-                                ADM: {currentUser.funcao_administrativa}
-                            </span>
-                        )}
-                        <span className="text-xs text-slate-500 font-bold hidden md:inline-block">•</span>
-                        <span className="text-[11px] font-bold text-slate-400 flex items-center justify-center md:justify-start gap-1 truncate max-w-[220px]">
-                            <MapPin size={11} className="shrink-0"/> {db.igreja.nome}
-                        </span>
+                {/* Linha Principal: Foto maior à esquerda e Informações alinhadas da direita para a esquerda */}
+                <div className="relative z-10 flex items-center justify-between gap-3.5 sm:gap-4 w-full flex-1 min-w-0">
+                    {/* FOTO MAIOR E À ESQUERDA */}
+                    <div className="relative shrink-0">
+                        <div className="w-20 h-20 sm:w-22 sm:h-22 md:w-24 md:h-24 rounded-full border-2 sm:border-3 border-emerald-500/50 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_22px_rgba(16,185,129,0.3)] relative group/foto shrink-0">
+                            {currentUser.foto ? (
+                                <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/>
+                            ) : (
+                                <User size={42} className="text-slate-400"/>
+                            )}
+                            <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer">
+                                <Camera size={18} className="text-white mb-0.5"/>
+                                <span className="text-[7px] font-black uppercase tracking-widest text-white">Editar</span>
+                            </button>
+                        </div>
                     </div>
                     
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
-                        {saudacaoTempo}, {currentUser.nome.split(' ')[0]}!
-                    </h2>
+                    {/* INFORMAÇÕES ALINHADAS DA DIREITA PARA A ESQUERDA */}
+                    <div className="flex-1 min-w-0 flex flex-col items-end text-right">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5 justify-end">
+                            <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-xs">
+                                {currentUser.cargo || 'Membro Ativo'}
+                            </span>
+                            {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
+                                <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-xs">
+                                    ADM: {currentUser.funcao_administrativa}
+                                </span>
+                            )}
+                            <span className="text-[11px] font-bold text-slate-400 flex items-center justify-end gap-1 truncate max-w-[180px] sm:max-w-[220px]">
+                                <MapPin size={11} className="shrink-0 text-slate-400"/> {db.igreja.nome}
+                            </span>
+                        </div>
+                        
+                        <h2 className="text-base sm:text-xl md:text-2xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-200">
+                            {saudacaoTempo}, {currentUser.nome.split(' ')[0]}!
+                        </h2>
+                    </div>
                 </div>
 
-                {/* BARRA DE NÍVEL DE ENGAJAMENTO GLOBAL (COMPACTA) */}
-                <div className="relative z-10 w-full md:w-56 bg-slate-800/60 p-2 sm:p-2.5 rounded-xl border border-slate-700/60 backdrop-blur-md shrink-0 shadow-inner">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                            <Activity size={11} className="text-emerald-400"/> Jornada de Fé
+                {/* BARRA DE NÍVEL DE ENGAJAMENTO GLOBAL (CAMPO REDUZIDO E COMPACTO) */}
+                <div className="relative z-10 w-full md:w-56 bg-slate-800/40 px-2.5 py-1.5 rounded-lg border border-slate-700/50 backdrop-blur-xs shrink-0 shadow-inner">
+                    <div className="flex justify-between items-center mb-0.5">
+                        <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                            <Activity size={10} className="text-emerald-400 shrink-0"/> Jornada de Fé
                         </span>
-                        <span className="text-xs sm:text-sm font-black text-emerald-400">{nivelSpiritual}%</span>
+                        <span className="text-[10px] sm:text-[11px] font-black text-emerald-400">{nivelSpiritual}%</span>
                     </div>
-                    <div className="w-full h-1.5 sm:h-2 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/80 mb-1">
+                    <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/60 mb-0.5">
                         <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 relative" style={{width: `${nivelSpiritual}%`}}>
                             <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ animation: 'slideRight 2s infinite linear' }}></div>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold">
-                        <span className="text-slate-300 truncate">{nivelRotulo}</span>
+                    <div className="flex justify-between items-center text-[8px] sm:text-[8.5px] text-slate-400 font-semibold">
+                        <span className="text-slate-300 truncate max-w-[140px]">{nivelRotulo}</span>
                         <span>{unlockedCount + unlockedCursosCount} Conquistas</span>
                     </div>
                 </div>
@@ -17676,7 +17684,10 @@ const MemberPortalLayout = () => {
 
             {/* Mobile Bottom Navigation (Strict Flex Item - Fixado no rodapé no mobile) */}
             {!isInterativoMode && (
-                <div className={`md:hidden shrink-0 border-t flex items-center justify-around z-45 h-20 px-2 select-none shadow-lg ${getBottomSheetStyles()}`}>
+                <div 
+                    className={`md:hidden shrink-0 border-t flex items-center justify-around z-45 h-16 px-2 select-none shadow-lg ${getBottomSheetStyles()}`}
+                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                >
                     {mobileBottomItems.map(item => {
                         const isActive = view === item.id || (item.id === 'portal_more' && showMoreMenu);
                         const styles = getBottomNavItemStyles(isActive, item.hoverColor);
@@ -17691,12 +17702,12 @@ const MemberPortalLayout = () => {
                                         setShowMoreMenu(false);
                                     }
                                 }}
-                                className="flex flex-col items-center justify-center flex-1 h-full py-2 hover:bg-slate-100/10 transition-colors focus:outline-none relative"
+                                className="flex flex-col items-center justify-center flex-1 h-full py-1 hover:bg-slate-100/10 transition-colors focus:outline-none relative"
                             >
-                                <div className={`p-1.5 rounded-xl transition-all ${styles.iconBg}`}>
-                                    <item.icon size={20} className={`transition-transform duration-300 ${styles.icon} ${isActive ? 'scale-110' : ''}`} />
+                                <div className={`p-1 rounded-xl transition-all ${styles.iconBg}`}>
+                                    <item.icon size={19} className={`transition-transform duration-300 ${styles.icon} ${isActive ? 'scale-110' : ''}`} />
                                 </div>
-                                <span className={`text-[9px] mt-1 font-bold leading-none select-none text-center ${styles.text}`}>
+                                <span className={`text-[9px] mt-0.5 font-bold leading-none select-none text-center ${styles.text}`}>
                                     {item.label}
                                 </span>
                             </button>
@@ -23749,7 +23760,7 @@ export default function App() {
         <div className={`print-area ${printOrientation === 'landscape' ? 'print-landscape' : 'print-portrait'} ${printMode?.startsWith('cert_') ? 'cert-colorized' : ''}`}>
             <PrintSystem mode={printMode} data={printData} palette={printPalette} marginType={printMarginType} contentScale={printContentScale} orientation={printOrientation} />
         </div>
-        <div className="screen-content pb-16 md:pb-0">
+        <div className={`screen-content ${user?.tipo === 'membro' ? 'h-[100dvh] overflow-hidden pb-0' : 'pb-16 md:pb-0'}`}>
             {user.tipo === 'membro' ? <MemberPortalLayout /> : <AppLayout />}
         </div>
 
