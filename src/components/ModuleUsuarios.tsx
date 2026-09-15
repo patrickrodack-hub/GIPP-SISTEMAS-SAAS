@@ -299,6 +299,8 @@ const ModuleUsuarios = memo(() => {
       perms = ['access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_manual'];
     } else if (val === 'AUXILIAR') {
       perms = ['access_sec_agenda', 'access_ebd', 'access_gestao_cursos', 'access_manual', 'access_interativo'];
+    } else if (val === 'MUSICO') {
+      perms = ['access_ministerio_louvor', 'access_manual', 'access_interativo'];
     }
     setFormData({ ...formData, funcao_administrativa: val, permissoes: perms });
   };
@@ -840,6 +842,7 @@ const ModuleUsuarios = memo(() => {
                         <option value="ADMINISTRADOR">Operador: Administrador Geral</option>
                         <option value="ADVOGADO">Operador: Jurídico / Advogado</option>
                         <option value="LIDER DE DEPARTAMENTO">Operador: Líder de Ministério</option>
+                        <option value="MUSICO">Operador: Músico / Ministério de Louvor</option>
                         <option value="AUXILIAR">Operador: Auxiliar / Apoio Voluntário</option>
                       </select>
                     </div>

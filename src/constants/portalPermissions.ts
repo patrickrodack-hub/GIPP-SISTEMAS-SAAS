@@ -42,3 +42,60 @@ export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
     'VISITANTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_carteirinha'],
     'CONGREGADO': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_carteirinha'],
 };
+
+/**
+ * Retorna uma lista de funções administrativas atribuídas ao membro/usuário.
+ * Suporta tanto o array `funcoes_administrativas` quanto string única ou concatenada `funcao_administrativa`.
+ */
+export function getMemberFuncoesAdm(userOrMember: any): string[] {
+    if (!userOrMember) return [];
+    
+    // 1. Array explícito de funções
+    if (Array.isArray(userOrMember.funcoes_administrativas) && userOrMember.funcoes_administrativas.length > 0) {
+        const list = userOrMember.funcoes_administrativas
+            .map((f: any) => String(f).trim().toUpperCase())
+            .filter((f: string) => f && f !== 'NENHUMA');
+        if (list.length > 0) return Array.from(new Set(list));
+    }
+    
+    // 2. String legada ou concatenada (ex: 'TESOUREIRO, MUSICO' ou 'TESOUREIRO / MUSICO')
+    const raw = userOrMember.funcao_administrativa || userOrMember.funcao;
+    if (typeof raw === 'string' && raw.trim() && raw.trim().toUpperCase() !== 'NENHUMA') {
+        const list = raw
+            .split(/[,/|;]+/)
+            .map((f: string) => f.trim().toUpperCase())
+            .filter((f: string) => f && f !== 'NENHUMA');
+        if (list.length > 0) return Array.from(new Set(list));
+    }
+    
+    return [];
+}
+
+/**
+ * Retorna todos os módulos liberados para o membro no portal, unindo as permissões
+ * de todas as suas funções administrativas caso possua múltiplas.
+ */
+export function getMemberPortalAllowedModules(
+    member: any, 
+    portalAcessosFuncao: Record<string, string[]> = {}
+): string[] {
+    const roles = getMemberFuncoesAdm(member);
+    
+    if (roles.length === 0) {
+        return portalAcessosFuncao['NENHUMA'] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'] || [];
+    }
+    
+    const modulesSet = new Set<string>();
+    
+    // Módulos base de todo membro
+    const baseModules = portalAcessosFuncao['NENHUMA'] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'] || [];
+    baseModules.forEach(m => modulesSet.add(m));
+    
+    // Módulos de cada uma das funções administrativas atribuídas
+    roles.forEach(role => {
+        const roleModules = portalAcessosFuncao[role] || DEFAULT_PORTAL_PERMISSIONS[role] || [];
+        roleModules.forEach(m => modulesSet.add(m));
+    });
+    
+    return Array.from(modulesSet);
+}

@@ -71,7 +71,7 @@ import { GippCppLayout } from './components/GippCppLayout';
 import { ClipperLayout } from './components/ClipperLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
-import { DEFAULT_PORTAL_PERMISSIONS } from './constants/portalPermissions';
+import { DEFAULT_PORTAL_PERMISSIONS, getMemberFuncoesAdm, getMemberPortalAllowedModules } from './constants/portalPermissions';
 
 const ModuleEmailAdmin = lazy(() => import('./components/ModuleEmailAdmin'));
 const ModuleEmailMember = lazy(() => import('./components/ModuleEmailMember'));
@@ -3508,7 +3508,28 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                          </div>
                      </div>
                  );
-             case 'membro':
+             case 'membro': {
+                 const currentFuncoesAdm = getMemberFuncoesAdm(data);
+                 const handleAddFuncaoAdm = (val: string) => {
+                     const trimmed = (val || '').trim().toUpperCase();
+                     if (!trimmed || trimmed === 'NENHUMA') return;
+                     if (currentFuncoesAdm.includes(trimmed)) return;
+                     const updated = [...currentFuncoesAdm, trimmed];
+                     setData({
+                         ...data,
+                         funcoes_administrativas: updated,
+                         funcao_administrativa: updated.join(', ')
+                     });
+                 };
+                 const handleRemoveFuncaoAdm = (funcaoToRemove: string) => {
+                     const updated = currentFuncoesAdm.filter(f => f !== funcaoToRemove);
+                     setData({
+                         ...data,
+                         funcoes_administrativas: updated,
+                         funcao_administrativa: updated.length > 0 ? updated.join(', ') : 'NENHUMA'
+                     });
+                 };
+
                  return (
                     <div className="space-y-6">
                         {/* Navegação de Abas do Membro */}
@@ -3586,8 +3607,117 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 {isMaster && <FormSelect label="Congregação / Filial" value={data.congregacao_id || 'sede'} onChange={v=>setData({...data, congregacao_id:v})} options={[{label: 'Sede Principal (Matriz)', value: 'sede'}, ...db.congregacoes.map(c=>({label: c.nome, value: c.id}))]} />}
                                 <FormSelect label="Cargo Eclesiástico" value={data.cargo} onChange={v=>setData({...data, cargo:v})} options={['Membro', 'Professor', 'Auxiliar', 'Diácono', 'Presbítero', 'Evangelista', 'Missionário', 'Pastor']} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormSelect label="Função Administrativa" value={data.funcao_administrativa || 'NENHUMA'} onChange={v=>setData({...data, funcao_administrativa:v})} options={['NENHUMA', 'PASTOR PRESIDENTE', 'PASTOR AUXILIAR', 'COORDENADOR', 'SUPERINTENDENTE', 'SECRETARIO', 'TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR', 'ADVOGADO', 'AUXILIAR', 'LIDER DE DEPARTAMENTO', 'PROFESSOR']} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between ml-1">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                            <span>Função Administrativa</span>
+                                            <span className="text-[9px] text-indigo-600 font-black bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider">
+                                                Múltiplas
+                                            </span>
+                                        </label>
+                                        {currentFuncoesAdm.length > 0 && (
+                                            <span className="text-[10px] text-slate-400 font-bold">
+                                                {currentFuncoesAdm.length} {currentFuncoesAdm.length === 1 ? 'função' : 'funções'}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2.5 min-h-[62px]">
+                                        {/* Badges / Chips das Funções Atribuídas */}
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            {currentFuncoesAdm.length === 0 ? (
+                                                <span className="text-xs text-slate-400 italic py-1 px-1">
+                                                    Nenhuma função atribuída (Membro Comum)
+                                                </span>
+                                            ) : (
+                                                currentFuncoesAdm.map(fn => {
+                                                    const isMusico = fn === 'MUSICO' || fn === 'MÚSICO';
+                                                    const isPastor = fn.includes('PASTOR');
+                                                    const isTesour = fn.includes('TESOUR') || fn.includes('CONTAD');
+                                                    return (
+                                                        <span 
+                                                            key={fn} 
+                                                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wide border shadow-2xs transition-all ${
+                                                                isMusico
+                                                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                    : isPastor 
+                                                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                    : isTesour
+                                                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                                            }`}
+                                                        >
+                                                            {isMusico ? '🎵 ' : isPastor ? '✝️ ' : isTesour ? '💼 ' : '🛡️ '}
+                                                            <span>{fn}</span>
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => handleRemoveFuncaoAdm(fn)} 
+                                                                className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded p-0.5 transition-colors cursor-pointer ml-0.5"
+                                                                title={`Remover ${fn}`}
+                                                            >
+                                                                <X size={12} strokeWidth={2.5}/>
+                                                            </button>
+                                                        </span>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+
+                                        {/* Linha de Seletor para Adicionar Funções */}
+                                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-100">
+                                            <select 
+                                                value="" 
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        handleAddFuncaoAdm(e.target.value);
+                                                    }
+                                                }}
+                                                className="flex-1 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-colors"
+                                            >
+                                                <option value="">+ Adicionar Função Administrativa...</option>
+                                                <option value="MUSICO" className="font-black text-purple-600">🎵 MÚSICO (Repertório & Louvor)</option>
+                                                <option disabled className="text-slate-300">──────────</option>
+                                                <option value="PASTOR PRESIDENTE">PASTOR PRESIDENTE</option>
+                                                <option value="PASTOR AUXILIAR">PASTOR AUXILIAR</option>
+                                                <option value="COORDENADOR">COORDENADOR</option>
+                                                <option value="SUPERINTENDENTE">SUPERINTENDENTE</option>
+                                                <option value="SECRETARIO">SECRETÁRIO</option>
+                                                <option value="TESOUREIRO">TESOUREIRO</option>
+                                                <option value="CONTADOR">CONTADOR</option>
+                                                <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+                                                <option value="ADVOGADO">ADVOGADO</option>
+                                                <option value="AUXILIAR">AUXILIAR</option>
+                                                <option value="LIDER DE DEPARTAMENTO">LÍDER DE DEPARTAMENTO</option>
+                                                <option value="PROFESSOR">PROFESSOR</option>
+                                                <option value="LOUVOR">LOUVOR</option>
+                                                <option value="CANTO">CANTO / VOCAL</option>
+                                                <option value="SOM">OPERADOR DE SOM</option>
+                                                <option value="MIDIA">MÍDIA & TRANSMISSÃO</option>
+                                                <option value="INFANTIL">MINISTÉRIO INFANTIL</option>
+                                                <option value="RECEPCAO">RECEPÇÃO</option>
+                                                <option value="PORTARIA">PORTARIA</option>
+                                                <option value="DIACONATO">DIACONATO</option>
+                                                <option value="ZELEADOR">ZELADORIA</option>
+                                                <option value="SEGURANCA">SEGURANÇA</option>
+                                            </select>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const custom = window.prompt('Digite o nome da função administrativa personalizada:');
+                                                    if (custom && custom.trim()) {
+                                                        handleAddFuncaoAdm(custom.trim());
+                                                    }
+                                                }}
+                                                className="px-2 py-1.5 text-[11px] font-bold text-slate-500 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 rounded-lg border border-slate-200 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+                                                title="Digitar outra função personalizada"
+                                            >
+                                                + Outra
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                                 <FormInput label="Nº Carteirinha" value={data.numero_registro} onChange={v=>setData({...data, numero_registro:v})} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -3842,6 +3972,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                         )}
                     </div>
                  );
+             }
              case 'usuario':
                  const gruposPermissoes = [
                      { 
@@ -12541,30 +12672,29 @@ const PortalHome = ({ user, db, setView }) => {
     const currentMonthStr = hojeObj.toISOString().slice(0, 7);
     const currentUser = db.membros.find((m: any) => m.id === user.id) || user;
 
-    const userFuncaoAdmHome = (currentUser.funcao_administrativa || 'NENHUMA').toUpperCase();
+    const userRolesHome = getMemberFuncoesAdm(currentUser);
     const portalAcessosFuncaoHome = db.igreja?.portal_acessos_funcao || {};
-    const defaultModulesHome = portalAcessosFuncaoHome[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdmHome] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const defaultModulesHome = getMemberPortalAllowedModules(currentUser, portalAcessosFuncaoHome);
     const allowedModulesHome = currentUser?.portal_permissoes_personalizadas 
         ? defaultModulesHome.filter((mId: string) => currentUser.portal_permissoes_personalizadas.includes(mId))
         : defaultModulesHome;
 
     const isProfessor = (currentUser.cargo || '').toLowerCase().includes('professor') || 
                         (currentUser.funcao || '').toLowerCase().includes('professor') || 
-                        (currentUser.funcao_administrativa || '').toLowerCase().includes('professor') || 
+                        userRolesHome.some(r => r.includes('PROFESSOR')) || 
                         currentUser.nivel === 'master' ||
                         (db.ebd?.turmas || []).some((t: any) => t.prof1_id === currentUser.id || t.prof2_id === currentUser.id || t.prof3_id === currentUser.id);
 
     const isPastorHome = (currentUser.cargo || '').toLowerCase().includes('pastor') || 
                          (currentUser.cargo || '').toLowerCase().includes('evangelista') || 
                          (currentUser.funcao || '').toLowerCase().includes('pastor') || 
-                         currentUser.funcao_administrativa === 'PASTOR PRESIDENTE' || 
-                         currentUser.funcao_administrativa === 'PASTOR AUXILIAR' || 
+                         userRolesHome.some(r => r === 'PASTOR PRESIDENTE' || r === 'PASTOR AUXILIAR') || 
                          currentUser.nivel === 'master';
 
     const isPresbiteroHome = (currentUser.cargo || '').toLowerCase().includes('presb') || 
                             (currentUser.cargo || '').toLowerCase().includes('pb.') || 
                             (currentUser.funcao || '').toLowerCase().includes('presb') || 
-                            (currentUser.funcao_administrativa || '').toUpperCase().includes('PRESBITERO');
+                            userRolesHome.some(r => r.includes('PRESBITERO'));
 
     const isAlunoOuCandidatoHome = Boolean(
         currentUser.is_candidato_obreiro || 
@@ -12586,7 +12716,7 @@ const PortalHome = ({ user, db, setView }) => {
         )
     );
 
-    const canAccessFormacaoHome = isAlunoOuCandidatoHome || isPastorHome || isPresbiteroHome || isProfessor || currentUser.nivel === 'master' || (currentUser.funcao_administrativa && ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(currentUser.funcao_administrativa.toUpperCase()));
+    const canAccessFormacaoHome = isAlunoOuCandidatoHome || isPastorHome || isPresbiteroHome || isProfessor || currentUser.nivel === 'master' || userRolesHome.some(r => ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(r));
     const isMusicoHome = checkIsMusicoOuLouvor(currentUser, db);
     
     const [devocional, setDevocional] = useState('');
@@ -12957,11 +13087,11 @@ const PortalHome = ({ user, db, setView }) => {
                         <span className="bg-emerald-500/15 text-emerald-300 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/30 shadow-xs shrink-0">
                             {currentUser.cargo || 'Membro Ativo'}
                         </span>
-                        {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
-                            <span className="bg-indigo-500/15 text-indigo-300 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/30 shadow-xs shrink-0">
-                                ADM: {currentUser.funcao_administrativa}
+                        {userRolesHome.map((fn: string) => (
+                            <span key={fn} className="bg-indigo-500/15 text-indigo-300 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/30 shadow-xs shrink-0">
+                                {fn === 'MUSICO' || fn === 'MÚSICO' ? '🎵 ' : 'ADM: '}{fn}
                             </span>
-                        )}
+                        ))}
                     </div>
 
                     {/* NOME COMPLETO DA IGREJA (EXTENDIDO SEM CORTES) */}
@@ -17374,39 +17504,39 @@ const MemberPortalLayout = () => {
     const portalPastorRolesStr = db.igreja?.portal_pastor_lideres_funcoes || ['PASTOR PRESIDENTE', 'PASTOR AUXILIAR'];
     const portalTesoureiroRolesStr = db.igreja?.portal_tesoureiro_lideres_funcoes || ['TESOUREIRO', 'CONTADOR', 'ADMINISTRADOR'];
 
+    const currentUserNav = db.membros.find((m: any) => m.id === user?.id) || user;
+    const userRolesNav = getMemberFuncoesAdm(currentUserNav);
+    const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
+    const defaultModules = getMemberPortalAllowedModules(currentUserNav, portalAcessosFuncao);
+    const allowedModules = currentUserNav?.portal_permissoes_personalizadas 
+        ? defaultModules.filter((mId: string) => currentUserNav.portal_permissoes_personalizadas.includes(mId))
+        : defaultModules;
+
     const isPastor = user?.cargo?.toLowerCase().includes('pastor') || 
                      user?.funcao?.toLowerCase().includes('pastor') || 
                      user?.nivel === 'master' || 
                      user?.nivel === 'pastor' ||
-                     (user?.funcao_administrativa && portalPastorRolesStr.includes(user.funcao_administrativa.toUpperCase()));
+                     userRolesNav.some(r => portalPastorRolesStr.includes(r));
 
     const isTesoureiro = user?.cargo?.toLowerCase().includes('tesour') || 
                           user?.funcao?.toLowerCase().includes('tesour') || 
                           user?.nivel === 'master' || 
                           user?.nivel === 'tesour' || 
-                          (user?.funcao_administrativa && portalTesoureiroRolesStr.includes(user.funcao_administrativa.toUpperCase())) ||
+                          userRolesNav.some(r => portalTesoureiroRolesStr.includes(r)) ||
                           (user?.permissoes && (user.permissoes.includes('access_fin_entradas') || user.permissoes.includes('access_fin_analise') || user.permissoes.includes('access_fin_cadastros'))) ||
                           (db.igreja?.tesoureiro1 && user?.nome && db.igreja.tesoureiro1.toLowerCase().trim() === user.nome.toLowerCase().trim()) || 
                           (db.igreja?.tesoureiro2 && user?.nome && db.igreja.tesoureiro2.toLowerCase().trim() === user.nome.toLowerCase().trim());
 
-    const currentUserNav = db.membros.find((m: any) => m.id === user?.id) || user;
-    const userFuncaoAdm = (currentUserNav?.funcao_administrativa || 'NENHUMA').toUpperCase();
-    const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-    const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
-    const allowedModules = currentUserNav?.portal_permissoes_personalizadas 
-        ? defaultModules.filter((mId: string) => currentUserNav.portal_permissoes_personalizadas.includes(mId))
-        : defaultModules;
-
     const isProfessor = (user?.cargo || '').toLowerCase().includes('professor') || 
                         (user?.funcao || '').toLowerCase().includes('professor') || 
-                        (user?.funcao_administrativa || '').toLowerCase().includes('professor') || 
+                        userRolesNav.some(r => r.includes('PROFESSOR')) || 
                         user?.nivel === 'master' ||
                         (db.ebd?.turmas || []).some((t: any) => t.prof1_id === user?.id || t.prof2_id === user?.id || t.prof3_id === user?.id);
 
     const isPresbitero = (user?.cargo || '').toLowerCase().includes('presb') || 
                          (user?.cargo || '').toLowerCase().includes('pb.') || 
                          (user?.funcao || '').toLowerCase().includes('presb') || 
-                         (user?.funcao_administrativa || '').toUpperCase().includes('PRESBITERO');
+                         userRolesNav.some(r => r.includes('PRESBITERO'));
 
     const isAlunoOuCandidato = Boolean(
         user?.is_candidato_obreiro || 
@@ -17428,7 +17558,7 @@ const MemberPortalLayout = () => {
         )
     );
 
-    const canAccessFormacao = isAlunoOuCandidato || isPastor || isPresbitero || isProfessor || user?.nivel === 'master' || (user?.funcao_administrativa && ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(user.funcao_administrativa.toUpperCase()));
+    const canAccessFormacao = isAlunoOuCandidato || isPastor || isPresbitero || isProfessor || user?.nivel === 'master' || userRolesNav.some(r => ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(r));
     const isMusico = useMemo(() => {
         return checkIsMusicoOuLouvor(user, db);
     }, [user, db]);
@@ -20898,9 +21028,8 @@ export default function App() {
                   if (foundMember) {
                       const isLiberado = foundMember.acesso_portal_liberado || (foundMember.senha_portal && foundMember.acesso_portal_liberado !== false);
                       if (isLiberado && foundMember.senha_portal) {
-                          const userFuncaoAdm = (foundMember.funcao_administrativa || 'NENHUMA').toUpperCase();
                           const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-                          const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+                          const defaultModules = getMemberPortalAllowedModules(foundMember, portalAcessosFuncao);
                           const allowedModules = foundMember.portal_permissoes_personalizadas 
                               ? defaultModules.filter((mId: string) => foundMember.portal_permissoes_personalizadas.includes(mId))
                               : defaultModules;
@@ -22473,9 +22602,8 @@ export default function App() {
               }
               
               if (foundMember.senha_portal === passDigitada) {
-                  const userFuncaoAdm = (foundMember.funcao_administrativa || 'NENHUMA').toUpperCase();
                   const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-                  const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+                  const defaultModules = getMemberPortalAllowedModules(foundMember, portalAcessosFuncao);
                   const allowedModules = foundMember.portal_permissoes_personalizadas 
                       ? defaultModules.filter((mId: string) => foundMember.portal_permissoes_personalizadas.includes(mId))
                       : defaultModules;
@@ -22642,43 +22770,47 @@ export default function App() {
       if (perm === 'access_dp_contabilidade' && user.permissoes?.includes('access_fin_saidas')) return true;
       if (perm === 'access_biblia' || perm === 'access_manual') return true;
 
-      if (user.funcao_administrativa) {
-          const role = user.funcao_administrativa.toUpperCase();
-          if (role === 'PASTOR PRESIDENTE' || role === 'PASTOR AUXILIAR') {
+      const userRoles = getMemberFuncoesAdm(user);
+      if (userRoles.length > 0) {
+          if (userRoles.some(r => r === 'PASTOR PRESIDENTE' || r === 'PASTOR AUXILIAR')) {
               const pastorPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 'access_loja_virtual'];
               if (pastorPerms.includes(perm)) return true;
           }
-          if (role === 'SECRETARIO') {
+          if (userRoles.some(r => r === 'SECRETARIO')) {
               const secPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_loja_virtual'];
               if (secPerms.includes(perm)) return true;
           }
-          if (role === 'TESOUREIRO' || role === 'CONTADOR') {
+          if (userRoles.some(r => r === 'TESOUREIRO' || r === 'CONTADOR')) {
               const financialPerms = ['access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_sec_relatorios', 'access_manual', 'access_loja_virtual'];
               if (financialPerms.includes(perm)) return true;
           }
-          if (role === 'ADMINISTRADOR') {
+          if (userRoles.some(r => r === 'ADMINISTRADOR')) {
               const adminPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_loja_virtual', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_docs_editor', 'access_sheets_editor', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_carnes', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (adminPerms.includes(perm)) return true;
           }
-          if (role === 'ADVOGADO') {
+          if (userRoles.some(r => r === 'ADVOGADO')) {
               const lawyerPerms = ['access_igreja', 'access_patrimonio', 'access_sec_relatorios', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (lawyerPerms.includes(perm)) return true;
           }
-          if (role === 'LIDER DE DEPARTAMENTO') {
+          if (userRoles.some(r => r === 'LIDER DE DEPARTAMENTO')) {
               const deptPerms = ['access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_manual'];
               if (deptPerms.includes(perm)) return true;
           }
-          if (role === 'COORDENADOR') {
+          if (userRoles.some(r => r === 'COORDENADOR')) {
               const coordPerms = ['access_ministerios', 'access_celulas', 'access_sec_agenda', 'access_manual'];
               if (coordPerms.includes(perm)) return true;
           }
-          if (role === 'SUPERINTENDENTE') {
+          if (userRoles.some(r => r === 'SUPERINTENDENTE')) {
               const superPerms = ['access_ebd', 'access_sec_agenda', 'access_manual'];
               if (superPerms.includes(perm)) return true;
           }
-          if (role === 'AUXILIAR') {
+          if (userRoles.some(r => r === 'AUXILIAR')) {
               const auxPerms = ['access_sec_agenda', 'access_ebd', 'access_gestao_cursos', 'access_manual'];
               if (auxPerms.includes(perm)) return true;
+          }
+          if (userRoles.some(r => r === 'MUSICO' || r === 'MÚSICO' || r === 'LOUVOR')) {
+              const musicoPerms = ['access_ministerio_louvor', 'access_manual'];
+              if (musicoPerms.includes(perm)) return true;
           }
       }
       
@@ -23058,9 +23190,8 @@ export default function App() {
 
   const confirmFirstAccess = () => {
       if (!firstAccessSuccessData) return;
-      const userFuncaoAdm = (firstAccessSuccessData.funcao_administrativa || 'NENHUMA').toUpperCase();
       const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-      const defaultModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+      const defaultModules = getMemberPortalAllowedModules(firstAccessSuccessData, portalAcessosFuncao);
       const allowedModules = firstAccessSuccessData.portal_permissoes_personalizadas 
           ? defaultModules.filter((mId: string) => firstAccessSuccessData.portal_permissoes_personalizadas.includes(mId))
           : defaultModules;

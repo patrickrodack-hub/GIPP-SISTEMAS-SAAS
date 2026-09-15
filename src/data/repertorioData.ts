@@ -3,6 +3,8 @@
  * Ministério de Louvor & Adoração - Portal do Membro GIPP
  */
 
+import { getMemberFuncoesAdm } from '../constants/portalPermissions';
+
 export interface ArquivoAnexoMusica {
   nome: string;
   url: string;
@@ -324,8 +326,15 @@ export function checkIsMusicoOuLouvor(user: any, db: any, extraMusicosList?: any
   if (inDeptLouvor) return true;
 
   // 4. Função Administrativa do Portal configurada como Músico / Louvor / Canto
+  const userRoles = [
+    ...getMemberFuncoesAdm(userMember),
+    ...getMemberFuncoesAdm(user)
+  ];
+  if (userRoles.some(role => ['MUSICO', 'MÚSICO', 'LOUVOR', 'CANTO', 'LEVITA', 'MINISTRO_LOUVOR'].includes(role) || /m[uú]sic|louvor|canto|levita/i.test(role))) {
+    return true;
+  }
   const funcaoAdm = String(userMember.funcao_administrativa || user.funcao_administrativa || '').toUpperCase();
-  if (['MUSICO', 'MÚSICO', 'LOUVOR', 'CANTO', 'LEVITA', 'MINISTRO_LOUVOR'].includes(funcaoAdm)) return true;
+  if (['MUSICO', 'MÚSICO', 'LOUVOR', 'CANTO', 'LEVITA', 'MINISTRO_LOUVOR'].includes(funcaoAdm) || /m[uú]sic|louvor|canto|levita/i.test(funcaoAdm)) return true;
 
   // 5. Verificação textual em Cargo, Função, Talentos e Departamento
   const matchMusicoTerm = (str: any) => {

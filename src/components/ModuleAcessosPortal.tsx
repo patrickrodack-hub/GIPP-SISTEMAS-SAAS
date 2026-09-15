@@ -30,6 +30,7 @@ import {
 } from '../App';
 
 import { DEFAULT_PORTAL_PERMISSIONS, PORTAL_MODULES } from './ModuleConfiguracoesSistemas';
+import { getMemberFuncoesAdm, getMemberPortalAllowedModules } from '../constants/portalPermissions';
 
 const ModuleAcessosPortal = () => {
     const { db, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
@@ -84,9 +85,8 @@ const ModuleAcessosPortal = () => {
 
     const handleOpenPerms = (member) => {
         setSelectedMemberForPerms(member);
-        const userFuncaoAdm = (member.funcao_administrativa || 'NENHUMA').toUpperCase();
         const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-        const roleModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+        const roleModules = getMemberPortalAllowedModules(member, portalAcessosFuncao);
         
         const currentPerms = member.portal_permissoes_personalizadas || roleModules;
         setMemberPerms(currentPerms);
@@ -251,10 +251,10 @@ const ModuleAcessosPortal = () => {
         return (db.membros || []).filter((m: any) => m.acesso_portal_liberado || (m.senha_portal && m.acesso_portal_liberado !== false));
     }, [db.membros]);
 
-    // Obter módulos liberados na Configuração Geral para a função administrativa do membro selecionado
-    const userFuncaoAdm = (selectedMemberForPerms?.funcao_administrativa || 'NENHUMA').toUpperCase();
+    // Obter módulos liberados na Configuração Geral para a(s) função(ões) administrativa(s) do membro selecionado
+    const memberRoles = getMemberFuncoesAdm(selectedMemberForPerms);
     const portalAcessosFuncao = db.igreja?.portal_acessos_funcao || {};
-    const roleModules = portalAcessosFuncao[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS[userFuncaoAdm] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'];
+    const roleModules = getMemberPortalAllowedModules(selectedMemberForPerms, portalAcessosFuncao);
     const availableModules = PORTAL_MODULES.filter(m => roleModules.includes(m.id));
 
     return (
@@ -587,7 +587,7 @@ const ModuleAcessosPortal = () => {
                                 </h3>
                                 <p className="text-sm text-slate-500 mt-1">
                                     Membro: <strong className="text-slate-800">{selectedMemberForPerms?.nome}</strong> | 
-                                    Função: <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-bold ml-1 uppercase">{selectedMemberForPerms?.funcao_administrativa || 'NENHUMA'}</span>
+                                    Funções: <span className="bg-slate-100 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-bold ml-1 uppercase">{memberRoles.length > 0 ? memberRoles.join(', ') : 'NENHUMA'}</span>
                                 </p>
                             </div>
                             <button onClick={() => setIsPermModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
@@ -599,7 +599,7 @@ const ModuleAcessosPortal = () => {
                             <p className="text-xs text-indigo-950 font-medium leading-relaxed">
                                 Habilite ou desabilite os módulos visíveis para este membro no portal de autoatendimento. 
                                 <br />
-                                <strong className="text-indigo-800">Importante:</strong> As opções abaixo respeitam estritamente as regras globais definidas para a função <strong className="text-indigo-700">{(selectedMemberForPerms?.funcao_administrativa || 'NENHUMA').toUpperCase()}</strong> em "Portal & Permissões" nas Configurações Gerais.
+                                <strong className="text-indigo-800">Importante:</strong> As opções abaixo combinam as regras globais definidas para {memberRoles.length > 1 ? 'as funções' : 'a função'} <strong className="text-indigo-700">{memberRoles.length > 0 ? memberRoles.join(' & ') : 'MEMBRO'}</strong> em "Portal & Permissões" nas Configurações Gerais.
                             </p>
                         </div>
 
@@ -609,7 +609,7 @@ const ModuleAcessosPortal = () => {
                                     <AlertCircle className="mx-auto text-amber-500 mb-2 animate-bounce" size={32} />
                                     <p className="text-sm font-bold text-slate-700">Nenhum módulo liberado para esta função</p>
                                     <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                                        Para habilitar a personalização, ative os módulos para a função de <span className="font-extrabold text-indigo-600 uppercase">{(selectedMemberForPerms?.funcao_administrativa || 'NENHUMA').toUpperCase()}</span> em "Portal & Permissões" nas Configurações Gerais do sistema.
+                                        Para habilitar a personalização, ative os módulos para as funções de <span className="font-extrabold text-indigo-600 uppercase">{memberRoles.length > 0 ? memberRoles.join(', ') : 'MEMBRO'}</span> em "Portal & Permissões" nas Configurações Gerais do sistema.
                                     </p>
                                 </div>
                             ) : (

@@ -1476,6 +1476,7 @@ const ModuleConfiguracoesSistemas = () => {
                                                 <option value="CONTADOR">CONTADOR</option>
                                                 <option value="ADMINISTRADOR">ADMINISTRADOR</option>
                                                 <option value="LIDER DE DEPARTAMENTO">LÍDER DE DEPARTAMENTO</option>
+                                                <option value="MUSICO">MÚSICO (Repertório & Louvor)</option>
                                                 <option value="AUXILIAR">AUXILIAR</option>
                                                 <option value="ADVOGADO">ADVOGADO</option>
                                                 <option value="NENHUMA">MEMBRO COMUM (Nenhuma Função)</option>
