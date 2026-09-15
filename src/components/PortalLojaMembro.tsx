@@ -11,7 +11,7 @@ import {
 import { 
   ProdutoLoja, PedidoLoja, ItemPedidoLoja, MovimentacaoEstoque, 
   CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS,
-  HistoricoEventoPedido
+  HistoricoEventoPedido, isProdutoExemplo
 } from '../data/lojaVirtualData';
 import { Button } from '../utils/sharedHelpers';
 import LojaMembroPedidoCard from './LojaMembroPedidoCard';
@@ -97,8 +97,11 @@ export default function PortalLojaMembro({ user, db, setView, onClose }: PortalL
     const list = db?.loja_produtos && Array.isArray(db.loja_produtos)
       ? db.loja_produtos
       : [];
+    const exemplosLimpos = localStorage.getItem('gipp_loja_exemplos_limpos') === 'true';
+    const hasReal = list.some((p: any) => !isProdutoExemplo(p));
+    const filteredList = (exemplosLimpos || hasReal) ? list.filter((p: any) => !isProdutoExemplo(p)) : list;
     // Only active products in the member portal
-    return list.filter((p: ProdutoLoja) => p.ativo);
+    return filteredList.filter((p: ProdutoLoja) => p.ativo);
   }, [db?.loja_produtos]);
 
   // Current Orders for this user (Garantia de histórico mantido e visível)

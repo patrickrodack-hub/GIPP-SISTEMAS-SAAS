@@ -141,6 +141,7 @@ const ModuleMensagensLote = lazy(() => import('./components/ModuleMensagensLote'
 const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin'));
 const ModuleLojaVirtualAdmin = lazy(() => import('./components/ModuleLojaVirtualAdmin'));
 const PortalLojaMembro = lazy(() => import('./components/PortalLojaMembro'));
+import { isProdutoExemplo, EXEMPLO_PRODUTO_IDS } from './data/lojaVirtualData';
 import { LockScreenModal } from './components/LockScreenModal';
 import { MobileBottomDock } from './components/MobileBottomDock';
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
@@ -20798,8 +20799,11 @@ export default function App() {
           const produtosCached = localStorage.getItem('gipp_loja_produtos');
           if (produtosCached) {
               const parsedPr = JSON.parse(produtosCached);
-              if (Array.isArray(parsedPr) && parsedPr.length > 0) {
-                  initialDb = { ...initialDb, loja_produtos: parsedPr };
+              if (Array.isArray(parsedPr)) {
+                  const exemplosLimpos = localStorage.getItem('gipp_loja_exemplos_limpos') === 'true';
+                  const hasReal = parsedPr.some((p: any) => !isProdutoExemplo(p));
+                  const filtered = (exemplosLimpos || hasReal) ? parsedPr.filter((p: any) => !isProdutoExemplo(p)) : parsedPr;
+                  initialDb = { ...initialDb, loja_produtos: filtered };
               }
           }
           const movsCached = localStorage.getItem('gipp_loja_movimentacoes');
@@ -21956,7 +21960,17 @@ export default function App() {
         }
     });
     
-    return () => unsubscribe();
+    const handleDbReload = (e: any) => {
+        if (e.detail) {
+            setDbState((prev: any) => ({ ...prev, ...e.detail }));
+        }
+    };
+    window.addEventListener('gipp_db_reload', handleDbReload);
+    
+    return () => {
+        unsubscribe();
+        window.removeEventListener('gipp_db_reload', handleDbReload);
+    };
   }, []);
 
   useEffect(() => {
@@ -22053,13 +22067,45 @@ export default function App() {
                                       const raw = localStorage.getItem('gipp_loja_produtos');
                                       if (raw) localProds = JSON.parse(raw);
                                   } catch (e) {}
+
+                                  let deletedIds: string[] = [];
+                                  try {
+                                      const rawDel = localStorage.getItem('gipp_loja_produtos_deleted_ids');
+                                      if (rawDel) deletedIds = JSON.parse(rawDel);
+                                  } catch (e) {}
+
+                                  const exemplosLimpos = localStorage.getItem('gipp_loja_exemplos_limpos') === 'true';
+                                  const hasRealLocal = localProds.some((p: any) => !isProdutoExemplo(p));
+                                  const hasRealUList = (uList || []).some((p: any) => !isProdutoExemplo(p));
+                                  const shouldBlockExemplos = exemplosLimpos || hasRealLocal || hasRealUList;
+
+                                  const isValid = (p: any) => {
+                                      if (!p || !p.id) return false;
+                                      if (deletedIds.includes(p.id)) return false;
+                                      if (shouldBlockExemplos && isProdutoExemplo(p)) return false;
+                                      return true;
+                                  };
+
+                                  if (shouldBlockExemplos && dbFirestore && appId) {
+                                      (uList || []).filter(isProdutoExemplo).forEach((ep: any) => {
+                                          deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', ep.id)).catch(() => {});
+                                      });
+                                  }
+
                                   const map = new Map();
-                                  (Array.isArray(localProds) ? localProds : []).forEach((p: any) => map.set(p.id, p));
-                                  (Array.isArray(prev.loja_produtos) ? prev.loja_produtos : []).forEach((p: any) => map.set(p.id, p));
-                                  (Array.isArray(uList) ? uList : []).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(uList) ? uList : []).filter(isValid).forEach((p: any) => map.set(p.id, p));
+                                  (Array.isArray(localProds) ? localProds : []).filter(isValid).forEach((p: any) => {
+                                      if (!map.has(p.id)) map.set(p.id, p);
+                                  });
+
                                   const mergedProds = Array.from(map.values());
-                                  newState[stateKey] = mergedProds.length > 0 ? mergedProds : (prev.loja_produtos || []);
-                                  try { localStorage.setItem('gipp_loja_produtos', JSON.stringify(newState[stateKey])); } catch (e) {}
+                                  newState[stateKey] = mergedProds;
+                                  try {
+                                      localStorage.setItem('gipp_loja_produtos', JSON.stringify(mergedProds));
+                                      if (shouldBlockExemplos) {
+                                          localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
+                                      }
+                                  } catch (e) {}
                               } else if (stateKey === 'loja_movimentacoes') {
                                   let localMovs: any[] = [];
                                   try {

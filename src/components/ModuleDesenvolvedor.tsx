@@ -45,11 +45,11 @@ import {
 
 import { SAAS_MODULES_LIST, generateSaaSMarketingMessages } from './ModuleDivulgacaoData';
 import { DiagnosticsDashboard } from './DiagnosticsDashboard';
-import { PRODUTOS_LOJA_INICIAIS } from '../data/lojaVirtualData';
+import { PRODUTOS_LOJA_INICIAIS, EXEMPLO_PRODUTO_IDS } from '../data/lojaVirtualData';
 
 // Exporting component
 const ModuleDesenvolvedor = () => {
-    const { db, setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
+    const { db, setDbState, setDoc, doc, deleteDoc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog } = useContext(ChurchContext);
     const [data, setData] = useState(db.igreja || {});
     const [tab, setTab] = useState('dashboard');
     
@@ -3792,12 +3792,16 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                         type="button"
                                         onClick={async () => {
                                             try {
+                                                localStorage.removeItem('gipp_loja_exemplos_limpos');
                                                 const novosProds = PRODUTOS_LOJA_INICIAIS;
                                                 localStorage.setItem('gipp_loja_produtos', JSON.stringify(novosProds));
                                                 if (dbFirestore && appId) {
                                                     for (const prod of novosProds) {
                                                         await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', prod.id), prod);
                                                     }
+                                                }
+                                                if (setDbState) {
+                                                    setDbState((prev: any) => ({ ...prev, loja_produtos: novosProds }));
                                                 }
                                                 window.dispatchEvent(new CustomEvent('gipp_db_reload', { detail: { loja_produtos: novosProds } }));
                                                 addToast("6 Produtos modelo CPAD injetados para testes com sucesso!", "success");
@@ -3815,13 +3819,29 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                         onClick={async () => {
                                             if (window.confirm("Deseja realmente limpar todos os produtos e pedidos de teste da Loja Virtual? Esta ação deixará o banco zerado para que somente cadastros reais de usuários sejam usados.")) {
                                                 try {
+                                                    localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
                                                     localStorage.setItem('gipp_loja_produtos', JSON.stringify([]));
                                                     localStorage.setItem('gipp_loja_pedidos', JSON.stringify([]));
                                                     localStorage.setItem('gipp_loja_movimentacoes', JSON.stringify([]));
+                                                    
                                                     if (dbFirestore && appId) {
+                                                        const prods = (db?.loja_produtos && Array.isArray(db.loja_produtos)) ? db.loja_produtos : [];
+                                                        const idsToDelete = Array.from(new Set([...prods.map((p: any) => p.id), ...EXEMPLO_PRODUTO_IDS]));
+                                                        for (const id of idsToDelete) {
+                                                            try {
+                                                                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', id));
+                                                            } catch (e) {}
+                                                        }
                                                         await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'loja_reset'), {
                                                             last_reset: new Date().toISOString()
                                                         }, { merge: true });
+                                                        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'loja_config'), {
+                                                            exemplos_limpos: true,
+                                                            last_update: new Date().toISOString()
+                                                        }, { merge: true });
+                                                    }
+                                                    if (setDbState) {
+                                                        setDbState((prev: any) => ({ ...prev, loja_produtos: [], loja_pedidos: [], loja_movimentacoes: [] }));
                                                     }
                                                     window.dispatchEvent(new CustomEvent('gipp_db_reload', { detail: { loja_produtos: [], loja_pedidos: [], loja_movimentacoes: [] } }));
                                                     addToast("Catálogo da loja zerado com sucesso. Base pronta para produção com cadastros reais!", "info");

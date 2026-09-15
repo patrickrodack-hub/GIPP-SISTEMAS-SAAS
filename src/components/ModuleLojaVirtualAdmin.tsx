@@ -12,7 +12,7 @@ import {
 import { 
   ProdutoLoja, PedidoLoja, MovimentacaoEstoque, TransferenciaCaixaLoja,
   CATEGORIAS_LOJA, PRODUTOS_LOJA_INICIAIS,
-  HistoricoEventoPedido
+  HistoricoEventoPedido, isProdutoExemplo, EXEMPLO_PRODUTO_IDS
 } from '../data/lojaVirtualData';
 import { Button } from '../utils/sharedHelpers';
 import LojaTratamentoModal from './LojaTratamentoModal';
@@ -65,6 +65,11 @@ export default function ModuleLojaVirtualAdmin() {
   // Safe collections getter with defaults - Somente produtos reais do banco / cadastrados pelos usuários
   const produtos: ProdutoLoja[] = useMemo(() => {
     if (db && Array.isArray(db.loja_produtos)) {
+      const exemplosLimpos = localStorage.getItem('gipp_loja_exemplos_limpos') === 'true';
+      const hasReal = db.loja_produtos.some((p: any) => !isProdutoExemplo(p));
+      if (exemplosLimpos || hasReal) {
+        return db.loja_produtos.filter((p: any) => !isProdutoExemplo(p));
+      }
       return db.loja_produtos;
     }
     return [];
@@ -93,10 +98,50 @@ export default function ModuleLojaVirtualAdmin() {
 
   // Persist helper
   const syncProdutos = async (newList: ProdutoLoja[]) => {
+    const currentList = Array.isArray(db?.loja_produtos) ? db.loja_produtos : produtos;
+    const removedIds = currentList.filter((p: any) => !newList.some((n: any) => n.id === p.id)).map((p: any) => p.id);
+
+    const hasRealProduct = newList.some(p => !isProdutoExemplo(p));
+    const isClearingOrHasReal = newList.length === 0 || hasRealProduct;
+
+    if (isClearingOrHasReal) {
+      localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
+    }
+
+    if (removedIds.length > 0) {
+      try {
+        let deletedIds: string[] = [];
+        const raw = localStorage.getItem('gipp_loja_produtos_deleted_ids');
+        if (raw) deletedIds = JSON.parse(raw);
+        removedIds.forEach(id => {
+          if (!deletedIds.includes(id)) deletedIds.push(id);
+        });
+        localStorage.setItem('gipp_loja_produtos_deleted_ids', JSON.stringify(deletedIds));
+      } catch (e) {}
+    }
+
     setDbState((prev: any) => ({ ...prev, loja_produtos: newList }));
     try {
       localStorage.setItem('gipp_loja_produtos', JSON.stringify(newList));
       if (dbFirestore && appId) {
+        for (const id of removedIds) {
+          try {
+            await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', id));
+          } catch (e) {}
+        }
+        if (isClearingOrHasReal) {
+          for (const sampleId of EXEMPLO_PRODUTO_IDS) {
+            try {
+              await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', sampleId));
+            } catch (e) {}
+          }
+          try {
+            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'loja_config'), {
+              exemplos_limpos: true,
+              last_update: new Date().toISOString()
+            }, { merge: true });
+          } catch (e) {}
+        }
         for (const item of newList) {
           await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'loja_produtos', item.id), item);
         }
@@ -362,8 +407,11 @@ export default function ModuleLojaVirtualAdmin() {
         destaque: !!formData.destaque,
         data_cadastro: new Date().toISOString()
       };
-      updatedList = [newProduct, ...produtos];
-      addToast("Novo produto cadastrado com sucesso!", "success");
+      // REGRA CRÍTICA: Ao cadastrar um produto real pela primeira vez, eliminamos qualquer produto de modelo remanescente
+      localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
+      const apenasReais = produtos.filter(p => !isProdutoExemplo(p));
+      updatedList = [newProduct, ...apenasReais];
+      addToast("Novo produto cadastrado com sucesso! Catálogo oficial configurado.", "success");
     }
 
     await syncProdutos(updatedList);
@@ -372,6 +420,10 @@ export default function ModuleLojaVirtualAdmin() {
 
   const handleDeleteProduct = async (prodId: string) => {
     if (!window.confirm("Deseja realmente remover este produto do catálogo?")) return;
+    const prodTarget = produtos.find(p => p.id === prodId);
+    if (prodTarget && isProdutoExemplo(prodTarget)) {
+      localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
+    }
     const updatedList = produtos.filter(p => p.id !== prodId);
     await syncProdutos(updatedList);
     addToast("Produto removido do catálogo.", "info");
@@ -645,6 +697,28 @@ export default function ModuleLojaVirtualAdmin() {
     window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
   };
 
+  const handleLimparModelosTeste = async () => {
+    const rawList = Array.isArray(db?.loja_produtos) ? db.loja_produtos : produtos;
+    const temExemplos = rawList.some(isProdutoExemplo);
+    const temReais = rawList.some((p: any) => !isProdutoExemplo(p));
+
+    if (temExemplos && temReais) {
+      if (window.confirm("Deseja remover todos os produtos de exemplo/modelo e MANTER apenas os seus produtos cadastrados?")) {
+        localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
+        const apenasReais = rawList.filter((p: any) => !isProdutoExemplo(p));
+        await syncProdutos(apenasReais);
+        addToast("Modelos de teste removidos com sucesso! Seus produtos reais foram mantidos.", "success");
+        return;
+      }
+    }
+
+    if (window.confirm("Atenção: Deseja limpar todos os produtos de modelo/teste e zerar o catálogo da loja para manter apenas cadastros reais de usuários?")) {
+      localStorage.setItem('gipp_loja_exemplos_limpos', 'true');
+      await syncProdutos([]);
+      addToast("Catálogo da loja zerado com sucesso. Pronto para seus cadastros oficiais!", "info");
+    }
+  };
+
   return (
     <div 
       id="module-loja-virtual-container"
@@ -670,19 +744,14 @@ export default function ModuleLojaVirtualAdmin() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {user?.nivel === 'master' && produtos.length > 0 && (
+          {produtos.length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm("Atenção: Deseja limpar todos os produtos de modelo/teste e zerar o catálogo da loja para manter apenas cadastros reais de usuários?")) {
-                  syncProdutos([]);
-                  addToast("Catálogo da loja zerado com sucesso. Apenas produtos reais de usuários serão exibidos.", "info");
-                }
-              }}
+              onClick={handleLimparModelosTeste}
               className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-800 transition-all cursor-pointer shadow-sm"
-              title="Zerar catálogo de teste e manter apenas cadastros reais"
+              title="Remover modelos de teste e garantir catálogo limpo para cadastros oficiais"
             >
-              <Trash2 size={14} /> Limpar Modelos de Teste
+              <Trash2 size={14} /> {produtos.some(isProdutoExemplo) ? "Limpar Produtos de Exemplo" : "Zerar Catálogo"}
             </button>
           )}
 
@@ -969,6 +1038,14 @@ export default function ModuleLojaVirtualAdmin() {
                             <button
                               type="button"
                               onClick={() => {
+                                localStorage.removeItem('gipp_loja_exemplos_limpos');
+                                try {
+                                  const raw = localStorage.getItem('gipp_loja_produtos_deleted_ids');
+                                  if (raw) {
+                                    const del = JSON.parse(raw).filter((id: string) => !EXEMPLO_PRODUTO_IDS.includes(id));
+                                    localStorage.setItem('gipp_loja_produtos_deleted_ids', JSON.stringify(del));
+                                  }
+                                } catch (e) {}
                                 syncProdutos(PRODUTOS_LOJA_INICIAIS);
                                 addToast("Modelos de demonstração CPAD carregados para testes com sucesso!", "info");
                               }}

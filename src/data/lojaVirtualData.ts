@@ -116,6 +116,22 @@ export const CATEGORIAS_LOJA = [
   'Acessórios & Outros'
 ];
 
+export const EXEMPLO_PRODUTO_IDS: string[] = [
+  'prod-001', 'prod-002', 'prod-003', 'prod-004', 'prod-005', 'prod-006'
+];
+
+export const EXEMPLO_PRODUTO_SKUS: string[] = [
+  'BIB-PENT-01', 'HARP-MUS-02', 'LIV-DF-03', 'VEST-CONG-04', 'PAP-CAD-05', 'EBD-REV-06'
+];
+
+export function isProdutoExemplo(p: any): boolean {
+  if (!p) return false;
+  if (p.is_exemplo === true || p.exemplo === true) return true;
+  if (p.id && EXEMPLO_PRODUTO_IDS.includes(p.id)) return true;
+  if (p.sku && EXEMPLO_PRODUTO_SKUS.includes(p.sku)) return true;
+  return false;
+}
+
 export const PRODUTOS_LOJA_INICIAIS: ProdutoLoja[] = [
   {
     id: 'prod-001',
