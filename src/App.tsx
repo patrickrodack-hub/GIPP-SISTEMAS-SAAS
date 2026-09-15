@@ -57,7 +57,7 @@ import {
     playMenuSound, playNotificationSound 
 } from './utils/sharedHelpers';
 import { 
-    transposeCifraText, transposeChord, isChordLine, CHROMATIC_SCALE_SHARP, getSemitoneDifference 
+    transposeCifraText, transposeChord, isChordLine, CHROMATIC_SCALE_SHARP, getSemitoneDifference, getCapoChordShapeKey 
 } from './utils/musicChords';
 
 // --- MODULARIZED IMPORTS ---
@@ -10479,12 +10479,20 @@ export const PrintSystem = ({
         const s = song || data.item || data;
         const semitones = typeof data.semitones === 'number' ? data.semitones : 0;
         const fontSize = typeof data.fontSize === 'number' ? data.fontSize : 13;
+        const capoFret = typeof data.capoFret === 'number' ? data.capoFret : 0;
+        const chordShapeKey = data.chordShapeKey || s.forma_capo || '';
+        const applyCapoToChords = data.applyCapoToChords !== false;
         const rawCifra = s.letra_cifra || s.cifra || '';
 
         // Transposição musical do tom e da letra cifrada
         const originalTom = s.tom || 'G';
         const currentTom = semitones !== 0 ? transposeChord(originalTom, semitones) : originalTom;
-        const processedCifra = semitones !== 0 ? transposeCifraText(rawCifra, semitones) : rawCifra;
+        const shapeTom = (capoFret > 0 && chordShapeKey) ? chordShapeKey : (capoFret > 0 ? getCapoChordShapeKey(currentTom, capoFret) : currentTom);
+        const effectiveSemi = (capoFret > 0 && applyCapoToChords) ? (semitones - capoFret) : semitones;
+        const targetKey = (capoFret > 0 && applyCapoToChords) ? shapeTom : currentTom;
+        const processedCifra = s.letra_cifra 
+            ? s.letra_cifra 
+            : (effectiveSemi !== 0 ? transposeCifraText(rawCifra, effectiveSemi, targetKey) : rawCifra);
 
         // Separar a cifra em blocos (estrofes, refrões, etc) para evitar cortes no meio de frases em A4
         const rawBlocks = processedCifra.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
@@ -10495,7 +10503,7 @@ export const PrintSystem = ({
                 subtitle={`Artista / Ministério: ${s.artista || 'Consagrado'} • Repertório Oficial de Louvor`}
             >
                 <div className="space-y-6 text-slate-800">
-                    {/* Barra de Metadados da Música (Tom, BPM, Ritmo, Pasta, Ministério) */}
+                    {/* Barra de Metadados da Música (Tom, Capotraste, BPM, Ritmo, Pasta, Ministério) */}
                     <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl avoid-break shadow-2xs">
                         <div className="flex flex-wrap items-center gap-2.5">
                             <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-950 px-3 py-1.5 rounded-lg">
@@ -10507,6 +10515,15 @@ export const PrintSystem = ({
                                     </span>
                                 )}
                             </div>
+                            {capoFret > 0 && (
+                                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-950 px-3 py-1.5 rounded-lg">
+                                    <span className="text-[10px] font-bold uppercase text-amber-700">Capo:</span>
+                                    <span className="text-xs font-black text-amber-900">{capoFret}ª casa</span>
+                                    <span className="text-[9px] font-bold text-amber-800 bg-amber-200/80 px-1.5 py-0.5 rounded">
+                                        {applyCapoToChords ? `Formas: ${shapeTom}` : `Tom Real: ${currentTom}`}
+                                    </span>
+                                </div>
+                            )}
                             {s.bpm && (
                                 <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-950 px-3 py-1.5 rounded-lg">
                                     <span className="text-[10px] font-bold uppercase text-emerald-700">Andamento:</span>

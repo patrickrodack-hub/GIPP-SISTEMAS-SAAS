@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronLeft, ChevronRight, X, Sun, Moon, Columns, 
   Play, Pause, ArrowUp, ArrowDown, Music, Sparkles, Mic,
-  List, Sliders, ChevronDown
+  List, Sliders, ChevronDown, Guitar, RotateCcw
 } from 'lucide-react';
 import { 
   SetlistCulto, SetlistMusicaItem, MusicaRepertorio 
 } from '../data/repertorioData';
 import { 
-  transposeChordSheet, transposeNote, CHROMATIC_SHARPS, getSemitoneDifference 
+  transposeChordSheet, transposeNote, CHROMATIC_SHARPS, getSemitoneDifference,
+  getCapoChordShapeKey, CAPO_FRETS
 } from '../utils/musicChords';
 import { WorshipMetronome } from './WorshipMetronome';
 
@@ -37,6 +38,10 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
   // Manual transposition offset applied on top of tom_culto
   const [liveSemitonesOffset, setLiveSemitonesOffset] = useState<number>(0);
 
+  // Capo state for live reader
+  const [liveCapo, setLiveCapo] = useState<number>(0);
+  const [applyCapoChords, setApplyCapoChords] = useState<boolean>(true);
+
   // Auto-scroll state
   const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
   const [scrollSpeed, setScrollSpeed] = useState<number>(1); // 1 = lento, 2 = médio, 3 = rápido
@@ -53,11 +58,12 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
   // Reset live offset when switching songs
   useEffect(() => {
     setLiveSemitonesOffset(0);
+    setLiveCapo(fullSongData?.capo || 0);
     setIsAutoScrolling(false);
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-  }, [currentIndex]);
+  }, [currentIndex, fullSongData?.capo]);
 
   // Keyboard navigation (ArrowLeft, ArrowRight, Space for scroll, Esc to exit)
   useEffect(() => {
@@ -137,10 +143,13 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
 
   // Compute current display key
   const effectiveCurrentKey = transposeNote(originalKey, totalTranspose);
+  const chordShapeKey = liveCapo > 0 ? getCapoChordShapeKey(effectiveCurrentKey, liveCapo) : effectiveCurrentKey;
+  const effectiveChordTranspose = (liveCapo > 0 && applyCapoChords) ? (totalTranspose - liveCapo) : totalTranspose;
+  const targetKeyForChords = (liveCapo > 0 && applyCapoChords) ? chordShapeKey : effectiveCurrentKey;
 
   // Transpose chords
   const rawChords = fullSongData?.letra_cifra || 'Cifra ainda não cadastrada para esta canção.';
-  const transposedChords = transposeChordSheet(rawChords, totalTranspose);
+  const transposedChords = transposeChordSheet(rawChords, effectiveChordTranspose, targetKeyForChords);
 
   const toggleStageMode = () => {
     setStageMode(prev => {
@@ -290,6 +299,37 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
             )}
           </div>
 
+          {/* Capo Selector */}
+          <div className="flex items-center bg-slate-800 border border-amber-500/40 rounded-xl px-2 py-1 gap-1">
+            <span className="text-[10px] text-amber-400 font-bold uppercase flex items-center gap-0.5">
+              <Guitar size={11} />
+              <span className="hidden sm:inline">Capo:</span>
+            </span>
+            <select
+              value={liveCapo}
+              onChange={(e) => setLiveCapo(parseInt(e.target.value) || 0)}
+              className="bg-transparent text-amber-300 text-xs font-mono font-bold outline-none cursor-pointer"
+              title="Posição do Capotraste"
+            >
+              <option value={0} className="bg-slate-900 text-white">Sem Capo</option>
+              {Array.from({ length: 11 }, (_, i) => i + 1).map(f => (
+                <option key={f} value={f} className="bg-slate-900 text-white">
+                  {f}ª casa ({getCapoChordShapeKey(effectiveCurrentKey, f)})
+                </option>
+              ))}
+            </select>
+            {liveCapo > 0 && (
+              <button
+                type="button"
+                onClick={() => setLiveCapo(0)}
+                className="text-[10px] font-bold text-rose-400 hover:text-rose-300 px-0.5 cursor-pointer"
+                title="Remover Capo"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {/* Compact Metronome / Tap */}
           <div className="hidden sm:block">
             <WorshipMetronome
@@ -419,6 +459,22 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
                     <span className="opacity-75 text-[10px] ml-1 font-semibold">(Orig: {originalKey})</span>
                   )}
                 </span>
+
+                {liveCapo > 0 && (
+                  <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/50 text-amber-200 px-2.5 py-1 rounded-lg text-xs font-black shadow-xs">
+                    <Guitar size={13} className="text-amber-400" />
+                    <span>Capo {liveCapo}ª</span>
+                    <button
+                      type="button"
+                      onClick={() => setApplyCapoChords(!applyCapoChords)}
+                      className="text-[10px] ml-1 bg-amber-400 hover:bg-amber-300 text-slate-950 px-1.5 py-0.5 rounded font-bold transition cursor-pointer"
+                      title="Alternar acordes para a digitação do violão ou tom real"
+                    >
+                      {applyCapoChords ? `Formas: ${chordShapeKey}` : `Tom Real: ${effectiveCurrentKey}`}
+                    </button>
+                  </div>
+                )}
+
                 {(currentItem.bpm || fullSongData?.bpm) && (
                   <span className="text-xs font-mono font-bold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">
                     {currentItem.bpm || fullSongData?.bpm} BPM

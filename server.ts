@@ -8,7 +8,7 @@ import webpush from "web-push";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore";
+import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore/lite";
 import { PDFDocument } from 'pdf-lib';
 
 const app = express();

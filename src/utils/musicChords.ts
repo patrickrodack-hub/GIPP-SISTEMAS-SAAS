@@ -199,3 +199,59 @@ export const transposeChord = transposeSingleChord;
 export const transposeCifraText = transposeChordSheet;
 export const CHROMATIC_SCALE_SHARP = CHROMATIC_SHARPS;
 
+/**
+ * Constantes e utilitários para Capotraste (Capo)
+ */
+export const CAPO_FRETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
+
+export function getCapoLabel(fret: number): string {
+    if (!fret || fret <= 0) return 'Sem Capo';
+    return `Capo ${fret}ª casa`;
+}
+
+/**
+ * Calcula o tom da forma dos acordes (shape) que o violão toca com o Capo.
+ * Ex: Som Real = 'G', Capo = 2ª casa -> Forma dos acordes = 'F'
+ * Ex: Som Real = 'Bb', Capo = 3ª casa -> Forma dos acordes = 'G'
+ */
+export function getCapoChordShapeKey(soundingKey: string, capoFret: number): string {
+    if (!capoFret || capoFret <= 0) return soundingKey;
+    return transposeNote(soundingKey, -capoFret);
+}
+
+/**
+ * Calcula o tom resultante (som real) ao usar determinado acorde-base com Capo.
+ * Ex: Forma tocada = 'G', Capo na 2ª casa -> Som real = 'A'
+ */
+export function getCapoSoundingKey(shapeKey: string, capoFret: number): string {
+    if (!capoFret || capoFret <= 0) return shapeKey;
+    return transposeNote(shapeKey, capoFret);
+}
+
+/**
+ * Sugere posições ideais de capotraste para facilitar a execução no violão
+ * priorizando formas abertas populares (G, C, D, E, A).
+ */
+export function suggestCapo(soundingKey: string): { fret: number; shape: string; reason: string } | null {
+    const clean = soundingKey.trim();
+    if (!clean) return null;
+    const root = clean.match(/^[A-Ga-g][#b]?/)?.[0]?.toUpperCase() || clean;
+
+    const suggestions: Record<string, { fret: number; shape: string; reason: string }> = {
+        'AB': { fret: 1, shape: 'G', reason: 'Toque na forma aberta de G com Capo na 1ª casa' },
+        'G#': { fret: 1, shape: 'G', reason: 'Toque na forma aberta de G com Capo na 1ª casa' },
+        'BB': { fret: 3, shape: 'G', reason: 'Toque na forma aberta de G com Capo na 3ª casa (ou 1ª casa na forma de A)' },
+        'A#': { fret: 3, shape: 'G', reason: 'Toque na forma aberta de G com Capo na 3ª casa (ou 1ª casa na forma de A)' },
+        'B':  { fret: 4, shape: 'G', reason: 'Toque na forma aberta de G com Capo na 4ª casa (ou 2ª casa na forma de A)' },
+        'DB': { fret: 1, shape: 'C', reason: 'Toque na forma de C com Capo na 1ª casa' },
+        'C#': { fret: 1, shape: 'C', reason: 'Toque na forma de C com Capo na 1ª casa' },
+        'EB': { fret: 1, shape: 'D', reason: 'Toque na forma aberta de D com Capo na 1ª casa (ou 3ª casa na forma de C)' },
+        'D#': { fret: 1, shape: 'D', reason: 'Toque na forma aberta de D com Capo na 1ª casa (ou 3ª casa na forma de C)' },
+        'F#': { fret: 2, shape: 'E', reason: 'Toque na forma de E com Capo na 2ª casa (ou 4ª casa na forma de D)' },
+        'GB': { fret: 2, shape: 'E', reason: 'Toque na forma de E com Capo na 2ª casa (ou 4ª casa na forma de D)' },
+    };
+
+    return suggestions[root] || null;
+}
+
+

@@ -5,7 +5,8 @@ import {
   Maximize2, Minimize2, Printer, Copy, RotateCcw, Type as TypeIcon,
   Play, Pause, Moon, Sun, ExternalLink, ShieldAlert, Sparkles,
   ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check, Columns2,
-  Expand, Shrink, Calendar, Clock, Users, CheckCircle2, AlertCircle, Clock3
+  Expand, Shrink, Calendar, Clock, Users, CheckCircle2, AlertCircle, Clock3,
+  Guitar
 } from 'lucide-react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
@@ -13,7 +14,8 @@ import {
   checkIsMusicoOuLouvor, SetlistCulto, SETLISTS_PADRAO
 } from '../data/repertorioData';
 import { 
-  transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
+  transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS,
+  CAPO_FRETS, getCapoLabel, getCapoChordShapeKey, suggestCapo
 } from '../utils/musicChords';
 import { InteractiveWindow } from './InteractiveWindow';
 import { CifraVisualizer } from './CifraVisualizer';
@@ -97,9 +99,11 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   const [isSongFullscreen, setIsSongFullscreen] = useState<boolean>(false);
   const [twoColumns, setTwoColumns] = useState<boolean>(false);
 
-  // Mapas de transposição e tamanho de fonte por canção
+  // Mapas de transposição, tamanho de fonte e capotraste por canção
   const [songTransposeMap, setSongTransposeMap] = useState<Record<string, number>>({});
   const [songFontSizeMap, setSongFontSizeMap] = useState<Record<string, number>>({});
+  const [songCapoMap, setSongCapoMap] = useState<Record<string, number>>({});
+  const [applyCapoToChords, setApplyCapoToChords] = useState<boolean>(true);
 
   // Modo Palco (Dark Mode de Alto Contraste para palco)
   const [stageMode, setStageMode] = useState<boolean>(() => {
@@ -274,11 +278,20 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     }
   };
 
-  // Impressão / PDF Oficial da Cifra
-  const handleImprimirCifra = (song: MusicaRepertorio, semitones: number, fontSize: number) => {
+  // Impressão / PDF Oficial da Cifra com Suporte a Capotraste
+  const handleImprimirCifra = (
+    song: MusicaRepertorio, 
+    semitones: number, 
+    fontSize: number, 
+    capoFret: number = 0, 
+    applyCapo: boolean = true
+  ) => {
     const originalTom = song.tom || 'G';
     const currentTom = transposeNote(originalTom, semitones);
-    const transposedText = transposeChordSheet(song.letra_cifra || '', semitones, currentTom);
+    const shapeTom = capoFret > 0 ? getCapoChordShapeKey(currentTom, capoFret) : currentTom;
+    const effectiveSemi = (capoFret > 0 && applyCapo) ? (semitones - capoFret) : semitones;
+    const targetKey = (capoFret > 0 && applyCapo) ? shapeTom : currentTom;
+    const transposedText = transposeChordSheet(song.letra_cifra || '', effectiveSemi, targetKey);
 
     if (setPrintMode && setPrintData) {
       setPrintMode('rel_cifra_musica');
@@ -286,14 +299,18 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
         song: {
           ...song,
           tom: currentTom,
+          forma_capo: capoFret > 0 ? shapeTom : undefined,
           letra_cifra: transposedText
         },
         semitones,
         fontSize,
+        capoFret,
+        chordShapeKey: shapeTom,
+        applyCapoToChords: applyCapo,
         igreja: db?.igreja
       });
       if (setPreviewOpen) setPreviewOpen(true);
-      addToast(`Cifra de "${song.titulo}" preparada em Tom de ${currentTom}!`, "info");
+      addToast(`Cifra de "${song.titulo}" preparada em Tom de ${currentTom}${capoFret > 0 ? ` (Capo ${capoFret}ª casa - Forma ${shapeTom})` : ''}!`, "info");
     } else {
       window.print();
     }
@@ -424,15 +441,30 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     );
   }
 
-  // Canção ativa no modal de cifra
+  // Canção ativa no modal de cifra e tela cheia
   const activeSong = activeModalSong;
   const activeSemitones = activeSong ? (songTransposeMap[activeSong.id] || 0) : 0;
   const activeFontSize = activeSong ? (songFontSizeMap[activeSong.id] || 13) : 13;
   const activeOriginalKey = activeSong ? (activeSong.tom || 'G') : 'G';
   const activeCurrentKey = activeSong ? transposeNote(activeOriginalKey, activeSemitones) : 'G';
+  
+  // Capotraste da canção ativa
+  const activeCapo = activeSong ? (songCapoMap[activeSong.id] || 0) : 0;
+  // Tom da digitação no violão com o Capo (ex: Tom Real 'G', Capo 2 -> Forma 'F')
+  const activeChordShapeKey = activeCapo > 0 
+    ? getCapoChordShapeKey(activeCurrentKey, activeCapo) 
+    : activeCurrentKey;
+  // Semitons efetivos aplicados na cifra exibida
+  const effectiveSemitones = (activeCapo > 0 && applyCapoToChords)
+    ? (activeSemitones - activeCapo)
+    : activeSemitones;
+  const targetKeyForSheet = (activeCapo > 0 && applyCapoToChords)
+    ? activeChordShapeKey
+    : activeCurrentKey;
   const activeTransposedSheet = activeSong 
-    ? transposeChordSheet(activeSong.letra_cifra || '', activeSemitones, activeCurrentKey)
+    ? transposeChordSheet(activeSong.letra_cifra || '', effectiveSemitones, targetKeyForSheet)
     : '';
+  const capoSuggestion = activeSong ? suggestCapo(activeCurrentKey) : null;
 
   return (
     <div 
@@ -924,6 +956,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               const semitones = songTransposeMap[song.id] || 0;
               const originalKey = song.tom || 'G';
               const currentKey = transposeNote(originalKey, semitones);
+              const songCapo = songCapoMap[song.id] || 0;
+              const songShape = songCapo > 0 ? getCapoChordShapeKey(currentKey, songCapo) : currentKey;
 
               return (
                 <div
@@ -945,14 +979,19 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                         </p>
                       </div>
 
-                      {/* Badge de Tom */}
-                      <div className="text-right shrink-0">
+                      {/* Badge de Tom e Capo */}
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
                         <span className="text-xs font-black bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 px-2.5 py-1 rounded-xl block shadow-2xs">
                           Tom: {currentKey}
                         </span>
                         {semitones !== 0 && (
-                          <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 block mt-0.5 font-mono">
+                          <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 block font-mono">
                             ({semitones > 0 ? `+${semitones}` : semitones}st)
+                          </span>
+                        )}
+                        {songCapo > 0 && (
+                          <span className="text-[10px] font-black bg-amber-50 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <Guitar size={10} /> Capo {songCapo}ª ({songShape})
                           </span>
                         )}
                       </div>
@@ -1038,7 +1077,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
         <InteractiveWindow
           id={`repertorio_cifra_window_${activeSong.id}`}
           title={`${activeSong.titulo} • ${activeSong.artista || 'Consagrado'}`}
-          subtitle={`Tom Atual: ${activeCurrentKey} ${activeSemitones !== 0 ? `(${activeSemitones > 0 ? `+${activeSemitones}` : activeSemitones}st)` : ''} • Pasta: ${activeSong.pasta || 'Geral'}`}
+          subtitle={`Tom Atual: ${activeCurrentKey} ${activeSemitones !== 0 ? `(${activeSemitones > 0 ? `+${activeSemitones}` : activeSemitones}st)` : ''} ${activeCapo > 0 ? `• Capo ${activeCapo}ª casa (${applyCapoToChords ? `Forma: ${activeChordShapeKey}` : 'Tom Real'})` : ''} • Pasta: ${activeSong.pasta || 'Geral'}`}
           onClose={() => {
             setActiveModalSong(null);
             setIsAutoScrolling(false);
@@ -1053,13 +1092,16 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   Tom Original: <strong className="text-slate-700 dark:text-slate-200">{activeOriginalKey}</strong>
                 </span>
-                {activeSemitones !== 0 && (
+                {(activeSemitones !== 0 || activeCapo !== 0) && (
                   <button
                     type="button"
-                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    onClick={() => {
+                      setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }));
+                      setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }));
+                    }}
                     className="text-[11px] font-bold text-rose-600 hover:underline flex items-center gap-1 cursor-pointer ml-1"
                   >
-                    <RotateCcw size={11} /> Restaurar Tom ({activeOriginalKey})
+                    <RotateCcw size={11} /> Restaurar Tom & Capo ({activeOriginalKey})
                   </button>
                 )}
               </div>
@@ -1085,7 +1127,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => handleImprimirCifra(activeSong, activeSemitones, activeFontSize)}
+                  onClick={() => handleImprimirCifra(activeSong, activeSemitones, activeFontSize, activeCapo, applyCapoToChords)}
                   className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
                   title="Imprimir ou gerar PDF formatado"
                 >
@@ -1096,7 +1138,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           }
         >
           <div className={`p-4 sm:p-5 space-y-4 flex flex-col h-full ${stageMode ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100'}`}>
-            {/* PAINEL DE FERRAMENTAS MUSICAIS: TRANSPOSIÇÃO, FONTE, TELA CHEIA, ROLAGEM E MODO PALCO */}
+            {/* PAINEL DE FERRAMENTAS MUSICAIS: TRANSPOSIÇÃO, CAPOTRASTE, FONTE, TELA CHEIA, ROLAGEM E MODO PALCO */}
             <div className={`p-3 rounded-2xl border flex flex-wrap items-center justify-between gap-3 shadow-2xs ${
               stageMode 
                 ? 'bg-zinc-900 border-zinc-800 text-zinc-100' 
@@ -1150,6 +1192,84 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                   ))}
                 </select>
               </div>
+
+              {/* 1.1 SELETOR E TRANSPOSIÇÃO COM CAPOTRASTE (CAPO) */}
+              <div className="flex items-center gap-1 bg-amber-500/10 dark:bg-amber-500/15 p-1 rounded-xl border border-amber-300 dark:border-amber-700/60 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1 px-1">
+                  <Guitar size={13} /> Capo:
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: Math.max(0, activeCapo - 1) }))}
+                  disabled={activeCapo <= 0}
+                  className="w-7 h-7 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-amber-200 dark:border-amber-800 shadow-2xs"
+                  title="Descer 1 casa do Capo"
+                >
+                  -
+                </button>
+
+                <div className={`px-2 py-0.5 rounded-lg font-black text-xs flex items-center gap-1 border ${
+                  activeCapo > 0
+                    ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200'
+                    : 'bg-white dark:bg-slate-800 border-amber-200/60 dark:border-amber-900 text-slate-600 dark:text-slate-400'
+                }`}>
+                  <span>{activeCapo > 0 ? `${activeCapo}ª casa` : 'Sem Capo'}</span>
+                  {activeCapo > 0 && (
+                    <span className="text-[9px] font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/80 px-1 rounded">
+                      {activeChordShapeKey}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: Math.min(11, activeCapo + 1) }))}
+                  disabled={activeCapo >= 11}
+                  className="w-7 h-7 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-amber-200 dark:border-amber-800 shadow-2xs"
+                  title="Subir 1 casa do Capo"
+                >
+                  +
+                </button>
+
+                <select
+                  value={activeCapo}
+                  onChange={(e) => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: parseInt(e.target.value) || 0 }))}
+                  className="text-[11px] font-bold bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-lg px-2 py-1 text-slate-800 dark:text-white outline-none cursor-pointer"
+                  title="Selecionar casa do Capotraste"
+                >
+                  <option value={0}>Sem Capo</option>
+                  {Array.from({ length: 11 }, (_, i) => i + 1).map(f => (
+                    <option key={f} value={f}>
+                      {f}ª casa ({getCapoChordShapeKey(activeCurrentKey, f)})
+                    </option>
+                  ))}
+                </select>
+
+                {activeCapo > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    className="p-1.5 text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-xs cursor-pointer"
+                    title="Remover Capotraste"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Sugestão Rápida de Capo Inteligente */}
+              {capoSuggestion && activeCapo === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: capoSuggestion.fret }))}
+                  className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700 px-2 py-1 rounded-xl flex items-center gap-1 hover:bg-amber-200 dark:hover:bg-amber-900 transition cursor-pointer shadow-2xs"
+                  title={capoSuggestion.reason}
+                >
+                  <Sparkles size={11} className="text-amber-500 shrink-0" />
+                  <span>Dica: Capo {capoSuggestion.fret}ª ({capoSuggestion.shape})</span>
+                </button>
+              )}
 
               {/* 2. CONTROLE DO TAMANHO DA FONTE */}
               <div className="flex items-center gap-1.5">
@@ -1269,6 +1389,56 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               </div>
             )}
 
+            {/* BANNER DE INFORMAÇÃO DO CAPOTRASTE (SE ATIVO) */}
+            {activeCapo > 0 && (
+              <div className={`p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-2 select-none shadow-2xs ${
+                stageMode
+                  ? 'bg-amber-950/50 border-amber-500/40 text-amber-200'
+                  : 'bg-amber-50/90 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+                    <Guitar size={15} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black tracking-wide flex items-center gap-2">
+                      <span>Capotraste na {activeCapo}ª Casa</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-100">
+                        {applyCapoToChords ? `Forma dos acordes: ${activeChordShapeKey}` : `Tom Real: ${activeCurrentKey}`}
+                      </span>
+                    </div>
+                    <p className="text-[10px] opacity-80 mt-0.5">
+                      {applyCapoToChords 
+                        ? `Cifras adaptadas para a digitação no violão em ${activeChordShapeKey}. Afinação soando em ${activeCurrentKey}.` 
+                        : `Cifras mantidas no tom real (${activeCurrentKey}). Posicione a braçadeira na ${activeCapo}ª casa.`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setApplyCapoToChords(!applyCapoToChords)}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer border ${
+                      applyCapoToChords 
+                        ? 'bg-amber-500 text-zinc-950 border-amber-400 font-black shadow-2xs' 
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }`}
+                    title="Alternar entre ver as formas de digitação do violão ou os acordes no tom real"
+                  >
+                    {applyCapoToChords ? '✓ Formas do Violão' : 'Tom Real'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer px-1"
+                    title="Remover Capotraste"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* VISUALIZADOR DA LETRA E CIFRA COM NOTAS DESTACADAS EM LARANJA */}
             <div 
               ref={scrollContainerRef}
@@ -1313,11 +1483,16 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 <Music size={16} />
               </div>
               <div>
-                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-wide flex items-center gap-2">
-                  {activeSong.titulo}
+                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-wide flex items-center gap-2 flex-wrap">
+                  <span>{activeSong.titulo}</span>
                   <span className="text-[10px] bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
                     Tom: {activeCurrentKey}
                   </span>
+                  {activeCapo > 0 && (
+                    <span className="text-[10px] bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full font-black flex items-center gap-1 shadow-2xs">
+                      <Guitar size={11} /> Capo {activeCapo}ª ({applyCapoToChords ? `Forma: ${activeChordShapeKey}` : 'Tom Real'})
+                    </span>
+                  )}
                   {activeSong.pasta && (
                     <span className="hidden md:inline-block text-[10px] bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30 px-2 py-0.5 rounded-full font-bold">
                       {activeSong.pasta}
@@ -1389,6 +1564,84 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* Transposição com Capotraste (Capo) */}
+              <div className={`flex items-center gap-1 rounded-xl p-1 border ${
+                stageMode 
+                  ? 'bg-zinc-900 border-zinc-800' 
+                  : 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-700/60'
+              }`}>
+                <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 px-1 flex items-center gap-1">
+                  <Guitar size={13} />
+                  <span className="hidden sm:inline">Capo:</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: Math.max(0, activeCapo - 1) }))}
+                  disabled={activeCapo <= 0}
+                  className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-amber-200 dark:border-amber-800 shadow-2xs"
+                  title="Descer 1 casa do Capo"
+                >
+                  -
+                </button>
+                <div className={`px-2 py-0.5 rounded font-black text-xs flex items-center gap-1 border ${
+                  activeCapo > 0
+                    ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                }`}>
+                  <span>{activeCapo > 0 ? `${activeCapo}ª casa` : 'Sem Capo'}</span>
+                  {activeCapo > 0 && (
+                    <span className="text-[9px] font-mono text-amber-800 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/80 px-1 rounded font-bold">
+                      {activeChordShapeKey}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: Math.min(11, activeCapo + 1) }))}
+                  disabled={activeCapo >= 11}
+                  className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-amber-200 dark:border-amber-800 shadow-2xs"
+                  title="Subir 1 casa do Capo"
+                >
+                  +
+                </button>
+                <select
+                  value={activeCapo}
+                  onChange={(e) => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: parseInt(e.target.value) || 0 }))}
+                  className="text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white outline-none cursor-pointer"
+                  title="Selecionar casa do Capotraste"
+                >
+                  <option value={0}>Sem Capo</option>
+                  {Array.from({ length: 11 }, (_, i) => i + 1).map(f => (
+                    <option key={f} value={f}>
+                      {f}ª casa ({getCapoChordShapeKey(activeCurrentKey, f)})
+                    </option>
+                  ))}
+                </select>
+                {activeCapo > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    className="p-1.5 text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-xs cursor-pointer"
+                    title="Remover Capotraste"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Sugestão Rápida de Capo */}
+              {capoSuggestion && activeCapo === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: capoSuggestion.fret }))}
+                  className="hidden xl:inline-flex text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700 px-2 py-1 rounded-xl items-center gap-1 hover:bg-amber-200 transition cursor-pointer shadow-2xs"
+                  title={capoSuggestion.reason}
+                >
+                  <Sparkles size={11} className="text-amber-500 shrink-0" />
+                  <span>Dica: Capo {capoSuggestion.fret}ª ({capoSuggestion.shape})</span>
+                </button>
+              )}
 
               {/* Tamanho da Fonte */}
               <div className={`flex items-center gap-1 rounded-xl p-1 border ${
@@ -1501,7 +1754,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               {/* Imprimir / PDF */}
               <button
                 type="button"
-                onClick={() => handleImprimirCifra(activeSong, activeSemitones, activeFontSize)}
+                onClick={() => handleImprimirCifra(activeSong, activeSemitones, activeFontSize, activeCapo, applyCapoToChords)}
                 className="p-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 text-xs font-bold transition cursor-pointer shadow-2xs"
                 title="Imprimir Cifra / Gerar PDF"
               >
@@ -1540,6 +1793,56 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 : 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100'
             }`}
           >
+            {/* BANNER DE AVISO DO CAPOTRASTE EM TELA CHEIA */}
+            {activeCapo > 0 && (
+              <div className={`max-w-6xl mx-auto p-3.5 mb-6 rounded-2xl border flex flex-wrap items-center justify-between gap-3 select-none shadow-sm ${
+                stageMode
+                  ? 'bg-amber-950/60 border-amber-500/50 text-amber-200'
+                  : 'bg-amber-50/90 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+                    <Guitar size={20} />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black flex items-center gap-2 flex-wrap">
+                      <span>Capotraste na {activeCapo}ª Casa</span>
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-100">
+                        {applyCapoToChords ? `Formas tocadas: ${activeChordShapeKey}` : `Afinação Real: ${activeCurrentKey}`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] opacity-80 mt-0.5">
+                      {applyCapoToChords 
+                        ? `As notas na folha estão transpostas para a digitação no violão (${activeChordShapeKey}). O som ouvido na igreja é ${activeCurrentKey}.` 
+                        : `Acordes exibidos na afinação real da banda (${activeCurrentKey}). Coloque a braçadeira na ${activeCapo}ª casa.`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setApplyCapoToChords(!applyCapoToChords)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer border ${
+                      applyCapoToChords 
+                        ? 'bg-amber-500 text-zinc-950 border-amber-400 font-black shadow-xs' 
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }`}
+                    title="Alternar entre ver as formas do violão ou os acordes no tom real"
+                  >
+                    {applyCapoToChords ? '✓ Formas do Capo' : 'Tom Real'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer px-2"
+                    title="Remover Capotraste"
+                  >
+                    Remover Capo
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="max-w-6xl mx-auto">
               <CifraVisualizer 
                 cifraText={activeTransposedSheet} 

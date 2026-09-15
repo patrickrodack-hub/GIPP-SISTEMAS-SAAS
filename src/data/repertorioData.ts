@@ -13,6 +13,8 @@ export interface SetlistMusicaItem {
   artista: string;
   tom_original: string;
   tom_culto: string;
+  capo?: number;
+  forma_capo?: string;
   ministro_vocal?: string;
   bpm?: string | number;
   ritmo?: string;
@@ -180,6 +182,8 @@ export interface MusicaRepertorio {
   titulo: string;
   artista: string;
   tom: string;
+  capo?: number;
+  forma_capo?: string;
   ritmo?: string;
   bpm?: string | number;
   pasta?: string;
