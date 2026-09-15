@@ -92,7 +92,11 @@ export const PORTAL_MODULES = [
     { id: 'portal_carteirinha', label: 'Cartão de Membro', desc: 'Gera a credencial digital de identificação com dados oficiais e QrCode.', iconId: 'IdCard' },
     { id: 'portal_pastor', label: 'Portal do Pastor', desc: 'Canal de supervisão exclusivo de dízimos detalhados e controle eclesiástico geral.', iconId: 'Shield' },
     { id: 'portal_tesoureiro', label: 'Portal do Tesoureiro', desc: 'Faculdade para tesoureiros oficiais lançarem envelopes diretamente do portal.', iconId: 'ShieldCheck' },
-    { id: 'portal_professor_ebd', label: 'Área do Professor (EBD)', desc: 'Permite que o professor lance frequências, gerencie cronograma, crie lições inteligentes via IA e controle o livro caixa de classe da EBD.', iconId: 'GraduationCap' }
+    { id: 'portal_professor_ebd', label: 'Área do Professor (EBD)', desc: 'Permite que o professor lance frequências, gerencie cronograma, crie lições inteligentes via IA e controle o livro caixa de classe da EBD.', iconId: 'GraduationCap' },
+    { id: 'portal_repertorio', label: 'Repertório Musical, Cifras & Louvor', desc: 'Acesso às músicas ministeriais, letras, cifras com transposição de tom e pastas de repertório de louvor.', iconId: 'Music' },
+    { id: 'portal_loja', label: 'Loja Virtual Eclesiástica & DAV', desc: 'Vitrine de artigos da igreja, pedidos de compra, sacola e consulta de DAV fiscal.', iconId: 'ShoppingBag' },
+    { id: 'portal_interativo', label: 'Módulo Interativo & Desafios Bíblicos', desc: 'Gamificação bíblica com quiz teológico, conquistas e ranking eclesiástico.', iconId: 'Gamepad2' },
+    { id: 'portal_google', label: 'Google Workspace Eclesiástico', desc: 'Salas virtuais Google Meet, documentos na nuvem, calendário oficial e Gmail.', iconId: 'Globe' }
 ];
 
 // Exporting component

@@ -35,7 +35,7 @@ import { getMemberFuncoesAdm, getMemberPortalAllowedModules } from '../constants
 const ModuleAcessosPortal = () => {
     const { db, setDoc, doc, dbFirestore, appId, addToast } = useContext(ChurchContext);
     
-    const [activeTab, setActiveTab] = useState<'liberacao' | 'monitoramento'>('liberacao');
+    const [activeTab, setActiveTab] = useState<'liberacao' | 'monitoramento' | 'regras_funcoes'>('liberacao');
     
     const [selectedMember, setSelectedMember] = useState(null);
     const [newPassword, setNewPassword] = useState('');
@@ -45,6 +45,62 @@ const ModuleAcessosPortal = () => {
     const [selectedMemberForPerms, setSelectedMemberForPerms] = useState(null);
     const [isPermModalOpen, setIsPermModalOpen] = useState(false);
     const [memberPerms, setMemberPerms] = useState<string[]>([]);
+
+    // Regras por Função Administrativa
+    const [selectedRoleForRules, setSelectedRoleForRules] = useState<string>('PASTOR PRESIDENTE');
+    const [selectedRolePerms, setSelectedRolePerms] = useState<string[]>([]);
+    const [isSavingRolePerms, setIsSavingRolePerms] = useState(false);
+
+    // Carregar permissões da função selecionada
+    useEffect(() => {
+        const savedPerms = db.igreja?.portal_acessos_funcao?.[selectedRoleForRules];
+        if (savedPerms) {
+            setSelectedRolePerms(savedPerms);
+        } else {
+            setSelectedRolePerms(DEFAULT_PORTAL_PERMISSIONS[selectedRoleForRules] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'] || []);
+        }
+    }, [selectedRoleForRules, db.igreja?.portal_acessos_funcao]);
+
+    const handleToggleRolePerm = (moduleId: string) => {
+        setSelectedRolePerms(prev => 
+            prev.includes(moduleId) ? prev.filter(id => id !== moduleId) : [...prev, moduleId]
+        );
+    };
+
+    const handleSelectAllRolePerms = () => {
+        setSelectedRolePerms(PORTAL_MODULES.map(m => m.id));
+    };
+
+    const handleClearAllRolePerms = () => {
+        setSelectedRolePerms(['portal_home', 'portal_carteirinha']);
+    };
+
+    const handleRestoreRoleDefaults = () => {
+        const def = DEFAULT_PORTAL_PERMISSIONS[selectedRoleForRules] || DEFAULT_PORTAL_PERMISSIONS['NENHUMA'] || [];
+        setSelectedRolePerms(def);
+        addToast(`Permissões padrão restauradas para ${selectedRoleForRules}. Clique em Salvar para persistir.`, 'info');
+    };
+
+    const handleSaveRolePerms = async () => {
+        setIsSavingRolePerms(true);
+        try {
+            const currentAcessos = db.igreja?.portal_acessos_funcao || {};
+            const configRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            const novasConfiguracoes = {
+                ...currentAcessos,
+                [selectedRoleForRules]: selectedRolePerms
+            };
+            await updateDoc(configRef, {
+                portal_acessos_funcao: novasConfiguracoes
+            });
+            addToast(`Permissões do portal para a função ${selectedRoleForRules} salvas com sucesso!`, 'success');
+        } catch (err) {
+            console.error(err);
+            addToast('Erro ao salvar permissões da função no portal.', 'error');
+        } finally {
+            setIsSavingRolePerms(false);
+        }
+    };
 
     // Simulações
     const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
@@ -315,6 +371,18 @@ const ModuleAcessosPortal = () => {
                         <span className="ml-1 bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse">{totalAtivos}</span>
                     )}
                 </button>
+                <button
+                    id="tab-btn-regras-funcoes-portal"
+                    onClick={() => { playMenuSound?.(); setActiveTab('regras_funcoes'); }}
+                    className={`pb-3.5 pt-1 px-5 text-xs font-black uppercase tracking-wider transition-all border-b-2.5 flex items-center gap-2 cursor-pointer ${
+                        activeTab === 'regras_funcoes'
+                            ? 'border-indigo-600 text-indigo-600 font-extrabold'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                >
+                    <Shield size={14} />
+                    Permissões por Função Administrativa
+                </button>
             </div>
 
             {/* Renderização Condicional de Conteúdo */}
@@ -353,7 +421,7 @@ const ModuleAcessosPortal = () => {
                             }}
                         />
                     </div>
-                ) : (
+                ) : activeTab === 'monitoramento' ? (
                     <div className="space-y-6 pb-12">
                         {/* Grade de Indicadores de Sessão */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -554,7 +622,135 @@ const ModuleAcessosPortal = () => {
                             </div>
                         </div>
                     </div>
-                )}
+                ) : activeTab === 'regras_funcoes' ? (
+                    <div className="h-full flex flex-col space-y-6 animate-entrance">
+                        {/* Banner explicativo */}
+                        <div className="bg-slate-900 text-white p-6 rounded-3xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                        Matriz de Funções Administrativas
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400">GIPP v12.0.0</span>
+                                </div>
+                                <h3 className="text-xl font-black text-white">Mapeamento de Permissões Globais do Portal</h3>
+                                <p className="text-xs text-slate-400 max-w-2xl mt-0.5 font-medium">
+                                    Defina quais módulos e recursos do Portal do Membro ficam disponíveis para cada função administrativa da congregação (como Pastor, Tesoureiro, Secretário, Líder, Músico, etc.). Membros com múltiplas funções herdam a soma de todos os módulos liberados.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    onClick={handleRestoreRoleDefaults}
+                                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                                >
+                                    <RotateCcw size={14} /> Restaurar Padrão
+                                </button>
+                                <button
+                                    onClick={handleSaveRolePerms}
+                                    disabled={isSavingRolePerms}
+                                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                                >
+                                    <Save size={14} /> {isSavingRolePerms ? 'Salvando...' : 'Salvar Regras da Função'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Seletor de Função Administrativa */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0">Função Administrativa:</span>
+                                <select
+                                    value={selectedRoleForRules}
+                                    onChange={(e) => setSelectedRoleForRules(e.target.value)}
+                                    className="px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                                >
+                                    <option value="PASTOR PRESIDENTE">PASTOR PRESIDENTE</option>
+                                    <option value="PASTOR AUXILIAR">PASTOR AUXILIAR</option>
+                                    <option value="TESOUREIRO">TESOUREIRO</option>
+                                    <option value="SECRETARIO">SECRETARIO</option>
+                                    <option value="COORDENADOR">COORDENADOR</option>
+                                    <option value="SUPERINTENDENTE">SUPERINTENDENTE (EBD)</option>
+                                    <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+                                    <option value="LIDER">LÍDER DE DEPARTAMENTO</option>
+                                    <option value="LIDER_CELULA">LÍDER DE CÉLULA</option>
+                                    <option value="PROFESSOR">PROFESSOR</option>
+                                    <option value="PROFESSOR_EBD">PROFESSOR DA EBD</option>
+                                    <option value="MUSICO">MÚSICO / MINISTÉRIO DE LOUVOR</option>
+                                    <option value="LOUVOR">LOUVOR / VOCAL</option>
+                                    <option value="MIDIA">MÍDIA & TRANSMISSÃO</option>
+                                    <option value="COMUNICACAO">COMUNICAÇÃO</option>
+                                    <option value="INFANTIL">INFANTIL (KIDS)</option>
+                                    <option value="DIACONATO">DIACONATO</option>
+                                    <option value="PRESBITERO">PRESBÍTERO</option>
+                                    <option value="EVANGELISTA">EVANGELISTA</option>
+                                    <option value="MISSIONARIO">MISSIONÁRIO</option>
+                                    <option value="DIACONO">DIÁCONO</option>
+                                    <option value="COOPERADOR">COOPERADOR</option>
+                                    <option value="APOIO">APOIO / RECEPÇÃO</option>
+                                    <option value="MEMBRO">MEMBRO REGULAR</option>
+                                    <option value="NENHUMA">NENHUMA (ACESSO BÁSICO)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSelectAllRolePerms}
+                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                >
+                                    Selecionar Todos
+                                </button>
+                                <button
+                                    onClick={handleClearAllRolePerms}
+                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                                >
+                                    Limpar Seleção
+                                </button>
+                                <span className="text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg">
+                                    {selectedRolePerms.length} de {PORTAL_MODULES.length} módulos ativos
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Grid de Módulos do Portal */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto max-h-[600px] p-1">
+                            {PORTAL_MODULES.map((module) => {
+                                const isChecked = selectedRolePerms.includes(module.id);
+                                return (
+                                    <div
+                                        key={module.id}
+                                        onClick={() => handleToggleRolePerm(module.id)}
+                                        className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 select-none ${
+                                            isChecked
+                                                ? 'bg-indigo-50/40 border-indigo-600 shadow-xs'
+                                                : 'bg-white border-slate-200 hover:border-slate-300 opacity-70'
+                                        }`}
+                                    >
+                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                                            isChecked 
+                                                ? 'bg-indigo-600 text-white shadow-xs' 
+                                                : 'border-2 border-slate-300 bg-slate-50'
+                                        }`}>
+                                            {isChecked && <Check size={14} strokeWidth={3} />}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-xs font-black text-slate-800 leading-tight truncate">{module.label}</h4>
+                                            </div>
+                                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed mt-1 line-clamp-2">
+                                                {module.desc}
+                                            </p>
+                                            <span className="text-[9px] font-mono text-slate-400 mt-1 inline-block">
+                                                chave: {module.id}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ) : null}
             </div>
 
             {/* Modal: Alterar Senha */}

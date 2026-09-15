@@ -72,9 +72,9 @@ export function transposeSingleChord(chord: string, semitones: number, preferFla
     return `${transposedNote}${suffix}`;
 }
 
-// Regex para identificar um token que parece um acorde musical
-// Exemplos aceitos: C, D, Em, F#m, G7, Bb, C9, D4, G/B, F#m7(b5), Asus4, C#m7(9), D°
-const CHORD_TOKEN_REGEX = /^[A-G][#b]?(m|maj|min|dim|aug|sus|add|M|º|°)?\d*(\([b#]?\d+\))?(\/[A-G][#b]?)?$/;
+// Regex aprimorada para identificar acordes musicais em qualquer notação
+// Aceita: C, C#, Db, Em, F#m, G7, Bb9, C9, D4, Dsus4, G/B, F#m7(b5), Asus4, C#m7(9), C7M, C7+, C6/9, D°, F#m/C#, etc.
+const CHORD_TOKEN_REGEX = /^[A-G][#b]?(m|min|maj|M|dim|aug|sus|add|º|°)?\d*(M|\+|\-)?(\([#b]?\d+[#b\+\-]?\))*(\/[A-G][#b]?)?$/;
 
 /**
  * Verifica se um token é um acorde válido
@@ -82,9 +82,12 @@ const CHORD_TOKEN_REGEX = /^[A-G][#b]?(m|maj|min|dim|aug|sus|add|M|º|°)?\d*(\(
 export function isChordToken(token: string): boolean {
     const cleaned = token.trim();
     if (!cleaned) return false;
-    // Excluir pontuações comuns
-    if (/^[.,;:!?'"()\-]+$/.test(cleaned)) return false;
-    return CHORD_TOKEN_REGEX.test(cleaned);
+    // Excluir pontuações comuns isoladas ou palavras de texto comuns
+    if (/^[.,;:!?'"()\-–—|/]+$/.test(cleaned)) return false;
+    
+    // Se estiver entre parênteses ex: (G) ou (Em)
+    const unwrapped = cleaned.replace(/^\((.+)\)$/, '$1');
+    return CHORD_TOKEN_REGEX.test(unwrapped) || CHORD_TOKEN_REGEX.test(cleaned);
 }
 
 /**
@@ -94,8 +97,11 @@ export function isChordLine(line: string): boolean {
     const trimmed = line.trim();
     if (!trimmed) return false;
 
-    // Se for uma tag de seção [Intro], [Verso], [Refrão], não é linha de cifra pura
-    if (/^\[.*?\]$/.test(trimmed)) return false;
+    // Se for uma tag de seção pura [Intro], [Verso], [Refrão] sem acordes adicionais
+    if (/^\[.*?\]$/.test(trimmed) && !trimmed.includes(' ')) return false;
+
+    // Se for tag de seção com acordes ex: [Intro] G Em C D
+    if (/^\[.*?\]\s+[A-G]/.test(trimmed)) return true;
 
     // Divide a linha por espaços
     const tokens = trimmed.split(/\s+/).filter(t => t.length > 0);
@@ -108,9 +114,9 @@ export function isChordLine(line: string): boolean {
         }
     }
 
-    // Se mais de 50% dos tokens forem acordes, ou se houver pelo menos 2 acordes e nenhum caractere típico de texto cursivo longo
-    if (chordCount / tokens.length >= 0.5) return true;
+    // Se mais de 50% dos tokens forem acordes, ou se houver pelo menos 1 acorde e nenhum caractere típico de texto cursivo longo
     if (tokens.length === 1 && isChordToken(tokens[0])) return true;
+    if (chordCount / tokens.length >= 0.4) return true;
 
     return false;
 }

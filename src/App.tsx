@@ -80,7 +80,7 @@ const ModuleChangelog = lazy(() => import('./components/ModuleChangelog'));
 const ModuleIgreja = lazy(() => import('./components/ModuleIgreja'));
 const ModuleDesenvolvedor = lazy(() => import('./components/ModuleDesenvolvedor'));
 const ModuleAssistenteAI = lazy(() => import('./components/ModuleAssistenteAI'));
-const FloatingChatWidget = lazy(() => import('./components/FloatingChatWidget'));
+import { FloatingChatWidget } from './components/FloatingChatWidget';
 import { FloatingActionButton } from './components/FloatingActionButton';
 const ModuleDevSuporte = lazy(() => import('./components/ModuleDevSuporte'));
 const ModuleBiblia = lazy(() => import('./components/ModuleBiblia'));

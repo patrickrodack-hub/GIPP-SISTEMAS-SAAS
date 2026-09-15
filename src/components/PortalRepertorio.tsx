@@ -4,9 +4,10 @@ import {
   Music, Search, Folder, FolderCheck, SlidersHorizontal, ArrowLeft,
   Maximize2, Minimize2, Printer, Copy, RotateCcw, Type as TypeIcon,
   Play, Pause, Moon, Sun, ExternalLink, ShieldAlert, Sparkles,
-  ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check
+  ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check, Columns2,
+  Expand, Shrink
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
   MusicaRepertorio, MUSICAS_REPERTORIO_PADRAO, PASTAS_REPERTORIO_PADRAO,
   checkIsMusicoOuLouvor 
@@ -15,6 +16,7 @@ import {
   transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
 } from '../utils/musicChords';
 import { InteractiveWindow } from './InteractiveWindow';
+import { CifraVisualizer } from './CifraVisualizer';
 import { collection, onSnapshot } from 'firebase/firestore';
 
 interface PortalRepertorioProps {
@@ -74,6 +76,10 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
   // Modal / InteractiveWindow de visualização detalhada da canção
   const [activeModalSong, setActiveModalSong] = useState<MusicaRepertorio | null>(null);
+  
+  // Modo Tela Cheia Dedicada para a Letra & Cifra da Música
+  const [isSongFullscreen, setIsSongFullscreen] = useState<boolean>(false);
+  const [twoColumns, setTwoColumns] = useState<boolean>(false);
 
   // Mapas de transposição e tamanho de fonte por canção
   const [songTransposeMap, setSongTransposeMap] = useState<Record<string, number>>({});
@@ -88,7 +94,19 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
   const [scrollSpeed, setScrollSpeed] = useState<number>(1); // 1 = lento, 2 = médio, 3 = rápido
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollFullscreenContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollAnimRef = useRef<number | null>(null);
+
+  // Listener para tecla ESC para sair da tela cheia
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSongFullscreen) {
+        setIsSongFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSongFullscreen]);
 
   // Sincronização em tempo real via Firestore
   useEffect(() => {
@@ -147,15 +165,20 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
       const delta = currentTime - lastTime;
       lastTime = currentTime;
 
-      if (scrollContainerRef.current) {
-        // Velocidades calculadas em pixels por segundo
-        const pixelsPerSec = scrollSpeed === 1 ? 22 : scrollSpeed === 2 ? 40 : 65;
-        const scrollAmount = (pixelsPerSec * delta) / 1000;
-        scrollContainerRef.current.scrollTop += scrollAmount;
+      const pixelsPerSec = scrollSpeed === 1 ? 22 : scrollSpeed === 2 ? 40 : 65;
+      const scrollAmount = (pixelsPerSec * delta) / 1000;
+
+      // Rolar o container ativo (modal regular ou tela cheia)
+      const targetEl = isSongFullscreen 
+        ? scrollFullscreenContainerRef.current 
+        : scrollContainerRef.current;
+
+      if (targetEl) {
+        targetEl.scrollTop += scrollAmount;
 
         // Se chegou ao fim do documento, pausa suavemente
-        const maxScroll = scrollContainerRef.current.scrollHeight - scrollContainerRef.current.clientHeight;
-        if (scrollContainerRef.current.scrollTop >= maxScroll - 2) {
+        const maxScroll = targetEl.scrollHeight - targetEl.clientHeight;
+        if (targetEl.scrollTop >= maxScroll - 2) {
           setIsAutoScrolling(false);
           return;
         }
@@ -169,7 +192,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     return () => {
       if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
     };
-  }, [isAutoScrolling, scrollSpeed, activeModalSong]);
+  }, [isAutoScrolling, scrollSpeed, activeModalSong, isSongFullscreen]);
 
   // Verificação estrita de prerrogativa: Músico ou Equipe de Louvor
   const isAuthorizedMusico = useMemo(() => {
@@ -561,9 +584,23 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                   {/* Rodapé do Card com Ação Rápida */}
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-violet-600 dark:text-violet-400">
                     <span className="flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                      Visualizar Cifra & Alterar Tom
+                      Visualizar Cifra
                     </span>
-                    <ChevronRight size={14} />
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveModalSong(song);
+                          setIsSongFullscreen(true);
+                        }}
+                        className="px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/60 dark:hover:bg-violet-900/80 text-violet-700 dark:text-violet-300 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all border border-violet-200 dark:border-violet-800"
+                        title="Abrir diretamente em Tela Cheia"
+                      >
+                        <Maximize2 size={11} /> Tela Cheia
+                      </button>
+                      <ChevronRight size={14} />
+                    </div>
                   </div>
                 </div>
               );
@@ -597,8 +634,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
         </div>
       </div>
 
-      {/* 5. FORMULÁRIO / MODAL DA CIFRA (Criado utilizando InteractiveWindow, conforme a Loja Virtual) */}
-      {activeSong && createPortal(
+      {/* 5. MODAL DA CIFRA (InteractiveWindow com suporte a Tela Cheia e CifraVisualizer) */}
+      {activeSong && !isSongFullscreen && createPortal(
         <InteractiveWindow
           id={`repertorio_cifra_window_${activeSong.id}`}
           title={`${activeSong.titulo} • ${activeSong.artista || 'Consagrado'}`}
@@ -631,6 +668,15 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setIsSongFullscreen(true)}
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                  title="Abrir letra e cifras em Tela Cheia"
+                >
+                  <Maximize2 size={13} /> Abrir em Tela Cheia
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => handleCopyChords(activeTransposedSheet, activeCurrentKey)}
                   className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
                   title="Copiar letra com cifras transpostas"
@@ -651,7 +697,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           }
         >
           <div className={`p-4 sm:p-5 space-y-4 flex flex-col h-full ${stageMode ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100'}`}>
-            {/* PAINEL DE FERRAMENTAS MUSICAIS: TRANSPOSIÇÃO, FONTE, ROLAGEM E MODO PALCO */}
+            {/* PAINEL DE FERRAMENTAS MUSICAIS: TRANSPOSIÇÃO, FONTE, TELA CHEIA, ROLAGEM E MODO PALCO */}
             <div className={`p-3 rounded-2xl border flex flex-wrap items-center justify-between gap-3 shadow-2xs ${
               stageMode 
                 ? 'bg-zinc-900 border-zinc-800 text-zinc-100' 
@@ -724,7 +770,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSongFontSizeMap(prev => ({ ...prev, [activeSong.id]: Math.min(24, activeFontSize + 1) }))}
+                  onClick={() => setSongFontSizeMap(prev => ({ ...prev, [activeSong.id]: Math.min(26, activeFontSize + 1) }))}
                   className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
                   title="Aumentar tamanho da letra"
                 >
@@ -732,7 +778,18 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 </button>
               </div>
 
-              {/* 3. AUTO-SCROLL (ROLAGEM AUTOMÁTICA PARA MÚSICOS EM PALCO) */}
+              {/* 3. BOTÃO ABRIR EM TELA CHEIA */}
+              <button
+                type="button"
+                onClick={() => setIsSongFullscreen(true)}
+                className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95"
+                title="Visualizar em Tela Cheia (Modo Palco/Ensaio)"
+              >
+                <Maximize2 size={13} />
+                <span>Tela Cheia</span>
+              </button>
+
+              {/* 4. AUTO-SCROLL (ROLAGEM AUTOMÁTICA PARA MÚSICOS EM PALCO) */}
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -769,7 +826,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 )}
               </div>
 
-              {/* 4. MODO PALCO (ALTO CONTRASTE / TEMA NOTURNO DE PALCO) */}
+              {/* 5. MODO PALCO (ALTO CONTRASTE / TEMA NOTURNO DE PALCO) */}
               <button
                 type="button"
                 onClick={toggleStageMode}
@@ -805,25 +862,279 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               </div>
             )}
 
-            {/* VISUALIZADOR DA LETRA E CIFRA (MONOSPACED COM ROLAGEM FLUIDA) */}
+            {/* VISUALIZADOR DA LETRA E CIFRA COM NOTAS DESTACADAS EM LARANJA */}
             <div 
               ref={scrollContainerRef}
               className={`flex-1 overflow-y-auto custom-scrollbar p-5 rounded-2xl border shadow-inner transition-colors duration-200 ${
                 stageMode
-                  ? 'bg-black border-zinc-800 text-amber-300 font-mono select-text'
+                  ? 'bg-black border-zinc-800 text-zinc-100 font-mono select-text'
                   : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-mono select-text'
               }`}
               style={{ minHeight: '380px' }}
             >
-              <pre
-                className="whitespace-pre leading-relaxed tracking-wider outline-none font-mono"
-                style={{ fontSize: `${activeFontSize}px` }}
-              >
-                {activeTransposedSheet || 'Nenhuma cifra cadastrada para esta canção.'}
-              </pre>
+              <CifraVisualizer 
+                cifraText={activeTransposedSheet} 
+                fontSize={activeFontSize} 
+                stageMode={stageMode} 
+                twoColumns={twoColumns} 
+              />
             </div>
           </div>
         </InteractiveWindow>,
+        document.body
+      )}
+
+      {/* 6. MODO TELA CHEIA IMERSIVA DA LETRA E CIFRA (FULLSCREEN READER DEDICADO) */}
+      {activeSong && isSongFullscreen && createPortal(
+        <div 
+          id="repertorio-cifra-fullscreen-portal"
+          className={`fixed inset-0 z-[999999] w-screen h-screen flex flex-col font-sans transition-colors duration-200 animate-fadeIn ${
+            stageMode 
+              ? 'bg-black text-zinc-100' 
+              : 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100'
+          }`}
+        >
+          {/* BARRA SUPERIOR DA TELA CHEIA (CONTROLE COMPACTO E IMERSIVO) */}
+          <div className={`w-full border-b px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 backdrop-blur-md shrink-0 shadow-xs z-50 transition-colors ${
+            stageMode
+              ? 'bg-zinc-950/95 border-zinc-800 text-zinc-100'
+              : 'bg-white/95 dark:bg-slate-950/95 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'
+          }`}>
+            {/* Título da Música e Tom */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/20 dark:border-orange-500/30 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold shrink-0">
+                <Music size={16} />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-wide flex items-center gap-2">
+                  {activeSong.titulo}
+                  <span className="text-[10px] bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                    Tom: {activeCurrentKey}
+                  </span>
+                  {activeSong.pasta && (
+                    <span className="hidden md:inline-block text-[10px] bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30 px-2 py-0.5 rounded-full font-bold">
+                      {activeSong.pasta}
+                    </span>
+                  )}
+                </h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-xs sm:max-w-md">
+                  {activeSong.artista || 'Ministério de Louvor'} • Tom Original: {activeOriginalKey}
+                </p>
+              </div>
+            </div>
+
+            {/* BARRA DE FERRAMENTAS COMPLETA DA TELA CHEIA */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Transposição de Tom */}
+              <div className={`flex items-center gap-1 rounded-xl p-1 border ${
+                stageMode 
+                  ? 'bg-zinc-900 border-zinc-800' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+              }`}>
+                <span className="text-[10px] font-black uppercase text-orange-600 dark:text-orange-400 px-1 hidden sm:inline">
+                  Tom:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones - 1 }))}
+                  className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-2xs"
+                  title="Baixar 1 semitom (-1)"
+                >
+                  -1
+                </button>
+                <div className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-300 rounded font-black text-xs flex items-center gap-1">
+                  <span>{activeCurrentKey}</span>
+                  {activeSemitones !== 0 && (
+                    <span className="text-[9px] text-amber-600 dark:text-amber-400 font-mono">
+                      ({activeSemitones > 0 ? `+${activeSemitones}` : activeSemitones}st)
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones + 1 }))}
+                  className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-2xs"
+                  title="Subir 1 semitom (+1)"
+                >
+                  +1
+                </button>
+                <select
+                  value={activeCurrentKey}
+                  onChange={(e) => {
+                    const diff = getSemitoneDifference(activeOriginalKey, e.target.value);
+                    setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: diff }));
+                  }}
+                  className="text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white outline-none cursor-pointer"
+                  title="Mudar tom direto"
+                >
+                  {CHROMATIC_SHARPS.map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+                {activeSemitones !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    className="p-1.5 text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-xs cursor-pointer"
+                    title={`Restaurar tom original (${activeOriginalKey})`}
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Tamanho da Fonte */}
+              <div className={`flex items-center gap-1 rounded-xl p-1 border ${
+                stageMode 
+                  ? 'bg-zinc-900 border-zinc-800' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setSongFontSizeMap(prev => ({ ...prev, [activeSong.id]: Math.max(10, activeFontSize - 1) }))}
+                  className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-2xs"
+                  title="Diminuir fonte"
+                >
+                  A-
+                </button>
+                <span className="font-mono font-bold text-xs px-1 text-slate-700 dark:text-slate-300">
+                  {activeFontSize}px
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSongFontSizeMap(prev => ({ ...prev, [activeSong.id]: Math.min(32, activeFontSize + 1) }))}
+                  className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-2xs"
+                  title="Aumentar fonte"
+                >
+                  A+
+                </button>
+              </div>
+
+              {/* Alternador de 1 / 2 Colunas */}
+              <button
+                type="button"
+                onClick={() => setTwoColumns(!twoColumns)}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                  twoColumns 
+                    ? 'bg-violet-600 text-white border-violet-500 shadow-sm' 
+                    : stageMode
+                      ? 'bg-zinc-900 text-zinc-300 hover:text-white border-zinc-800'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                }`}
+                title="Alternar entre 1 coluna e 2 colunas para telas largas"
+              >
+                <Columns2 size={13} />
+                <span className="hidden md:inline">{twoColumns ? '2 Colunas' : '1 Coluna'}</span>
+              </button>
+
+              {/* Auto-Scroll */}
+              <div className={`flex items-center gap-1 rounded-xl p-1 border ${
+                stageMode 
+                  ? 'bg-zinc-900 border-zinc-800' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setIsAutoScrolling(!isAutoScrolling)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    isAutoScrolling
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : stageMode
+                        ? 'bg-zinc-800 text-zinc-300 hover:text-white'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-2xs'
+                  }`}
+                  title={isAutoScrolling ? "Pausar rolagem automática" : "Iniciar rolagem automática"}
+                >
+                  {isAutoScrolling ? <Pause size={12} className="animate-pulse" /> : <Play size={12} />}
+                  <span className="hidden sm:inline">Auto-Scroll</span>
+                </button>
+                {isAutoScrolling && (
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3].map(spd => (
+                      <button
+                        key={spd}
+                        type="button"
+                        onClick={() => setScrollSpeed(spd)}
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
+                          scrollSpeed === spd 
+                            ? 'bg-violet-600 text-white' 
+                            : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                        }`}
+                        title={`Velocidade ${spd}x`}
+                      >
+                        {spd}x
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Modo Palco (Alto Contraste) */}
+              <button
+                type="button"
+                onClick={toggleStageMode}
+                className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                  stageMode
+                    ? 'bg-amber-500 text-zinc-950 border-amber-400 font-black'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                }`}
+                title="Alternar Tema Palco / Contraste"
+              >
+                {stageMode ? <Sun size={14} /> : <Moon size={14} />}
+              </button>
+
+              {/* Imprimir / PDF */}
+              <button
+                type="button"
+                onClick={() => handleImprimirCifra(activeSong, activeSemitones, activeFontSize)}
+                className="p-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 text-xs font-bold transition cursor-pointer shadow-2xs"
+                title="Imprimir Cifra / Gerar PDF"
+              >
+                <Printer size={14} />
+              </button>
+
+              {/* Copiar */}
+              <button
+                type="button"
+                onClick={() => handleCopyChords(activeTransposedSheet, activeCurrentKey)}
+                className="p-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 text-xs font-bold transition cursor-pointer shadow-2xs"
+                title="Copiar Cifra"
+              >
+                <Copy size={14} />
+              </button>
+
+              {/* BOTÃO SAIR DA TELA CHEIA */}
+              <button
+                type="button"
+                onClick={() => setIsSongFullscreen(false)}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer ml-1"
+                title="Sair do modo Tela Cheia (ou pressione ESC)"
+              >
+                <Minimize2 size={14} />
+                <span>Sair da Tela Cheia</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CORPO DE LEITURA EM TELA CHEIA (COM FUNDO BRANCO NO MODO CLARO E NOTAS EM LARANJA) */}
+          <div 
+            ref={scrollFullscreenContainerRef}
+            className={`flex-1 w-full overflow-y-auto custom-scrollbar p-6 sm:p-10 md:p-12 transition-colors duration-200 ${
+              stageMode 
+                ? 'bg-black text-zinc-100' 
+                : 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100'
+            }`}
+          >
+            <div className="max-w-6xl mx-auto">
+              <CifraVisualizer 
+                cifraText={activeTransposedSheet} 
+                fontSize={activeFontSize} 
+                stageMode={stageMode} 
+                twoColumns={twoColumns} 
+              />
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </div>

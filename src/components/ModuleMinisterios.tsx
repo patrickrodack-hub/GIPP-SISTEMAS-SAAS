@@ -27,6 +27,7 @@ import {
 import { 
   transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
 } from '../utils/musicChords';
+import { CifraVisualizer } from './CifraVisualizer';
 
 import { 
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 
@@ -1976,12 +1977,15 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                         </div>
 
                                                         {/* Pré-visualização da Cifra com Acordes Transpostos */}
-                                                        <pre 
-                                                            className="bg-white border border-slate-200 text-slate-900 font-mono p-4 rounded-xl max-h-[350px] overflow-y-auto whitespace-pre leading-relaxed tracking-wider select-text shadow-inner"
-                                                            style={{ fontSize: `${fontSize}px` }}
+                                                        <div 
+                                                            className="bg-white border border-slate-200 text-slate-900 font-mono p-4 rounded-xl max-h-[380px] overflow-y-auto whitespace-pre select-text shadow-inner custom-scrollbar"
                                                         >
-                                                            {transposedText || 'Nenhuma cifra cadastrada para esta canção.'}
-                                                        </pre>
+                                                            <CifraVisualizer 
+                                                                cifraText={transposedText} 
+                                                                fontSize={fontSize} 
+                                                                stageMode={false} 
+                                                            />
+                                                        </div>
                                                     </div>
                                                 );
                                             })()}
