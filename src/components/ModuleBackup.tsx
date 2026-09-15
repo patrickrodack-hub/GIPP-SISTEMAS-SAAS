@@ -51,6 +51,7 @@ const DATABASE_SECTIONS = [
   { key: 'congregacoes', label: 'Congregações & Filiais' },
   { key: 'departamentos', label: 'Departamentos & Ministérios Gerais' },
   { key: 'louvor_musicas', label: 'Louvor: Músicas & Cifras' },
+  { key: 'louvor_setlists', label: 'Louvor: Setlists & Cultos' },
   { key: 'louvor_escalas', label: 'Louvor: Escalas de Músicos' },
   { key: 'louvor_musicos', label: 'Louvor: Integrantes & Músicos' },
   { key: 'louvor_reunioes', label: 'Louvor: Ensaios & Reuniões' },

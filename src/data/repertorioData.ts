@@ -5,6 +5,171 @@
 
 import { getMemberFuncoesAdm } from '../constants/portalPermissions';
 
+export interface SetlistMusicaItem {
+  id: string;
+  ordem: number;
+  musica_id: string;
+  titulo: string;
+  artista: string;
+  tom_original: string;
+  tom_culto: string;
+  ministro_vocal?: string;
+  bpm?: string | number;
+  ritmo?: string;
+  momento_liturgico?: string;
+  notas_arranjo?: string;
+  duracao_minutos?: number;
+}
+
+export interface SetlistMusicoEscalado {
+  membro_id: string;
+  nome: string;
+  funcao: string;
+  status: 'confirmado' | 'pendente' | 'indisponivel';
+  justificativa?: string;
+}
+
+export interface SetlistCulto {
+  id: string;
+  titulo: string;
+  data: string;
+  horario: string;
+  tipo_culto: string;
+  tema_devocional?: string;
+  lider_id?: string;
+  lider_nome?: string;
+  equipe_escalada: SetlistMusicoEscalado[];
+  itens: SetlistMusicaItem[];
+  observacoes_gerais?: string;
+  tempo_total_estimado?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const MOMENTOS_LITURGICOS = [
+  'Abertura / Prelúdio',
+  'Júbilo / Celebração',
+  'Adoração / Ministração',
+  'Ofertório / Dízimos',
+  'Santa Ceia',
+  'Apelo / Decisão',
+  'Comunhão / Poslúdio'
+];
+
+export const FUNCOES_LOUVOR = [
+  'Vocal Líder / Ministro',
+  'Backing Vocal (Soprano)',
+  'Backing Vocal (Contralto)',
+  'Backing Vocal (Tenor)',
+  'Teclado / Piano',
+  'Sintetizador / Pad',
+  'Violão',
+  'Guitarra',
+  'Baixo',
+  'Bateria',
+  'Percussão',
+  'Saxofone / Metais',
+  'Operador de Som / Mesa',
+  'Operador de Projeção'
+];
+
+export const TIPOS_CULTO_PADRAO = [
+  'Domingo Noite (Celebração)',
+  'Domingo Manhã (EBD & Louvor)',
+  'Quinta-Feira (Doutrina / Ensino)',
+  'Terça-Feira (Oração & Clamor)',
+  'Culto de Santa Ceia',
+  'Culto de Jovens (Mocidade)',
+  'Culto de Mulheres / Irmãs',
+  'Vigília Pentecostal',
+  'Conferência / Congresso',
+  'Culto Especial'
+];
+
+export const SETLISTS_PADRAO: SetlistCulto[] = [
+  {
+    id: 'setlist-demo-1',
+    titulo: 'Culto de Celebração e Louvor Congregacional',
+    data: new Date().toISOString().split('T')[0],
+    horario: '19:00',
+    tipo_culto: 'Domingo Noite (Celebração)',
+    tema_devocional: 'Salmo 100 - Celebrai com júbilo ao Senhor todas as terras',
+    lider_nome: 'Missionária Sarah (Ministra de Louvor)',
+    equipe_escalada: [
+      { membro_id: 'm1', nome: 'Sarah Oliveira', funcao: 'Vocal Líder / Ministro', status: 'confirmado' },
+      { membro_id: 'm2', nome: 'Daniel Albuquerque', funcao: 'Teclado / Piano', status: 'confirmado' },
+      { membro_id: 'm3', nome: 'Marcos Vinícius', funcao: 'Bateria', status: 'confirmado' },
+      { membro_id: 'm4', nome: 'Samuel Pereira', funcao: 'Baixo', status: 'confirmado' },
+      { membro_id: 'm5', nome: 'Lucas Santos', funcao: 'Violão', status: 'pendente' },
+      { membro_id: 'm6', nome: 'Ana Paula Ramos', funcao: 'Backing Vocal (Soprano)', status: 'confirmado' }
+    ],
+    itens: [
+      {
+        id: 'item-1',
+        ordem: 1,
+        musica_id: 'mus-padrao-4',
+        titulo: 'Grandes Coisas',
+        artista: 'Fernandinho',
+        tom_original: 'D',
+        tom_culto: 'D',
+        ministro_vocal: 'Missionária Sarah',
+        bpm: '124',
+        ritmo: 'Jubiloso / Celebrativo',
+        momento_liturgico: 'Júbilo / Celebração',
+        notas_arranjo: 'Intro com bateria forte. Dobra o refrão com a igreja em pé.',
+        duracao_minutos: 5
+      },
+      {
+        id: 'item-2',
+        ordem: 2,
+        musica_id: 'mus-padrao-2',
+        titulo: 'Bondade de Deus',
+        artista: 'Isaías Saad / Bethel Music',
+        tom_original: 'G',
+        tom_culto: 'G',
+        ministro_vocal: 'Missionária Sarah & Ana Paula',
+        bpm: '70',
+        ritmo: 'Worship / 6/8',
+        momento_liturgico: 'Adoração / Ministração',
+        notas_arranjo: 'Transição suave sem corte. Verso 1 apenas violão e pad de teclado.',
+        duracao_minutos: 6
+      },
+      {
+        id: 'item-3',
+        ordem: 3,
+        musica_id: 'mus-padrao-1',
+        titulo: 'Porque Ele Vive',
+        artista: 'Harpa Cristã / Tradicional',
+        tom_original: 'G',
+        tom_culto: 'G',
+        ministro_vocal: 'Toda a Equipe',
+        bpm: '68',
+        ritmo: 'Balada / Worship',
+        momento_liturgico: 'Adoração / Ministração',
+        notas_arranjo: 'Emenda no refrão. No final, fazer refrão a cappella com palmas da congregação.',
+        duracao_minutos: 5
+      },
+      {
+        id: 'item-4',
+        ordem: 4,
+        musica_id: 'mus-padrao-3',
+        titulo: 'A Ele a Glória',
+        artista: 'Diante do Trono',
+        tom_original: 'Am',
+        tom_culto: 'Am',
+        ministro_vocal: 'Missionária Sarah',
+        bpm: '65',
+        ritmo: 'Adoração',
+        momento_liturgico: 'Apelo / Decisão',
+        notas_arranjo: 'Dinâmica baixa para momento de oração e ministração pastoral.',
+        duracao_minutos: 6
+      }
+    ],
+    observacoes_gerais: 'Chegada para passagem de som às 17h45 pontualmente. Traje: Roupa escura ou uniforme de louvor.',
+    tempo_total_estimado: 22
+  }
+];
+
 export interface ArquivoAnexoMusica {
   nome: string;
   url: string;

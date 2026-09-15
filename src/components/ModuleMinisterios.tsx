@@ -47,6 +47,8 @@ import {
 } from '../App';
 
 import { ModuleMidiaTab } from './ModuleMidiaTab';
+import { WorshipSetlistManager } from './WorshipSetlistManager';
+import { SetlistCulto, SETLISTS_PADRAO } from '../data/repertorioData';
 
 const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
     const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -109,9 +111,9 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
 
     const [subTab, setSubTab] = useState(() => {
         try {
-            return localStorage.getItem('louvor_subtab') || 'escalas';
+            return localStorage.getItem('louvor_subtab') || 'setlists';
         } catch (_) {
-            return 'escalas';
+            return 'setlists';
         }
     });
 
@@ -172,9 +174,20 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             return [];
         }
     });
+    const [setlists, setSetlists] = useState<SetlistCulto[]>(() => {
+        try {
+            const saved = localStorage.getItem('louvor_setlists');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (_) {}
+        return SETLISTS_PADRAO;
+    });
 
     const [loadingMusicas, setLoadingMusicas] = useState(true);
     const [loadingEscalas, setLoadingEscalas] = useState(true);
+    const [loadingSetlists, setLoadingSetlists] = useState(true);
     const [loadingReunioes, setLoadingReunioes] = useState(true);
     const [subTabMedia, setSubTabMedia] = useState(() => {
         try {
@@ -327,6 +340,18 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
             setLoadingEscalas(false);
         }, () => setLoadingEscalas(false));
 
+        const setlistsRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_setlists');
+        const unsubSetlists = onSnapshot(setlistsRef, (snapshot: any) => {
+            const list: any[] = [];
+            snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
+            if (list.length > 0) {
+                list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+                setSetlists(list);
+                try { localStorage.setItem('louvor_setlists', JSON.stringify(list)); } catch(_) {}
+            }
+            setLoadingSetlists(false);
+        }, () => setLoadingSetlists(false));
+
         const reunioesRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_reunioes');
         const unsubReunioes = onSnapshot(reunioesRef, (snapshot: any) => {
             const list: any[] = [];
@@ -385,6 +410,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         return () => {
             unsubMusicas();
             unsubEscalas();
+            unsubSetlists();
             unsubReunioes();
             unsubMusicos();
             unsubMediaEquipe();
@@ -572,6 +598,41 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         } catch (err: any) {
             addToast(`Erro ao excluir: ${err.message}`, "error");
         }
+    };
+
+    const handleSaveSetlist = async (sl: SetlistCulto) => {
+        const targetId = sl.id || `setlist_${Date.now()}`;
+        const payload: SetlistCulto = { ...sl, id: targetId };
+
+        if (dbFirestore && appId) {
+            try {
+                const { id, ...cloudData } = payload;
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_setlists', targetId), cloudData);
+            } catch (err) {
+                console.error("Firestore save setlist failed:", err);
+            }
+        }
+
+        const updated = setlists.some(s => s.id === targetId)
+            ? setlists.map(s => s.id === targetId ? payload : s)
+            : [payload, ...setlists];
+        setSetlists(updated);
+        try { localStorage.setItem('louvor_setlists', JSON.stringify(updated)); } catch (_) {}
+        addToast("Setlist e escala salvas com sucesso!", "success");
+    };
+
+    const handleDeleteSetlist = async (id: string) => {
+        if (dbFirestore && appId) {
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_setlists', id));
+            } catch (err) {
+                console.error("Firestore delete setlist failed:", err);
+            }
+        }
+        const updated = setlists.filter(s => s.id !== id);
+        setSetlists(updated);
+        try { localStorage.setItem('louvor_setlists', JSON.stringify(updated)); } catch (_) {}
+        addToast("Setlist excluída.", "info");
     };
 
     const handleEditSong = (song: any) => {
@@ -1397,16 +1458,17 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                         </div>
 
                         {/* Worship Sub tabs switcher */}
-                        <div className="flex gap-2 border-b border-slate-200 pb-1">
-                            {['escalas', 'musicas', 'musicos', 'reunioes'].map((st) => (
+                        <div className="flex gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
+                            {['setlists', 'escalas', 'musicas', 'musicos', 'reunioes'].map((st) => (
                                 <button
                                     key={st}
                                     onClick={() => setSubTab(st)}
-                                    className={`px-5 py-2 font-black text-xs uppercase tracking-wider rounded-xl transition-all ${subTab === st ? 'bg-indigo-50 text-indigo-700 font-black border-b-2 border-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}
+                                    className={`px-4 sm:px-5 py-2 font-black text-xs uppercase tracking-wider rounded-xl transition-all shrink-0 ${subTab === st ? 'bg-indigo-50 text-indigo-700 font-black border-b-2 border-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}
                                 >
+                                    {st === 'setlists' && '🎼 Setlists & Agenda'}
                                     {st === 'escalas' && '📅 Escalas & Histórico'}
                                     {st === 'musicas' && '🎸 Repertório & Cifras IA'}
-                                    {st === 'musicos' && '👥 EQUIPES DE LOUVOR'}
+                                    {st === 'musicos' && '👥 Equipes de Louvor'}
                                     {st === 'reunioes' && '📢 Reuniões & Ensaios'}
                                 </button>
                             ))}
@@ -1414,6 +1476,19 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
 
                         {/* SUB-TAB CONTENTS */}
                         
+                        {/* 0. SETLISTS & AGENDA DOS CULTOS */}
+                        {subTab === 'setlists' && (
+                            <WorshipSetlistManager
+                                setlists={setlists}
+                                musicas={musicas}
+                                musicosCadastrados={musicos}
+                                membrosIgreja={db?.membros || []}
+                                onSaveSetlist={handleSaveSetlist}
+                                onDeleteSetlist={handleDeleteSetlist}
+                                addToast={addToast}
+                            />
+                        )}
+
                         {/* 1. ESCALAS */}
                         {subTab === 'escalas' && (
                             <div className="space-y-4">

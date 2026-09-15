@@ -5,19 +5,21 @@ import {
   Maximize2, Minimize2, Printer, Copy, RotateCcw, Type as TypeIcon,
   Play, Pause, Moon, Sun, ExternalLink, ShieldAlert, Sparkles,
   ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check, Columns2,
-  Expand, Shrink
+  Expand, Shrink, Calendar, Clock, Users, CheckCircle2, AlertCircle, Clock3
 } from 'lucide-react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
   MusicaRepertorio, MUSICAS_REPERTORIO_PADRAO, PASTAS_REPERTORIO_PADRAO,
-  checkIsMusicoOuLouvor 
+  checkIsMusicoOuLouvor, SetlistCulto, SETLISTS_PADRAO
 } from '../data/repertorioData';
 import { 
   transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
 } from '../utils/musicChords';
 import { InteractiveWindow } from './InteractiveWindow';
 import { CifraVisualizer } from './CifraVisualizer';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { WorshipLiveReader } from './WorshipLiveReader';
+import { WorshipMetronome } from './WorshipMetronome';
+import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface PortalRepertorioProps {
   user: any;
@@ -77,6 +79,20 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   // Modal / InteractiveWindow de visualização detalhada da canção
   const [activeModalSong, setActiveModalSong] = useState<MusicaRepertorio | null>(null);
   
+  // Setlists do Ministério de Louvor
+  const [setlists, setSetlists] = useState<SetlistCulto[]>(() => {
+    try {
+      const saved = localStorage.getItem('louvor_setlists');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return SETLISTS_PADRAO;
+  });
+  const [activeLiveSetlist, setActiveLiveSetlist] = useState<SetlistCulto | null>(null);
+  const [portalTab, setPortalTab] = useState<'setlists' | 'musicas'>('setlists');
+
   // Modo Tela Cheia Dedicada para a Letra & Cifra da Música
   const [isSongFullscreen, setIsSongFullscreen] = useState<boolean>(false);
   const [twoColumns, setTwoColumns] = useState<boolean>(false);
@@ -135,9 +151,23 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
         try { localStorage.setItem('louvor_musicos', JSON.stringify(list)); } catch (_) {}
       }, (err) => console.warn("Erro ao ouvir musicos de louvor:", err));
 
+      const setlistsRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_setlists');
+      const unsubSetlists = onSnapshot(setlistsRef, (snapshot) => {
+        const list: SetlistCulto[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...(docSnap.data() as any) });
+        });
+        if (list.length > 0) {
+          list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+          setSetlists(list);
+          try { localStorage.setItem('louvor_setlists', JSON.stringify(list)); } catch (_) {}
+        }
+      }, (err) => console.warn("Erro ao ouvir setlists:", err));
+
       return () => {
         unsubMusicas();
         unsubMusicos();
+        unsubSetlists();
       };
     } catch (err) {
       console.warn("Firestore listener initialization skipped:", err);
@@ -277,6 +307,81 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     } catch (_) {
       addToast("Não foi possível copiar automaticamente. Selecione e copie o texto.", "warning");
     }
+  };
+
+  // Confirmação de presença do músico logado
+  const handleConfirmPresencaMusico = async (setlistId: string, status: 'confirmado' | 'indisponivel') => {
+    const userName = (user?.nome || user?.name || '').toLowerCase().trim();
+    const targetSetlist = setlists.find(s => s.id === setlistId);
+    if (!targetSetlist) return;
+
+    const updatedEquipe = (targetSetlist.equipe_escalada || []).map(m => {
+      const matchName = m.nome.toLowerCase().trim() === userName ||
+        (m.membro_id && m.membro_id === user?.id) ||
+        (m.membro_id && m.membro_id === user?.membro_id);
+      if (matchName) {
+        return { ...m, status };
+      }
+      return m;
+    });
+
+    const updatedSetlist: SetlistCulto = { 
+      ...targetSetlist, 
+      equipe_escalada: updatedEquipe, 
+      updated_at: new Date().toISOString() 
+    };
+
+    if (dbFirestore && appId) {
+      try {
+        const { id, ...cloudData } = updatedSetlist;
+        await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_setlists', setlistId), cloudData);
+      } catch (err) {
+        console.error("Erro ao atualizar presença do músico no Firestore:", err);
+      }
+    }
+
+    const updatedList = setlists.map(s => s.id === setlistId ? updatedSetlist : s);
+    setSetlists(updatedList);
+    try { localStorage.setItem('louvor_setlists', JSON.stringify(updatedList)); } catch (_) {}
+
+    if (status === 'confirmado') {
+      addToast("Presença confirmada no culto! Deus abençoe seu ministério.", "success");
+    } else {
+      addToast("Status registrado como indisponível para este culto.", "info");
+    }
+  };
+
+  const handleShareWhatsAppSetlist = (sl: SetlistCulto) => {
+    const dateFormatted = sl.data.split('-').reverse().join('/');
+    let text = `🎼 *SETLIST & ESCALA DO CULTO*\n`;
+    text += `🏛️ *${sl.titulo}*\n`;
+    text += `📅 *Data:* ${dateFormatted} às ${sl.horario}h\n`;
+    text += `🏷️ *Ocasião:* ${sl.tipo_culto}\n`;
+    if (sl.tema_devocional) text += `📖 *Texto/Tema:* ${sl.tema_devocional}\n`;
+    if (sl.lider_nome) text += `🎤 *Líder do Louvor:* ${sl.lider_nome}\n`;
+
+    text += `\n👥 *EQUIPE ESCALADA:*\n`;
+    sl.equipe_escalada?.forEach(e => {
+      const icon = e.status === 'confirmado' ? '✅' : e.status === 'indisponivel' ? '❌' : '⏳';
+      text += `• ${e.nome} - *${e.funcao}* (${icon} ${e.status})\n`;
+    });
+
+    text += `\n🎵 *ORDEM DO LOUVOR (SETLIST):*\n`;
+    sl.itens?.forEach(item => {
+      text += `${item.ordem}º. *${item.titulo}* - ${item.artista}\n`;
+      text += `    🔑 *Tom:* ${item.tom_culto}${item.tom_culto !== item.tom_original ? ` (orig: ${item.tom_original})` : ''} | ⏱ *BPM:* ${item.bpm || '70'}\n`;
+      if (item.momento_liturgico) text += `    ✨ *Momento:* ${item.momento_liturgico}\n`;
+      if (item.ministro_vocal) text += `    🎤 *Vocal:* ${item.ministro_vocal}\n`;
+      if (item.notas_arranjo) text += `    💡 *Arranjo:* ${item.notas_arranjo}\n`;
+      text += `\n`;
+    });
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      addToast('Roteiro copiado para a área de transferência!', 'success');
+    }
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   // Se o usuário NÃO for integrante de louvor ou músico cadastrado
@@ -435,6 +540,298 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           </div>
         </div>
 
+        {/* NAVEGAÇÃO DE ABAS: SETLISTS DOS CULTOS / REPERTÓRIO COMPLETO */}
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setPortalTab('setlists')}
+            className={`px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 ${
+              portalTab === 'setlists'
+                ? 'bg-amber-400 text-slate-950 shadow-md scale-[1.02]'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Play size={14} fill="currentColor" /> Setlists & Agenda dos Cultos
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+              portalTab === 'setlists' ? 'bg-black/20 text-slate-950' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {setlists.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPortalTab('musicas')}
+            className={`px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 ${
+              portalTab === 'musicas'
+                ? 'bg-violet-600 text-white shadow-md scale-[1.02]'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Music size={14} /> Repertório Geral & Cifras
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+              portalTab === 'musicas' ? 'bg-white/20 text-white' : 'bg-violet-100 text-violet-700'
+            }`}>
+              {musicas.length}
+            </span>
+          </button>
+        </div>
+
+        {/* ABA 1: SETLISTS & AGENDA DOS CULTOS AO VIVO */}
+        {portalTab === 'setlists' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>🎼 Programações & Escalas dos Cultos</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Consulte a ordem oficial dos hinos, os tons definidos para a celebração, notas de arranjo e confirme sua presença.
+                </p>
+              </div>
+            </div>
+
+            {setlists.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 text-center border border-slate-200 dark:border-slate-800 space-y-2">
+                <Music size={28} className="mx-auto text-slate-400" />
+                <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">Nenhuma Setlist cadastrada no momento</h4>
+                <p className="text-xs text-slate-500">As escalas e canções de culto cadastradas pela liderança aparecerão aqui.</p>
+              </div>
+            ) : (
+              setlists.map(sl => {
+                const dateFormatted = sl.data.split('-').reverse().join('/');
+                const currentUserName = (user?.nome || user?.name || '').toLowerCase().trim();
+                const myEscala = (sl.equipe_escalada || []).find(m => 
+                  m.nome.toLowerCase().trim() === currentUserName ||
+                  (m.membro_id && m.membro_id === user?.id) ||
+                  (m.membro_id && m.membro_id === user?.membro_id)
+                );
+
+                return (
+                  <div
+                    key={sl.id}
+                    className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4 hover:shadow-md transition"
+                  >
+                    {/* Top Row: Service details & Action buttons */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-black bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
+                            <Calendar size={13} /> {dateFormatted} às {sl.horario}h
+                          </span>
+                          <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg">
+                            {sl.tipo_culto}
+                          </span>
+                          {sl.tempo_total_estimado ? (
+                            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-800">
+                              ⏱ ~{sl.tempo_total_estimado} min
+                            </span>
+                          ) : null}
+                        </div>
+                        <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                          {sl.titulo}
+                        </h2>
+                        {sl.tema_devocional && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold italic">
+                            📖 {sl.tema_devocional}
+                          </p>
+                        )}
+                        {sl.lider_nome && (
+                          <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">
+                            🎤 Ministro(a): {sl.lider_nome}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Main Action: Tocar Setlist */}
+                      <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => setActiveLiveSetlist(sl)}
+                          className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl transition shadow-sm cursor-pointer active:scale-95"
+                          title="Abrir Modo Culto ao Vivo com Cifras e Sequência"
+                        >
+                          <Play size={15} fill="currentColor" /> Tocar Setlist (Modo Culto)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleShareWhatsAppSetlist(sl)}
+                          className="flex items-center gap-1 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs rounded-xl transition"
+                          title="Compartilhar no WhatsApp"
+                        >
+                          <Share2 size={14} /> WhatsApp
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Musician Attendance Highlight Box */}
+                    {myEscala && (
+                      <div className="bg-gradient-to-r from-amber-500/10 to-indigo-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 block">
+                            Sua Escala para este Culto
+                          </span>
+                          <strong className="text-sm font-black text-slate-900 dark:text-white">
+                            Você está escalado(a) como {myEscala.funcao}!
+                          </strong>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block">
+                            Status atual: <strong className="uppercase">{myEscala.status}</strong>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmPresencaMusico(sl.id, 'confirmado')}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 transition ${
+                              myEscala.status === 'confirmado'
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-emerald-300 hover:bg-emerald-50'
+                            }`}
+                          >
+                            <CheckCircle2 size={13} /> Confirmar Presença
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmPresencaMusico(sl.id, 'indisponivel')}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 transition ${
+                              myEscala.status === 'indisponivel'
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400 border border-rose-300 hover:bg-rose-50'
+                            }`}
+                          >
+                            <AlertCircle size={13} /> Não poderei ir
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Songs Sequence & Team Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                      {/* Songs list (8 cols) */}
+                      <div className="lg:col-span-8 space-y-2">
+                        <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                          Ordem das Canções ({sl.itens.length}) • Clique para ver a cifra
+                        </div>
+
+                        <div className="space-y-2">
+                          {sl.itens.map((it, idx) => {
+                            const catalogSong = musicas.find(m => m.id === it.musica_id || m.titulo.toLowerCase().trim() === it.titulo.toLowerCase().trim());
+                            
+                            return (
+                              <div
+                                key={it.id || idx}
+                                onClick={() => {
+                                  if (catalogSong) {
+                                    setActiveModalSong(catalogSong);
+                                  } else {
+                                    setActiveLiveSetlist(sl);
+                                  }
+                                }}
+                                className="bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50/70 dark:hover:bg-slate-800 p-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 transition cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 group"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="w-6 h-6 rounded-full bg-slate-900 dark:bg-slate-700 text-white text-xs font-black flex items-center justify-center shrink-0 group-hover:bg-violet-600 transition">
+                                    {it.ordem || idx + 1}
+                                  </span>
+                                  <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-extrabold text-sm text-slate-900 dark:text-white group-hover:text-violet-600 transition">
+                                        {it.titulo}
+                                      </span>
+                                      <span className="text-xs text-slate-500">({it.artista})</span>
+                                      {it.momento_liturgico && (
+                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-violet-100 dark:bg-violet-950/70 text-violet-800 dark:text-violet-300">
+                                          {it.momento_liturgico}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {it.notas_arranjo && (
+                                      <p className="text-[11px] text-amber-800 dark:text-amber-300 font-semibold mt-0.5">
+                                        💡 {it.notas_arranjo}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                  <span className="text-xs font-black font-mono bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-800">
+                                    Tom: {it.tom_culto}
+                                    {it.tom_culto !== it.tom_original && (
+                                      <span className="text-[10px] opacity-75 font-normal ml-1">
+                                        (orig: {it.tom_original})
+                                      </span>
+                                    )}
+                                  </span>
+                                  {it.bpm && (
+                                    <span className="text-[11px] font-mono text-slate-500 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 font-bold">
+                                      {it.bpm} BPM
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Musician Schedule (4 cols) */}
+                      <div className="lg:col-span-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <Users size={14} className="text-violet-600" />
+                            Agenda dos Músicos
+                          </h4>
+                          <span className="text-[10px] font-bold text-slate-500">
+                            {sl.equipe_escalada?.length || 0} escalados
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {(sl.equipe_escalada || []).map((musico, mIdx) => (
+                            <div
+                              key={mIdx}
+                              className="bg-white dark:bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs"
+                            >
+                              <div className="truncate pr-2">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">{musico.nome}</span>
+                                <span className="text-[10px] text-slate-500 font-medium">{musico.funcao}</span>
+                              </div>
+
+                              <div className="shrink-0">
+                                {musico.status === 'confirmado' && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                                    <CheckCircle2 size={11} /> Confirmado
+                                  </span>
+                                )}
+                                {musico.status === 'pendente' && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full">
+                                    <Clock3 size={11} /> Pendente
+                                  </span>
+                                )}
+                                {musico.status === 'indisponivel' && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full">
+                                    <AlertCircle size={11} /> Ausente
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* ABA 2: REPERTÓRIO GERAL & CIFRAS */}
+        {portalTab === 'musicas' && (
+          <>
         {/* 3. BARRA DE PESQUISA, PASTAS E FILTRO DE TOM (Formulários no Padrão da Loja Virtual) */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
           <div className="flex flex-col md:flex-row gap-3">
@@ -632,6 +1029,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* 5. MODAL DA CIFRA (InteractiveWindow com suporte a Tela Cheia e CifraVisualizer) */}
@@ -778,7 +1177,15 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 </button>
               </div>
 
-              {/* 3. BOTÃO ABRIR EM TELA CHEIA */}
+              {/* 3. METRÔNOMO VISUAL */}
+              <div className="flex items-center">
+                <WorshipMetronome 
+                  compact 
+                  initialBpm={activeSong.bpm ? parseInt(activeSong.bpm) : 72} 
+                />
+              </div>
+
+              {/* 4. BOTÃO ABRIR EM TELA CHEIA */}
               <button
                 type="button"
                 onClick={() => setIsSongFullscreen(true)}
@@ -789,7 +1196,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 <span>Tela Cheia</span>
               </button>
 
-              {/* 4. AUTO-SCROLL (ROLAGEM AUTOMÁTICA PARA MÚSICOS EM PALCO) */}
+              {/* 5. AUTO-SCROLL (ROLAGEM AUTOMÁTICA PARA MÚSICOS EM PALCO) */}
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -1069,6 +1476,14 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 )}
               </div>
 
+              {/* Metrônomo Visual */}
+              <div className="flex items-center">
+                <WorshipMetronome 
+                  compact 
+                  initialBpm={activeSong.bpm ? parseInt(activeSong.bpm) : 72} 
+                />
+              </div>
+
               {/* Modo Palco (Alto Contraste) */}
               <button
                 type="button"
@@ -1136,6 +1551,15 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* 6. MODO CULTO AO VIVO / SEQUENCIAL EM TELA CHEIA */}
+      {activeLiveSetlist && (
+        <WorshipLiveReader
+          setlist={activeLiveSetlist}
+          allMusicas={musicas}
+          onClose={() => setActiveLiveSetlist(null)}
+        />
       )}
     </div>
   );
