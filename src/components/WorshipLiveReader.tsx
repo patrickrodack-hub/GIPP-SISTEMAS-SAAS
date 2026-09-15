@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronLeft, ChevronRight, X, Sun, Moon, Columns, 
   Play, Pause, ArrowUp, ArrowDown, Music, Sparkles, Mic,
-  List, Sliders, ChevronDown, Guitar, RotateCcw
+  List, Sliders, ChevronDown, Guitar, RotateCcw, Target
 } from 'lucide-react';
 import { 
   SetlistCulto, SetlistMusicaItem, MusicaRepertorio 
@@ -12,6 +12,8 @@ import {
   getCapoChordShapeKey, CAPO_FRETS
 } from '../utils/musicChords';
 import { WorshipMetronome } from './WorshipMetronome';
+import { CifraVisualizer } from './CifraVisualizer';
+import { CifraScrollDock } from './CifraScrollDock';
 
 interface WorshipLiveReaderProps {
   setlist: SetlistCulto;
@@ -42,9 +44,11 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
   const [liveCapo, setLiveCapo] = useState<number>(0);
   const [applyCapoChords, setApplyCapoChords] = useState<boolean>(true);
 
-  // Auto-scroll state
+  // Auto-scroll state & Focus Guide
   const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
-  const [scrollSpeed, setScrollSpeed] = useState<number>(1); // 1 = lento, 2 = médio, 3 = rápido
+  const [scrollSpeed, setScrollSpeed] = useState<number>(1.0); // 0.5x a 4.0x
+  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(0);
+  const [showFocusGuide, setShowFocusGuide] = useState<boolean>(true);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollAnimRef = useRef<number | null>(null);
 
@@ -55,15 +59,79 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
     m => m.id === currentItem?.musica_id || m.titulo.toLowerCase().trim() === currentItem?.titulo.toLowerCase().trim()
   );
 
-  // Reset live offset when switching songs
+  // Reset live offset and line focus when switching songs
   useEffect(() => {
     setLiveSemitonesOffset(0);
     setLiveCapo(fullSongData?.capo || 0);
     setIsAutoScrolling(false);
+    setActiveLineIndex(0);
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
   }, [currentIndex, fullSongData?.capo]);
+
+  // Atualiza linha focal ativa baseada no scroll (30% do topo da tela)
+  const updateActiveLineFromScroll = (container: HTMLElement) => {
+    if (!showFocusGuide) return;
+    const lineEls = container.querySelectorAll<HTMLElement>('[data-line-index]');
+    if (!lineEls.length) return;
+
+    const focusZoneY = container.scrollTop + container.clientHeight * 0.30;
+    let closestIndex = 0;
+    let minDiff = Infinity;
+
+    lineEls.forEach((el) => {
+      const idx = parseInt(el.getAttribute('data-line-index') || '0', 10);
+      const lineTop = el.offsetTop;
+      const diff = Math.abs(lineTop - focusZoneY);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = idx;
+      }
+    });
+
+    setActiveLineIndex(closestIndex);
+  };
+
+  const scrollToLine = (lineIdx: number) => {
+    if (scrollContainerRef.current) {
+      const lineEl = scrollContainerRef.current.querySelector<HTMLElement>(`[data-line-index="${lineIdx}"]`);
+      if (lineEl) {
+        scrollContainerRef.current.scrollTo({
+          top: Math.max(0, lineEl.offsetTop - scrollContainerRef.current.clientHeight * 0.30),
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
+
+  const handleLineClick = (lineIdx: number) => {
+    setActiveLineIndex(lineIdx);
+    scrollToLine(lineIdx);
+  };
+
+  const handlePrevLine = () => {
+    setActiveLineIndex(prev => {
+      const next = Math.max(0, (prev ?? 0) - 1);
+      scrollToLine(next);
+      return next;
+    });
+  };
+
+  const handleNextLine = () => {
+    setActiveLineIndex(prev => {
+      const next = (prev ?? 0) + 1;
+      scrollToLine(next);
+      return next;
+    });
+  };
+
+  const handleResetScrollToTop = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setActiveLineIndex(0);
+  };
 
   // Keyboard navigation (ArrowLeft, ArrowRight, Space for scroll, Esc to exit)
   useEffect(() => {
@@ -103,9 +171,12 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
       lastTime = time;
 
       if (scrollContainerRef.current) {
-        const pxPerSecond = scrollSpeed === 1 ? 22 : scrollSpeed === 2 ? 45 : 75;
+        const pxPerSecond = Math.max(12, Math.round(26 * scrollSpeed));
         const scrollDelta = (pxPerSecond * delta) / 1000;
         scrollContainerRef.current.scrollTop += scrollDelta;
+
+        // Atualiza a linha de foco visual em tempo real
+        updateActiveLineFromScroll(scrollContainerRef.current);
 
         const maxScroll = scrollContainerRef.current.scrollHeight - scrollContainerRef.current.clientHeight;
         if (scrollContainerRef.current.scrollTop >= maxScroll - 2) {
@@ -121,7 +192,7 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
     return () => {
       if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
     };
-  }, [isAutoScrolling, scrollSpeed]);
+  }, [isAutoScrolling, scrollSpeed, showFocusGuide]);
 
   if (!currentItem) {
     return (
@@ -343,31 +414,45 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
             <button
               type="button"
               onClick={() => setIsAutoScrolling(!isAutoScrolling)}
-              className={`px-2 py-1 rounded-lg text-xs font-black flex items-center gap-1 transition ${
+              className={`px-2 py-1 rounded-lg text-xs font-black flex items-center gap-1 transition cursor-pointer ${
                 isAutoScrolling ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
               }`}
-              title="Rolar Cifra Automaticamente (Barra de Espaço)"
+              title="Rolar Cifra Automaticamente [Barra de Espaço]"
             >
-              {isAutoScrolling ? <Pause size={13} /> : <Play size={13} />}
+              {isAutoScrolling ? <Pause size={13} className="animate-pulse" /> : <Play size={13} />}
               <span className="hidden md:inline">{isAutoScrolling ? 'Pausar' : 'Rolar'}</span>
             </button>
-            {isAutoScrolling && (
-              <div className="flex gap-0.5 px-1">
-                {([1, 2, 3] as const).map(spd => (
-                  <button
-                    key={spd}
-                    type="button"
-                    onClick={() => setScrollSpeed(spd)}
-                    className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
-                      scrollSpeed === spd ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {spd}x
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex gap-0.5 px-1">
+              {[0.5, 1, 1.5, 2, 3].map(spd => (
+                <button
+                  key={spd}
+                  type="button"
+                  onClick={() => setScrollSpeed(spd)}
+                  className={`text-[9px] px-1.5 py-0.5 rounded font-black cursor-pointer ${
+                    scrollSpeed === spd ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title={`Velocidade ${spd}x`}
+                >
+                  {spd}x
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Guia de Foco e Linha Ativa */}
+          <button
+            type="button"
+            onClick={() => setShowFocusGuide(!showFocusGuide)}
+            className={`p-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer border ${
+              showFocusGuide
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+            title="Alternar cursor vertical e realce da linha ativa da cifra"
+          >
+            <Target size={14} />
+            <span className="hidden lg:inline text-[11px]">Foco</span>
+          </button>
 
           {/* Font Size */}
           <div className="hidden md:flex items-center bg-slate-800 border border-slate-700 rounded-xl px-1.5 py-1 text-slate-300 text-xs">
@@ -437,9 +522,10 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
       {/* CHORD & LYRICS SHEET DISPLAY AREA */}
       <main
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 md:px-12 py-6 scroll-smooth select-text"
+        onScroll={(e) => updateActiveLineFromScroll(e.currentTarget)}
+        className="cifra-container flex-1 overflow-y-auto px-4 md:px-12 py-6 scroll-smooth select-text relative"
       >
-        <div className={`max-w-5xl mx-auto ${twoColumns ? 'columns-1 lg:columns-2 gap-8' : ''}`}>
+        <div className={`max-w-5xl mx-auto pb-16 ${twoColumns ? 'columns-1 lg:columns-2 gap-8' : ''}`}>
           {/* Song Header Info on Paper */}
           <div className="mb-6 pb-4 border-b border-slate-800 break-inside-avoid">
             <div className="flex flex-wrap justify-between items-baseline gap-2">
@@ -489,15 +575,35 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
             </div>
           </div>
 
-          {/* CHORDS BODY */}
-          <pre
-            style={{ fontSize: `${fontSize}px` }}
-            className={`font-mono leading-relaxed whitespace-pre-wrap transition-all select-text pb-24 ${
-              stageMode ? 'text-amber-100 font-medium' : 'text-slate-200'
-            }`}
-          >
-            {transposedChords}
-          </pre>
+          {/* CHORDS BODY COM REALCE DE LINHA E CURSOR VERTICAL */}
+          <CifraVisualizer
+            cifraText={transposedChords}
+            fontSize={fontSize}
+            stageMode={stageMode}
+            twoColumns={twoColumns}
+            activeLineIndex={activeLineIndex}
+            onLineClick={handleLineClick}
+            showFocusGuide={showFocusGuide}
+            showVerticalCursor={showFocusGuide}
+          />
+
+          {/* DOCK FLUTUANTE DE ROLAGEM AUTOMÁTICA E VELOCIDADE */}
+          <div className="sticky bottom-4 right-4 ml-auto max-w-max mt-6 z-40">
+            <CifraScrollDock
+              isAutoScrolling={isAutoScrolling}
+              onToggleAutoScroll={() => setIsAutoScrolling(!isAutoScrolling)}
+              scrollSpeed={scrollSpeed}
+              onChangeScrollSpeed={setScrollSpeed}
+              showFocusGuide={showFocusGuide}
+              onToggleFocusGuide={() => setShowFocusGuide(!showFocusGuide)}
+              activeLineIndex={activeLineIndex}
+              totalLines={transposedChords.split('\n').length}
+              onPrevLine={handlePrevLine}
+              onNextLine={handleNextLine}
+              onResetToTop={handleResetScrollToTop}
+              stageMode={stageMode}
+            />
+          </div>
         </div>
       </main>
 

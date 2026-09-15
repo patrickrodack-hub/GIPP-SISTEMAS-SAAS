@@ -6,7 +6,7 @@ import {
   Play, Pause, Moon, Sun, ExternalLink, ShieldAlert, Sparkles,
   ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check, Columns2,
   Expand, Shrink, Calendar, Clock, Users, CheckCircle2, AlertCircle, Clock3,
-  Guitar
+  Guitar, Target
 } from 'lucide-react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
@@ -19,6 +19,7 @@ import {
 } from '../utils/musicChords';
 import { InteractiveWindow } from './InteractiveWindow';
 import { CifraVisualizer } from './CifraVisualizer';
+import { CifraScrollDock } from './CifraScrollDock';
 import { WorshipLiveReader } from './WorshipLiveReader';
 import { WorshipMetronome } from './WorshipMetronome';
 import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -112,21 +113,37 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
   // Auto-scroll para músicos no palco/ensaio
   const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
-  const [scrollSpeed, setScrollSpeed] = useState<number>(1); // 1 = lento, 2 = médio, 3 = rápido
+  const [scrollSpeed, setScrollSpeed] = useState<number>(1.0); // Velocidade contínua: 0.5x a 4.0x
+  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(0);
+  const [showFocusGuide, setShowFocusGuide] = useState<boolean>(true);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollFullscreenContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollAnimRef = useRef<number | null>(null);
 
-  // Listener para tecla ESC para sair da tela cheia
+  // Reset de rolagem e foco ao trocar ou abrir nova música
+  useEffect(() => {
+    setIsAutoScrolling(false);
+    setActiveLineIndex(0);
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+    if (scrollFullscreenContainerRef.current) scrollFullscreenContainerRef.current.scrollTop = 0;
+  }, [activeModalSong?.id]);
+
+  // Listener para teclas de atalho: ESC, Barra de Espaço e Setas
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar se estiver digitando em campo de texto
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
       if (e.key === 'Escape' && isSongFullscreen) {
         setIsSongFullscreen(false);
+      } else if (e.code === 'Space' && activeModalSong) {
+        e.preventDefault();
+        setIsAutoScrolling(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSongFullscreen]);
+  }, [isSongFullscreen, activeModalSong]);
 
   // Sincronização em tempo real via Firestore
   useEffect(() => {
@@ -187,6 +204,76 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     });
   };
 
+  // Atualiza a linha ativa baseada na posição do scroll relativo à zona focal de leitura (30% do topo)
+  const updateActiveLineFromScroll = (container: HTMLElement) => {
+    if (!showFocusGuide) return;
+    const lineEls = container.querySelectorAll<HTMLElement>('[data-line-index]');
+    if (!lineEls.length) return;
+
+    const focusZoneY = container.scrollTop + container.clientHeight * 0.30;
+    let closestIndex = 0;
+    let minDiff = Infinity;
+
+    lineEls.forEach((el) => {
+      const idx = parseInt(el.getAttribute('data-line-index') || '0', 10);
+      const lineTop = el.offsetTop;
+      const diff = Math.abs(lineTop - focusZoneY);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = idx;
+      }
+    });
+
+    setActiveLineIndex(closestIndex);
+  };
+
+  const scrollToLine = (lineIdx: number) => {
+    const targetEl = isSongFullscreen 
+      ? scrollFullscreenContainerRef.current 
+      : scrollContainerRef.current;
+    if (targetEl) {
+      const lineEl = targetEl.querySelector<HTMLElement>(`[data-line-index="${lineIdx}"]`);
+      if (lineEl) {
+        targetEl.scrollTo({
+          top: Math.max(0, lineEl.offsetTop - targetEl.clientHeight * 0.30),
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
+
+  const handleLineClick = (lineIdx: number) => {
+    setActiveLineIndex(lineIdx);
+    scrollToLine(lineIdx);
+  };
+
+  const handlePrevLine = () => {
+    setActiveLineIndex(prev => {
+      const next = Math.max(0, (prev ?? 0) - 1);
+      scrollToLine(next);
+      return next;
+    });
+  };
+
+  const handleNextLine = () => {
+    const totalLines = (activeTransposedSheet?.split('\n').length || 1);
+    setActiveLineIndex(prev => {
+      const next = Math.min(totalLines - 1, (prev ?? 0) + 1);
+      scrollToLine(next);
+      return next;
+    });
+  };
+
+  const handleResetScrollToTop = () => {
+    const targetEl = isSongFullscreen 
+      ? scrollFullscreenContainerRef.current 
+      : scrollContainerRef.current;
+    if (targetEl) {
+      targetEl.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setActiveLineIndex(0);
+  };
+
   // Motor de Auto-Scroll suave para execução musical
   useEffect(() => {
     if (!isAutoScrolling || !activeModalSong) {
@@ -199,7 +286,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
       const delta = currentTime - lastTime;
       lastTime = currentTime;
 
-      const pixelsPerSec = scrollSpeed === 1 ? 22 : scrollSpeed === 2 ? 40 : 65;
+      // Velocidade calculada em pixels/segundo proporcional ao multiplicador scrollSpeed
+      const pixelsPerSec = Math.max(12, Math.round(26 * scrollSpeed));
       const scrollAmount = (pixelsPerSec * delta) / 1000;
 
       // Rolar o container ativo (modal regular ou tela cheia)
@@ -209,6 +297,9 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
       if (targetEl) {
         targetEl.scrollTop += scrollAmount;
+
+        // Atualizar a linha de foco visual ativa
+        updateActiveLineFromScroll(targetEl);
 
         // Se chegou ao fim do documento, pausa suavemente
         const maxScroll = targetEl.scrollHeight - targetEl.clientHeight;
@@ -226,7 +317,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     return () => {
       if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
     };
-  }, [isAutoScrolling, scrollSpeed, activeModalSong, isSongFullscreen]);
+  }, [isAutoScrolling, scrollSpeed, activeModalSong, isSongFullscreen, showFocusGuide]);
 
   // Verificação estrita de prerrogativa: Músico ou Equipe de Louvor
   const isAuthorizedMusico = useMemo(() => {
@@ -1326,32 +1417,46 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                       : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-200'
                   }`}
-                  title={isAutoScrolling ? "Pausar rolagem automática" : "Iniciar rolagem automática"}
+                  title={isAutoScrolling ? "Pausar rolagem automática [Espaço]" : "Iniciar rolagem automática [Espaço]"}
                 >
                   {isAutoScrolling ? <Pause size={12} className="animate-pulse" /> : <Play size={12} />}
                   <span className="hidden xs:inline">Auto-Scroll</span>
                 </button>
 
-                {isAutoScrolling && (
-                  <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg border border-slate-200 dark:border-slate-600">
-                    {[1, 2, 3].map(spd => (
-                      <button
-                        key={spd}
-                        type="button"
-                        onClick={() => setScrollSpeed(spd)}
-                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
-                          scrollSpeed === spd 
-                            ? 'bg-violet-600 text-white' 
-                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
-                        }`}
-                        title={`Velocidade ${spd}x`}
-                      >
-                        {spd}x
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* Seletor rápido de velocidades */}
+                <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                  {[0.5, 1, 1.5, 2, 3].map(spd => (
+                    <button
+                      key={spd}
+                      type="button"
+                      onClick={() => setScrollSpeed(spd)}
+                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
+                        scrollSpeed === spd 
+                          ? 'bg-violet-600 text-white' 
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                      title={`Definir velocidade ${spd}x`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* 6. GUIA DE LEITURA / REALCE DE LINHA ATIVA */}
+              <button
+                type="button"
+                onClick={() => setShowFocusGuide(!showFocusGuide)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                  showFocusGuide
+                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-400 dark:border-amber-600'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 border-slate-200 dark:border-slate-600'
+                }`}
+                title="Alternar realce da linha ativa e cursor vertical de leitura"
+              >
+                <Target size={12} />
+                <span className="hidden sm:inline">Foco</span>
+              </button>
 
               {/* 5. MODO PALCO (ALTO CONTRASTE / TEMA NOTURNO DE PALCO) */}
               <button
@@ -1442,7 +1547,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
             {/* VISUALIZADOR DA LETRA E CIFRA COM NOTAS DESTACADAS EM LARANJA */}
             <div 
               ref={scrollContainerRef}
-              className={`flex-1 overflow-y-auto custom-scrollbar p-5 rounded-2xl border shadow-inner transition-colors duration-200 ${
+              onScroll={(e) => updateActiveLineFromScroll(e.currentTarget)}
+              className={`cifra-container flex-1 overflow-y-auto custom-scrollbar p-5 rounded-2xl border shadow-inner transition-colors duration-200 relative ${
                 stageMode
                   ? 'bg-black border-zinc-800 text-zinc-100 font-mono select-text'
                   : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-mono select-text'
@@ -1453,8 +1559,30 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 cifraText={activeTransposedSheet} 
                 fontSize={activeFontSize} 
                 stageMode={stageMode} 
-                twoColumns={twoColumns} 
+                twoColumns={twoColumns}
+                activeLineIndex={activeLineIndex}
+                onLineClick={handleLineClick}
+                showFocusGuide={showFocusGuide}
+                showVerticalCursor={showFocusGuide}
               />
+
+              {/* DOCK FLUTUANTE DE ROLAGEM AUTOMÁTICA E CONTROLE DE VELOCIDADE NO CIFRA-CONTAINER */}
+              <div className="sticky bottom-3 right-3 ml-auto max-w-max mt-4 z-40">
+                <CifraScrollDock
+                  isAutoScrolling={isAutoScrolling}
+                  onToggleAutoScroll={() => setIsAutoScrolling(!isAutoScrolling)}
+                  scrollSpeed={scrollSpeed}
+                  onChangeScrollSpeed={setScrollSpeed}
+                  showFocusGuide={showFocusGuide}
+                  onToggleFocusGuide={() => setShowFocusGuide(!showFocusGuide)}
+                  activeLineIndex={activeLineIndex}
+                  totalLines={activeTransposedSheet.split('\n').length}
+                  onPrevLine={handlePrevLine}
+                  onNextLine={handleNextLine}
+                  onResetToTop={handleResetScrollToTop}
+                  stageMode={stageMode}
+                />
+              </div>
             </div>
           </div>
         </InteractiveWindow>,
@@ -1703,31 +1831,46 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                         ? 'bg-zinc-800 text-zinc-300 hover:text-white'
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-2xs'
                   }`}
-                  title={isAutoScrolling ? "Pausar rolagem automática" : "Iniciar rolagem automática"}
+                  title={isAutoScrolling ? "Pausar rolagem automática [Espaço]" : "Iniciar rolagem automática [Espaço]"}
                 >
                   {isAutoScrolling ? <Pause size={12} className="animate-pulse" /> : <Play size={12} />}
                   <span className="hidden sm:inline">Auto-Scroll</span>
                 </button>
-                {isAutoScrolling && (
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3].map(spd => (
-                      <button
-                        key={spd}
-                        type="button"
-                        onClick={() => setScrollSpeed(spd)}
-                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
-                          scrollSpeed === spd 
-                            ? 'bg-violet-600 text-white' 
-                            : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                        }`}
-                        title={`Velocidade ${spd}x`}
-                      >
-                        {spd}x
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="flex items-center gap-0.5">
+                  {[0.5, 1, 1.5, 2, 3].map(spd => (
+                    <button
+                      key={spd}
+                      type="button"
+                      onClick={() => setScrollSpeed(spd)}
+                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
+                        scrollSpeed === spd 
+                          ? 'bg-violet-600 text-white' 
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      }`}
+                      title={`Definir velocidade ${spd}x`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Guia de Foco e Linha Ativa */}
+              <button
+                type="button"
+                onClick={() => setShowFocusGuide(!showFocusGuide)}
+                className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                  showFocusGuide
+                    ? 'bg-amber-500/20 text-amber-500 border-amber-400 dark:border-amber-600'
+                    : stageMode
+                      ? 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                      : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800'
+                }`}
+                title="Alternar cursor vertical e realce da linha ativa da música"
+              >
+                <Target size={14} />
+                <span className="hidden xl:inline">Foco</span>
+              </button>
 
               {/* Metrônomo Visual */}
               <div className="flex items-center">
@@ -1787,7 +1930,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           {/* CORPO DE LEITURA EM TELA CHEIA (COM FUNDO BRANCO NO MODO CLARO E NOTAS EM LARANJA) */}
           <div 
             ref={scrollFullscreenContainerRef}
-            className={`flex-1 w-full overflow-y-auto custom-scrollbar p-6 sm:p-10 md:p-12 transition-colors duration-200 ${
+            onScroll={(e) => updateActiveLineFromScroll(e.currentTarget)}
+            className={`cifra-container flex-1 w-full overflow-y-auto custom-scrollbar p-6 sm:p-10 md:p-12 transition-colors duration-200 relative ${
               stageMode 
                 ? 'bg-black text-zinc-100' 
                 : 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100'
@@ -1843,13 +1987,35 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               </div>
             )}
 
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-6xl mx-auto pb-16">
               <CifraVisualizer 
                 cifraText={activeTransposedSheet} 
                 fontSize={activeFontSize} 
                 stageMode={stageMode} 
-                twoColumns={twoColumns} 
+                twoColumns={twoColumns}
+                activeLineIndex={activeLineIndex}
+                onLineClick={handleLineClick}
+                showFocusGuide={showFocusGuide}
+                showVerticalCursor={showFocusGuide}
               />
+
+              {/* DOCK FLUTUANTE DE ROLAGEM AUTOMÁTICA E CONTROLE DE VELOCIDADE EM TELA CHEIA */}
+              <div className="sticky bottom-4 right-4 ml-auto max-w-max mt-6 z-40">
+                <CifraScrollDock
+                  isAutoScrolling={isAutoScrolling}
+                  onToggleAutoScroll={() => setIsAutoScrolling(!isAutoScrolling)}
+                  scrollSpeed={scrollSpeed}
+                  onChangeScrollSpeed={setScrollSpeed}
+                  showFocusGuide={showFocusGuide}
+                  onToggleFocusGuide={() => setShowFocusGuide(!showFocusGuide)}
+                  activeLineIndex={activeLineIndex}
+                  totalLines={activeTransposedSheet.split('\n').length}
+                  onPrevLine={handlePrevLine}
+                  onNextLine={handleNextLine}
+                  onResetToTop={handleResetScrollToTop}
+                  stageMode={stageMode}
+                />
+              </div>
             </div>
           </div>
         </div>,
