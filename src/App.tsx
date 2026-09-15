@@ -141,6 +141,8 @@ const ModuleMensagensLote = lazy(() => import('./components/ModuleMensagensLote'
 const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin'));
 const ModuleLojaVirtualAdmin = lazy(() => import('./components/ModuleLojaVirtualAdmin'));
 const PortalLojaMembro = lazy(() => import('./components/PortalLojaMembro'));
+const PortalRepertorio = lazy(() => import('./components/PortalRepertorio'));
+import { checkIsMusicoOuLouvor } from './data/repertorioData';
 import { isProdutoExemplo, EXEMPLO_PRODUTO_IDS } from './data/lojaVirtualData';
 import { LockScreenModal } from './components/LockScreenModal';
 import { MobileBottomDock } from './components/MobileBottomDock';
@@ -12585,6 +12587,7 @@ const PortalHome = ({ user, db, setView }) => {
     );
 
     const canAccessFormacaoHome = isAlunoOuCandidatoHome || isPastorHome || isPresbiteroHome || isProfessor || currentUser.nivel === 'master' || (currentUser.funcao_administrativa && ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(currentUser.funcao_administrativa.toUpperCase()));
+    const isMusicoHome = checkIsMusicoOuLouvor(currentUser, db);
     
     const [devocional, setDevocional] = useState('');
     const [loadingDev, setLoadingDev] = useState(false);
@@ -12932,36 +12935,39 @@ const PortalHome = ({ user, db, setView }) => {
                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none"></div>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
                 
-                {/* FOTO DO USUÁRIO COM ESPAÇO AMPLIADO E DESTAQUE */}
-                <div className="relative z-10 shrink-0 flex items-center justify-center p-0.5 sm:p-1">
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-3 sm:border-4 border-emerald-500/60 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)] relative group/foto shrink-0 ring-4 ring-emerald-500/15">
+                {/* FOTO DO USUÁRIO AMPLIADA À ESQUERDA PARA MELHOR EXPOSIÇÃO */}
+                <div className="relative z-10 shrink-0 flex items-center justify-center p-0.5">
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full border-4 border-emerald-400/80 overflow-hidden bg-slate-800 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.45)] relative group/foto shrink-0 ring-4 ring-emerald-500/20">
                         {currentUser.foto ? (
                             <CachedImage src={currentUser.foto} cacheKey={`user_${currentUser.id || 'current'}_foto`} className="w-full h-full object-cover"/>
                         ) : (
-                            <User size={52} className="text-slate-400"/>
+                            <User size={56} className="text-slate-400"/>
                         )}
                         <button onClick={() => setView('portal_perfil')} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer">
-                            <Camera size={20} className="text-white mb-0.5"/>
+                            <Camera size={22} className="text-white mb-0.5"/>
                             <span className="text-[8px] font-black uppercase tracking-widest text-white">Editar</span>
                         </button>
                     </div>
                 </div>
                 
-                {/* CONTEÚDO PRINCIPAL ALINHADO À DIREITA */}
+                {/* INFORMAÇÕES ALINHADAS À DIREITA (FLUXO DIREITA PARA ESQUERDA) */}
                 <div className="relative z-10 flex-1 min-w-0 flex flex-col items-end text-right justify-center gap-1 sm:gap-1.5">
-                    {/* BADGES E NOME DA IGREJA (SEM CORTE / EXTENDIDO) */}
+                    {/* BADGES */}
                     <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 justify-end w-full">
-                        <span className="bg-emerald-500/10 text-emerald-400 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/20 shadow-xs shrink-0">
+                        <span className="bg-emerald-500/15 text-emerald-300 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-emerald-500/30 shadow-xs shrink-0">
                             {currentUser.cargo || 'Membro Ativo'}
                         </span>
                         {currentUser.funcao_administrativa && currentUser.funcao_administrativa !== 'NENHUMA' && (
-                            <span className="bg-indigo-500/10 text-indigo-400 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/20 shadow-xs shrink-0">
+                            <span className="bg-indigo-500/15 text-indigo-300 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest inline-block border border-indigo-500/30 shadow-xs shrink-0">
                                 ADM: {currentUser.funcao_administrativa}
                             </span>
                         )}
-                        <span className="text-[10.5px] sm:text-[11.5px] font-bold text-slate-300 flex items-center justify-end gap-1 leading-snug text-right">
-                            <MapPin size={11} className="shrink-0 text-emerald-400"/> {db.igreja.nome}
-                        </span>
+                    </div>
+
+                    {/* NOME COMPLETO DA IGREJA (EXTENDIDO SEM CORTES) */}
+                    <div className="flex items-center justify-end gap-1.5 text-slate-300 text-[10.5px] sm:text-[11.5px] font-bold leading-tight w-full text-right">
+                        <span className="break-words max-w-full text-right">{db.igreja.nome}</span>
+                        <MapPin size={11} className="shrink-0 text-emerald-400"/>
                     </div>
                     
                     {/* SAUDAÇÃO COM NOME */}
@@ -12969,22 +12975,22 @@ const PortalHome = ({ user, db, setView }) => {
                         {saudacaoTempo}, {currentUser.nome.split(' ')[0]}!
                     </h2>
 
-                    {/* JORNADA DE FÉ (BOX REDUZIDO, COMPACTO E ELEGANTE) */}
-                    <div className="w-full max-w-[230px] sm:max-w-[270px] bg-slate-800/60 px-2.5 py-1.5 rounded-xl border border-slate-700/60 backdrop-blur-xs shadow-inner mt-0.5">
+                    {/* JORNADA DE FÉ (BOX REDUZIDO E COMPACTO) */}
+                    <div className="w-full max-w-[170px] sm:max-w-[200px] bg-slate-800/50 px-2 py-1 rounded-lg border border-slate-700/50 backdrop-blur-xs shadow-inner mt-0.5">
                         <div className="flex justify-between items-center mb-0.5">
-                            <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                                <Activity size={10} className="text-emerald-400 shrink-0"/> Jornada de Fé
+                            <span className="text-[8px] sm:text-[8.5px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                                <Activity size={9} className="text-emerald-400 shrink-0"/> Jornada
                             </span>
-                            <span className="text-[10px] sm:text-[11px] font-black text-emerald-400">{nivelSpiritual}%</span>
+                            <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-400">{nivelSpiritual}%</span>
                         </div>
-                        <div className="w-full h-1 sm:h-1.5 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/60 mb-0.5">
+                        <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden flex shadow-inner border border-slate-700/50 mb-0.5">
                             <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 relative" style={{width: `${nivelSpiritual}%`}}>
                                 <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ animation: 'slideRight 2s infinite linear' }}></div>
                             </div>
                         </div>
-                        <div className="flex justify-between items-center text-[8px] sm:text-[8.5px] text-slate-400 font-semibold">
-                            <span className="text-slate-300 truncate max-w-[130px]">{nivelRotulo}</span>
-                            <span>{unlockedCount + unlockedCursosCount} Conquistas</span>
+                        <div className="flex justify-between items-center text-[7.5px] sm:text-[8px] text-slate-400 font-semibold">
+                            <span className="text-slate-300 truncate max-w-[100px]">{nivelRotulo}</span>
+                            <span>{unlockedCount + unlockedCursosCount} Conq.</span>
                         </div>
                     </div>
                 </div>
@@ -13120,6 +13126,13 @@ const PortalHome = ({ user, db, setView }) => {
                     <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Loja</span>
                     <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Produtos</span>
                 </button>
+                {isMusicoHome && (
+                    <button onClick={() => setView('portal_repertorio')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-violet-300 transition-all flex flex-col items-center text-center group cursor-pointer">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-violet-50 text-violet-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-violet-600 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><Music size={16} className="sm:w-5 sm:h-5"/></div>
+                        <span className="font-black text-slate-800 text-[11px] sm:text-xs truncate max-w-full leading-tight">Repertório</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate max-w-full">Cifras</span>
+                    </button>
+                )}
                 {isProfessor && (
                     <button onClick={() => setView('portal_professor_ebd')} className="bg-white p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-violet-300 transition-all flex flex-col items-center text-center group cursor-pointer">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-violet-50 text-violet-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-1 group-hover:bg-violet-500 group-hover:text-white transition-all shadow-xs transform group-hover:scale-110"><GraduationCap size={16} className="sm:w-5 sm:h-5"/></div>
@@ -17416,6 +17429,9 @@ const MemberPortalLayout = () => {
     );
 
     const canAccessFormacao = isAlunoOuCandidato || isPastor || isPresbitero || isProfessor || user?.nivel === 'master' || (user?.funcao_administrativa && ['ADMINISTRADOR', 'SUPERINTENDENTE', 'COORDENADOR'].includes(user.funcao_administrativa.toUpperCase()));
+    const isMusico = useMemo(() => {
+        return checkIsMusicoOuLouvor(user, db);
+    }, [user, db]);
 
     const baseNavItems = [
         { id: 'portal_home', icon: LayoutDashboard, label: 'Início', hoverColor: 'group-hover:text-blue-500' },
@@ -17433,6 +17449,7 @@ const MemberPortalLayout = () => {
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
+        { id: 'portal_repertorio', icon: Music, label: 'Repertório & Cifras', hoverColor: 'group-hover:text-violet-500' },
         { id: 'portal_loja', icon: ShoppingBag, label: 'Loja Virtual', hoverColor: 'group-hover:text-amber-500' },
         { id: 'portal_interativo', icon: Gamepad2, label: 'Interatividade', hoverColor: 'group-hover:text-indigo-400' },
     ];
@@ -17455,6 +17472,9 @@ const MemberPortalLayout = () => {
         }
         if (item.id === 'portal_candidato') {
             return canAccessFormacao;
+        }
+        if (item.id === 'portal_repertorio') {
+            return isMusico || allowedModules.includes('portal_repertorio');
         }
         return allowedModules.includes(item.id);
     });
@@ -17530,12 +17550,17 @@ const MemberPortalLayout = () => {
                     <PortalLojaMembro user={user} db={db} setView={setView} onClose={() => setView('portal_home')} />
                 </Suspense>
             );
+            case 'portal_repertorio': return (
+                <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin text-violet-600 mx-auto" size={32}/></div>}>
+                    <PortalRepertorio user={user} db={db} setView={setView} onClose={() => setView('portal_home')} />
+                </Suspense>
+            );
             case 'portal_interativo': return <ModuleInterativo onClose={() => setView('portal_home')} />;
             default: return <PortalHome user={user} db={db} setView={setView} />;
         }
     };
 
-    const isInterativoMode = view === 'portal_interativo' || view === 'portal_loja';
+    const isInterativoMode = view === 'portal_interativo' || view === 'portal_loja' || view === 'portal_repertorio';
 
     return (
         <div className="flex flex-col md:flex-row w-full overflow-hidden relative font-sans text-slate-900" style={{ height: '100dvh' }}>
@@ -17607,19 +17632,19 @@ const MemberPortalLayout = () => {
 
             {/* Mobile Header (Strict Flex Item - Fixado) */}
             {!isInterativoMode && (
-                <header className={`md:hidden shrink-0 backdrop-blur-md p-4 flex justify-between items-center shadow-sm z-40 transition-all duration-300 ${getHeaderStyles()}`}>
-                    <div className="flex items-center gap-3">
-                        {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain rounded-lg" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs"><Building2 size={16}/></div>}
-                        <span className={`font-black text-sm tracking-tight truncate max-w-[150px] ${isThemeDark || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`}>{db.igreja.nome}</span>
+                <header className={`md:hidden shrink-0 backdrop-blur-md py-2.5 px-3 sm:px-4 flex justify-between items-center shadow-xs z-40 transition-all duration-300 ${getHeaderStyles()}`}>
+                    <div className="flex items-center gap-2 sm:gap-2.5 flex-1 min-w-0 mr-2">
+                        {db.igreja.logo ? <img src={db.igreja.logo} className="h-8 w-8 object-contain rounded-lg shrink-0" /> : <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0"><Building2 size={16}/></div>}
+                        <span className={`font-black text-xs sm:text-sm tracking-tight truncate leading-tight flex-1 min-w-0 ${isThemeDark || osTheme === 'win95' ? 'text-white' : 'text-slate-800'}`} title={db.igreja.nome}>{db.igreja.nome}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         <OsThemeToggle variant="mobile" />
                         <AnimBgToggle variant="mobile" />
                         <ThemeToggle variant="mobile" />
                         <MemberPaymentAlerts />
                         <NotificationCenter />
                         <FullScreenToggle variant="mobile" />
-                        <button onClick={logout} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"><LogOut size={18}/></button>
+                        <button onClick={logout} className="text-rose-500 p-1.5 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors" title="Sair"><LogOut size={17}/></button>
                     </div>
                 </header>
             )}
@@ -17629,8 +17654,8 @@ const MemberPortalLayout = () => {
                 className={isInterativoMode 
                     ? "flex-1 min-h-0 min-w-0 p-0 m-0 w-full h-full overflow-y-auto relative z-10" 
                     : view === 'portal_home'
-                        ? "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto no-scrollbar relative z-10 p-2.5 sm:p-3 md:p-4 lg:p-5 pb-16 md:pb-3"
-                        : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-3 sm:p-5 md:p-8 pb-20 md:pb-8"} 
+                        ? "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto no-scrollbar relative z-10 p-2 sm:p-2.5 md:p-4 lg:p-5 pb-3 md:pb-3"
+                        : "flex-1 min-h-0 min-w-0 w-full h-full overflow-y-auto custom-scrollbar relative z-10 p-2.5 sm:p-5 md:p-8 pb-4 md:pb-8"} 
             >
                 <div className={isInterativoMode ? "w-full h-full" : "max-w-[1800px] mx-auto"}>
                     {/* Desktop Header Panel */}

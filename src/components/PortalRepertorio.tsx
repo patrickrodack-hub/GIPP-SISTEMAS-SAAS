@@ -1,0 +1,833 @@
+import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { 
+  Music, Search, Folder, FolderCheck, SlidersHorizontal, ArrowLeft,
+  Maximize2, Minimize2, Printer, Copy, RotateCcw, Type as TypeIcon,
+  Play, Pause, Moon, Sun, ExternalLink, ShieldAlert, Sparkles,
+  ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check
+} from 'lucide-react';
+import { ChurchContext } from '../App';
+import { 
+  MusicaRepertorio, MUSICAS_REPERTORIO_PADRAO, PASTAS_REPERTORIO_PADRAO,
+  checkIsMusicoOuLouvor 
+} from '../data/repertorioData';
+import { 
+  transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
+} from '../utils/musicChords';
+import { InteractiveWindow } from './InteractiveWindow';
+import { collection, onSnapshot } from 'firebase/firestore';
+
+interface PortalRepertorioProps {
+  user: any;
+  db: any;
+  setView?: (view: string) => void;
+  onClose?: () => void;
+}
+
+export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
+  user,
+  db,
+  setView,
+  onClose
+}) => {
+  const { 
+    dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen 
+  } = useContext(ChurchContext);
+
+  // Estados de controle visual do módulo
+  const [isHubMaximized, setIsHubMaximized] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPasta, setSelectedPasta] = useState<string>('todas');
+  const [selectedTomFilter, setSelectedTomFilter] = useState<string>('todos');
+
+  // Músicas carregadas
+  const [musicas, setMusicas] = useState<MusicaRepertorio[]>(() => {
+    try {
+      const saved = localStorage.getItem('louvor_musicas');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return (db?.louvor_musicas && Array.isArray(db.louvor_musicas) && db.louvor_musicas.length > 0)
+      ? db.louvor_musicas
+      : MUSICAS_REPERTORIO_PADRAO;
+  });
+
+  // Equipe de músicos (para verificação de permissão em tempo real)
+  const [musicos, setMusicos] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('louvor_musicos');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return (db?.louvor_musicos && Array.isArray(db.louvor_musicos)) ? db.louvor_musicos : [];
+  });
+
+  // Pastas cadastradas
+  const [pastasRepertorio, setPastasRepertorio] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('louvor_pastas_repertorio');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return PASTAS_REPERTORIO_PADRAO;
+  });
+
+  // Modal / InteractiveWindow de visualização detalhada da canção
+  const [activeModalSong, setActiveModalSong] = useState<MusicaRepertorio | null>(null);
+
+  // Mapas de transposição e tamanho de fonte por canção
+  const [songTransposeMap, setSongTransposeMap] = useState<Record<string, number>>({});
+  const [songFontSizeMap, setSongFontSizeMap] = useState<Record<string, number>>({});
+
+  // Modo Palco (Dark Mode de Alto Contraste para palco)
+  const [stageMode, setStageMode] = useState<boolean>(() => {
+    return localStorage.getItem('gipp_repertorio_stage_mode') === 'true';
+  });
+
+  // Auto-scroll para músicos no palco/ensaio
+  const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
+  const [scrollSpeed, setScrollSpeed] = useState<number>(1); // 1 = lento, 2 = médio, 3 = rápido
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollAnimRef = useRef<number | null>(null);
+
+  // Sincronização em tempo real via Firestore
+  useEffect(() => {
+    if (!dbFirestore || !appId) return;
+
+    try {
+      const musicasRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas');
+      const unsubMusicas = onSnapshot(musicasRef, (snapshot) => {
+        const list: MusicaRepertorio[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...(docSnap.data() as any) });
+        });
+        if (list.length > 0) {
+          setMusicas(list);
+          try { localStorage.setItem('louvor_musicas', JSON.stringify(list)); } catch (_) {}
+        }
+      }, (err) => console.warn("Erro ao ouvir musicas do repertorio:", err));
+
+      const musicosRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicos');
+      const unsubMusicos = onSnapshot(musicosRef, (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setMusicos(list);
+        try { localStorage.setItem('louvor_musicos', JSON.stringify(list)); } catch (_) {}
+      }, (err) => console.warn("Erro ao ouvir musicos de louvor:", err));
+
+      return () => {
+        unsubMusicas();
+        unsubMusicos();
+      };
+    } catch (err) {
+      console.warn("Firestore listener initialization skipped:", err);
+    }
+  }, [dbFirestore, appId]);
+
+  // Persistir preferência do modo palco
+  const toggleStageMode = () => {
+    setStageMode(prev => {
+      const next = !prev;
+      try { localStorage.setItem('gipp_repertorio_stage_mode', String(next)); } catch (_) {}
+      return next;
+    });
+  };
+
+  // Motor de Auto-Scroll suave para execução musical
+  useEffect(() => {
+    if (!isAutoScrolling || !activeModalSong) {
+      if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
+      return;
+    }
+
+    let lastTime = performance.now();
+    const scrollStep = (currentTime: number) => {
+      const delta = currentTime - lastTime;
+      lastTime = currentTime;
+
+      if (scrollContainerRef.current) {
+        // Velocidades calculadas em pixels por segundo
+        const pixelsPerSec = scrollSpeed === 1 ? 22 : scrollSpeed === 2 ? 40 : 65;
+        const scrollAmount = (pixelsPerSec * delta) / 1000;
+        scrollContainerRef.current.scrollTop += scrollAmount;
+
+        // Se chegou ao fim do documento, pausa suavemente
+        const maxScroll = scrollContainerRef.current.scrollHeight - scrollContainerRef.current.clientHeight;
+        if (scrollContainerRef.current.scrollTop >= maxScroll - 2) {
+          setIsAutoScrolling(false);
+          return;
+        }
+      }
+
+      scrollAnimRef.current = requestAnimationFrame(scrollStep);
+    };
+
+    scrollAnimRef.current = requestAnimationFrame(scrollStep);
+
+    return () => {
+      if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
+    };
+  }, [isAutoScrolling, scrollSpeed, activeModalSong]);
+
+  // Verificação estrita de prerrogativa: Músico ou Equipe de Louvor
+  const isAuthorizedMusico = useMemo(() => {
+    return checkIsMusicoOuLouvor(user, db, musicos);
+  }, [user, db, musicos]);
+
+  // Lista consolidada de pastas (existentes nas músicas + padrão)
+  const allFoldersList = useMemo(() => {
+    const set = new Set<string>(pastasRepertorio);
+    musicas.forEach(m => {
+      if (m.pasta && m.pasta.trim()) set.add(m.pasta.trim());
+    });
+    return Array.from(set);
+  }, [pastasRepertorio, musicas]);
+
+  // Filtro de Músicas: Pesquisa por nome, artista ou letra + Pasta + Tom
+  const filteredMusicas = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
+    return musicas.filter(m => {
+      // Filtro por pasta
+      if (selectedPasta !== 'todas') {
+        const pastaM = (m.pasta || 'Sem Pasta').trim();
+        if (pastaM !== selectedPasta) return false;
+      }
+
+      // Filtro por tom
+      if (selectedTomFilter !== 'todos') {
+        if ((m.tom || '').toUpperCase() !== selectedTomFilter.toUpperCase()) return false;
+      }
+
+      // Pesquisa por nome, artista ou letra
+      if (q) {
+        const matchTitulo = (m.titulo || '').toLowerCase().includes(q);
+        const matchArtista = (m.artista || '').toLowerCase().includes(q);
+        const matchLetra = (m.letra_cifra || '').toLowerCase().includes(q);
+        return matchTitulo || matchArtista || matchLetra;
+      }
+
+      return true;
+    });
+  }, [musicas, selectedPasta, selectedTomFilter, searchTerm]);
+
+  // Fechar módulo e voltar
+  const handleBack = () => {
+    if (onClose) {
+      onClose();
+    } else if (setView) {
+      setView('portal_home');
+    }
+  };
+
+  // Impressão / PDF Oficial da Cifra
+  const handleImprimirCifra = (song: MusicaRepertorio, semitones: number, fontSize: number) => {
+    const originalTom = song.tom || 'G';
+    const currentTom = transposeNote(originalTom, semitones);
+    const transposedText = transposeChordSheet(song.letra_cifra || '', semitones, currentTom);
+
+    if (setPrintMode && setPrintData) {
+      setPrintMode('rel_cifra_musica');
+      setPrintData({
+        song: {
+          ...song,
+          tom: currentTom,
+          letra_cifra: transposedText
+        },
+        semitones,
+        fontSize,
+        igreja: db?.igreja
+      });
+      if (setPreviewOpen) setPreviewOpen(true);
+      addToast(`Cifra de "${song.titulo}" preparada em Tom de ${currentTom}!`, "info");
+    } else {
+      window.print();
+    }
+  };
+
+  // Copiar cifras para área de transferência
+  const handleCopyChords = async (text: string, tom: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      addToast(`Cifra copiada no tom ${tom}!`, "success");
+    } catch (_) {
+      addToast("Não foi possível copiar automaticamente. Selecione e copie o texto.", "warning");
+    }
+  };
+
+  // Se o usuário NÃO for integrante de louvor ou músico cadastrado
+  if (!isAuthorizedMusico) {
+    return (
+      <div className="w-full h-full min-h-[500px] flex items-center justify-center p-6 font-sans">
+        <div className="bg-white dark:bg-slate-900 max-w-lg w-full p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-5 animate-entrance">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20 shadow-inner">
+            <ShieldAlert size={32} />
+          </div>
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800">
+              Acesso Exclusivo
+            </span>
+            <h2 className="text-xl font-black text-slate-800 dark:text-white">
+              Módulo de Repertório & Cifras
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Este módulo é restrito exclusivamente aos integrantes escalados no Ministério de Louvor, instrumentistas e cantores cadastrados na congregação.
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 text-left text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+            <p className="font-bold flex items-center gap-1.5 text-slate-800 dark:text-white">
+              <Info size={14} className="text-amber-600 shrink-0" /> Como obter acesso?
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Se você faz parte da equipe de louvor ou é músico da igreja, solicite ao líder do ministério ou à secretaria para atualizar sua função ou cadastro de músicos.
+            </p>
+          </div>
+
+          <button
+            onClick={handleBack}
+            className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <ArrowLeft size={15} /> Voltar ao Início do Portal
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Canção ativa no modal de cifra
+  const activeSong = activeModalSong;
+  const activeSemitones = activeSong ? (songTransposeMap[activeSong.id] || 0) : 0;
+  const activeFontSize = activeSong ? (songFontSizeMap[activeSong.id] || 13) : 13;
+  const activeOriginalKey = activeSong ? (activeSong.tom || 'G') : 'G';
+  const activeCurrentKey = activeSong ? transposeNote(activeOriginalKey, activeSemitones) : 'G';
+  const activeTransposedSheet = activeSong 
+    ? transposeChordSheet(activeSong.letra_cifra || '', activeSemitones, activeCurrentKey)
+    : '';
+
+  return (
+    <div 
+      id="module-portal-repertorio-container"
+      className={`w-full bg-slate-100/60 dark:bg-slate-950 flex flex-col font-sans transition-all duration-300 ${
+        isHubMaximized 
+          ? 'fixed inset-0 z-[99999] w-screen h-screen overflow-y-auto custom-scrollbar bg-slate-100 dark:bg-slate-950' 
+          : 'min-h-full h-full relative overflow-y-auto custom-scrollbar'
+      }`}
+    >
+      {/* 1. BARRA SUPERIOR DE CONTROLE (Padronizada com a Loja Virtual) */}
+      <div className="w-full bg-slate-900/95 border-b border-slate-800/90 px-4 md:px-8 py-3 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shrink-0 shadow-lg text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 flex items-center justify-center font-bold shadow-inner shrink-0">
+            <Music size={18} />
+          </div>
+          <div>
+            <h2 className="font-extrabold text-xs sm:text-sm text-white tracking-wide uppercase flex items-center gap-2">
+              Repertório Musical & Cifras
+              <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider hidden xs:inline-block">
+                Portal do Músico
+              </span>
+              {isHubMaximized && (
+                <span className="hidden sm:inline-flex text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                  Tela Cheia
+                </span>
+              )}
+            </h2>
+            <p className="text-[10px] text-slate-400 font-medium hidden sm:block">
+              Adoração, Transposição de Tom, Cifras Oficiais e Pastas de Culto
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsHubMaximized(!isHubMaximized)}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-extrabold flex items-center gap-2 transition-all border border-slate-700/60 cursor-pointer shadow-sm active:scale-95"
+            title={isHubMaximized ? "Restaurar visualização padrão" : "Maximizar para modo palco/ensaio"}
+          >
+            {isHubMaximized ? (
+              <>
+                <Minimize2 size={14} className="text-violet-400" />
+                <span className="hidden md:inline">Restaurar</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 size={14} className="text-violet-400" />
+                <span className="hidden md:inline">Maximizar</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleBack}
+            className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-extrabold flex items-center gap-1.5 transition-all border border-rose-500/30 cursor-pointer shadow-sm active:scale-95"
+            title="Voltar ao início do portal"
+          >
+            <ArrowLeft size={14} />
+            <span className="hidden sm:inline">Voltar ao Início</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. CORPO PRINCIPAL DO MÓDULO */}
+      <div className="flex-1 w-full max-w-[1800px] mx-auto p-3 sm:p-5 md:p-6 space-y-4 animate-entrance pb-24 md:pb-12">
+        {/* BANNER PRINCIPAL DO REPERTÓRIO */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900 via-indigo-900 to-slate-900 text-white p-6 md:p-8 shadow-md border border-violet-800/40">
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 bg-violet-800/80 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider text-violet-200 border border-violet-600/60">
+                <Sparkles size={13} className="text-amber-400" /> Ministério de Louvor & Adoração
+              </div>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
+                Repertório & Caderno de Cifras
+              </h1>
+              <p className="text-xs md:text-sm text-violet-200/90 font-medium leading-relaxed">
+                Acesse todas as canções organizadas por culto, altere o tom em tempo real para o seu instrumento ou voz, e pratique com o motor oficial de cifras da igreja.
+              </p>
+              <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-violet-300 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Mic2 size={14} className="text-amber-400" /> Transposição Imediata de Tom
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Folder size={14} className="text-indigo-400" /> Pastas Oficiais de Culto
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Disc3 size={14} className="text-emerald-400" /> Visualização Segura (Somente Leitura)
+                </span>
+              </div>
+            </div>
+
+            {/* BADGE DE MÚSICO ATIVO */}
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex flex-col items-center text-center shrink-0 w-full md:w-auto">
+              <span className="text-[10px] font-black uppercase tracking-wider text-violet-200">
+                Prerrogativa Confirmada
+              </span>
+              <span className="text-base font-black text-white mt-0.5">
+                🎸 Músico / Louvor
+              </span>
+              <span className="text-[11px] text-emerald-400 font-bold mt-1 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                {musicas.length} Canções Disponíveis
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. BARRA DE PESQUISA, PASTAS E FILTRO DE TOM (Formulários no Padrão da Loja Virtual) */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Input de Pesquisa por Nome/Artista/Letra */}
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Pesquisar música por nome, artista ou trecho da letra..."
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-600 transition-all"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+
+            {/* Filtro Rápido por Tom */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Music size={13} className="text-violet-600" /> Tom:
+              </span>
+              <select
+                value={selectedTomFilter}
+                onChange={e => setSelectedTomFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-violet-500/20"
+              >
+                <option value="todos">Todos os Tons</option>
+                {CHROMATIC_SHARPS.map(k => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Pastas Pills com rolagem horizontal fluida (Idêntico às Categorias da Loja Virtual) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+            <button
+              onClick={() => setSelectedPasta('todas')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border flex items-center gap-1.5 ${
+                selectedPasta === 'todas'
+                  ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Music size={13} /> Todas as Pastas ({musicas.length})
+            </button>
+
+            {allFoldersList.map(pasta => {
+              const count = musicas.filter(m => (m.pasta || 'Sem Pasta').trim() === pasta).length;
+              return (
+                <button
+                  key={pasta}
+                  onClick={() => setSelectedPasta(pasta)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border flex items-center gap-1.5 ${
+                    selectedPasta === pasta
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Folder size={13} /> {pasta} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 4. GRADE DE MÚSICAS DO REPERTÓRIO */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium px-1">
+            <span>
+              Exibindo <strong className="text-slate-800 dark:text-white font-bold">{filteredMusicas.length}</strong> música(s)
+              {selectedPasta !== 'todas' && ` na pasta "${selectedPasta}"`}
+              {selectedTomFilter !== 'todos' && ` com tom ${selectedTomFilter}`}
+            </span>
+            <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1">
+              <Eye size={12} /> Clique na canção para abrir a cifra completa
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {filteredMusicas.map(song => {
+              const semitones = songTransposeMap[song.id] || 0;
+              const originalKey = song.tom || 'G';
+              const currentKey = transposeNote(originalKey, semitones);
+
+              return (
+                <div
+                  key={song.id}
+                  onClick={() => setActiveModalSong(song)}
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-2xs hover:shadow-md hover:border-violet-400/80 transition-all cursor-pointer group flex flex-col justify-between space-y-3 transform active:scale-[0.99]"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/60 px-2 py-0.5 rounded-md border border-violet-200/60 dark:border-violet-800">
+                          {song.pasta || 'Geral'}
+                        </span>
+                        <h3 className="font-black text-sm sm:text-base text-slate-800 dark:text-white mt-1 group-hover:text-violet-600 transition-colors leading-tight">
+                          {song.titulo}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                          {song.artista || 'Artista Consagrado'}
+                        </p>
+                      </div>
+
+                      {/* Badge de Tom */}
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 px-2.5 py-1 rounded-xl block shadow-2xs">
+                          Tom: {currentKey}
+                        </span>
+                        {semitones !== 0 && (
+                          <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 block mt-0.5 font-mono">
+                            ({semitones > 0 ? `+${semitones}` : semitones}st)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tags secundárias: Ritmo / BPM */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      {song.ritmo && (
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                          🎵 {song.ritmo}
+                        </span>
+                      )}
+                      {song.bpm && (
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                          ⏱️ {song.bpm} BPM
+                        </span>
+                      )}
+                      {song.arquivos && song.arquivos.length > 0 && (
+                        <span className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md">
+                          📎 {song.arquivos.length} anexo(s)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rodapé do Card com Ação Rápida */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-violet-600 dark:text-violet-400">
+                    <span className="flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      Visualizar Cifra & Alterar Tom
+                    </span>
+                    <ChevronRight size={14} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredMusicas.length === 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-200 dark:border-slate-800 space-y-3">
+              <Music size={36} className="text-slate-300 dark:text-slate-700 mx-auto" />
+              <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">
+                Nenhuma música encontrada com os filtros selecionados
+              </h4>
+              <p className="text-xs text-slate-400">
+                Tente alterar a pasta selecionada ou limpar o termo de pesquisa.
+              </p>
+              {(searchTerm || selectedPasta !== 'todas' || selectedTomFilter !== 'todos') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedPasta('todas');
+                    setSelectedTomFilter('todos');
+                  }}
+                  className="px-4 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Limpar Todos os Filtros
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 5. FORMULÁRIO / MODAL DA CIFRA (Criado utilizando InteractiveWindow, conforme a Loja Virtual) */}
+      {activeSong && createPortal(
+        <InteractiveWindow
+          id={`repertorio_cifra_window_${activeSong.id}`}
+          title={`${activeSong.titulo} • ${activeSong.artista || 'Consagrado'}`}
+          subtitle={`Tom Atual: ${activeCurrentKey} ${activeSemitones !== 0 ? `(${activeSemitones > 0 ? `+${activeSemitones}` : activeSemitones}st)` : ''} • Pasta: ${activeSong.pasta || 'Geral'}`}
+          onClose={() => {
+            setActiveModalSong(null);
+            setIsAutoScrolling(false);
+          }}
+          icon={Music}
+          headerBg={stageMode ? 'from-slate-900 via-zinc-900 to-black' : 'from-violet-800 via-indigo-900 to-slate-900'}
+          defaultWidth={960}
+          defaultHeight={760}
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  Tom Original: <strong className="text-slate-700 dark:text-slate-200">{activeOriginalKey}</strong>
+                </span>
+                {activeSemitones !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    className="text-[11px] font-bold text-rose-600 hover:underline flex items-center gap-1 cursor-pointer ml-1"
+                  >
+                    <RotateCcw size={11} /> Restaurar Tom ({activeOriginalKey})
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyChords(activeTransposedSheet, activeCurrentKey)}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+                  title="Copiar letra com cifras transpostas"
+                >
+                  <Copy size={13} /> Copiar Cifra
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleImprimirCifra(activeSong, activeSemitones, activeFontSize)}
+                  className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                  title="Imprimir ou gerar PDF formatado"
+                >
+                  <Printer size={13} /> Imprimir / PDF
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <div className={`p-4 sm:p-5 space-y-4 flex flex-col h-full ${stageMode ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100'}`}>
+            {/* PAINEL DE FERRAMENTAS MUSICAIS: TRANSPOSIÇÃO, FONTE, ROLAGEM E MODO PALCO */}
+            <div className={`p-3 rounded-2xl border flex flex-wrap items-center justify-between gap-3 shadow-2xs ${
+              stageMode 
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-100' 
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white'
+            }`}>
+              {/* 1. SELETOR E BOTÕES DE TRANSPOSIÇÃO DE TOM */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1 mr-0.5">
+                  <Music size={13} /> Tom:
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones - 1 }))}
+                  className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
+                  title="Baixar 1 semitom (-1)"
+                >
+                  -1
+                </button>
+
+                <div className="flex items-center gap-1 bg-violet-50 dark:bg-violet-950/60 border border-violet-200 dark:border-violet-800 text-violet-950 dark:text-violet-200 px-2.5 py-1 rounded-lg font-black text-xs">
+                  <span>{activeCurrentKey}</span>
+                  {activeSemitones !== 0 && (
+                    <span className="text-[9px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950 px-1 rounded font-mono">
+                      ({activeSemitones > 0 ? `+${activeSemitones}` : activeSemitones}st)
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones + 1 }))}
+                  className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
+                  title="Subir 1 semitom (+1)"
+                >
+                  +1
+                </button>
+
+                {/* Seletor direto do tom desejado */}
+                <select
+                  value={activeCurrentKey}
+                  onChange={(e) => {
+                    const diff = getSemitoneDifference(activeOriginalKey, e.target.value);
+                    setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: diff }));
+                  }}
+                  className="text-[11px] font-bold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-800 dark:text-white outline-none cursor-pointer"
+                  title="Mudar para tom direto"
+                >
+                  {CHROMATIC_SHARPS.map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. CONTROLE DO TAMANHO DA FONTE */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                  <TypeIcon size={13} /> Fonte:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSongFontSizeMap(prev => ({ ...prev, [activeSong.id]: Math.max(9, activeFontSize - 1) }))}
+                  className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
+                  title="Diminuir tamanho da letra"
+                >
+                  A-
+                </button>
+                <span className="font-mono font-bold text-xs px-1 text-slate-700 dark:text-slate-300">
+                  {activeFontSize}px
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSongFontSizeMap(prev => ({ ...prev, [activeSong.id]: Math.min(24, activeFontSize + 1) }))}
+                  className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
+                  title="Aumentar tamanho da letra"
+                >
+                  A+
+                </button>
+              </div>
+
+              {/* 3. AUTO-SCROLL (ROLAGEM AUTOMÁTICA PARA MÚSICOS EM PALCO) */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsAutoScrolling(!isAutoScrolling)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    isAutoScrolling
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-200'
+                  }`}
+                  title={isAutoScrolling ? "Pausar rolagem automática" : "Iniciar rolagem automática"}
+                >
+                  {isAutoScrolling ? <Pause size={12} className="animate-pulse" /> : <Play size={12} />}
+                  <span className="hidden xs:inline">Auto-Scroll</span>
+                </button>
+
+                {isAutoScrolling && (
+                  <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                    {[1, 2, 3].map(spd => (
+                      <button
+                        key={spd}
+                        type="button"
+                        onClick={() => setScrollSpeed(spd)}
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
+                          scrollSpeed === spd 
+                            ? 'bg-violet-600 text-white' 
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                        }`}
+                        title={`Velocidade ${spd}x`}
+                      >
+                        {spd}x
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. MODO PALCO (ALTO CONTRASTE / TEMA NOTURNO DE PALCO) */}
+              <button
+                type="button"
+                onClick={toggleStageMode}
+                className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                  stageMode
+                    ? 'bg-amber-500 text-zinc-950 border-amber-400 font-black'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-200'
+                }`}
+                title="Alternar Modo Palco (Evita reflexo e melhora contraste em cultos)"
+              >
+                {stageMode ? <Sun size={12} /> : <Moon size={12} />}
+                <span className="hidden xs:inline">Modo Palco</span>
+              </button>
+            </div>
+
+            {/* ANEXOS E MÍDIAS DA MÚSICA (SE HOUVER) */}
+            {activeSong.arquivos && activeSong.arquivos.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                <span className="font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <Disc3 size={13} className="text-violet-600" /> Links & Gravações:
+                </span>
+                {activeSong.arquivos.map((arq, idx) => (
+                  <a
+                    key={idx}
+                    href={arq.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 rounded-lg hover:underline font-bold"
+                  >
+                    <ExternalLink size={11} /> {arq.nome || `Anexo ${idx + 1}`}
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* VISUALIZADOR DA LETRA E CIFRA (MONOSPACED COM ROLAGEM FLUIDA) */}
+            <div 
+              ref={scrollContainerRef}
+              className={`flex-1 overflow-y-auto custom-scrollbar p-5 rounded-2xl border shadow-inner transition-colors duration-200 ${
+                stageMode
+                  ? 'bg-black border-zinc-800 text-amber-300 font-mono select-text'
+                  : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-mono select-text'
+              }`}
+              style={{ minHeight: '380px' }}
+            >
+              <pre
+                className="whitespace-pre leading-relaxed tracking-wider outline-none font-mono"
+                style={{ fontSize: `${activeFontSize}px` }}
+              >
+                {activeTransposedSheet || 'Nenhuma cifra cadastrada para esta canção.'}
+              </pre>
+            </div>
+          </div>
+        </InteractiveWindow>,
+        document.body
+      )}
+    </div>
+  );
+};
+
+export default PortalRepertorio;
