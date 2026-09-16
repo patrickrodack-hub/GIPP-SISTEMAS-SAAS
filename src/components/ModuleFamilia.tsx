@@ -85,7 +85,8 @@ interface MaterialDevocional {
 }
 
 const ModuleFamilia: React.FC = () => {
-  const { db, addToast, callGeminiAI, user, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+  const context = useContext(ChurchContext) || {};
+  const { db, addToast = () => {}, callGeminiAI, user, setPrintMode, setPrintData, setPreviewOpen } = context;
   const churchName = db?.igreja?.nome || 'Assembleia de Deus';
   const dbMembros = db?.membros || [];
 

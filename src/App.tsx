@@ -52,12 +52,12 @@ import {
   resolveClientRealLocation, 
   detectCurrentChannelType 
 } from './lib/deviceAuditService';
-export { 
+import { 
     Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
     isValidCPF, formatCPF, copyToClipboard, resizeImageAndCompress, 
     playMenuSound, playNotificationSound 
 } from './utils/sharedHelpers';
-import { 
+export { 
     Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
     isValidCPF, formatCPF, copyToClipboard, resizeImageAndCompress, 
     playMenuSound, playNotificationSound 
