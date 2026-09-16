@@ -123,14 +123,20 @@ export const ModuleQrCheckin: React.FC = () => {
       setIsCameraActive(false);
     } else {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (videoRef.current) {
+        let stream: MediaStream | null = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        } catch (firstErr) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+        if (videoRef.current && stream) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
         }
         setIsCameraActive(true);
-      } catch (e) {
-        addToast('Não foi possível acessar a câmera do dispositivo.', 'warning');
+      } catch (e: any) {
+        console.warn('Dispositivo de câmera não disponível:', e?.message || e);
+        addToast('Câmera não encontrada ou indisponível neste dispositivo.', 'warning');
       }
     }
   };

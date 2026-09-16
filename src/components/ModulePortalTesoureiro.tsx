@@ -40,6 +40,8 @@ import {
   playMenuSound, playNotificationSound, getTodayDate, formatDateLocal, isValidCPF, formatCPF,
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
+import { ModuloRemessasCongregacoes } from './ModuloRemessasCongregacoes';
+import { InformeRendimentosIRPF } from './InformeRendimentosIRPF';
 
 // Exporting component
 const ModulePortalTesoureiro = () => {
@@ -289,12 +291,18 @@ const ModulePortalTesoureiro = () => {
                         <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Gestão financeira descentralizada e lançamentos rápidos</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <button onClick={() => setActiveTab('lancamento')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'lancamento' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10' : 'bg-white/60 hover:bg-white text-slate-600 border border-slate-200'}`}>Lançamento Rápido</button>
                     <button onClick={() => setActiveTab('ultimos')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'ultimos' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10' : 'bg-white/60 hover:bg-white text-slate-600 border border-slate-200'}`}>Últimos Registros</button>
                     <button onClick={() => setActiveTab('conciliacao')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all relative ${activeTab === 'conciliacao' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10' : 'bg-white/60 hover:bg-white text-slate-600 border border-slate-200'}`}>
                         Conciliação PIX
                         {stats.pendingPix > 0 && <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white min-w-4 h-4 text-[9px] font-black rounded-full flex items-center justify-center px-1 animate-pulse">{stats.pendingPix}</span>}
+                    </button>
+                    <button onClick={() => setActiveTab('remessas')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'remessas' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10' : 'bg-white/60 hover:bg-white text-slate-600 border border-slate-200'}`}>
+                        Remessas & Cotas
+                    </button>
+                    <button onClick={() => setActiveTab('irpf')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'irpf' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10' : 'bg-white/60 hover:bg-white text-slate-600 border border-slate-200'}`}>
+                        Informe IRPF
                     </button>
                 </div>
             </div>
@@ -683,6 +691,16 @@ const ModulePortalTesoureiro = () => {
                             <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">Clique no botão superior para realizar uma busca automatizada por notificações enviadas de dízimos/ofertas em PIX e conciliá-las.</p>
                         </div>
                     )}
+                </div>
+            )}
+
+            {activeTab === 'remessas' && (
+                <ModuloRemessasCongregacoes />
+            )}
+
+            {activeTab === 'irpf' && (
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                    <InformeRendimentosIRPF />
                 </div>
             )}
         </div>

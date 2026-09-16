@@ -42,6 +42,7 @@ import {
   playMenuSound, playNotificationSound, getTodayDate, formatDateLocal, isValidCPF, formatCPF,
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
+import { MapaEstatisticoConvencional } from './MapaEstatisticoConvencional';
 
 // Helper para formatar / resolver valores de campos em formato legível
 const resolveFieldValue = (item: any, key: string, db: any) => {
@@ -1222,7 +1223,7 @@ const ModuleRelatorios = memo(() => {
     const [configModal, setConfigModal] = useState({ open: false, type: null });
     const [inputs, setInputs] = useState({});
     const [loadingAiAta, setLoadingAiAta] = useState(false);
-    const [activeTab, setActiveTab] = useState<'oficiais' | 'construtor'>('oficiais');
+    const [activeTab, setActiveTab] = useState<'oficiais' | 'construtor' | 'mapa_convencional'>('oficiais');
 
     // AI Query States
     const [aiQuery, setAiQuery] = useState('');
@@ -1539,7 +1540,7 @@ RESSALTAMOS QUE, A PARTIR DA PRESENTE DATA, O(A) MESMO(A) FICA DESLIGADO(A) DE Q
                 </div>
 
                 {/* Tab Switcher */}
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex gap-2 shrink-0 self-start md:self-auto">
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-wrap gap-2 shrink-0 self-start md:self-auto">
                     <button
                         onClick={() => setActiveTab('oficiais')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
@@ -1561,10 +1562,23 @@ RESSALTAMOS QUE, A PARTIR DA PRESENTE DATA, O(A) MESMO(A) FICA DESLIGADO(A) DE Q
                         <Sliders size={15} /> Construtor Dinâmico
                         <span className="bg-amber-400 text-amber-950 font-extrabold text-[9px] px-1.5 py-0.5 rounded-md uppercase tracking-wider">NOVO</span>
                     </button>
+                    <button
+                        onClick={() => setActiveTab('mapa_convencional')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            activeTab === 'mapa_convencional'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        <Landmark size={15} /> Mapa Estatístico Convencional
+                        <span className="bg-emerald-400 text-emerald-950 font-extrabold text-[9px] px-1.5 py-0.5 rounded-md uppercase tracking-wider">CGADB</span>
+                    </button>
                 </div>
             </div>
 
-            {activeTab === 'construtor' ? (
+            {activeTab === 'mapa_convencional' ? (
+                <MapaEstatisticoConvencional />
+            ) : activeTab === 'construtor' ? (
                 <ConstrutorRelatoriosDinamicos
                     db={db}
                     setPrintMode={setPrintMode}

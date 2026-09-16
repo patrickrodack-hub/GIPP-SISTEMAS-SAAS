@@ -41,6 +41,8 @@ import {
   playMenuSound, playNotificationSound, getTodayDate, formatDateLocal, isValidCPF, formatCPF,
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
+import { ModuloRemessasCongregacoes } from './ModuloRemessasCongregacoes';
+import { InformeRendimentosIRPF } from './InformeRendimentosIRPF';
 
 const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
     const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -1181,7 +1183,9 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
         {id: 5, label: 'Análise de Dizimistas', icon: Target},
         {id: 6, label: 'Lembretes & Cobranças', icon: Bell},
         {id: 7, label: 'Relatórios Gerenciais', icon: FileBarChart},
-        {id: 8, label: 'Boletos DDA (CNPJ)', icon: Landmark}
+        {id: 8, label: 'Boletos DDA (CNPJ)', icon: Landmark},
+        {id: 9, label: 'Remessas de Congregações', icon: Layers},
+        {id: 10, label: 'Informe IRPF Dízimos', icon: Receipt}
     ];
     const TabButton: any = ({ item }) => (
         <button 
@@ -3424,6 +3428,16 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {tab === 9 && (
+                    <ModuloRemessasCongregacoes />
+                )}
+
+                {tab === 10 && (
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <InformeRendimentosIRPF />
                     </div>
                 )}
             </div>

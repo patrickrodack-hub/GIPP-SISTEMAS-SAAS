@@ -21,8 +21,11 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
+  ShieldAlert
 } from 'lucide-react';
+
+import { TermoCautelaManager } from './TermoCautelaPatrimonio';
 
 import { 
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, 
@@ -45,6 +48,8 @@ import {
 const ModulePatrimonio = () => {
     const { db, openModal, addToast } = useContext(ChurchContext);
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
+    const [showTermosCautela, setShowTermosCautela] = useState(false);
+    const [cautelaPatrimonioId, setCautelaPatrimonioId] = useState<string | null>(null);
     
     const bens = (db.patrimonio || []).filter(b => 
         congregacaoFilter === 'todas' || 
@@ -64,6 +69,17 @@ const ModulePatrimonio = () => {
         addToast("A transferir anexo...", "success");
     };
 
+    if (showTermosCautela) {
+        return (
+            <div className="h-full flex flex-col space-y-6 animate-entrance">
+                <TermoCautelaManager 
+                    initialPatrimonioId={cautelaPatrimonioId || undefined} 
+                    onClose={() => { setShowTermosCautela(false); setCautelaPatrimonioId(null); }} 
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="h-full flex flex-col space-y-6 animate-entrance">
             <div className="flex justify-between items-center bg-white/40 p-4 rounded-2xl border border-white/50 shadow-sm flex-wrap gap-4">
@@ -75,6 +91,13 @@ const ModulePatrimonio = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => setShowTermosCautela(true)}
+                        className="px-4 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-teal-500/20 cursor-pointer"
+                        title="Abrir Central de Termos de Cautela e Empréstimo de Bens"
+                    >
+                        <ShieldAlert size={16}/> Termos de Cautela & Empréstimos
+                    </button>
                     <select value={congregacaoFilter} onChange={e => setCongregacaoFilter(e.target.value)} className="bg-white p-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-sm">
                         <option value="todas">Filtro: Todas as Filiais</option>
                         <option value="sede">Sede Principal</option>
@@ -129,6 +152,15 @@ const ModulePatrimonio = () => {
                             }},
                             {header: 'Valor', key: 'valor', render: b => <span className="font-medium text-emerald-600">R$ {parseFloat(b.valor || 0).toFixed(2)}</span>}
                         ]} 
+                        customActions={(b) => (
+                            <button
+                                onClick={() => { setCautelaPatrimonioId(b.id); setShowTermosCautela(true); }}
+                                className="p-2 text-teal-700 hover:bg-teal-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-teal-300 cursor-pointer"
+                                title="Emitir Termo de Cautela / Empréstimo deste Equipamento"
+                            >
+                                <ShieldAlert size={16}/>
+                            </button>
+                        )}
                     />
                 </div>
             </div>

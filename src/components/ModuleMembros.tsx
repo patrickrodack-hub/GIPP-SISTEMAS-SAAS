@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, memo, useRef, isValidElement } from 'react';
+import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toPng, toJpeg, toBlob } from 'html-to-image';
@@ -22,7 +23,8 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
+  ArrowRightLeft
 } from 'lucide-react';
 
 import { 
@@ -41,11 +43,19 @@ import {
   playMenuSound, playNotificationSound, getTodayDate, formatDateLocal, isValidCPF, formatCPF,
   copyToClipboard, generatePixPayload, safeRender, safeText, ICON_MAP, getIcon, THEME_COLORS, REGRA_DOMINGOS, PortalHeader
 } from '../App';
+import { InformeRendimentosIRPF } from './InformeRendimentosIRPF';
+import { ProntuarioMinisterial } from './ProntuarioMinisterial';
+import { CartaTransferenciaEclesiastica } from './CartaTransferenciaEclesiastica';
+import { GestaoVisitasPastorais } from './GestaoVisitasPastorais';
 
 // Exporting component
 const ModuleMembros = memo(() => { 
     const { db, setPrintMode, setPrintData, setPreviewOpen, addToast } = useContext(ChurchContext); 
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
+    const [prontuarioModalMembroId, setProntuarioModalMembroId] = useState<string | null>(null);
+    const [informeIrpfMembroId, setInformeIrpfMembroId] = useState<string | null>(null);
+    const [cartaTransferenciaMembroId, setCartaTransferenciaMembroId] = useState<string | null>(null);
+    const [visitasModalMembroId, setVisitasModalMembroId] = useState<string | null>(null);
     
     const membrosFiltrados = (db.membros || []).filter(m => 
         congregacaoFilter === 'todas' || 
@@ -183,12 +193,44 @@ const ModuleMembros = memo(() => {
                         <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">Rol de membros da igreja</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                     <select value={congregacaoFilter} onChange={e => setCongregacaoFilter(e.target.value)} className="bg-white p-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-sm">
                         <option value="todas">Filtro: Todas as Filiais</option>
                         <option value="sede">Sede Principal</option>
                         {(db.congregacoes||[]).map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
                     </select>
+                    <button 
+                        onClick={() => setInformeIrpfMembroId(membrosFiltrados[0]?.id || 'geral')} 
+                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm text-xs font-bold py-2.5 px-3.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Emitir Comprovante Anual de Dízimos para Imposto de Renda"
+                    >
+                        <Receipt size={16} className="text-emerald-600" />
+                        Informe IRPF
+                    </button>
+                    <button 
+                        onClick={() => setProntuarioModalMembroId(membrosFiltrados[0]?.id || 'geral')} 
+                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 shadow-sm text-xs font-bold py-2.5 px-3.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Prontuário Histórico Ministerial de Obreiros"
+                    >
+                        <Award size={16} className="text-amber-600" />
+                        Prontuários Ministeriais
+                    </button>
+                    <button 
+                        onClick={() => setCartaTransferenciaMembroId(membrosFiltrados[0]?.id || 'geral')} 
+                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 shadow-sm text-xs font-bold py-2.5 px-3.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Cartas de Transferência Eclesiástica"
+                    >
+                        <ArrowRightLeft size={16} className="text-indigo-600" />
+                        Cartas de Transferência
+                    </button>
+                    <button 
+                        onClick={() => setVisitasModalMembroId(membrosFiltrados[0]?.id || 'geral')} 
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 shadow-sm text-xs font-bold py-2.5 px-3.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Central de Visitas Pastorais & Aconselhamentos"
+                    >
+                        <HeartHandshake size={16} className="text-rose-600" />
+                        Visitas Pastorais
+                    </button>
                     <Button onClick={handleExportMembrosCSV} variant="secondary" className="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-1.5 transition-all">
                         <FileSpreadsheet size={16} className="text-emerald-500" />
                         Exportar CSV
@@ -198,6 +240,10 @@ const ModuleMembros = memo(() => {
             <div className="flex-1 overflow-hidden">
                 <GenericTable title="Listagem de Membros" type="membro" data={membrosFiltrados} columns={cols} customActions={(item) => (
                     <div className="flex gap-1.5">
+                        <button onClick={() => setCartaTransferenciaMembroId(item.id)} className="p-2 text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-indigo-300 cursor-pointer" title="Emitir Carta de Transferência Eclesiástica"><ArrowRightLeft size={16}/></button>
+                        <button onClick={() => setVisitasModalMembroId(item.id)} className="p-2 text-rose-700 hover:bg-rose-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-rose-300 cursor-pointer" title="Registrar / Consultar Visitas Pastorais e Aconselhamentos"><HeartHandshake size={16}/></button>
+                        <button onClick={() => setProntuarioModalMembroId(item.id)} className="p-2 text-amber-700 hover:bg-amber-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-amber-300 cursor-pointer" title="Prontuário Ministerial / Carreira Eclesiástica"><Award size={16}/></button>
+                        <button onClick={() => setInformeIrpfMembroId(item.id)} className="p-2 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-emerald-300 cursor-pointer" title="Informe Anual de Rendimentos / IRPF"><Receipt size={16}/></button>
                         <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('carteirinha'); setPreviewOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-indigo-300 cursor-pointer" title="Carteirinha"><FileBadge size={16}/></button>
                         <button onClick={() => { setPrintData({ membro: item, igreja: db.igreja, data: new Date().toISOString() }); setPrintMode('rel_ficha_membro'); setPreviewOpen(true); }} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-amber-300 cursor-pointer" title="Ficha do Membro"><FileText size={16}/></button>
                         <button onClick={() => { setPrintData({ membro: item, tarefas: db.tarefas || [], igreja: db.igreja }); setPrintMode('membro_escala_print'); setPreviewOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-slate-200 bg-white hover:border-blue-300 cursor-pointer" title="Escala de Compromissos"><ClipboardList size={16}/></button>
@@ -221,6 +267,66 @@ const ModuleMembros = memo(() => {
                     </div>
                 )} />
             </div>
+
+            {/* MODAL / VIEW: PRONTUÁRIO HISTÓRICO MINISTERIAL */}
+            {prontuarioModalMembroId && (
+                <div className="fixed inset-0 bg-slate-950/70 z-[11000] overflow-y-auto p-4 md:p-8 backdrop-blur-xs flex justify-center items-start">
+                    <div className="w-full max-w-5xl bg-slate-100 dark:bg-slate-900 rounded-3xl shadow-2xl p-4 md:p-6 my-auto">
+                        <ProntuarioMinisterial 
+                            initialMembroId={prontuarioModalMembroId === 'geral' ? undefined : prontuarioModalMembroId} 
+                            onClose={() => setProntuarioModalMembroId(null)} 
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL / VIEW: INFORME DE RENDIMENTOS IRPF */}
+            {informeIrpfMembroId && (
+                <div className="fixed inset-0 bg-slate-950/70 z-[11000] overflow-y-auto p-4 md:p-8 backdrop-blur-xs flex justify-center items-start">
+                    <div className="w-full max-w-5xl bg-slate-100 dark:bg-slate-900 rounded-3xl shadow-2xl p-4 md:p-6 my-auto">
+                        <InformeRendimentosIRPF 
+                            initialMembroId={informeIrpfMembroId === 'geral' ? undefined : informeIrpfMembroId} 
+                            onClose={() => setInformeIrpfMembroId(null)} 
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL / VIEW: CARTA DE TRANSFERÊNCIA */}
+            {cartaTransferenciaMembroId && typeof document !== 'undefined' && createPortal(
+                <div 
+                    className="fixed inset-0 bg-slate-950/80 z-[11000] overflow-y-auto p-3 sm:p-5 md:p-8 backdrop-blur-xs flex justify-center items-start"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setCartaTransferenciaMembroId(null);
+                    }}
+                >
+                    <div className="w-full max-w-5xl bg-slate-100 dark:bg-slate-900 rounded-3xl shadow-2xl p-4 md:p-6 my-auto">
+                        <CartaTransferenciaEclesiastica 
+                            initialMembroId={cartaTransferenciaMembroId === 'geral' ? undefined : cartaTransferenciaMembroId} 
+                            onClose={() => setCartaTransferenciaMembroId(null)} 
+                        />
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL / VIEW: VISITAS PASTORAIS & ACONSELHAMENTO */}
+            {visitasModalMembroId && typeof document !== 'undefined' && createPortal(
+                <div 
+                    className="fixed inset-0 bg-slate-950/80 z-[11000] overflow-y-auto p-3 sm:p-5 md:p-8 backdrop-blur-xs flex justify-center items-start"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setVisitasModalMembroId(null);
+                    }}
+                >
+                    <div className="w-full max-w-6xl bg-slate-100 dark:bg-slate-900 rounded-3xl shadow-2xl p-4 md:p-6 my-auto">
+                        <GestaoVisitasPastorais 
+                            initialMembroId={visitasModalMembroId === 'geral' ? undefined : visitasModalMembroId} 
+                            onClose={() => setVisitasModalMembroId(null)} 
+                        />
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 });

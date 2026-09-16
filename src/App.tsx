@@ -79,7 +79,24 @@ import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISP
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS, getMemberFuncoesAdm, getMemberPortalAllowedModules } from './constants/portalPermissions';
 
-const ModuleEmailAdmin = lazy(() => import('./components/ModuleEmailAdmin'));
+// Helper to gracefully retry failed dynamic chunk / module imports
+const lazyWithRetry = (factory: () => Promise<any>) =>
+  lazy(async () => {
+    try {
+      return await factory();
+    } catch (err: any) {
+      console.warn('Erro na importação dinâmica, tentando novamente...', err);
+      await new Promise(res => setTimeout(res, 350));
+      try {
+        return await factory();
+      } catch (retryErr: any) {
+        console.error('Falha na segunda tentativa de importação dinâmica:', retryErr);
+        throw retryErr;
+      }
+    }
+  });
+
+const ModuleEmailAdmin = lazyWithRetry(() => import('./components/ModuleEmailAdmin'));
 const ModuleEmailMember = lazy(() => import('./components/ModuleEmailMember'));
 const ModuleMarketingSocial = lazy(() => import('./components/ModuleMarketingSocial'));
 const ModuleChangelog = lazy(() => import('./components/ModuleChangelog'));
@@ -88,6 +105,7 @@ const ModuleDesenvolvedor = lazy(() => import('./components/ModuleDesenvolvedor'
 const ModuleAssistenteAI = lazy(() => import('./components/ModuleAssistenteAI'));
 import { FloatingChatWidget } from './components/FloatingChatWidget';
 import { FloatingActionButton } from './components/FloatingActionButton';
+import { PortalCarteirinha as PortalCarteirinhaComponent } from './components/PortalCarteirinha';
 const ModuleDevSuporte = lazy(() => import('./components/ModuleDevSuporte'));
 const ModuleBiblia = lazy(() => import('./components/ModuleBiblia'));
 const ModuleMembros = lazy(() => import('./components/ModuleMembros'));
@@ -119,7 +137,7 @@ const ModuleConfigVisual = lazy(() => import('./components/ModuleConfigVisual'))
 const ModuleBackup = lazy(() => import('./components/ModuleBackup'));
 const ModuleUtilitarios = lazy(() => import('./components/ModuleUtilitarios'));
 const ModuleConciliacaoBancaria = lazy(() => import('./components/ModuleConciliacaoBancaria'));
-const ModulePortalPastor = lazy(() => import('./components/ModulePortalPastor'));
+const ModulePortalPastor = lazyWithRetry(() => import('./components/ModulePortalPastor'));
 const ModulePortalTesoureiro = lazy(() => import('./components/ModulePortalTesoureiro'));
 const ModuleSobre = lazy(() => import('./components/ModuleSobre'));
 const ModuleRelatorios = lazy(() => import('./components/ModuleRelatorios'));
@@ -155,6 +173,8 @@ import { MobileBottomDock } from './components/MobileBottomDock';
 import { InteractiveMagazineView } from './components/InteractiveMagazineView';
 import { requestAppFullscreen } from './lib/performanceHelpers';
 import { ModalInstalacaoApp } from './components/ModalInstalacaoApp';
+import { InformeRendimentosIRPF } from './components/InformeRendimentosIRPF';
+import { ProntuarioMinisterial } from './components/ProntuarioMinisterial';
 // ----------------------------
 
 
@@ -1884,16 +1904,45 @@ class ErrorBoundary extends React.Component<any, any> {
   state: any;
   props: any;
   setState: any;
-  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, errorInfo) { console.error("ErrorBoundary caught an error", error, errorInfo); }
+  constructor(props: any) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
+  componentDidCatch(error: any, errorInfo: any) { 
+    console.error("ErrorBoundary caught an error", error, errorInfo); 
+    const isDynamicImport = error?.message?.includes('dynamically imported module') ||
+                            String(error).includes('dynamically imported module') ||
+                            error?.message?.includes('Failed to fetch');
+    if (isDynamicImport) {
+      const reloadKey = 'dyn_import_recovery_attempt';
+      const lastAttempt = sessionStorage.getItem(reloadKey);
+      const now = Date.now();
+      if (!lastAttempt || (now - parseInt(lastAttempt, 10)) > 8000) {
+        sessionStorage.setItem(reloadKey, String(now));
+        window.location.reload();
+      }
+    }
+  }
   render() {
     if (this.state.hasError) {
+      const isDynamicImport = this.state.error?.message?.includes('dynamically imported module') ||
+                              String(this.state.error).includes('dynamically imported module') ||
+                              this.state.error?.message?.includes('Failed to fetch');
       return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center bg-rose-50/50 backdrop-blur-md rounded-3xl m-4">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center bg-rose-50/50 backdrop-blur-md rounded-3xl m-4 border border-rose-100">
           <AlertTriangle className="text-rose-500 mb-4" size={48} />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Ops! Algo deu errado.</h2>
-          <button onClick={() => { this.setState({ hasError: false }); window.location.reload(); }} className="px-6 py-2 bg-rose-500 text-white rounded-xl font-bold mt-4">Recarregar</button>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+            {isDynamicImport ? 'Módulo Atualizado' : 'Ops! Algo deu errado.'}
+          </h2>
+          <p className="text-sm text-slate-600 max-w-md mb-2">
+            {isDynamicImport 
+              ? 'Uma nova versão do módulo foi disponibilizada no servidor. Clique no botão abaixo para carregar.' 
+              : 'Ocorreu uma instabilidade momentânea no carregamento do módulo.'}
+          </p>
+          <button 
+            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }} 
+            className="px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold mt-4 shadow cursor-pointer transition-all"
+          >
+            Recarregar Módulo
+          </button>
         </div>
       );
     }
@@ -3058,7 +3107,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
     const [isSaving, setIsSaving] = useState(false);
 
     // Crescimento Eclesiástico States
-    const [membroFormTab, setMembroFormTab] = useState<'dados' | 'crescimento'>('dados');
+    const [membroFormTab, setMembroFormTab] = useState<'dados' | 'crescimento' | 'prontuario'>('dados');
     const [histDate, setHistDate] = useState('');
     const [histType, setHistType] = useState('Consagração');
     const [histTargetCargo, setHistTargetCargo] = useState('');
@@ -3539,7 +3588,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                  return (
                     <div className="space-y-6">
                         {/* Navegação de Abas do Membro */}
-                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner mb-2">
+                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner mb-2 gap-1">
                             <button
                                 type="button"
                                 onClick={() => setMembroFormTab('dados')}
@@ -3552,7 +3601,14 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 onClick={() => setMembroFormTab('crescimento')}
                                 className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${membroFormTab === 'crescimento' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/40' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
                             >
-                                <TrendingUp size={14} /> Crescimento Eclesiástico
+                                <TrendingUp size={14} /> Crescimento
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMembroFormTab('prontuario')}
+                                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${membroFormTab === 'prontuario' ? 'bg-white text-amber-600 shadow-sm border border-slate-200/40' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                            >
+                                <Award size={14} /> Prontuário Ministerial
                             </button>
                         </div>
 
@@ -3824,7 +3880,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                             </div>
                         </div>
                         </div>
-                        ) : (
+                        ) : membroFormTab === 'crescimento' ? (
                             <div className="space-y-6 animate-entrance">
                                 {/* Form para Registrar Crescimento */}
                                 <div className="bg-gradient-to-br from-indigo-50/50 to-white p-5 rounded-2xl border border-indigo-100 shadow-sm space-y-4 text-left">
@@ -3974,6 +4030,10 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                         )}
                                     </div>
                                 </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-6 animate-entrance">
+                                <ProntuarioMinisterial initialMembroId={data.id} />
                             </div>
                         )}
                     </div>
@@ -14307,123 +14367,13 @@ const PortalHome = ({ user, db, setView }) => {
     );
 };
 
-const PortalCarteirinha = ({ user, igreja }) => {
-    return (
-        <div className="space-y-6 animate-entrance flex flex-col items-center justify-center pb-12">
-            <h2 className="text-2xl font-black text-slate-800 mb-4 flex items-center gap-3 w-full justify-center md:justify-start">
-                <FileBadge size={28} className="text-emerald-500"/> Credencial Digital
-            </h2>
-            
-            {/* Visual da Carteirinha Digital Inspirado no Modelo Físico Premium */}
-            <div className="w-[320px] bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-700 relative transform transition-transform hover:scale-[1.02] duration-300">
-                {/* Efeitos de Fundo Premium */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600 rounded-full blur-[80px] opacity-30 -mr-20 -mt-20 pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none"></div>
-                <div className="absolute inset-0 border-[4px] border-amber-500/20 m-2 rounded-2xl pointer-events-none"></div>
-                <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
-
-                <div className="p-6 relative z-10 flex flex-col h-full">
-                    {/* Header Institucional */}
-                    <div className="flex flex-col items-center text-center pb-5 border-b border-white/10 mb-5">
-                        {igreja?.logo ? (
-                            <img src={igreja.logo} className="h-16 w-16 object-contain bg-white rounded-xl p-1.5 shadow-lg mb-3" />
-                        ) : (
-                            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md mb-3 border border-white/20 shadow-lg">
-                                <Building2 size={32} className="text-white"/>
-                            </div>
-                        )}
-                        <h3 className="font-black text-white text-sm uppercase tracking-widest drop-shadow-md leading-tight">{igreja?.nome || 'Ministério'}</h3>
-                        <p className="text-[10px] text-amber-500 font-black tracking-[0.3em] uppercase mt-1">Credencial Oficial</p>
-                    </div>
-                    
-                    {/* Foto e QR Code */}
-                    <div className="flex gap-5 mb-5 items-center">
-                        <div className="w-24 h-32 bg-slate-800 rounded-xl overflow-hidden border-2 border-amber-500 shadow-xl shrink-0 relative">
-                            {user.foto ? <img src={user.foto} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-500"><User size={40}/></div>}
-                        </div>
-                        <div className="flex-1 bg-white p-1.5 rounded-xl shadow-lg border border-slate-200">
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(user.id)}&color=0f172a&bgcolor=ffffff`} alt="QR Code Identificação" className="w-full aspect-square object-contain opacity-90"/>
-                            <p className="text-[8px] font-black text-slate-800 text-center tracking-[0.2em] uppercase mt-1">Check-in Válido</p>
-                        </div>
-                    </div>
-                    
-                    {/* Dados do Membro */}
-                    <div className="flex-1 flex flex-col justify-end">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">Nome do Titular</p>
-                        <p className="text-xl font-black text-white uppercase leading-tight mb-4 drop-shadow-md">{user.nome}</p>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Função</p>
-                                <div className="bg-amber-500 text-slate-900 px-3 py-1 rounded-lg shadow-sm inline-block">
-                                    <p className="text-xs font-black uppercase tracking-wider">{user.cargo || 'Membro'}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Registro</p>
-                                <p className="text-sm font-bold text-white font-mono bg-white/10 px-3 py-1 rounded-lg inline-block border border-white/20">{user.numero_registro || '000000'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* NOVO: Dados Cadastrais / Verso da Carteirinha */}
-            <div className="w-[320px] sm:w-full max-w-md bg-white rounded-[2rem] p-6 shadow-sm border border-slate-200 mt-2 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-amber-500"></div>
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-3 flex items-center gap-2 mt-1">
-                    <ClipboardList size={18} className="text-emerald-500"/> Dados de Registro
-                </h3>
-                <div className="grid grid-cols-2 gap-y-4 gap-x-4">
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Documento (CPF)</p>
-                        <p className="text-xs font-bold text-slate-800">{user.cpf || 'Não informado'}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nascimento</p>
-                        <p className="text-xs font-bold text-slate-800">{formatDateLocal(user.data_nascimento) || 'Não informado'}</p>
-                    </div>
-                    <div className="col-span-2">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filiação</p>
-                        <p className="text-xs font-bold text-slate-800 uppercase leading-snug">
-                            {user.nome_pai || '---'} <br/> {user.nome_mae || '---'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Batismo</p>
-                        <p className="text-xs font-bold text-slate-800">{formatDateLocal(user.data_batismo) || 'Não informado'}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admissão</p>
-                        <p className="text-xs font-bold text-slate-800">{formatDateLocal(user.data_admissao) || 'Não informado'}</p>
-                    </div>
-                    <div className="col-span-2 mt-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1"><MapPin size={12}/> Congregação / Sede</p>
-                        <p className="text-xs font-bold text-slate-800 truncate">{igreja?.nome} - {igreja?.cidade}/{igreja?.uf}</p>
-                    </div>
-                </div>
-                <div className="flex justify-between items-end mt-2 pt-2 border-t border-slate-200">
-                    <div className="w-[45%] text-center">
-                        <div className="border-b border-slate-800 mb-0.5 w-full"></div>
-                        <p className="text-[5px] text-slate-500 uppercase font-bold tracking-widest">Assinatura do Titular</p>
-                    </div>
-                    <div className="w-[45%] text-center">
-                        <div className="border-b border-slate-800 mb-0.5 w-full"></div>
-                        <p className="text-[6px] font-bold text-slate-800 uppercase truncate">{igreja?.pastor || 'Pastor Presidente'}</p>
-                        <p className="text-[5px] text-slate-500 uppercase tracking-widest">Presidente / Direção</p>
-                    </div>
-                </div>
-            </div>
-
-            <p className="text-sm text-slate-500 text-center max-w-sm mt-4 font-medium bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm">
-                Apresente esta credencial digital em eventos, portarias ou na secretaria da igreja para identificação rápida e segura.
-            </p>
-        </div>
-    );
+const PortalCarteirinha = ({ user, igreja }: { user: any; igreja: any }) => {
+    return <PortalCarteirinhaComponent user={user} igreja={igreja} />;
 };
 
 const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
     const { addToast, dbFirestore, appId, collection, addDoc, logAction, setDoc, doc, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
+    const [showInformeIRPF, setShowInformeIRPF] = useState(false);
 
     const handleGerarRelatorioAuditoria = () => {
         const currentDate = new Date();
@@ -14595,14 +14545,22 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
         <div id="portal_financas" className="space-y-6 animate-entrance pb-10">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3 mb-0"><DollarSign size={28} className="text-emerald-500"/> Meus Dízimos e Ofertas</h2>
-                {isTesoureiro && (
+                <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
                     <button 
-                        onClick={handleGerarRelatorioAuditoria}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:-translate-y-0.5 self-start sm:self-auto cursor-pointer"
+                        onClick={() => setShowInformeIRPF(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 cursor-pointer"
                     >
-                        <ShieldCheck size={16}/> Relatório de Auditoria (Mês Atual)
+                        <Receipt size={16}/> Comprovante Anual IRPF
                     </button>
-                )}
+                    {isTesoureiro && (
+                        <button 
+                            onClick={handleGerarRelatorioAuditoria}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:-translate-y-0.5 cursor-pointer"
+                        >
+                            <ShieldCheck size={16}/> Relatório de Auditoria (Mês Atual)
+                        </button>
+                    )}
+                </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -14892,6 +14850,15 @@ const PortalFinanceiro = ({ user, db, isTesoureiro }) => {
                     </div>
                 )}
             </div>
+
+            {/* MODAL INFORME ANUAL DE RENDIMENTOS / IRPF NO PORTAL DO MEMBRO */}
+            {showInformeIRPF && (
+                <div className="fixed inset-0 bg-slate-950/70 z-[11000] overflow-y-auto p-4 md:p-8 backdrop-blur-xs flex justify-center items-start">
+                    <div className="w-full max-w-5xl bg-slate-100 dark:bg-slate-900 rounded-3xl shadow-2xl p-4 md:p-6 my-auto">
+                        <InformeRendimentosIRPF isPortalView={true} initialMembroId={user?.id} onClose={() => setShowInformeIRPF(false)} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

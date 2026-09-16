@@ -22,7 +22,8 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
+  ArrowRightLeft, ShieldAlert
 } from 'lucide-react';
 
 import { 
@@ -43,6 +44,10 @@ import {
 } from '../App';
 
 import { InteractiveWindow } from './InteractiveWindow';
+import { CartaTransferenciaEclesiastica } from './CartaTransferenciaEclesiastica';
+import { PainelPulpitoCulto } from './PainelPulpitoCulto';
+import { GestaoVisitasPastorais } from './GestaoVisitasPastorais';
+import { TermoCautelaManager } from './TermoCautelaPatrimonio';
 
 // Exporting component
 const ModuleSecretariaIntegrada = () => {
@@ -555,6 +560,30 @@ const ModuleSecretariaIntegrada = () => {
                 >
                     <ScrollText size={15} /> Roteiros & Liturgias
                 </button>
+                <button 
+                    onClick={()=>setTab('cartas')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='cartas' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <ArrowRightLeft size={15} /> Cartas de Transferência
+                </button>
+                <button 
+                    onClick={()=>setTab('visitas')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='visitas' ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <HeartHandshake size={15} /> Visitas Pastorais
+                </button>
+                <button 
+                    onClick={()=>setTab('cautela')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='cautela' ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <ShieldAlert size={15} /> Termos de Cautela
+                </button>
+                <button 
+                    onClick={()=>setTab('pulpito')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='pulpito' ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <Flame size={15} /> Painel de Púlpito (Ao Vivo)
+                </button>
             </div>
             
             <div className="flex-1 overflow-hidden">
@@ -757,9 +786,17 @@ const ModuleSecretariaIntegrada = () => {
                                 </h3>
                                 <p className="text-xs text-slate-400 font-medium font-sans">Faça o mapeamento completo dos cânticos, leituras e pregações por culto.</p>
                             </div>
-                            <button onClick={() => { setEditingLiturgiaId(null); setLiturgiaForm({ data: new Date().toISOString().split('T')[0], hora: '', titulo: '', serie: '', dirigente: '', pregador: '', louvor: '', leitura_biblica: '', esboco_pregao: '' }); setShowLiturgiaModal(true); }} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/10">
-                                <Plus size={16}/> Criar Culto & Roteiro
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => setTab('pulpito')} 
+                                    className="px-4 py-3 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-rose-500/20 cursor-pointer"
+                                >
+                                    <Flame size={16}/> Abrir Painel de Púlpito (Ao Vivo)
+                                </button>
+                                <button onClick={() => { setEditingLiturgiaId(null); setLiturgiaForm({ data: new Date().toISOString().split('T')[0], hora: '', titulo: '', serie: '', dirigente: '', pregador: '', louvor: '', leitura_biblica: '', esboco_pregao: '' }); setShowLiturgiaModal(true); }} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/10">
+                                    <Plus size={16}/> Criar Culto & Roteiro
+                                </button>
+                            </div>
                         </div>
 
                         <div className="grid gap-4 overflow-y-auto max-h-[calc(100vh-320px)] pr-2">
@@ -1070,6 +1107,30 @@ const ModuleSecretariaIntegrada = () => {
                                 </table>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {tab === 'cartas' && (
+                    <div className="space-y-6">
+                        <CartaTransferenciaEclesiastica />
+                    </div>
+                )}
+
+                {tab === 'visitas' && (
+                    <div className="space-y-6">
+                        <GestaoVisitasPastorais />
+                    </div>
+                )}
+
+                {tab === 'cautela' && (
+                    <div className="space-y-6">
+                        <TermoCautelaManager />
+                    </div>
+                )}
+
+                {tab === 'pulpito' && (
+                    <div className="space-y-6">
+                        <PainelPulpitoCulto />
                     </div>
                 )}
             </div>

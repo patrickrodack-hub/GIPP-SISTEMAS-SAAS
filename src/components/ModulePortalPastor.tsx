@@ -22,7 +22,8 @@ import {
   MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, FileInput, RotateCcw as RestoreIcon,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
+  ArrowRightLeft, ShieldAlert
 } from 'lucide-react';
 
 import { 
@@ -33,6 +34,10 @@ import {
 
 import { preprocessImage, storeMedia, getMedia, clearMedia } from '../lib/indexedDbService';
 import ModuleGoogleMeet from './ModuleGoogleMeet';
+import { CartaTransferenciaEclesiastica } from './CartaTransferenciaEclesiastica';
+import { PainelPulpitoCulto } from './PainelPulpitoCulto';
+import { GestaoVisitasPastorais } from './GestaoVisitasPastorais';
+import { TermoCautelaManager } from './TermoCautelaPatrimonio';
 
 import {
   ChurchContext, CachedImage, callGeminiAI, resizeImageAndCompress,
@@ -679,6 +684,18 @@ const ModulePortalPastor = () => {
                 </button>
                 <button onClick={() => setActiveTab('orcamento')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'orcamento' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Target size={16}/> Planeamento Orçamentário
+                </button>
+                <button onClick={() => setActiveTab('visitas')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'visitas' ? 'bg-rose-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <HeartHandshake size={16}/> Visitas & Aconselhamentos
+                </button>
+                <button onClick={() => setActiveTab('pulpito')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'pulpito' ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <Flame size={16}/> Painel de Púlpito (Ao Vivo)
+                </button>
+                <button onClick={() => setActiveTab('cartas')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'cartas' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <ArrowRightLeft size={16}/> Cartas de Transferência
+                </button>
+                <button onClick={() => setActiveTab('cautela')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'cautela' ? 'bg-teal-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
+                    <ShieldAlert size={16}/> Termos de Cautela
                 </button>
                 <button onClick={() => setActiveTab('cofre')} className={`px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 tracking-wide shrink-0 ${activeTab === 'cofre' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}>
                     <Lock size={16}/> Área Restrita
@@ -1644,6 +1661,30 @@ const ModulePortalPastor = () => {
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {activeTab === 'visitas' && (
+                <div className="space-y-6 animate-entrance">
+                    <GestaoVisitasPastorais />
+                </div>
+            )}
+
+            {activeTab === 'pulpito' && (
+                <div className="space-y-6 animate-entrance">
+                    <PainelPulpitoCulto />
+                </div>
+            )}
+
+            {activeTab === 'cartas' && (
+                <div className="space-y-6 animate-entrance">
+                    <CartaTransferenciaEclesiastica />
+                </div>
+            )}
+
+            {activeTab === 'cautela' && (
+                <div className="space-y-6 animate-entrance">
+                    <TermoCautelaManager />
                 </div>
             )}
 
