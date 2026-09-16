@@ -8,12 +8,16 @@ import {
   SetlistCulto, SetlistMusicaItem, MusicaRepertorio 
 } from '../data/repertorioData';
 import { 
-  transposeChordSheet, transposeNote, CHROMATIC_SHARPS, getSemitoneDifference,
+  transposeChordSheet, transposeNote, transposeKey, calculateSemitonesBetweenKeys,
+  CHROMATIC_SHARPS, CHROMATIC_MINORS_SHARPS,
+  MUSICAL_KEY_GROUPS, ALL_MUSICAL_KEYS, getSemitoneDifference,
   getCapoChordShapeKey, CAPO_FRETS
 } from '../utils/musicChords';
 import { WorshipMetronome } from './WorshipMetronome';
 import { CifraVisualizer } from './CifraVisualizer';
 import { CifraScrollDock } from './CifraScrollDock';
+import { ModalEscalaHarmonica } from './ModalEscalaHarmonica';
+import { CifraEscalaContainer } from './CifraEscalaContainer';
 
 interface WorshipLiveReaderProps {
   setlist: SetlistCulto;
@@ -37,7 +41,8 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
   const [showMetronome, setShowMetronome] = useState<boolean>(false);
   const [showIndexMenu, setShowIndexMenu] = useState<boolean>(false);
 
-  // Manual transposition offset applied on top of tom_culto
+  // Key override state for live performance
+  const [liveKeyOverride, setLiveKeyOverride] = useState<string | null>(null);
   const [liveSemitonesOffset, setLiveSemitonesOffset] = useState<number>(0);
 
   // Capo state for live reader
@@ -49,6 +54,7 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
   const [scrollSpeed, setScrollSpeed] = useState<number>(1.0); // 0.5x a 4.0x
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(0);
   const [showFocusGuide, setShowFocusGuide] = useState<boolean>(true);
+  const [showScaleModal, setShowScaleModal] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollAnimRef = useRef<number | null>(null);
 
@@ -61,6 +67,7 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
 
   // Reset live offset and line focus when switching songs
   useEffect(() => {
+    setLiveKeyOverride(null);
     setLiveSemitonesOffset(0);
     setLiveCapo(fullSongData?.capo || 0);
     setIsAutoScrolling(false);
@@ -206,14 +213,13 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
   }
 
   // Base key calculation:
-  // We determine base transposition from song's original key to tom_culto, plus any live offset.
+  // We determine base transposition from song's original key to tom_culto, plus any live key override/offset.
   const originalKey = fullSongData?.tom || currentItem.tom_original || 'C';
   const targetCultoKey = currentItem.tom_culto || originalKey;
-  const cultoDiff = getSemitoneDifference(originalKey, targetCultoKey);
-  const totalTranspose = (cultoDiff + liveSemitonesOffset) % 12;
+  const effectiveCurrentKey = liveKeyOverride || (liveSemitonesOffset !== 0 ? transposeKey(targetCultoKey, liveSemitonesOffset) : targetCultoKey);
+  const totalTranspose = calculateSemitonesBetweenKeys(originalKey, effectiveCurrentKey);
 
-  // Compute current display key
-  const effectiveCurrentKey = transposeNote(originalKey, totalTranspose);
+  // Compute capo shapes and chords
   const chordShapeKey = liveCapo > 0 ? getCapoChordShapeKey(effectiveCurrentKey, liveCapo) : effectiveCurrentKey;
   const effectiveChordTranspose = (liveCapo > 0 && applyCapoChords) ? (totalTranspose - liveCapo) : totalTranspose;
   const targetKeyForChords = (liveCapo > 0 && applyCapoChords) ? chordShapeKey : effectiveCurrentKey;
@@ -344,26 +350,44 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => setLiveSemitonesOffset(prev => prev - 1)}
-              className="w-5 h-5 rounded hover:bg-slate-700 text-slate-300 font-black text-xs flex items-center justify-center transition"
+              onClick={() => {
+                const prevKey = transposeKey(effectiveCurrentKey, -1);
+                setLiveKeyOverride(prevKey);
+              }}
+              className="w-5 h-5 rounded hover:bg-slate-700 text-slate-300 font-black text-xs flex items-center justify-center transition cursor-pointer"
               title="Baixar 1 semitom (-1)"
             >
               -
             </button>
             <button
               type="button"
-              onClick={() => setLiveSemitonesOffset(prev => prev + 1)}
-              className="w-5 h-5 rounded hover:bg-slate-700 text-slate-300 font-black text-xs flex items-center justify-center transition"
+              onClick={() => {
+                const nextKey = transposeKey(effectiveCurrentKey, +1);
+                setLiveKeyOverride(nextKey);
+              }}
+              className="w-5 h-5 rounded hover:bg-slate-700 text-slate-300 font-black text-xs flex items-center justify-center transition cursor-pointer"
               title="Subir 1 semitom (+1)"
             >
               +
             </button>
-            {liveSemitonesOffset !== 0 && (
+            <button
+              type="button"
+              onClick={() => setShowScaleModal(true)}
+              className="p-1 text-violet-400 hover:text-violet-300 hover:bg-slate-700 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer"
+              title="Ver Escala e Campo Harmônico"
+            >
+              <Sparkles size={11} />
+              <span className="hidden xl:inline text-[9px]">Escala</span>
+            </button>
+            {effectiveCurrentKey !== targetCultoKey && (
               <button
                 type="button"
-                onClick={() => setLiveSemitonesOffset(0)}
-                className="text-[9px] text-amber-400 underline ml-0.5"
-                title="Voltar ao tom programado do culto"
+                onClick={() => {
+                  setLiveKeyOverride(null);
+                  setLiveSemitonesOffset(0);
+                }}
+                className="text-[9px] text-amber-400 underline ml-0.5 cursor-pointer"
+                title={`Voltar ao tom programado do culto (${targetCultoKey})`}
               >
                 Reset
               </button>
@@ -575,6 +599,18 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
             </div>
           </div>
 
+          {/* SELETOR VISUAL DE ESCALAS MAIORES E MENORES (.cifra-escala-container) */}
+          <CifraEscalaContainer
+            currentKey={effectiveCurrentKey}
+            stageMode={stageMode}
+            defaultExpanded={false}
+            collapsible={true}
+            className="mb-6"
+            onTransposeToKey={(newKey) => {
+              setLiveKeyOverride(newKey);
+            }}
+          />
+
           {/* CHORDS BODY COM REALCE DE LINHA E CURSOR VERTICAL */}
           <CifraVisualizer
             cifraText={transposedChords}
@@ -628,6 +664,18 @@ export const WorshipLiveReader: React.FC<WorshipLiveReaderProps> = ({
           </div>
         </div>
       </footer>
+
+      {/* MODAL DE ESCALAS & CAMPO HARMÔNICO */}
+      <ModalEscalaHarmonica
+        isOpen={showScaleModal}
+        onClose={() => setShowScaleModal(false)}
+        currentKey={effectiveCurrentKey}
+        songTitle={currentItem?.titulo || fullSongData?.titulo}
+        stageMode={true}
+        onSelectKey={(newKey) => {
+          setLiveKeyOverride(newKey);
+        }}
+      />
     </div>
   );
 };

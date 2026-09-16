@@ -14,7 +14,9 @@ import {
   checkIsMusicoOuLouvor, SetlistCulto, SETLISTS_PADRAO
 } from '../data/repertorioData';
 import { 
-  transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS,
+  transposeChordSheet, transposeNote, transposeKey, calculateSemitonesBetweenKeys,
+  getSemitoneDifference, CHROMATIC_SHARPS,
+  CHROMATIC_MINORS_SHARPS, MUSICAL_KEY_GROUPS, ALL_MUSICAL_KEYS,
   CAPO_FRETS, getCapoLabel, getCapoChordShapeKey, suggestCapo
 } from '../utils/musicChords';
 import { InteractiveWindow } from './InteractiveWindow';
@@ -22,6 +24,8 @@ import { CifraVisualizer } from './CifraVisualizer';
 import { CifraScrollDock } from './CifraScrollDock';
 import { WorshipLiveReader } from './WorshipLiveReader';
 import { WorshipMetronome } from './WorshipMetronome';
+import { ModalEscalaHarmonica } from './ModalEscalaHarmonica';
+import { CifraEscalaContainer } from './CifraEscalaContainer';
 import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface PortalRepertorioProps {
@@ -101,6 +105,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   const [twoColumns, setTwoColumns] = useState<boolean>(false);
 
   // Mapas de transposição, tamanho de fonte e capotraste por canção
+  const [songKeyMap, setSongKeyMap] = useState<Record<string, string>>({});
   const [songTransposeMap, setSongTransposeMap] = useState<Record<string, number>>({});
   const [songFontSizeMap, setSongFontSizeMap] = useState<Record<string, number>>({});
   const [songCapoMap, setSongCapoMap] = useState<Record<string, number>>({});
@@ -116,6 +121,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   const [scrollSpeed, setScrollSpeed] = useState<number>(1.0); // Velocidade contínua: 0.5x a 4.0x
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(0);
   const [showFocusGuide, setShowFocusGuide] = useState<boolean>(true);
+  const [showScaleModal, setShowScaleModal] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollFullscreenContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollAnimRef = useRef<number | null>(null);
@@ -378,7 +384,7 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
     applyCapo: boolean = true
   ) => {
     const originalTom = song.tom || 'G';
-    const currentTom = transposeNote(originalTom, semitones);
+    const currentTom = songKeyMap[song.id] || (songTransposeMap[song.id] !== undefined ? transposeNote(originalTom, songTransposeMap[song.id]) : originalTom);
     const shapeTom = capoFret > 0 ? getCapoChordShapeKey(currentTom, capoFret) : currentTom;
     const effectiveSemi = (capoFret > 0 && applyCapo) ? (semitones - capoFret) : semitones;
     const targetKey = (capoFret > 0 && applyCapo) ? shapeTom : currentTom;
@@ -534,10 +540,12 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
   // Canção ativa no modal de cifra e tela cheia
   const activeSong = activeModalSong;
-  const activeSemitones = activeSong ? (songTransposeMap[activeSong.id] || 0) : 0;
-  const activeFontSize = activeSong ? (songFontSizeMap[activeSong.id] || 13) : 13;
   const activeOriginalKey = activeSong ? (activeSong.tom || 'G') : 'G';
-  const activeCurrentKey = activeSong ? transposeNote(activeOriginalKey, activeSemitones) : 'G';
+  const activeCurrentKey = activeSong 
+    ? (songKeyMap[activeSong.id] || (songTransposeMap[activeSong.id] !== undefined ? transposeNote(activeOriginalKey, songTransposeMap[activeSong.id]) : activeOriginalKey))
+    : 'G';
+  const activeSemitones = activeSong ? calculateSemitonesBetweenKeys(activeOriginalKey, activeCurrentKey) : 0;
+  const activeFontSize = activeSong ? (songFontSizeMap[activeSong.id] || 13) : 13;
   
   // Capotraste da canção ativa
   const activeCapo = activeSong ? (songCapoMap[activeSong.id] || 0) : 0;
@@ -990,8 +998,12 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 className="px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-violet-500/20"
               >
                 <option value="todos">Todos os Tons</option>
-                {CHROMATIC_SHARPS.map(k => (
-                  <option key={k} value={k}>{k}</option>
+                {MUSICAL_KEY_GROUPS.map(group => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.keys.map(k => (
+                      <option key={k} value={k}>{k}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -1044,9 +1056,9 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {filteredMusicas.map(song => {
-              const semitones = songTransposeMap[song.id] || 0;
               const originalKey = song.tom || 'G';
-              const currentKey = transposeNote(originalKey, semitones);
+              const currentKey = songKeyMap[song.id] || (songTransposeMap[song.id] !== undefined ? transposeNote(originalKey, songTransposeMap[song.id]) : originalKey);
+              const semitones = calculateSemitonesBetweenKeys(originalKey, currentKey);
               const songCapo = songCapoMap[song.id] || 0;
               const songShape = songCapo > 0 ? getCapoChordShapeKey(currentKey, songCapo) : currentKey;
 
@@ -1183,10 +1195,15 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   Tom Original: <strong className="text-slate-700 dark:text-slate-200">{activeOriginalKey}</strong>
                 </span>
-                {(activeSemitones !== 0 || activeCapo !== 0) && (
+                {(activeCurrentKey !== activeOriginalKey || activeCapo !== 0) && (
                   <button
                     type="button"
                     onClick={() => {
+                      setSongKeyMap(prev => {
+                        const next = { ...prev };
+                        delete next[activeSong.id];
+                        return next;
+                      });
                       setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }));
                       setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }));
                     }}
@@ -1243,7 +1260,10 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones - 1 }))}
+                  onClick={() => {
+                    const nextKey = transposeKey(activeCurrentKey, -1);
+                    setSongKeyMap(prev => ({ ...prev, [activeSong.id]: nextKey }));
+                  }}
                   className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
                   title="Baixar 1 semitom (-1)"
                 >
@@ -1261,7 +1281,10 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones + 1 }))}
+                  onClick={() => {
+                    const nextKey = transposeKey(activeCurrentKey, +1);
+                    setSongKeyMap(prev => ({ ...prev, [activeSong.id]: nextKey }));
+                  }}
                   className="w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-600"
                   title="Subir 1 semitom (+1)"
                 >
@@ -1272,16 +1295,31 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 <select
                   value={activeCurrentKey}
                   onChange={(e) => {
-                    const diff = getSemitoneDifference(activeOriginalKey, e.target.value);
-                    setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: diff }));
+                    const targetKey = e.target.value;
+                    setSongKeyMap(prev => ({ ...prev, [activeSong.id]: targetKey }));
                   }}
                   className="text-[11px] font-bold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-slate-800 dark:text-white outline-none cursor-pointer"
-                  title="Mudar para tom direto"
+                  title="Mudar para tom direto (Tons Maiores e Menores)"
                 >
-                  {CHROMATIC_SHARPS.map(k => (
-                    <option key={k} value={k}>{k}</option>
+                  {MUSICAL_KEY_GROUPS.map(group => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.keys.map(k => (
+                        <option key={k} value={k}>{k}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
+
+                {/* Botão para abrir Dicionário de Escala & Campo Harmônico */}
+                <button
+                  type="button"
+                  onClick={() => setShowScaleModal(true)}
+                  className="px-2 py-1 bg-violet-100 hover:bg-violet-200 dark:bg-violet-950/70 dark:hover:bg-violet-900 border border-violet-300 dark:border-violet-700 text-violet-800 dark:text-violet-200 rounded-lg text-xs font-black transition flex items-center gap-1 cursor-pointer"
+                  title="Ver Escala e Campo Harmônico deste Tom"
+                >
+                  <Sparkles size={12} className="text-violet-600 dark:text-violet-400" />
+                  <span className="hidden sm:inline">Escala</span>
+                </button>
               </div>
 
               {/* 1.1 SELETOR E TRANSPOSIÇÃO COM CAPOTRASTE (CAPO) */}
@@ -1544,6 +1582,17 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               </div>
             )}
 
+            {/* SELETOR VISUAL DE ESCALAS MAIORES E MENORES COM GRADE RESPONSIVA (.cifra-escala-container) */}
+            <CifraEscalaContainer
+              currentKey={activeCurrentKey}
+              stageMode={stageMode}
+              defaultExpanded={false}
+              collapsible={true}
+              onTransposeToKey={(newKey) => {
+                setSongKeyMap(prev => ({ ...prev, [activeSong.id]: newKey }));
+              }}
+            />
+
             {/* VISUALIZADOR DA LETRA E CIFRA COM NOTAS DESTACADAS EM LARANJA */}
             <div 
               ref={scrollContainerRef}
@@ -1646,7 +1695,10 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones - 1 }))}
+                  onClick={() => {
+                    const nextKey = transposeKey(activeCurrentKey, -1);
+                    setSongKeyMap(prev => ({ ...prev, [activeSong.id]: nextKey }));
+                  }}
                   className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-2xs"
                   title="Baixar 1 semitom (-1)"
                 >
@@ -1662,7 +1714,10 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: activeSemitones + 1 }))}
+                  onClick={() => {
+                    const nextKey = transposeKey(activeCurrentKey, +1);
+                    setSongKeyMap(prev => ({ ...prev, [activeSong.id]: nextKey }));
+                  }}
                   className="w-7 h-7 bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-lg text-xs transition active:scale-95 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-2xs"
                   title="Subir 1 semitom (+1)"
                 >
@@ -1671,20 +1726,41 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 <select
                   value={activeCurrentKey}
                   onChange={(e) => {
-                    const diff = getSemitoneDifference(activeOriginalKey, e.target.value);
-                    setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: diff }));
+                    const targetKey = e.target.value;
+                    setSongKeyMap(prev => ({ ...prev, [activeSong.id]: targetKey }));
                   }}
                   className="text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white outline-none cursor-pointer"
-                  title="Mudar tom direto"
+                  title="Mudar tom direto (Tons Maiores e Menores)"
                 >
-                  {CHROMATIC_SHARPS.map(k => (
-                    <option key={k} value={k}>{k}</option>
+                  {MUSICAL_KEY_GROUPS.map(group => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.keys.map(k => (
+                        <option key={k} value={k}>{k}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
-                {activeSemitones !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowScaleModal(true)}
+                  className="p-1.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-violet-500/30"
+                  title="Ver Escala e Campo Harmônico deste Tom"
+                >
+                  <Sparkles size={12} className="text-violet-400" />
+                  <span className="hidden sm:inline">Escala</span>
+                </button>
+                {(activeCurrentKey !== activeOriginalKey || activeCapo !== 0) && (
                   <button
                     type="button"
-                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }))}
+                    onClick={() => {
+                      setSongKeyMap(prev => {
+                        const next = { ...prev };
+                        delete next[activeSong.id];
+                        return next;
+                      });
+                      setSongTransposeMap(prev => ({ ...prev, [activeSong.id]: 0 }));
+                      setSongCapoMap(prev => ({ ...prev, [activeSong.id]: 0 }));
+                    }}
                     className="p-1.5 text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-xs cursor-pointer"
                     title={`Restaurar tom original (${activeOriginalKey})`}
                   >
@@ -1988,6 +2064,18 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
             )}
 
             <div className="max-w-6xl mx-auto pb-16">
+              {/* SELETOR VISUAL DE ESCALAS MAIORES E MENORES COM GRADE RESPONSIVA (.cifra-escala-container) */}
+              <CifraEscalaContainer
+                currentKey={activeCurrentKey}
+                stageMode={stageMode}
+                defaultExpanded={false}
+                collapsible={true}
+                className="mb-6"
+                onTransposeToKey={(newKey) => {
+                  setSongKeyMap(prev => ({ ...prev, [activeSong.id]: newKey }));
+                }}
+              />
+
               <CifraVisualizer 
                 cifraText={activeTransposedSheet} 
                 fontSize={activeFontSize} 
@@ -2030,6 +2118,20 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           onClose={() => setActiveLiveSetlist(null)}
         />
       )}
+
+      {/* 7. DICIONÁRIO E VISUALIZADOR DE ESCALA & CAMPO HARMÔNICO */}
+      <ModalEscalaHarmonica
+        isOpen={showScaleModal}
+        onClose={() => setShowScaleModal(false)}
+        currentKey={activeCurrentKey}
+        songTitle={activeSong?.titulo}
+        stageMode={stageMode}
+        onSelectKey={(newKey) => {
+          if (activeSong) {
+            setSongKeyMap(prev => ({ ...prev, [activeSong.id]: newKey }));
+          }
+        }}
+      />
     </div>
   );
 };

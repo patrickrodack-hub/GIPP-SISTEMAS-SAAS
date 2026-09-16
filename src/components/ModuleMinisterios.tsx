@@ -25,7 +25,8 @@ import {
   Folder, FolderPlus, FolderCheck, Bookmark, SlidersHorizontal
 } from 'lucide-react';
 import { 
-  transposeChordSheet, transposeNote, getSemitoneDifference, CHROMATIC_SHARPS 
+  transposeChordSheet, transposeNote, transposeKey, calculateSemitonesBetweenKeys, getSemitoneDifference, CHROMATIC_SHARPS,
+  MUSICAL_KEY_GROUPS, ALL_MUSICAL_KEYS
 } from '../utils/musicChords';
 import { CifraVisualizer } from './CifraVisualizer';
 
@@ -148,6 +149,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
     const [newFolderName, setNewFolderName] = useState<string>('');
 
     // Ajuste em tempo real de Tom e Tamanho de Fonte por música no painel de visualização
+    const [songKeyMap, setSongKeyMap] = useState<Record<string, string>>({});
     const [songTransposeMap, setSongTransposeMap] = useState<Record<string, number>>({});
     const [songFontSizeMap, setSongFontSizeMap] = useState<Record<string, number>>({});
     const [escalas, setEscalas] = useState<any[]>(() => {
@@ -1924,10 +1926,10 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
 
                                             {/* Stylized Chords Visualizer box with Real-Time Transposition and Font Size controls */}
                                             {viewChordsSongId === s.id && (() => {
-                                                const semitones = songTransposeMap[s.id] || 0;
-                                                const fontSize = songFontSizeMap[s.id] || 12;
                                                 const originalKey = s.tom || 'G';
-                                                const currentKey = transposeNote(originalKey, semitones);
+                                                const currentKey = songKeyMap[s.id] || (songTransposeMap[s.id] !== undefined ? transposeNote(originalKey, songTransposeMap[s.id]) : originalKey);
+                                                const semitones = calculateSemitonesBetweenKeys(originalKey, currentKey);
+                                                const fontSize = songFontSizeMap[s.id] || 12;
                                                 const transposedText = transposeChordSheet(s.letra_cifra || '', semitones, currentKey);
 
                                                 return (
@@ -1941,7 +1943,10 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                                 </span>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [s.id]: semitones - 1 }))}
+                                                                    onClick={() => {
+                                                                        const nextKey = transposeKey(currentKey, -1);
+                                                                        setSongKeyMap(prev => ({ ...prev, [s.id]: nextKey }));
+                                                                    }}
                                                                     className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-2 py-0.5 rounded text-xs transition active:scale-95 cursor-pointer"
                                                                     title="Baixar 1 semitom (-1)"
                                                                 >
@@ -1957,7 +1962,10 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                                 </div>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSongTransposeMap(prev => ({ ...prev, [s.id]: semitones + 1 }))}
+                                                                    onClick={() => {
+                                                                        const nextKey = transposeKey(currentKey, +1);
+                                                                        setSongKeyMap(prev => ({ ...prev, [s.id]: nextKey }));
+                                                                    }}
                                                                     className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black px-2 py-0.5 rounded text-xs transition active:scale-95 cursor-pointer"
                                                                     title="Subir 1 semitom (+1)"
                                                                 >
@@ -1966,20 +1974,31 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                                 <select
                                                                     value={currentKey}
                                                                     onChange={(e) => {
-                                                                        const diff = getSemitoneDifference(originalKey, e.target.value);
-                                                                        setSongTransposeMap(prev => ({ ...prev, [s.id]: diff }));
+                                                                        const targetKey = e.target.value;
+                                                                        setSongKeyMap(prev => ({ ...prev, [s.id]: targetKey }));
                                                                     }}
                                                                     className="text-[11px] font-bold bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-800 outline-none cursor-pointer"
-                                                                    title="Mudar tom direto"
+                                                                    title="Mudar tom direto (Tons Maiores e Menores)"
                                                                 >
-                                                                    {CHROMATIC_SHARPS.map(k => (
-                                                                        <option key={k} value={k}>{k}</option>
+                                                                    {MUSICAL_KEY_GROUPS.map(group => (
+                                                                        <optgroup key={group.label} label={group.label}>
+                                                                            {group.keys.map(k => (
+                                                                                <option key={k} value={k}>{k}</option>
+                                                                            ))}
+                                                                        </optgroup>
                                                                     ))}
                                                                 </select>
-                                                                {semitones !== 0 && (
+                                                                {currentKey !== originalKey && (
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setSongTransposeMap(prev => ({ ...prev, [s.id]: 0 }))}
+                                                                        onClick={() => {
+                                                                            setSongKeyMap(prev => {
+                                                                                const next = { ...prev };
+                                                                                delete next[s.id];
+                                                                                return next;
+                                                                            });
+                                                                            setSongTransposeMap(prev => ({ ...prev, [s.id]: 0 }));
+                                                                        }}
                                                                         className="text-[9px] text-rose-600 font-bold hover:underline ml-1 cursor-pointer"
                                                                     >
                                                                         Resetar
