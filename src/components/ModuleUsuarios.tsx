@@ -34,7 +34,7 @@ const CATEGORIAS_PERMISSOES = [
     desc: "Louvor, Mídia, Família, Salinha Kids e Missões",
     icon: Heart,
     opcoes: [
-      { id: 'access_ministerio_louvor', label: 'Ministério de Louvor (Músicas/Escalas)' },
+      { id: 'access_ministerio_louvor', label: 'Ministério de Louvor, Repertório & Cifras (Auto-Scroll/Metrônomo/Modo Palco)' },
       { id: 'access_ministerio_midia', label: 'Ministério de Mídia (Equipamentos/Escalas)' },
       { id: 'access_ministerio_familia', label: 'Ministério da Família & Aconselhamento' },
       { id: 'access_salinha_kids', label: 'Salinha Kids & Berçário (Check-In)' },

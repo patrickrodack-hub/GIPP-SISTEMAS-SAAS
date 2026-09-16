@@ -46,6 +46,12 @@ import {
 } from './components/GoogleIcons';
 import { ChurchContext } from './context/ChurchContext';
 export { ChurchContext };
+import { 
+  getPersistentDeviceId, 
+  resolveClientRealIp, 
+  resolveClientRealLocation, 
+  detectCurrentChannelType 
+} from './lib/deviceAuditService';
 export { 
     Button, FormInput, FormSelect, formatDateLocal, getTodayDate, 
     isValidCPF, formatCPF, copyToClipboard, resizeImageAndCompress, 
@@ -3984,6 +3990,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                              { id: 'access_igreja', label: 'Matriz, Filiais & Contas Bancárias' }, 
                              { id: 'access_patrimonio', label: 'Gestão de Patrimônio & Inventário' }, 
                              { id: 'access_frotas', label: 'Controle de Frotas & Veículos' }, 
+                             { id: 'access_loja_virtual', label: 'Loja Virtual Eclesiástica & Retaguarda DAV' }, 
                              { id: 'access_celulas', label: 'Células e Pequenos Grupos' }, 
                              { id: 'access_ministerios', label: 'Ministérios & Departamentos Gerais' } 
                          ] 
@@ -4022,6 +4029,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                              { id: 'access_ebd', label: 'Gestão EBD (Turmas & Chamadas)' }, 
                              { id: 'access_gestao_cursos', label: 'Capacitações EAD (Cursos Online)' }, 
                              { id: 'access_teologia', label: 'Estudo de Teologia Básico GIPP & Formação' }, 
+                             { id: 'access_ebooks_teologia', label: 'E-books & Apostilas Teológicas (CGADB/CPAD)' }, 
                              { id: 'access_biblia', label: 'Bíblia de Estudos & Comentários' } 
                          ] 
                      },
@@ -4043,7 +4051,9 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                              { id: 'access_config_sistema', label: 'Configurações Gerais do Sistema' }, 
                              { id: 'access_config_visual', label: 'Personalização Visual & Temas' }, 
                              { id: 'access_config_backup', label: 'Backup Geral de Dados (Local/Nuvem)' }, 
+                             { id: 'access_permissoes_planos', label: 'Permissões de Planos SaaS' }, 
                              { id: 'access_auditoria', label: 'Auditoria & Logs de Segurança' }, 
+                             { id: 'access_auditoria_aparelhos', label: 'Auditoria de Aparelhos SaaS & Telemetria Real' }, 
                              { id: 'access_lixeira', label: 'Lixeira Virtual do Sistema' }, 
                              { id: 'access_manual', label: 'Manual do Usuário GIPP' }, 
                              { id: 'access_amparo_legal', label: 'Amparo Constitucional & Jurídico' }, 
@@ -9408,7 +9418,7 @@ export const PrintSystem = ({
                     <div className="space-y-4">
                         <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-250 pb-2 flex justify-between items-center">
                             <span>Demonstrativo Contábil • Folha Analítica Consolidada de Pessoal</span>
-                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 11.0.0 Ultimate Platinum v16</span>
+                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 13.0.0 Ultimate Platinum v18</span>
                         </h2>
                         
                         {/* Parameters summary description */}
@@ -20631,7 +20641,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                 <div className="relative flex flex-col items-center justify-center p-6 bg-[#f0f0f0] border-2 border-t-white border-l-white border-r-[#404040] border-b-[#404040] shadow-2xl rounded-xs min-w-[340px]">
                     <div className="w-full bg-gradient-to-r from-[#005a9e] via-[#0078d7] to-[#0063b1] text-white px-3 py-1 font-bold text-xs flex items-center justify-between mb-6 shadow-xs">
                         <span>GIPP - C++ (Win32 Enterprise)</span>
-                        <span className="font-mono text-[10px]">v11.0.0 (1.1.8689)</span>
+                        <span className="font-mono text-[10px]">v13.0.0 (1.1.9200)</span>
                     </div>
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-12 h-12 bg-gradient-to-br from-slate-200 to-slate-400 border border-slate-500 rounded-sm flex items-center justify-center shadow-md">
@@ -20705,7 +20715,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
                         <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>{saasSettings?.saas_versao_sistema || "Versão 11.0.0 Ultimate Platinum v16"}</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 13.0.0 Ultimate Platinum v18"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -21271,12 +21281,18 @@ export default function App() {
         const subId = user?.id || 'anonymous_' + Math.random().toString(36).substring(2, 9);
         const subJson = sub.toJSON();
 
+        const realClientIp = await resolveClientRealIp();
+        const realLocation = resolveClientRealLocation();
+
         const subRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions', subId);
         await setDoc(subRef, {
           id: subId,
           userId: user?.id || 'anonymous',
-          userNome: user?.nome || 'Operador anônimo',
+          userNome: user?.nome || (user?.usuario ? user.usuario : 'Operador Autenticado'),
           userTipo: user?.tipo || 'membro',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+          ip: realClientIp,
+          location: realLocation,
           subscription: subJson,
           updatedAt: new Date().toISOString()
         }, { merge: true });
@@ -21398,6 +21414,51 @@ export default function App() {
       }
     }
   }, [user, fcmToken]);
+
+  // Auditoria e Registro de Sessão Real do Dispositivo Atual Conectado (100% Real - Zero Simulações)
+  useEffect(() => {
+    if (!appId || !dbFirestore) return;
+
+    let isDisposed = false;
+    const syncCurrentDevice = async () => {
+      try {
+        const deviceId = getPersistentDeviceId();
+        const realIp = await resolveClientRealIp();
+        const realLocation = resolveClientRealLocation();
+        const channelType = detectCurrentChannelType();
+
+        const devRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dispositivos_conectados', deviceId);
+        await setDoc(devRef, {
+          id: deviceId,
+          userId: user?.id || 'admin_master',
+          userNome: user?.nome || (user?.usuario ? user.usuario : 'Operador do Sistema (Local)'),
+          userTipo: user?.tipo || (user?.id === 'dev' ? 'admin' : 'administrador'),
+          userEmail: user?.email || (user?.usuario ? `${user.usuario}@gipp.org` : ''),
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+          ip: realIp,
+          location: realLocation,
+          type: channelType,
+          status: 'online',
+          isCurrentDevice: true,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn("[Device Audit] Erro silencioso ao registrar batimento do aparelho:", err);
+      }
+    };
+
+    syncCurrentDevice();
+    const interval = setInterval(() => {
+      if (!isDisposed) {
+        syncCurrentDevice();
+      }
+    }, 60000); // Heartbeat a cada 60s
+
+    return () => {
+      isDisposed = true;
+      clearInterval(interval);
+    };
+  }, [appId, dbFirestore, user]);
 
   const [clearedNotifications, setClearedNotifications] = useState<string[]>(() => {
     try {
@@ -22152,7 +22213,7 @@ export default function App() {
       const baseCollections = ['usuarios', 'membros', 'congregacoes', 'fornecedores', 'centro_custo', 'departamentos', 'loja_produtos', 'loja_pedidos', 'loja_movimentacoes', 'loja_transferencias'];
       
       // Coleções transacionais pesadas (só carregam DEPOIS do login)
-      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos'];
+      const systemCollections = ['financeiro', 'carnes', 'celulas', 'celulas_relatorios', 'agenda', 'tarefas', 'ebd_turmas', 'ebd_alunos', 'ebd_licoes', 'ebd_escalas', 'missoes_missionarios', 'missoes_agencias', 'missoes_colaboradores', 'missoes_agenda', 'projetos_midia', 'solicitacoes', 'auditoria_logs', 'visitantes', 'patrimonio', 'emails', 'mural', 'pastor_agenda', 'pastor_mensagens', 'pastor_esbocos', 'pastor_atas', 'pastor_liturgias', 'support_chats', 'orcamentos', 'push_subscriptions', 'dispositivos_conectados', 'kids_criancas', 'kids_presencas', 'kids_ocorrencias', 'dp_colaboradores', 'dp_folhas', 'frotas_veiculos', 'frotas_motoristas', 'frotas_despesas', 'frotas_multas', 'secretaria_contatos', 'portal_acessos'];
 
       let collectionsToSync = [...baseCollections];
       if (user) {
@@ -22790,7 +22851,7 @@ export default function App() {
       const userRoles = getMemberFuncoesAdm(user);
       if (userRoles.length > 0) {
           if (userRoles.some(r => r === 'PASTOR PRESIDENTE' || r === 'PASTOR AUXILIAR')) {
-              const pastorPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 'access_loja_virtual'];
+              const pastorPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_ia', 'access_boletim', 'access_sec_relatorios', 'access_missoes', 'access_manual', 'access_amparo_legal', 'access_registro_software', 'access_frotas', 'access_loja_virtual', 'access_auditoria_aparelhos'];
               if (pastorPerms.includes(perm)) return true;
           }
           if (userRoles.some(r => r === 'SECRETARIO')) {
@@ -22802,7 +22863,7 @@ export default function App() {
               if (financialPerms.includes(perm)) return true;
           }
           if (userRoles.some(r => r === 'ADMINISTRADOR')) {
-              const adminPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_loja_virtual', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_docs_editor', 'access_sheets_editor', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_carnes', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
+              const adminPerms = ['access_membros', 'access_acessos_portal', 'access_visitantes', 'access_igreja', 'access_patrimonio', 'access_frotas', 'access_loja_virtual', 'access_celulas', 'access_ministerios', 'access_ministerio_louvor', 'access_ministerio_midia', 'access_ministerio_familia', 'access_sec_agenda', 'access_sec_livro_atas', 'access_sec_certificados', 'access_carteirinha_studio', 'access_credencial_lote', 'access_ebd', 'access_salinha_kids', 'access_gestao_cursos', 'access_teologia', 'access_boletim', 'access_midia', 'access_docs_editor', 'access_sheets_editor', 'access_sec_relatorios', 'access_fin_entradas', 'access_fin_saidas', 'access_fin_analise', 'access_fin_conciliacao', 'access_carnes', 'access_fin_carnes', 'access_fin_cadastros', 'access_dp_contabilidade', 'access_config_sistema', 'access_config_visual', 'access_config_backup', 'access_auditoria', 'access_auditoria_aparelhos', 'access_permissoes_planos', 'access_lixeira', 'access_manual', 'access_amparo_legal', 'access_registro_software'];
               if (adminPerms.includes(perm)) return true;
           }
           if (userRoles.some(r => r === 'ADVOGADO')) {
@@ -23742,7 +23803,7 @@ export default function App() {
                             </div>
                             <div className="text-center lg:text-left">
                                 <h2 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1">{db.igreja?.nome || "Igreja Local"}</h2>
-                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 11.0.0 Ultimate Platinum v16</p>
+                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 13.0.0 Ultimate Platinum v18</p>
                             </div>
                         </div>
                         <div>

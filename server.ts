@@ -219,6 +219,27 @@ app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
 });
 
+app.get("/api/client-info", (req, res) => {
+    try {
+        const forwarded = req.headers['x-forwarded-for'];
+        let clientIp = typeof forwarded === 'string' 
+            ? forwarded.split(',')[0].trim() 
+            : (req.socket.remoteAddress || '');
+        clientIp = clientIp.replace('::ffff:', '').trim();
+        if (!clientIp || clientIp === '::1') {
+            clientIp = '127.0.0.1';
+        }
+        res.json({
+            ip: clientIp,
+            userAgent: req.headers['user-agent'] || '',
+            language: req.headers['accept-language'] || '',
+            timestamp: new Date().toISOString()
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err?.message || 'Error getting client info' });
+    }
+});
+
 app.get("/api/admin/api-usage-stats", (req, res) => {
     let totalRequests = apiUsageLogs.length;
     let cachedRequests = apiUsageLogs.filter(l => l.status === "cached").length;

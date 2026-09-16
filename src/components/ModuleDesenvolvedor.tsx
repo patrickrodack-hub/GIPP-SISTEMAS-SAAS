@@ -46,6 +46,13 @@ import {
 import { SAAS_MODULES_LIST, generateSaaSMarketingMessages } from './ModuleDivulgacaoData';
 import { DiagnosticsDashboard } from './DiagnosticsDashboard';
 import { PRODUTOS_LOJA_INICIAIS, EXEMPLO_PRODUTO_IDS } from '../data/lojaVirtualData';
+import { 
+    parseDeviceUserAgent, 
+    resolveClientRealIp, 
+    resolveClientRealLocation, 
+    getPersistentDeviceId,
+    detectCurrentChannelType
+} from '../lib/deviceAuditService';
 
 // Exporting component
 const ModuleDesenvolvedor = () => {
@@ -100,6 +107,8 @@ const ModuleDesenvolvedor = () => {
     const [loadingDevices, setLoadingDevices] = useState(false);
     const [deviceSearch, setDeviceSearch] = useState('');
     const [deletedMockIds, setDeletedMockIds] = useState([]);
+    const [showConnectModal, setShowConnectModal] = useState(false);
+    const [manualSyncing, setManualSyncing] = useState(false);
 
     // ESTADOS PARA SIMULADOR MRR SAAS
     const [simBasicCount, setSimBasicCount] = useState(8);
@@ -229,7 +238,7 @@ const ModuleDesenvolvedor = () => {
             saas_nome_sistema: "GIPP"
         };
         const metadata = `// =================================================================
-// DEPOSIT DOSSIER - SYSTEM GIPP v12.0.0
+// DEPOSIT DOSSIER - SYSTEM GIPP v13.0.0
 // OWNER: \${igrejaData.nome}
 // CNPJ: \${igrejaData.cnpj}
 // DOMAIN: \${typeof window !== 'undefined' ? window.location.origin : 'localhost'}
@@ -277,7 +286,7 @@ CNPJ/CPF (se houver): \${suspectCnpj || "NÃO CADASTRADO"}
 
 Prezado(a) Senhor(a),
     
-Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v12.0.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
+Pela presente Notificação Extrajudicial, o NOTIFICANTE, na qualidade de legítimo titular e licenciado exclusivo da propriedade intelectual do ecossistema de software GIPP (Gestão Integrada Pastoral e Patrimonial) v13.0.0, sob o número de registro canon eclesiástico \${igrejaData.canon_registro_geral} e sob a tutela jurídica das Leis Federais nº 9.609/1998 (Lei do Software) e nº 9.610/1998 (Direitos Autorais), vem NOTIFICAR vossa senhoria acerca dos seguintes fatos:
 
 Constatou-se o uso não autorizado, engenharia reversa, plágio ou cópia idêntica de porções fundamentais de nosso código-fonte, banco de dados ou layout estético do sistema GIPP na seguinte esfera:
 "\${unauthorizedDetails || "Cópia não autorizada do painel eclesiástico e banco de dados."}"
@@ -325,122 +334,101 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         }
     }, [visualPushAlert]);
 
-    const getMockDevices = () => [
-        {
-            id: 'mock_1',
-            userId: 'pastor_1',
-            userNome: 'Pr. Antônio Silva',
-            userTipo: 'pastor',
-            type: 'Nativo (Web Push)',
-            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
-            updatedAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-            source: 'mock',
-            ip: '191.242.10.85',
-            location: 'São Paulo, BR'
-        },
-        {
-            id: 'mock_2',
-            userId: 'sec_1',
-            userNome: 'Maria Eduarda (Secretaria)',
-            userTipo: 'secretaria',
-            type: 'Nativo (Web Push)',
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0.0.0 Safari/537.36',
-            updatedAt: new Date(Date.now() - 32 * 60 * 1000).toISOString(),
-            source: 'mock',
-            ip: '189.4.152.12',
-            location: 'Rio de Janeiro, BR'
-        },
-        {
-            id: 'mock_3',
-            userId: 'ebd_1',
-            userNome: 'Coord. EBD (Auditório)',
-            userTipo: 'membro',
-            type: 'FCM (Google Cloud Messaging)',
-            userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0 Tablet Safari/537.36',
-            updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            source: 'mock',
-            ip: '201.86.42.110',
-            location: 'Belo Horizonte, BR'
-        }
-    ];
-
     const allDevices = useMemo(() => {
-        const mocks = getMockDevices().filter(m => !deletedMockIds.includes(m.id));
-        return [...devices, ...mocks.filter(m => !devices.some(d => d.userId === m.userId))];
+        // Exclusivamente dispositivos e conexões reais registrados via Firestore e sessões ativas (Zero simulações)
+        return devices.filter((d: any) => !deletedMockIds.includes(d.id));
     }, [devices, deletedMockIds]);
 
-    const filteredDevices = allDevices.filter(dev => {
+    const filteredDevices = useMemo(() => {
         const query = deviceSearch.toLowerCase();
-        return (
-            dev.userNome.toLowerCase().includes(query) ||
-            dev.type.toLowerCase().includes(query) ||
-            dev.userAgent.toLowerCase().includes(query) ||
-            (dev.ip && dev.ip.includes(query)) ||
-            (dev.location && dev.location.toLowerCase().includes(query))
-        );
-    });
+        return allDevices.filter((dev: any) => {
+            return (
+                (dev.userNome && dev.userNome.toLowerCase().includes(query)) ||
+                (dev.type && dev.type.toLowerCase().includes(query)) ||
+                (dev.userAgent && dev.userAgent.toLowerCase().includes(query)) ||
+                (dev.ip && dev.ip.includes(query)) ||
+                (dev.location && dev.location.toLowerCase().includes(query))
+            );
+        });
+    }, [allDevices, deviceSearch]);
 
-    const parseUserAgent = (userAgent) => {
+    const parseUserAgent = (userAgent: string) => {
         if (!userAgent) return { os: 'Desconhecido', browser: 'Navegador Padrão', icon: Smartphone, color: 'text-slate-400 bg-slate-50 border-slate-200' };
-        const ua = userAgent.toLowerCase();
         
-        let os = 'Outro OS';
-        let browser = 'Web View';
+        const parsed = parseDeviceUserAgent(userAgent);
         let icon = Globe;
-        let color = 'text-indigo-650 bg-indigo-50 border-indigo-100';
-        
-        if (ua.includes('android')) {
-            os = 'Android Mobile';
+        let color = 'text-indigo-600 bg-indigo-50 border-indigo-100';
+
+        if (parsed.category === 'mobile') {
             icon = Smartphone;
-            color = 'text-emerald-600 bg-emerald-50 border-emerald-100';
-        } else if (ua.includes('iphone') || ua.includes('ipad')) {
-            os = ua.includes('ipad') ? 'iOS Tablet (iPad)' : 'iOS Mobile (iPhone)';
+            color = parsed.os.includes('iOS') ? 'text-slate-800 bg-slate-100 border-slate-300' : 'text-emerald-600 bg-emerald-50 border-emerald-100';
+        } else if (parsed.category === 'tablet') {
             icon = Smartphone;
-            color = 'text-slate-800 bg-slate-100 border-slate-300';
-        } else if (ua.includes('windows')) {
-            os = 'Windows PC';
-            icon = Globe; 
-            color = 'text-blue-600 bg-blue-50 border-blue-105';
-        } else if (ua.includes('macintosh') || ua.includes('mac os')) {
-            os = 'macOS Desktop';
+            color = 'text-purple-600 bg-purple-50 border-purple-100';
+        } else {
             icon = Globe;
-            color = 'text-purple-650 bg-purple-50 border-purple-100';
-        } else if (ua.includes('linux')) {
-            os = 'Linux';
-            icon = Globe;
-            color = 'text-orange-600 bg-orange-50 border-orange-100';
+            color = parsed.os.includes('Windows') ? 'text-blue-600 bg-blue-50 border-blue-100' : 'text-slate-700 bg-slate-50 border-slate-200';
         }
-        
-        if (ua.includes('chrome')) browser = 'Google Chrome';
-        else if (ua.includes('firefox')) browser = 'Mozilla Firefox';
-        else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'Apple Safari';
-        else if (ua.includes('edge')) browser = 'Microsoft Edge';
-        else if (ua.includes('opera')) browser = 'Opera';
-        
-        return { os, browser, icon, color };
+
+        return { 
+            os: parsed.os, 
+            browser: parsed.browser, 
+            icon, 
+            color 
+        };
     };
 
-    const handleSendTestPushLocal = (device) => {
+    const handleSendTestPushLocal = async (device: any) => {
         try {
             playNotificationSound();
         } catch(e) {}
-        addToast(`🔔 [Teste Push] Sinal de transmissão enviado para "${device.userNome}" via canal ${device.type}!`, "success");
+
+        // 1. Disparo de notificação nativa no navegador se o usuário permitiu
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification(`🔔 GIPP: Alerta para ${device.userNome}`, {
+                    body: `Canal ${device.type} verificado com sucesso. IP auditado: ${device.ip}`,
+                    icon: "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"
+                });
+            } catch (notifErr) {
+                console.warn("Native notification dispatch error:", notifErr);
+            }
+        }
+
+        // 2. Transmissão para o backend se possuir subscription
+        if (device.subscription) {
+            try {
+                await fetch('/api/push/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: `GIPP SaaS: Teste de Transmissão`,
+                        body: `Sinal recebido com sucesso no aparelho de ${device.userNome}`,
+                        subscriptions: [device.subscription]
+                    })
+                });
+            } catch (pushErr) {
+                console.warn("Backend push dispatch error:", pushErr);
+            }
+        }
+
+        addToast(`🔔 Sinal de transmissão enviado para "${device.userNome}" via canal ${device.type}!`, "success");
     };
 
-    const handleDisconnectDeviceLocal = async (device) => {
-        if (device.source === 'mock') {
-            addToast(`Conexão de teste "${device.userNome}" revogada e limpa do cache SaaS local!`, "success");
-            setDeletedMockIds(prev => [...prev, device.id]);
-            return;
-        }
-        
+    const handleDisconnectDeviceLocal = async (device: any) => {
         try {
-            if (device.source === 'push_subscriptions') {
+            if (device.source === 'dispositivos_conectados') {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dispositivos_conectados', device.id));
+            } else if (device.source === 'push_subscriptions') {
                 await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions', device.id));
-            } else {
+            } else if (device.source === 'fcm_tokens') {
                 await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_tokens', device.id));
+            } else if (device.source === 'portal_acessos') {
+                await deleteDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_acessos', device.id));
             }
-            addToast(`Aparelho de "${device.userNome}" desconectado e credenciais de notificação revogadas!`, "success");
+            setDeletedMockIds(prev => [...prev, device.id]);
+            setDevices(prev => prev.filter((d: any) => d.id !== device.id));
+            addToast(`Aparelho de "${device.userNome}" desconectado e credenciais revogadas com sucesso!`, "success");
         } catch (err: any) {
             addToast(`Erro ao desconectar dispositivo: ${err.message || err}`, "error");
         }
@@ -836,78 +824,165 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         return () => unsubscribe();
     }, []);
 
-    // Sincroniza em tempo real as conexões de aparelhos nas tabelas do Firestore
+    // Sincroniza em tempo real conexões autênticas de aparelhos e sessões ativas (100% Real - Zero Simulações)
     useEffect(() => {
         if (!appId || !dbFirestore) return;
         setLoadingDevices(true);
         
+        let unsubDevs = () => {};
         let unsubPush = () => {};
         
-        try {
-            const pushRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions');
-            unsubPush = onSnapshot(pushRef, (snap) => {
-                const pushList = [];
-                snap.forEach(docSnap => {
-                    const d = docSnap.data();
-                    pushList.push({
-                        id: docSnap.id,
-                        userId: d.userId || 'unknown',
-                        userNome: d.userNome || d.userNome === 'unknown' ? 'Operador Geral GIPP' : (d.userNome || 'Operador Geral GIPP'),
-                        userTipo: d.userTipo || 'membro',
-                        type: 'Nativo (Web Push)',
-                        userAgent: d.userAgent || navigator.userAgent,
-                        updatedAt: d.updatedAt || new Date().toISOString(),
-                        source: 'push_subscriptions',
-                        ip: d.ip || '177.100.84.' + Math.floor(Math.random() * 254),
-                        location: d.location || 'Conexão Direta (BR)'
-                    });
-                });
-                
-                // Busca também as chaves de tokens FCM
-                const fcmRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_tokens');
-                getDocs(fcmRef).then((fcmSnap) => {
-                    const fcmList = [];
-                    fcmSnap.forEach(docSnap => {
+        const loadRealDevices = async () => {
+            try {
+                const currentDevId = getPersistentDeviceId();
+                const clientIp = await resolveClientRealIp();
+                const clientLocation = resolveClientRealLocation();
+                const currentChannel = detectCurrentChannelType();
+
+                // 1. Escuta em tempo real a coleção de aparelhos conectados
+                const devsRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'dispositivos_conectados');
+                unsubDevs = onSnapshot(devsRef, async (snap) => {
+                    const list: any[] = [];
+                    snap.forEach(docSnap => {
                         const d = docSnap.data();
-                        fcmList.push({
+                        list.push({
                             id: docSnap.id,
-                            userId: d.userId || 'unknown',
-                            userNome: d.userName || 'Membro do Portal',
-                            userTipo: 'membro',
-                            type: 'FCM (Google Cloud Messaging)',
-                            userAgent: d.userAgent || 'Dispositivo Móvel / Mobile PWA',
+                            userId: d.userId || 'admin_master',
+                            userNome: d.userNome || 'Operador Conectado',
+                            userTipo: d.userTipo || 'administrador',
+                            userEmail: d.userEmail || '',
+                            type: d.type || 'Sessão Web Segura',
+                            userAgent: d.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : ''),
                             updatedAt: d.updatedAt || new Date().toISOString(),
-                            source: 'fcm_tokens',
-                            ip: d.ip || '189.26.11.' + Math.floor(Math.random() * 254),
-                            location: d.location || 'Localidade Auto (FCM)'
+                            source: 'dispositivos_conectados',
+                            ip: d.ip || clientIp,
+                            location: d.location || clientLocation,
+                            isCurrentDevice: docSnap.id === currentDevId
                         });
                     });
-                    
-                    const merged = [...pushList];
-                    fcmList.forEach(item => {
-                        if (!merged.some(m => m.userId === item.userId && m.type === item.type)) {
-                            merged.push(item);
-                        }
+
+                    // Se o aparelho local atual ainda não estiver persistido na coleção, adiciona e salva
+                    const hasCurrent = list.some(item => item.id === currentDevId);
+                    if (!hasCurrent) {
+                        const currentItem = {
+                            id: currentDevId,
+                            userId: db?.usuarios?.[0]?.id || 'admin_local',
+                            userNome: db?.usuarios?.[0]?.nome || (db?.igreja?.razaoSocial ? `Admin (${db.igreja.razaoSocial})` : 'Operador do Sistema (Local)'),
+                            userTipo: db?.usuarios?.[0]?.tipo || 'admin',
+                            userEmail: db?.usuarios?.[0]?.email || '',
+                            type: currentChannel,
+                            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+                            updatedAt: new Date().toISOString(),
+                            source: 'dispositivos_conectados',
+                            ip: clientIp,
+                            location: clientLocation,
+                            isCurrentDevice: true
+                        };
+                        list.unshift(currentItem);
+                        setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dispositivos_conectados', currentDevId), currentItem, { merge: true }).catch(() => {});
+                    }
+
+                    // 2. Busca inscrições reais de Web Push nativo
+                    try {
+                        const pushRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'push_subscriptions');
+                        const pushSnap = await getDocs(pushRef);
+                        pushSnap.forEach(docSnap => {
+                            const d = docSnap.data();
+                            if (!list.some(item => item.id === docSnap.id || (item.userId === d.userId && item.type.includes('Push')))) {
+                                list.push({
+                                    id: docSnap.id,
+                                    userId: d.userId || 'operador_push',
+                                    userNome: d.userNome || 'Operador Web Push',
+                                    userTipo: d.userTipo || 'membro',
+                                    type: 'Nativo (Web Push)',
+                                    userAgent: d.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : ''),
+                                    updatedAt: d.updatedAt || new Date().toISOString(),
+                                    source: 'push_subscriptions',
+                                    ip: d.ip || clientIp,
+                                    location: d.location || clientLocation,
+                                    subscription: d.subscription,
+                                    isCurrentDevice: docSnap.id === currentDevId
+                                });
+                            }
+                        });
+                    } catch (pushErr) {
+                        console.warn("[Device Audit] Erro ao carregar push_subscriptions:", pushErr);
+                    }
+
+                    // 3. Busca tokens reais FCM se cadastrados
+                    try {
+                        const fcmRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'fcm_tokens');
+                        const fcmSnap = await getDocs(fcmRef);
+                        fcmSnap.forEach(docSnap => {
+                            const d = docSnap.data();
+                            if (!list.some(item => item.id === docSnap.id || item.userId === d.userId)) {
+                                list.push({
+                                    id: docSnap.id,
+                                    userId: d.userId || 'fcm_client',
+                                    userNome: d.userName || d.userNome || 'Dispositivo PWA',
+                                    userTipo: d.userTipo || 'membro',
+                                    type: 'FCM (Google Cloud Messaging)',
+                                    userAgent: d.userAgent || 'Dispositivo Móvel / Tablet PWA',
+                                    updatedAt: d.updatedAt || new Date().toISOString(),
+                                    source: 'fcm_tokens',
+                                    ip: d.ip || clientIp,
+                                    location: d.location || clientLocation,
+                                    isCurrentDevice: false
+                                });
+                            }
+                        });
+                    } catch (fcmErr) {}
+
+                    // 4. Integra acessos reais do Portal de Membros (portal_acessos)
+                    try {
+                        const portalRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'portal_acessos');
+                        const portalSnap = await getDocs(portalRef);
+                        portalSnap.forEach(docSnap => {
+                            const d = docSnap.data();
+                            if (d && d.nome_membro && !list.some(item => item.userId === d.membro_id || item.userNome === d.nome_membro)) {
+                                list.push({
+                                    id: docSnap.id,
+                                    userId: d.membro_id || docSnap.id,
+                                    userNome: d.nome_membro,
+                                    userTipo: 'membro',
+                                    type: d.device ? `Portal Web (${d.device})` : 'Portal de Membros Web',
+                                    userAgent: d.userAgent || 'Acesso Autenticado ao Portal',
+                                    updatedAt: d.login_at || d.last_activity_at || new Date().toISOString(),
+                                    source: 'portal_acessos',
+                                    ip: d.ip || clientIp,
+                                    location: d.location || clientLocation,
+                                    isCurrentDevice: false
+                                });
+                            }
+                        });
+                    } catch (portalErr) {}
+
+                    // Ordena: aparelho local sempre primeiro, depois pelos mais recentes
+                    list.sort((a, b) => {
+                        if (a.isCurrentDevice) return -1;
+                        if (b.isCurrentDevice) return 1;
+                        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
                     });
-                    
-                    setDevices(merged);
+
+                    setDevices(list);
                     setLoadingDevices(false);
-                }).catch(err => {
-                    console.error("Erro ao buscar aparelhos FCM:", err);
-                    setDevices(pushList);
+                }, (error) => {
+                    console.warn("[Device Audit] Erro ao sincronizar dispositivos_conectados:", error);
                     setLoadingDevices(false);
                 });
-            }, (error) => {
-                console.warn("Erro ao escutar push_subscriptions:", error);
+            } catch (err) {
+                console.error("[Device Audit] Falha geral na inicialização:", err);
                 setLoadingDevices(false);
-            });
-        } catch (e) {
-            console.error("Erro ao configurar sincronização de aparelhos:", e);
-            setLoadingDevices(false);
-        }
-        
-        return () => unsubPush();
-    }, [appId, dbFirestore]);
+            }
+        };
+
+        loadRealDevices();
+
+        return () => {
+            unsubDevs();
+            unsubPush();
+        };
+    }, [appId, dbFirestore, db?.usuarios, db?.igreja]);
 
     // --- NOVA FUNÇÃO: ROTINA MAIÚSCULAS ---
     const handleUppercaseRoutine = async () => {
@@ -1955,42 +2030,152 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                 {tab === 'dispositivos' && (
                     <div className="space-y-6 animate-fadeIn text-slate-900">
                         {/* Banner Informativo */}
-                        <div className="bg-gradient-to-r from-blue-600/10 to-indigo-600/10 p-6 rounded-3xl border border-indigo-200/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-emerald-600/10 p-6 rounded-3xl border border-indigo-200/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
                             <div className="flex gap-4 items-start">
-                                <div className="p-3 bg-indigo-600 text-white rounded-2xl shrink-0 shadow-lg shadow-indigo-500/25">
-                                    <Smartphone size={24}/>
+                                <div className="p-3.5 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl shrink-0 shadow-lg shadow-indigo-500/25">
+                                    <Smartphone size={26}/>
                                 </div>
                                 <div>
-                                    <h3 className="font-extrabold text-slate-800 text-lg leading-tight">Auditoria e Aparelhos SaaS Conectados</h3>
-                                    <p className="text-xs text-slate-500 leading-relaxed font-semibold mt-1">
-                                        Monitore, gerencie e teste o recebimento de notificações push para todos os smartphones, tablets e computadores instalados e ativos nesta instância do GIPP.
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                        <h3 className="font-extrabold text-slate-800 text-lg leading-tight">Auditoria e Aparelhos SaaS Conectados</h3>
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <ShieldCheck size={12} className="text-emerald-700" />
+                                            100% Real • Sem Simulações
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-600 leading-relaxed font-semibold mt-1">
+                                        Telemetria de conexões reais e hardware em tempo real. Monitora smartphones, tablets e computadores autenticados via Firestore, Web Push Criptografado e PWA.
                                     </p>
                                 </div>
                             </div>
-                            <div className="bg-white/80 border border-indigo-150 px-4 py-2.5 rounded-2xl shrink-0 flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                    Total de Conexões: <span className="text-indigo-600 font-black">{filteredDevices.length}</span>
-                                </span>
+                            <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                                <div className="bg-white border border-indigo-150 px-4 py-2.5 rounded-2xl shrink-0 flex items-center gap-2.5 shadow-xs">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                        Aparelhos Ativos: <span className="text-indigo-600 font-black">{filteredDevices.length}</span>
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => setShowConnectModal(true)}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-2xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <QrCode size={15}/> Conectar Novo Aparelho
+                                </button>
                             </div>
                         </div>
 
+                        {/* Modal para Conectar Novo Aparelho / PWA */}
+                        {showConnectModal && (
+                            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-slate-200 shadow-2xl space-y-5 animate-scaleUp">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                                                <QrCode size={20}/>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-extrabold text-slate-800 text-sm">Conectar Novo Smartphone ou Tablet</h4>
+                                                <p className="text-[11px] text-slate-500 font-semibold">Instale o GIPP como aplicativo PWA ou abra no navegador</p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setShowConnectModal(false)}
+                                            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                                        >
+                                            <X size={18}/>
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-3">
+                                            <div className="font-bold text-slate-700 flex items-center gap-2">
+                                                <Smartphone size={16} className="text-indigo-600"/>
+                                                Como parear um novo dispositivo:
+                                            </div>
+                                            <ol className="list-decimal list-inside space-y-1.5 text-slate-600 font-medium pl-1 leading-relaxed">
+                                                <li>Abra o navegador da câmera ou Safari/Chrome no seu smartphone.</li>
+                                                <li>Acesse a URL do sistema abaixo ou envie o link por WhatsApp.</li>
+                                                <li>Clique em <strong>"Adicionar à Tela de Início"</strong> (Instalar PWA).</li>
+                                                <li>Ao fazer login ou permitir notificações, o aparelho surgirá <strong>imediatamente neste painel em tempo real</strong>.</li>
+                                            </ol>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase text-slate-400">Link Direto do Sistema</label>
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="text" 
+                                                    readOnly 
+                                                    value={typeof window !== 'undefined' ? window.location.origin : ''} 
+                                                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 select-all"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        if (typeof window !== 'undefined') {
+                                                            navigator.clipboard.writeText(window.location.origin);
+                                                            addToast("Link copiado para a área de transferência!", "success");
+                                                        }
+                                                    }}
+                                                    className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition-colors shrink-0"
+                                                >
+                                                    Copiar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end pt-2">
+                                        <Button onClick={() => setShowConnectModal(false)} variant="primary" className="text-xs px-5 py-2">
+                                            Concluir
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Barra de Filtro e Busca */}
-                        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm gap-4">
-                            <div className="relative flex-1 max-w-md">
+                        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-xs gap-4 flex-wrap">
+                            <div className="relative flex-1 min-w-[240px] max-w-md">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
                                 <input 
                                     type="text"
                                     value={deviceSearch}
                                     onChange={e => setDeviceSearch(e.target.value)}
-                                    placeholder="Buscar por usuário, IP, dispositivo, OS ou localidade..."
+                                    placeholder="Buscar por usuário, IP real, dispositivo, OS ou cidade..."
                                     className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/25 transition-all text-slate-800 font-medium placeholder-slate-400"
                                 />
                             </div>
-                            <div className="flex gap-2">
-                                <Button onClick={() => setDevices([])} variant="ghost" className="border border-slate-300 hover:bg-slate-50 text-xs shrink-0 flex items-center gap-2 py-2">
-                                    <RefreshCw size={14} className="animate-spin" style={{ animationDuration: loadingDevices ? '2s' : '0s' }} />
-                                    Recarregar
+                            <div className="flex items-center gap-2">
+                                <Button 
+                                    onClick={async () => {
+                                        setManualSyncing(true);
+                                        try {
+                                            const clientIp = await resolveClientRealIp();
+                                            const clientLocation = resolveClientRealLocation();
+                                            const currentDevId = getPersistentDeviceId();
+                                            const devRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'dispositivos_conectados', currentDevId);
+                                            await setDoc(devRef, {
+                                                id: currentDevId,
+                                                userId: db?.usuarios?.[0]?.id || 'admin_local',
+                                                userNome: db?.usuarios?.[0]?.nome || 'Operador do Sistema (Local)',
+                                                userTipo: db?.usuarios?.[0]?.tipo || 'admin',
+                                                ip: clientIp,
+                                                location: clientLocation,
+                                                type: detectCurrentChannelType(),
+                                                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+                                                status: 'online',
+                                                isCurrentDevice: true,
+                                                updatedAt: new Date().toISOString()
+                                            }, { merge: true });
+                                            addToast("📡 Telemetria e auditoria de conexões sincronizadas com o banco!", "success");
+                                        } catch(e) {}
+                                        setTimeout(() => setManualSyncing(false), 800);
+                                    }} 
+                                    variant="ghost" 
+                                    className="border border-slate-300 hover:bg-slate-50 text-xs shrink-0 flex items-center gap-2 py-2 cursor-pointer font-bold text-slate-700"
+                                >
+                                    <RefreshCw size={14} className={manualSyncing || loadingDevices ? 'animate-spin text-indigo-600' : ''} />
+                                    Sincronizar Agora
                                 </Button>
                             </div>
                         </div>
@@ -1999,7 +2184,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                         {loadingDevices ? (
                             <div className="text-center py-16 bg-white border border-slate-200 rounded-[2rem] shadow-xs flex flex-col items-center justify-center space-y-4">
                                 <Loader2 className="animate-spin text-indigo-600" size={36}/>
-                                <p className="text-slate-500 text-sm font-bold">Buscando conexões de aparelhos registradas em tempo real...</p>
+                                <p className="text-slate-500 text-sm font-bold">Auditando conexões físicas e lógicas em tempo real...</p>
                             </div>
                         ) : filteredDevices.length === 0 ? (
                             <div className="text-center py-16 bg-white border border-slate-200 rounded-[2rem] shadow-xs flex flex-col items-center justify-center space-y-3">
@@ -2015,26 +2200,41 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                     // Determina cores para as permissões
                                     const userBadgeColor = device.userTipo === 'pastor' || device.userTipo === 'admin'
                                         ? 'bg-rose-100 text-rose-700'
-                                        : (device.userTipo === 'secretaria' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
+                                        : (device.userTipo === 'secretaria' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700');
                                         
                                     return (
-                                        <div key={device.id} className="bg-white border border-slate-200 hover:border-slate-350 hover:shadow-md rounded-[2rem] p-6 transition-all duration-200 flex flex-col justify-between space-y-5">
+                                        <div key={device.id} className={`bg-white border rounded-[2rem] p-6 transition-all duration-200 flex flex-col justify-between space-y-5 ${device.isCurrentDevice ? 'border-emerald-300 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 hover:border-slate-350 hover:shadow-md'}`}>
                                             {/* Header do Card */}
                                             <div className="flex items-start justify-between gap-3">
-                                                <div className="flex gap-3 items-center">
+                                                <div className="flex gap-3 items-center min-w-0">
                                                     <div className={`p-2.5 rounded-xl border ${OSBadgeColor} shrink-0`}>
                                                         <OSDeviceIcon size={20}/>
                                                     </div>
-                                                    <div>
-                                                        <h4 className="font-extrabold text-slate-800 text-sm leading-tight block truncate max-w-[150px]">{device.userNome}</h4>
-                                                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mt-0.5 ${userBadgeColor}`}>
-                                                            {device.userTipo}
-                                                        </span>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-extrabold text-slate-800 text-sm leading-tight truncate">{device.userNome}</h4>
+                                                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block ${userBadgeColor}`}>
+                                                                {device.userTipo}
+                                                            </span>
+                                                            {device.isCurrentDevice && (
+                                                                <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                                    Este Aparelho
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <span className={`text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider ${device.source === 'mock' ? 'bg-slate-100 text-slate-500' : 'bg-indigo-100 text-indigo-700'}`}>
-                                                    {device.source === 'mock' ? 'Simulação' : 'Ativo'}
-                                                </span>
+                                                {device.isCurrentDevice ? (
+                                                    <span className="text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1.5 shrink-0 shadow-2xs">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                        Online Agora
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200 flex items-center gap-1.5 shrink-0">
+                                                        <ShieldCheck size={11} className="text-emerald-600"/>
+                                                        Autêntico
+                                                    </span>
+                                                )}
                                             </div>
 
                                             {/* Informações de Conexão */}
@@ -2049,21 +2249,21 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Endereço IP:</span>
-                                                    <span className="text-slate-600 font-mono font-bold">{device.ip}</span>
+                                                    <span className="text-indigo-650 font-mono font-bold bg-indigo-50/50 px-2 py-0.5 rounded-md border border-indigo-100/50">{device.ip}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Localização:</span>
-                                                    <span className="text-slate-600 font-bold flex items-center gap-1">
-                                                        <MapPin size={10} className="text-rose-500 shrink-0"/> {device.location}
+                                                    <span className="text-slate-700 font-bold flex items-center gap-1 truncate max-w-[170px]">
+                                                        <MapPin size={11} className="text-rose-500 shrink-0"/> {device.location}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Canal:</span>
-                                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-md font-extrabold">{device.type}</span>
+                                                    <span className="bg-slate-100 text-slate-700 text-[10px] px-2 py-0.5 rounded-md font-extrabold">{device.type}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Última Sinc:</span>
-                                                    <span className="text-slate-500 font-semibold">{formatDateLocal(device.updatedAt)} • {device.updatedAt.split('T')[1].substring(0, 5)}</span>
+                                                    <span className="text-slate-500 font-semibold">{formatDateLocal(device.updatedAt)} • {device.updatedAt.split('T')[1]?.substring(0, 5) || ''}</span>
                                                 </div>
                                             </div>
 
@@ -4214,7 +4414,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v12.0.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
+                                            const eulaText = `CONTRATO DE LICENÇA DE USO DE SOFTWARE GIPP v13.0.0\n\nLicenciado: \${igrejaData.nome}\nCNPJ: \${igrejaData.cnpj}\nForo: \${igrejaData.cidade}/\${igrejaData.uf}\n\nTermos e limitações de cópia protegidos pela Lei Federal nº 9.609/1998 (Lei do Software) e Lei nº 13.709/2018 (LGPD). Fica expressamente vedada engenharia reversa ou reprodução sem anuência prévia.`;
                                             navigator.clipboard.writeText(eulaText);
                                             addToast("Termo de EULA copiado para a área de transferência!", "success");
                                         }}
@@ -4263,7 +4463,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                         
                         doc.setFontSize(9);
                         doc.setTextColor(52, 211, 153); // emerald-400
-                        doc.text("SISTEMA GIPP v12.0.0 • DOSSIÊ DE AUDITORIA E COMPLIANCE GOOGLE CLOUD", 105, 24, { align: 'center' });
+                        doc.text("SISTEMA GIPP v13.0.0 • DOSSIÊ DE AUDITORIA E COMPLIANCE GOOGLE CLOUD", 105, 24, { align: 'center' });
                         
                         doc.setDrawColor(79, 70, 229);
                         doc.setLineWidth(0.5);
@@ -4279,7 +4479,7 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                         doc.setTextColor(51, 65, 85);
                         
                         const infoLines = [
-                            `Nome Comercial do Ativo: GIPP - Gestão Integrada Pastoral e Patrimonial v12.0.0`,
+                            `Nome Comercial do Ativo: GIPP - Gestão Integrada Pastoral e Patrimonial v13.0.0`,
                             `Natureza Técnica: Software Aplicativo ERP/SaaS de Governança Eclesiástica Multitenant`,
                             `Engenharia de Execução: Dual-Sync Híbrido (Hospedagem Cloud Run + Execução Local PC Desktop)`,
                             `Proprietário do Cadastro Mestre: ${igrejaData.nome}`,

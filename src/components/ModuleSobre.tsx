@@ -53,7 +53,7 @@ const ModuleSobre = () => {
                     <Building2 size={48} className="text-white"/>
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight block uppercase">{db.igreja?.saas_nome_sistema || "GIPP - GESTÃO DE IGREJA"}</h2>
-                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">{db.igreja?.saas_versao_sistema || "Versão 11.0.0 Ultimate Platinum v16"}</p>
+                <p className="text-indigo-600 font-black tracking-widest uppercase text-sm bg-indigo-50 px-4 py-2.5 rounded-full inline-block border border-indigo-200/50 shadow-xs">{db.igreja?.saas_versao_sistema || "Versão 13.0.0 Ultimate Platinum v18"}</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -164,7 +164,7 @@ const ModuleSobre = () => {
                         <p className="text-slate-500 text-xs mt-1 font-semibold">Os pilares e engenharia de software de classe mundial integrados ao nosso ecossistema eclesiástico.</p>
                     </div>
                     <div className="text-xs font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
-                        Tecnologias de Ponta Ativas: <span className="text-indigo-600 font-extrabold">10 Motores</span>
+                        Tecnologias de Ponta Ativas: <span className="text-indigo-600 font-extrabold">11 Motores</span>
                     </div>
                 </div>
 
@@ -248,6 +248,15 @@ const ModuleSobre = () => {
                             <h4 className="font-extrabold text-sm text-slate-850 font-sans">PDF & Canvas HD Spooler</h4>
                         </div>
                         <p className="text-xs text-slate-500 leading-relaxed font-medium">Geração e captura rasterizada vetorizada em alta resolução para a emissão canônica instantânea de certificados, comprovantes e relatórios.</p>
+                    </div>
+
+                    {/* Harmonic Chord Engine & Live Worship */}
+                    <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center gap-3.5 mb-3">
+                            <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600 border border-violet-100"><Music size={20}/></div>
+                            <h4 className="font-extrabold text-sm text-slate-850 font-sans">Harmonic Engine & Worship Reader</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">Motor de transposição harmônica de cifras em tempo real, capotraste inteligente, auto-scroll com velocidade calibrada e metrônomo Web Audio API.</p>
                     </div>
                 </div>
             </div>

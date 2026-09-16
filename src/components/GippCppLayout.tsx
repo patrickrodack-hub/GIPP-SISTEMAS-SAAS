@@ -1174,16 +1174,16 @@ export const GippCppLayout: React.FC<GippCppLayoutProps> = ({
           {/* Panel 3: Version (Versão Original & Atual do Sistema GIPP) */}
           <div 
             className="px-2.5 py-0.5 bg-[#e0e0e0]/70 border-t border-l border-[#808080] border-b border-r border-white min-w-[70px] text-center text-slate-800 flex items-center justify-center gap-1.5 select-none"
-            title="GIPP.® SISTEMAS — Versão Atual: 11.0.0 Ultimate Platinum v16 (Versão Original: 1.1.8689)"
+            title="GIPP.® SISTEMAS — Versão Atual: 13.0.0 Ultimate Platinum v18 (Versão Original: 1.1.9200)"
           >
             <span className="hidden sm:inline font-bold text-[#005a9e] tracking-tight">
-              {db?.igreja?.saas_versao_sistema || "Versão 11.0.0 Ultimate Platinum v16"}
+              {db?.igreja?.saas_versao_sistema || "Versão 13.0.0 Ultimate Platinum v18"}
             </span>
             <span className="sm:hidden font-bold text-[#005a9e]">
-              v11.0.0 v16
+              v13.0.0 v18
             </span>
             <span className="text-slate-500 font-mono text-[10px] hidden md:inline font-semibold">
-              • 1.1.8689
+              • 1.1.9200
             </span>
           </div>
         </div>

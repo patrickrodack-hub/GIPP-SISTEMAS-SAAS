@@ -1,6 +1,6 @@
 {
   "name": "Gestão de Igreja - GIPP",
-  "description": "Sistema completo de administração eclesiástica, incluindo painel de membros, financeiro, EBD, missões, teologia e loja virtual integrada com esteira comercial e separação de pedidos.",
+  "description": "Sistema de gestão eclesiástica GIPP v13.0.0 com auditoria de aparelhos SaaS em tempo real, telemetria de hardware, louvor com cifras dinâmicas, teologia CGADB/CPAD, loja virtual e Google Workspace.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

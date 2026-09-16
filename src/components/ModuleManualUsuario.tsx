@@ -7,7 +7,7 @@ import {
   Sparkles, Layers, Cpu, CheckSquare, RefreshCw, Printer, Trash2, Heart,
   Briefcase, MessageSquare, Clipboard, Share2, Eye, Key, Sliders, Database,
   Plus, GraduationCap, Baby, ShieldAlert, X, Gamepad2, Table, Video, Globe,
-  CreditCard, ShoppingBag
+  CreditCard, ShoppingBag, Music, Smartphone
 } from 'lucide-react';
 import { GoogleGLogo, GoogleAuthorizedBadge } from './GoogleIcons';
 import { jsPDF } from 'jspdf';
@@ -55,7 +55,149 @@ export default function ModuleManualUsuario() {
 
     const code = subMod.id.toLowerCase();
     
-    if (['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(code)) {
+    if (code.startsWith('ml')) {
+      if (code === 'ml1') {
+        introTexts = [
+          `O Módulo de Repertório Musical & Pastas Litúrgicas (GIPP-ML1) centraliza o acervo completo de cânticos, hinos da Harpa Cristã e louvores congregacionais da igreja.`,
+          `Permite catalogar músicas por tonalidade, andamento (BPM), autor e organizá-las em pastas litúrgicas personalizadas para cultos dominicais, vigílias, conferências e congressos.`
+        ];
+        steps = [
+          `Acesse o Ministério de Louvor no menu lateral ou clique no Portal de Repertório.`,
+          `Crie ou selecione uma Pasta Litúrgica (ex: "Culto da Família", "Vigília de Avivamento").`,
+          `Adicione músicas à setlist litúrgica organizando a ordem sequencial dos cânticos.`,
+          `Abra as cifras e visualize o tom de referência, compasso e arranjos combinados nos ensaios.`
+        ];
+        securityLevel = "Líder de Louvor / Músicos & Levitas Cadastrados";
+        securityText = `O acesso ao repertório é irrestrito para consulta de levitas e cantores, resguardando a edição das pastas oficiais apenas aos líderes e coordenadores musicais.`;
+        faqs = [
+          { q: "Posso exportar a setlist completa para o grupo de louvor no WhatsApp?", a: "Sim, através do botão de compartilhamento rápido que gera o roteiro com títulos, tons e links de cifras." }
+        ];
+        tips = [
+          "Defina as pastas de culto com antecedência para que a equipe estude as músicas antes do ensaio.",
+          "Mantenha os campos de tom original e BPM preenchidos para orientar a banda."
+        ];
+      } else if (code === 'ml2') {
+        introTexts = [
+          `O Motor de Transposição Harmônica Dinâmica (GIPP-ML2) recalcula instantaneamente toda a estrutura tonal da música em semitons ascendentes e descendentes.`,
+          `Suporta dissonâncias avançadas, acordes com baixo invertido (como D/F#, G/B, C/E) e armaduras com sustenidos (#) e bemóis (b) sem quebrar o layout da letra.`
+        ];
+        steps = [
+          `Abra a cifra da música desejada no Repertório ou no Leitor de Culto.`,
+          `Utilize os botões de Tom (+ / -) na barra superior ou no dock de controle.`,
+          `Observe a cifra ser recalculada em 0ms com todas as notas e notas de baixo atualizadas.`,
+          `Se desejar voltar ao tom original, utilize o botão de reset de tonalidade.`
+        ];
+        securityLevel = "Ministro de Louvor / Instrumentistas / Solistas";
+        securityText = `A transposição harmônica ocorre em memória de forma não destrutiva, preservando a cifra matriz intacta no banco de dados enquanto permite a cada cantor ajustar o tom à sua extensão vocal.`;
+        faqs = [
+          { q: "A transposição altera notas com baixos invertidos?", a: "Sim, tanto a nota fundamental quanto o baixo depois da barra invertida (/) são transpostos com precisão matemática harmônica." }
+        ];
+        tips = [
+          "Teste a extensão vocal do solista no ensaio e anote o semitom ideal nas observações da pasta litúrgica.",
+          "Em caso de modulações no final da música, utilize o botão (+) para acompanhar a elevação de meio tom."
+        ];
+      } else if (code === 'ml3') {
+        introTexts = [
+          `O Módulo de Capotraste Inteligente & Digitação de Formas (GIPP-ML3) calcula a posição exata da braçadeira no braço do violão/guitarra (1ª à 7ª casa).`,
+          `Calcula a transposição inversa automática, mostrando ao músico exatamente qual 'forma' de acorde simples ele deve tocar para soar na tonalidade real da banda.`
+        ];
+        steps = [
+          `Ao abrir a cifra, localize o seletor 'Capotraste' na barra de ferramentas.`,
+          `Escolha a casa desejada (ex: 1ª, 2ª ou 3ª casa).`,
+          `O sistema exibe o tom real resultante e atualiza as formas dos acordes para dedilhado amigável.`,
+          `Toque as formas exibidas com o capotraste encaixado na casa correspondente.`
+        ];
+        securityLevel = "Violonistas / Guitarristas / Equipe de Cordas";
+        securityText = `O capotraste é processado localmente no leitor do músico, permitindo que o violonista use capotraste na 3ª casa enquanto o tecladista lê no tom real sem interferência mútua.`;
+        faqs = [
+          { q: "Qual a vantagem de usar o capotraste no louvor?", a: "Permite utilizar cordas soltas com sonoridade brilhante e aberta mesmo quando a congregação canta em tons com muitos sustenidos ou bemóis (ex: Eb, Ab, F#)." }
+        ];
+        tips = [
+          "Para músicas em Mi bemol (Eb), experimente Capotraste na 1ª casa tocando as formas simples de Ré (D).",
+          "Para músicas em Fá sustenido (F#), use Capotraste na 2ª casa tocando as formas de Mi (E)."
+        ];
+      } else if (code === 'ml4') {
+        introTexts = [
+          `O Auto-Scroll Contínuo & Controle de Velocidade (GIPP-ML4) automatiza a rolagem vertical suave da cifra durante a execução musical ao vivo.`,
+          `Elimina a necessidade de tirar as mãos do instrumento para rolar a tela, oferecendo seletor de velocidade calibrado (0.5x a 3.0x), atalho ergonômico por teclado (Barra de Espaço) e parada no fim da música.`
+        ];
+        steps = [
+          `Abra qualquer cifra no modo normal ou em tela cheia (Full Screen).`,
+          `Pressione o botão 'Auto-Scroll' no dock inferior ou aperte a Barra de Espaço no teclado.`,
+          `Ajuste a velocidade da rolagem conforme o andamento da música (0.5x para hinos lentos, até 3.0x para cânticos de celebração).`,
+          `Pressione Espaço novamente a qualquer momento para pausar ou reiniciar a rolagem.`
+        ];
+        securityLevel = "Todos os Músicos e Cantores do Altar";
+        securityText = `A engrenagem de animação utiliza requestAnimationFrame com cálculo delta de alta precisão (60fps), evitando travamentos ou saltos bruscos mesmo em dispositivos móveis.`;
+        faqs = [
+          { q: "Posso usar pedal Bluetooth para ligar o auto-scroll?", a: "Sim, pedais Bluetooth configurados para enviar comando de tecla de Espaço ou Page Down acionam o auto-scroll instantaneamente." }
+        ];
+        tips = [
+          "Inicie a rolagem em 1.0x e aumente suavemente se a letra for longa.",
+          "Use a visualização em 2 colunas para músicas curtas, dispensando qualquer rolagem."
+        ];
+      } else if (code === 'ml5') {
+        introTexts = [
+          `O Cursor Vertical de Foco & Realce da Linha Ativa (GIPP-ML5) projeta um guia visual dinâmico com barra vertical âmbar e realce de fundo na linha em execução.`,
+          `Calcula a linha central posicionada a 30% da área útil da tela, permitindo que os olhos do músico foquem com facilidade no compasso certo sem se perder na leitura.`
+        ];
+        steps = [
+          `Durante a rolagem da cifra, observe a barra vertical âmbar destacando a linha ativa atual.`,
+          `Toque ou clique sobre qualquer verso para posicionar instantaneamente o foco naquela linha.`,
+          `Utilize as setas verticais no dock de controle para subir ou descer linha por linha de forma precisa.`,
+          `O contador exibe a linha atual e o total de linhas da folha musical.`
+        ];
+        securityLevel = "Músicos / Cantores do Altar / Operadores de Telão";
+        securityText = `O realce de linha respeita contrastes WCAG AA, garantindo visualização perfeita sob holofotes de palco ou em ambientes escuros.`;
+        faqs = [
+          { q: "O clique na linha funciona com o auto-scroll ativado?", a: "Sim, ao clicar em uma estrofe, o leitor centraliza aquela linha imediatamente e continua a rolagem suave a partir dela." }
+        ];
+        tips = [
+          "Durante pontes ou repetições de refrão, clique diretamente no refrão para saltar a leitura sem interrupções.",
+          "Em tablets no púlpito, mantenha o modo escuro ativo para maior discrição litúrgica."
+        ];
+      } else if (code === 'ml6') {
+        introTexts = [
+          `O Leitor de Culto ao Vivo - Worship Live Reader (GIPP-ML6) é a estação de trabalho completa de palco para a equipe de louvor e obreiros do som.`,
+          `Reúne em uma tela imersiva sem distrações a setlist do culto, atalhos de transição rápida entre canções (Setas Esquerda/Direita), modo palco escuro (Dark Stage) e divisão em colunas.`
+        ];
+        steps = [
+          `Abra a pasta litúrgica do culto e clique em 'Iniciar Culto ao Vivo (Live Reader)'.`,
+          `Navegue pelas músicas da setlist usando os botões 'Anterior' e 'Próxima' ou as teclas de seta do teclado.`,
+          `Ative a visualização em Tela Cheia para ocultar menus do navegador e focar 100% na liturgia.`,
+          `Alterne entre modo claro (para ensaios diurnos) e modo escuro (para o altar durante o culto).`
+        ];
+        securityLevel = "Líder de Louvor / Ministros / Operadores de Áudio e Mídia";
+        securityText = `Projetado para missão crítica durante cultos ao vivo: previne bloqueio de tela do dispositivo e opera com armazenamento local para não falhar mesmo com quedas na conexão de internet.`;
+        faqs = [
+          { q: "Se a internet do templo cair durante o culto o leitor continua funcionando?", a: "Sim, todas as cifras e músicas da pasta ficam salvas no cache local do dispositivo e abrem normalmente sem internet." }
+        ];
+        tips = [
+          "Conecte um tablet no pedestal do microfone e habilite a navegação por gestos de deslizar.",
+          "Use a tecla F11 ou o botão de tela cheia para maximizar a área de leitura no palco."
+        ];
+      } else if (code === 'ml7') {
+        introTexts = [
+          `O Metrônomo Sonoro e Visual Integrado (GIPP-ML7) fornece sincronismo de tempo preciso para instrumentistas através de síntese de áudio Web Audio API.`,
+          `Possui acentuação do primeiro tempo do compasso com tom diferenciado, suporte a compassos simples e compostos (2/4, 3/4, 4/4, 6/8), tap tempo e indicador visual pulsante.`
+        ];
+        steps = [
+          `No dock de controle da cifra ou leitor, clique no ícone do metrônomo.`,
+          `Defina o andamento em BPM ou dê toques repetidos no botão 'Tap Tempo' no ritmo da música.`,
+          `Selecione a métrica do compasso (ex: 4/4 para hinos tradicionais ou 6/8 para baladas de louvor).`,
+          `Inicie a contagem e acompanhe o clique sonoro nos fones (in-ear) e o pulso luminoso na tela.`
+        ];
+        securityLevel = "Bateristas / Baixistas / Regentes / Toda a Banda";
+        securityText = `A sintetização por oscilador Web Audio API opera na thread de áudio do sistema com latência inferior a 5 milissegundos, garantindo rigor métrico de estúdio profissional.`;
+        faqs = [
+          { q: "Posso usar o metrônomo apenas no modo visual sem som?", a: "Sim, basta zerar o volume de saída do áudio e acompanhar a barra de pulso rítmico luminoso na tela." }
+        ];
+        tips = [
+          "Para bateristas que usam fones de retorno (in-ear), o clique do metrônomo mantém a banda no andamento exato.",
+          "Use o Tap Tempo durante o ensaio para descobrir com exatidão o andamento confortável para os cantores."
+        ];
+      }
+    } else if (['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(code)) {
       if (code === 'k1') {
         introTexts = [
           `O Módulo de Check-in e Check-out Seguro da Salinha Kids (GIPP-K1) oferece proteção incondicional às crianças entregues aos cuidados da igreja durante as liturgias e cultos dominicais.`,
@@ -1231,7 +1373,20 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     { id: 'lj1', name: 'Loja Virtual Eclesiástica & Vitrine Online', category: 'secretaria', desc: 'Catálogo de livros, bíblias, uniformes e artigos com sacola interativa e checkout no Portal do Membro.' },
     { id: 'lj2', name: 'Emissão de Documento Fiscal / DAV & Chave Digital', category: 'financeiro', desc: 'Geração de Documentos Auxiliares de Venda (DAV) com chave de 44 dígitos, QR Code e cálculo de tributos.' },
     { id: 'lj3', name: 'Pedidos de Compra & Motor de Impressão Oficial', category: 'secretaria', desc: 'Emissão de Pedido de Compra timbrado com QR Code, resumo de itens e envio multicanal (WhatsApp/E-mail).' },
-    { id: 'lj4', name: 'Retaguarda Comercial, Estoque & Esteira de Separação', category: 'financeiro', desc: 'Controle de estoque mínimo, movimentações, conferência de pagamentos e estorno automático.' }
+    { id: 'lj4', name: 'Retaguarda Comercial, Estoque & Esteira de Separação', category: 'financeiro', desc: 'Controle de estoque mínimo, movimentações, conferência de pagamentos e estorno automático.' },
+    // MINISTÉRIO DE LOUVOR & REPERTÓRIO MUSICAL EXPANDED (v12.0.0)
+    { id: 'ml1', name: 'Repertório Musical & Pastas Litúrgicas', category: 'louvor', desc: 'Catálogo completo de hinos e louvores organizados por pastas de cultos, eventos e estilos musicais.' },
+    { id: 'ml2', name: 'Transposição Harmônica Dinâmica (+/- Semitons)', category: 'louvor', desc: 'Mudança instantânea do tom original da música com recálculo automático de notas, sustenidos, bemóis e baixos invertidos.' },
+    { id: 'ml3', name: 'Capotraste Inteligente & Digitação de Formas', category: 'louvor', desc: 'Ajuste de afinação na 1ª à 7ª casa com cálculo automático dos acordes reais e dedilhados no violão.' },
+    { id: 'ml4', name: 'Auto-Scroll Contínuo & Controle de Velocidade', category: 'louvor', desc: 'Rolagem automática da cifra com velocidades de 0.5x a 3.0x, atalho via teclado (Espaço) e parada no fim da folha.' },
+    { id: 'ml5', name: 'Cursor Vertical de Foco & Realce da Linha Ativa', category: 'louvor', desc: 'Destaque visual da linha atual em execução com guia vertical de foco, toque para posicionar e botões de navegação.' },
+    { id: 'ml6', name: 'Leitor de Culto ao Vivo (Worship Live Reader)', category: 'louvor', desc: 'Navegação sequencial de setlist em tempo real para equipe do altar, modo escuro de alto contraste e layout 2 colunas.' },
+    { id: 'ml7', name: 'Metrônomo Sonoro e Visual Integrado', category: 'louvor', desc: 'Marcação rítmica precisa via Web Audio API, tempo acentuado, seletor de compassos (2/4, 3/4, 4/4, 6/8) e tap tempo.' },
+    // AUDITORIA DE APARELHOS SAAS & TELEMETRIA REAL EXPANDED (v13.0.0)
+    { id: 'ap1', name: 'Auditoria de Aparelhos SaaS & Telemetria em Tempo Real', category: 'seguranca', desc: 'Identificação contínua de hardware, IP público verídico, geolocalização física e detecção de status online (100% Real).' },
+    { id: 'ap2', name: 'Gestão de Canais Push Criptografados (VAPID / FCM / PWA)', category: 'seguranca', desc: 'Monitoramento multicanal de assinaturas ativas para notificações institucionais, testes de transmissão e revogação remota.' },
+    { id: 'ap3', name: 'Pareamento Rápido de Dispositivos via QR Code & PWA', category: 'seguranca', desc: 'Conexão instantânea de smartphones e tablets de obreiros via QR Code com suporte a instalação em tela cheia.' },
+    { id: 'ap4', name: 'Universidade Teológica & E-books Dogmáticos (CGADB / CPAD)', category: 'secretaria', desc: 'Currículo acadêmico fundamentado nos 24 capítulos da Declaração de Fé das Assembleias de Deus com apostilas e certificação.' }
   ], []);
 
   const filteredDirectory = useMemo(() => {
@@ -1270,7 +1425,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                   <span className="w-3 h-3 rounded-full bg-amber-500 block" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500 block" />
                 </div>
-                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v11.0.0 Ultimate Platinum v16</span>
+                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v13.0.0 Ultimate Platinum v18</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1339,6 +1494,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                 <option value="financeiro">Finanças & Balancetes</option>
                 <option value="celulas">Células & Redes</option>
                 <option value="secretaria">Secretaria & EBD</option>
+                <option value="louvor">Ministério de Louvor & Cifras</option>
                 <option value="ai">Serviços com IA</option>
                 <option value="seguranca">Segurança & Sistema</option>
               </select>
@@ -1833,7 +1989,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 11.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB), na Loja Virtual com emissão de DAV/Nota Fiscal e na ministração estruturada e litúrgica de ordem pastoral.
+            O GIPP Versão 13.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB), na Loja Virtual com emissão de DAV/Nota Fiscal, no Ministério de Louvor com cifras inteligentes e auto-scroll, e na Auditoria de Aparelhos SaaS com telemetria de hardware e rede 100% real.
           </p>
 
           <div className="bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200/80 rounded-2xl p-4 space-y-3 text-slate-900 shadow-xs">
@@ -1940,7 +2096,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
             </div>
 
             <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              O GIPP v11.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
+              O GIPP v13.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
@@ -2145,8 +2301,168 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       )
     },
     {
+      id: 'ministerio_louvor_repertorio',
+      title: '15. Ministério de Louvor, Repertório Musical, Cifras Dinâmicas & Culto ao Vivo',
+      shortTitle: 'Louvor & Repertório',
+      icon: Music,
+      category: 'Ministérios',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-violet-50 via-purple-50 to-indigo-50 border border-violet-200/80 rounded-3xl p-6 shadow-xs relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-violet-250/60 pb-4 mb-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Music className="text-violet-600" size={22} />
+                  Ministério de Louvor, Cifras Inteligentes & Culto ao Vivo
+                </h3>
+                <p className="text-xs text-violet-800 font-semibold mt-0.5">Repertório Musical, Transposição Harmônica, Capotraste, Auto-Scroll e Worship Live Reader</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-600 text-white shadow-xs">
+                Novo v12.0.0
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">
+              O ecossistema do **Ministério de Louvor GIPP v13.0.0** transforma o acompanhamento musical nos cultos e ensaios, fornecendo aos músicos e regentes um leitor digital interativo de cifras harmônicas, rolagem automatizada contínua, metrônomo calibrado via Web Audio API e modo palco de alta legibilidade.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-violet-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-violet-500"></span> Transposição Harmônica & Capotraste
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Mudança instantânea do tom original (+/- semitons) com recálculo matemático de notas, acidentes (# e b) e baixos invertidos (ex: G/B, C/E, D/F#). Inclui cálculo de afinação com capotraste de 1ª a 7ª casa, exibindo as formas simples dedilhadas ideais para violão e guitarra.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-violet-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span> Auto-Scroll Contínuo & Foco Vertical
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Rolagem automática suave a 60fps com seletor de velocidade (0.5x a 3.0x), acionamento rápido por teclado (Barra de Espaço ou pedais Bluetooth), realce da linha ativa a 30% da tela e barra vertical de foco âmbar. Permite toque em qualquer verso para recentralização imediata.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-violet-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span> Leitor de Culto ao Vivo (Live Reader)
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Estação imersiva para o palco com navegação sequencial da setlist litúrgica pelas teclas de setas, suporte a tela cheia, modo escuro de alto contraste (Dark Stage) para não ofuscar o templo e visualização em 2 colunas para tablets.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-violet-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Metrônomo Sonoro & Visual Integrado
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Gerador rítmico nativo de estúdio via Web Audio API com latência zero (&lt;5ms), acentuação sonora do primeiro tempo, seletor de compassos (2/4, 3/4, 4/4, 6/8), botão Tap Tempo e pulso luminoso sincronizado para monitoração in-ear.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+              <CheckCircle size={16} className="text-violet-600" />
+              Fluxo Litúrgico de Uso no Culto e Ensaios
+            </h4>
+            <ol className="list-decimal list-inside text-xs text-slate-600 space-y-1.5 leading-relaxed font-medium">
+              <li>O ministro de louvor cria a pasta litúrgica da reunião (ex: "Culto de Santa Ceia") e insere os hinos e cânticos.</li>
+              <li>A equipe musical abre a pasta no tablet, celular ou notebook e confere o tom e o andamento (BPM) das canções.</li>
+              <li>Violonistas e solistas ajustam o capotraste e a tonalidade ideal diretamente na cifra, sem alterar a partitura dos demais.</li>
+              <li>Durante a ministração no altar, o leitor de culto ao vivo acompanha a banda com auto-scroll ativado via teclado ou pedal.</li>
+              <li>O cursor vertical âmbar destaca a linha ativa exata da letra, mantendo regentes e cantores em perfeita sincronia.</li>
+            </ol>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'auditoria_aparelhos_saas',
+      title: '16. Auditoria de Aparelhos SaaS, Telemetria & Conexões Reais',
+      shortTitle: 'Auditoria de Aparelhos',
+      icon: Smartphone,
+      category: 'Segurança',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-emerald-200/60 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Smartphone className="text-emerald-600" size={22} />
+                  Auditoria de Aparelhos SaaS & Telemetria em Tempo Real (100% Real)
+                </h3>
+                <p className="text-xs text-emerald-800 font-semibold mt-0.5">Identificação Contínua de Hardware, IP Público Verídico, Status Online e Notificações Criptografadas</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                Novo v13.0.0
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">
+              O módulo de **Auditoria de Aparelhos SaaS** opera em regime de telemetria autêntica, eliminando quaisquer dados simulados ou estáticos. Toda a informação apresentada no painel provém de sessões criptografadas ativas registradas na coleção <code className="text-emerald-800 font-bold bg-white/70 px-1 py-0.5 rounded text-[11px]">dispositivos_conectados</code> no Firestore, com atualização instantânea via ouvintes reativos (<code className="text-emerald-800 font-bold bg-white/70 px-1 py-0.5 rounded text-[11px]">onSnapshot</code>).
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Resolução de IP & Geolocalização Física
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Identificação do endereço IP de internet público real do terminal através do endpoint nativo <code className="text-indigo-700 font-semibold">/api/client-info</code>, mapeando cidade, unidade federativa e provedor de acesso com total acurácia para auditoria ministerial.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-teal-500"></span> Identificação do Terminal do Operador
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Distinção visual imediata entre o aparelho utilizado pelo operador no momento (sinalizado com tag animada <span className="text-emerald-700 font-bold bg-emerald-100 px-1 py-0.5 rounded text-[10px]">Este Aparelho</span>) e os demais smartphones ou computadores autorizados da congregação.
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span> Gestão Multicanal de Notificações Push
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Auditoria de canais ativos de comunicação institucional criptografada: Web Push W3C com chaves públicas VAPID, Firebase Cloud Messaging (FCM) e sessões integradas ao Portal do Membro via Progressive Web App (PWA).
+                </p>
+              </div>
+
+              <div className="bg-white/90 p-3.5 rounded-2xl border border-emerald-100 shadow-2xs space-y-1">
+                <div className="flex items-center gap-2 text-slate-900 font-black text-xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span> Pareamento Rápido via QR Code
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Conexão simplificada de novos tablets ou celulares de obreiros e líderes de departamento através de leitura direta de QR Code na tela, permitindo instalação de atalho nativo e sincronização segura com a Sede.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+              <CheckCircle size={16} className="text-emerald-600" />
+              Diretrizes de Segurança & Desconexão Remota
+            </h4>
+            <ol className="list-decimal list-inside text-xs text-slate-600 space-y-1.5 leading-relaxed font-medium">
+              <li>Caso um aparelho cadastrado seja extraviado ou um operador seja desligado do ministério, o administrador MASTER pode revogar a credencial com um único clique.</li>
+              <li>A sessão é encerrada na nuvem e o aparelho perderá permissão para receber ordens de serviço, mensagens e dados sigilosos da tesouraria ou rol de membros.</li>
+              <li>O sistema mantém trilhas de auditoria criptografadas protegidas pela LGPD (Lei 13.709/2018) e Lei do Software (Lei 9.609/1998).</li>
+            </ol>
+          </div>
+        </div>
+      )
+    },
+    {
       id: 'faq_geral',
-      title: '15. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
+      title: '17. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
       shortTitle: 'Perguntas Frequentes (FAQ)',
       icon: HelpCircle,
       category: 'Suporte',
@@ -2543,6 +2859,8 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
             submods = [];
           } else if (sec.id === 'recursos_expandidos') {
             submods = ALL_GIPP_MODULES.filter(m => ['k1', 'k2', 'k3', 'ebd1', 'ead1', 'lit1'].includes(m.id));
+          } else if (sec.id === 'ministerio_louvor_repertorio') {
+            submods = ALL_GIPP_MODULES.filter(m => m.category === 'louvor' || m.id.startsWith('ml'));
           } else {
             submods = ALL_GIPP_MODULES.filter(m => m.category === sec.id);
           }

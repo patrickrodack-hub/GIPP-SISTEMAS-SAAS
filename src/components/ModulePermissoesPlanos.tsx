@@ -29,11 +29,12 @@ const ALL_SYSTEM_MODULES: ModuleItem[] = [
   { id: 'acessos_portal', label: 'Acessos & Permissões do Portal do Membro', desc: 'Mapeamento de funções administrativas e permissões personalizadas.', category: 'Segurança' },
   { id: 'permissoes_planos', label: 'Gestão de Permissões de Planos SaaS', desc: 'Painel de controle de recursos e ativação de módulos por plano.', category: 'Segurança' },
   { id: 'auditoria', label: 'Auditoria & Logs de Segurança', desc: 'Rastreabilidade com histórico de modificações e IPs conectados.', category: 'Segurança' },
+  { id: 'auditoria_aparelhos', label: 'Auditoria de Aparelhos SaaS & Telemetria Real', desc: 'Identificação contínua de hardware, IP real, geolocalização e canais push criptografados (100% Real).', category: 'Segurança' },
   { id: 'lixeira', label: 'Lixeira Virtual do Sistema', desc: 'Recuperação segura de registros deletados acidentalmente.', category: 'Segurança' },
   { id: 'config_backup', label: 'Backup Geral (Local & Nuvem)', desc: 'Exportação e restauração total de dados e configurações.', category: 'Segurança' },
 
   // Ministérios & Cuidado
-  { id: 'ministerio_louvor', label: 'Ministério de Louvor & Cifras', desc: 'Repertório musical, pastas, escalas de músicos e cifras interativas.', category: 'Ministérios' },
+  { id: 'ministerio_louvor', label: 'Ministério de Louvor, Repertório & Cifras Interativas', desc: 'Repertório musical, pastas litúrgicas, cifras com transposição harmônica, capotraste inteligente, auto-scroll, cursor de foco, metrônomo e leitor de culto ao vivo.', category: 'Ministérios' },
   { id: 'ministerio_midia', label: 'Ministério de Mídia & Transmissão', desc: 'Equipamentos, escalas de câmeras, som e biblioteca de artes.', category: 'Ministérios' },
   { id: 'ministerio_familia', label: 'Ministério da Família & Gabinete', desc: 'Aconselhamento matrimonial, cursos de noivos e visitas.', category: 'Ministérios' },
   { id: 'salinha_kids', label: 'Salinha Kids & Berçário com Check-in', desc: 'Segurança com PIN secreto, etiquetas de segurança e crachás.', category: 'Ministérios' },
@@ -98,7 +99,7 @@ export const ModulePermissoesPlanos = () => {
         'dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 
         'permissoes_planos', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 
         'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 
-        'registro_software', 'ministerio_familia', 'access_interativo', 'loja_virtual',
+        'registro_software', 'ministerio_familia', 'access_interativo', 'loja_virtual', 'auditoria_aparelhos',
         'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 
         'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'
       ],
@@ -109,7 +110,7 @@ export const ModulePermissoesPlanos = () => {
         'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 
         'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 
         'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 
-        'ministerio_familia', 'access_interativo', 'loja_virtual',
+        'ministerio_familia', 'access_interativo', 'loja_virtual', 'ministerio_louvor', 'auditoria_aparelhos',
         'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 
         'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom'
       ],
@@ -121,7 +122,7 @@ export const ModulePermissoesPlanos = () => {
         'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 
         'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 
         'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 
-        'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 
+        'relatorios', 'config_backup', 'auditoria', 'auditoria_aparelhos', 'lixeira', 'salinha_kids', 'config_visual', 
         'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 
         'ministerio_familia', 'access_interativo', 'loja_virtual',
         'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 
@@ -204,7 +205,7 @@ export const ModulePermissoesPlanos = () => {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">Permissões de Planos SaaS</h1>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                GIPP v12.0.0
+                GIPP v13.0.0
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -418,7 +419,7 @@ export const ModulePermissoesPlanos = () => {
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2">
                   <span className="text-white/60 block text-[10px] uppercase font-bold">Versão do Sistema</span>
-                  <span className="font-mono font-bold text-emerald-400">v12.0.0 Platinum v17</span>
+                  <span className="font-mono font-bold text-emerald-400">v13.0.0 Platinum v18</span>
                 </div>
               </div>
             </div>
@@ -623,7 +624,7 @@ export const ModulePermissoesPlanos = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-black text-white">Plano Avançado</h3>
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">Platinum v17</span>
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">Platinum v18</span>
                 </div>
                 <div>
                   <span className="text-3xl font-black text-white">R$ {planosValores.avancado}</span>

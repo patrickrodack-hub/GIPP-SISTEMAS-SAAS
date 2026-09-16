@@ -631,7 +631,7 @@ const ModuleAcessosPortal = () => {
                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                                         Matriz de Funções Administrativas
                                     </span>
-                                    <span className="text-[10px] font-bold text-slate-400">GIPP v12.0.0</span>
+                                    <span className="text-[10px] font-bold text-slate-400">GIPP v13.0.0</span>
                                 </div>
                                 <h3 className="text-xl font-black text-white">Mapeamento de Permissões Globais do Portal</h3>
                                 <p className="text-xs text-slate-400 max-w-2xl mt-0.5 font-medium">
