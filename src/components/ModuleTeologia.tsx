@@ -5,11 +5,12 @@ import {
     BookOpen, GraduationCap, ChevronRight, ChevronLeft, CheckCircle, Lock, Award, ArrowLeft, 
     Shield, Printer, Sparkles, Brain, Trash2, Download, Plus, Search, 
     BookOpenText, FileText, RotateCcw, Check, HelpCircle, Loader2, ClipboardList,
-    Play, Pause, Volume2, X
+    Play, Pause, Volume2, X, Monitor
 } from 'lucide-react';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
 import { BibleReferenceModal } from './BibleReferenceModal';
+import { GeradorSlidesMultimidia } from './GeradorSlidesMultimidia';
 
 export default function ModuleTeologia() {
     const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog, callGeminiAI } = useContext(ChurchContext);
@@ -20,6 +21,10 @@ export default function ModuleTeologia() {
     // Interactive Bible Reference Reader Modal
     const [bibleModalOpen, setBibleModalOpen] = useState<boolean>(false);
     const [bibleModalQuery, setBibleModalQuery] = useState<string>('');
+
+    // Telão Multimídia & Gerador de Slides para Aulas
+    const [slidesModalOpen, setSlidesModalOpen] = useState<boolean>(false);
+    const [slidesModuleId, setSlidesModuleId] = useState<string>('teontologia');
 
     const handleOpenBibleReference = (query: string) => {
         playMenuSound();
@@ -625,6 +630,17 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                 title="Modo Leitura de Tela Cheia"
                             >
                                 <BookOpen size={16} /> <span className="hidden sm:inline">Tela Cheia</span>
+                            </Button>
+                            <Button
+                                onClick={() => { 
+                                    playMenuSound(); 
+                                    setSlidesModuleId(selectedCourse || 'teontologia');
+                                    setSlidesModalOpen(true); 
+                                }}
+                                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black gap-1.5 px-3.5 py-1.5 rounded-xl text-xs flex items-center shrink-0 shadow-sm border border-amber-400"
+                                title="Apresentar no Telão / Datashow com Slides"
+                            >
+                                <Monitor size={16} /> <span>Projetar Telão</span>
                             </Button>
                         </div>
                     </div>
@@ -3791,6 +3807,14 @@ ${generatedLessonPlan.perguntasDebate.map((q: string, i: number) => `${i + 1}. $
                 isOpen={bibleModalOpen}
                 referenceQuery={bibleModalQuery}
                 onClose={() => setBibleModalOpen(false)}
+            />
+
+            {/* Telão Multimídia & Gerador de Slides para Aulas Teológicas / EBD */}
+            <GeradorSlidesMultimidia
+                isOpen={slidesModalOpen}
+                onClose={() => setSlidesModalOpen(false)}
+                moduloInicial={slidesModuleId}
+                callGeminiAI={callGeminiAI}
             />
         </div>
     );

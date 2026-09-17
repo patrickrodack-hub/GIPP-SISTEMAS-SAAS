@@ -10,6 +10,7 @@ import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore/lite";
 import { PDFDocument } from 'pdf-lib';
+import QRCode from 'qrcode';
 
 const app = express();
 
@@ -1499,6 +1500,354 @@ app.post("/api/financeiro/sondar-dda", async (req, res) => {
         console.error("Erro no serviço de DDA real do gateway bancário:", e);
         // Retorna a mensagem amigável e precisa do gateway para que o usuário possa reajustar suas chaves
         res.status(400).json({ success: false, error: e.message || String(e) });
+    }
+});
+
+// ==================== MOTOR DE PIX DINÂMICO REAL COM BAIXA INSTANTÂNEA & WEBHOOK ====================
+
+interface PixChargeRecord {
+    id: string; // txid
+    valor: number;
+    descricao: string;
+    categoria: string; // 'dizimo' | 'oferta' | 'loja' | 'carne' | 'ebd' | 'geral'
+    membroId?: string;
+    membroNome?: string;
+    referenciaId?: string;
+    chavePix: string;
+    beneficiario: string;
+    cidade: string;
+    status: 'PENDING' | 'RECEIVED' | 'CONFIRMED' | 'OVERDUE';
+    origem: 'asaas' | 'brcode_direto';
+    payload: string; // Copia e Cola
+    qrCodeBase64: string;
+    appId: string;
+    createdAt: string;
+    paidAt?: string;
+    comprovante?: string;
+}
+
+const pixChargesStore = new Map<string, PixChargeRecord>();
+
+// Cálculo de CRC-16/CCITT-FALSE para conformidade estrita com o padrão BACEN / EMVCo
+function calculateCrc16(payload: string): string {
+    let crc = 0xFFFF;
+    const polynomial = 0x1021;
+    for (let i = 0; i < payload.length; i++) {
+        crc ^= (payload.charCodeAt(i) << 8);
+        for (let j = 0; j < 8; j++) {
+            if ((crc & 0x8000) !== 0) {
+                crc = ((crc << 1) ^ polynomial) & 0xFFFF;
+            } else {
+                crc = (crc << 1) & 0xFFFF;
+            }
+        }
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+// Formatador EMVCo TLV (Tag-Length-Value)
+function formatTlv(id: string, value: string): string {
+    const len = value.length.toString().padStart(2, '0');
+    return `${id}${len}${value}`;
+}
+
+// Gerador oficial de BRCode BACEN (PIX Estático/Dinâmico com CRC-16)
+function generateOfficialPixPayload(params: {
+    chave: string;
+    nome: string;
+    cidade: string;
+    valor?: number;
+    txid: string;
+    info?: string;
+}): string {
+    const cleanKey = params.chave.trim();
+    const cleanName = params.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").substring(0, 25).trim() || "IGREJA";
+    const cleanCity = params.cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").substring(0, 15).trim() || "SAO PAULO";
+    const cleanTxid = (params.txid || 'GIPP').replace(/[^a-zA-Z0-9]/g, "").substring(0, 25);
+
+    // Merchant Account Information (Tag 26)
+    const gui = formatTlv("00", "br.gov.bcb.pix");
+    const key = formatTlv("01", cleanKey);
+    const info = params.info ? formatTlv("02", params.info.substring(0, 40)) : "";
+    const merchantAccount = formatTlv("26", `${gui}${key}${info}`);
+
+    let raw = "";
+    raw += formatTlv("00", "01"); // Payload Format Indicator
+    raw += formatTlv("01", "12"); // Point of Initiation: Dinâmico / Multiuso
+    raw += merchantAccount;
+    raw += formatTlv("52", "0000"); // Merchant Category Code
+    raw += formatTlv("53", "986");  // Transaction Currency (BRL)
+    if (params.valor && params.valor > 0) {
+        raw += formatTlv("54", params.valor.toFixed(2)); // Transaction Amount
+    }
+    raw += formatTlv("58", "BR"); // Country Code
+    raw += formatTlv("59", cleanName); // Merchant Name
+    raw += formatTlv("60", cleanCity); // Merchant City
+    
+    // Additional Data Field Template (Tag 62)
+    const txidField = formatTlv("05", cleanTxid);
+    raw += formatTlv("62", txidField);
+
+    // CRC16 (Tag 63)
+    raw += "6304";
+    const crc = calculateCrc16(raw);
+    return `${raw}${crc}`;
+}
+
+// 1. ROTA PARA GERAR COBRANÇA PIX DINÂMICA
+app.post("/api/financeiro/pix/gerar-cobranca", async (req, res) => {
+    try {
+        const { 
+            valor, 
+            descricao, 
+            categoria, 
+            membroId, 
+            membroNome, 
+            referenciaId, 
+            chavePix, 
+            beneficiario, 
+            cidade, 
+            appId,
+            bankApiKey,
+            bankSandbox
+        } = req.body;
+
+        if (!valor || Number(valor) <= 0) {
+            res.status(400).json({ error: "Valor da cobrança deve ser superior a zero." });
+            return;
+        }
+
+        const numValor = Number(valor);
+        const resolvedKey = (chavePix || "").trim() || "12.345.678/0001-90";
+        const resolvedBeneficiario = (beneficiario || "").trim() || "IGREJA SEDE ASSEMBLEIA DE DEUS";
+        const resolvedCidade = (cidade || "").trim() || "SAO PAULO";
+        const resolvedAppId = (appId || "").trim() || "gipp_default";
+        const uniqueTxid = `GIPP${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+        // Verifica se há chave Asaas configurada
+        const asaasEnvKey = process.env.ASAAS_API_KEY;
+        const asaasKey = (bankApiKey || asaasEnvKey || "").trim();
+        const isSandbox = bankSandbox !== false && !process.env.ASAAS_API_KEY;
+
+        let asaasSuccess = false;
+        let qrCodeBase64 = "";
+        let copiaECola = "";
+        let chargeId = uniqueTxid;
+        let providerMode: 'asaas' | 'brcode_direto' = 'brcode_direto';
+
+        // Tenta Asaas se a chave estiver presente
+        if (asaasKey) {
+            try {
+                const asaasBaseUrl = isSandbox ? "https://sandbox.asaas.com/api/v3" : "https://www.asaas.com/api/v3";
+                console.log(`[PIX Asaas] Gerando cobrança de R$ ${numValor.toFixed(2)} via gateway Asaas...`);
+
+                const createPaymentResp = await fetch(`${asaasBaseUrl}/payments`, {
+                    method: "POST",
+                    headers: {
+                        "access_token": asaasKey,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        billingType: "PIX",
+                        value: numValor,
+                        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        description: descricao || `Dízimo/Oferta/Loja - ${resolvedBeneficiario}`,
+                        externalReference: uniqueTxid
+                    })
+                });
+
+                if (createPaymentResp.ok) {
+                    const payData: any = await createPaymentResp.json();
+                    chargeId = payData.id;
+
+                    // Busca o QR Code e payload copia-e-cola gerados pelo Asaas
+                    const qrResp = await fetch(`${asaasBaseUrl}/payments/${payData.id}/pixQrCode`, {
+                        headers: { "access_token": asaasKey }
+                    });
+
+                    if (qrResp.ok) {
+                        const qrData: any = await qrResp.json();
+                        copiaECola = qrData.payload || "";
+                        qrCodeBase64 = qrData.encodedImage ? `data:image/png;base64,${qrData.encodedImage}` : "";
+                        asaasSuccess = true;
+                        providerMode = 'asaas';
+                    }
+                }
+            } catch (errAsaas) {
+                console.warn("[PIX Asaas] Falha ao comunicar com API Asaas, utilizando motor de BRCode Dinâmico Nativo:", errAsaas);
+            }
+        }
+
+        // Fallback robusto: BRCode Dinâmico EMVCo com QRCode em alta definição
+        if (!asaasSuccess || !copiaECola) {
+            copiaECola = generateOfficialPixPayload({
+                chave: resolvedKey,
+                nome: resolvedBeneficiario,
+                cidade: resolvedCidade,
+                valor: numValor,
+                txid: uniqueTxid,
+                info: descricao || "GIPP PIX"
+            });
+            qrCodeBase64 = await QRCode.toDataURL(copiaECola, {
+                errorCorrectionLevel: 'M',
+                margin: 2,
+                scale: 8,
+                color: {
+                    dark: '#002B36',
+                    light: '#FFFFFF'
+                }
+            });
+            chargeId = uniqueTxid;
+            providerMode = 'brcode_direto';
+        }
+
+        const newRecord: PixChargeRecord = {
+            id: chargeId,
+            valor: numValor,
+            descricao: descricao || "Contribuição eclesiástica / Loja",
+            categoria: categoria || "geral",
+            membroId,
+            membroNome,
+            referenciaId,
+            chavePix: resolvedKey,
+            beneficiario: resolvedBeneficiario,
+            cidade: resolvedCidade,
+            status: 'PENDING',
+            origem: providerMode,
+            payload: copiaECola,
+            qrCodeBase64,
+            appId: resolvedAppId,
+            createdAt: new Date().toISOString()
+        };
+
+        pixChargesStore.set(chargeId, newRecord);
+
+        res.json({
+            success: true,
+            txid: chargeId,
+            valor: numValor,
+            descricao: newRecord.descricao,
+            payload: copiaECola,
+            qrCodeBase64,
+            status: 'PENDING',
+            provider: providerMode === 'asaas' ? 'Asaas Gateway PIX' : 'PIX Dinâmico BACEN (EMVCo)',
+            vencimento: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutos de validade
+        });
+
+    } catch (e: any) {
+        console.error("Erro ao gerar PIX dinâmico:", e);
+        res.status(500).json({ success: false, error: e.message || "Erro interno ao gerar cobrança PIX." });
+    }
+});
+
+// 2. ROTA DE CONSULTA DE STATUS EM TEMPO REAL (POLLING INSTANTÂNEO)
+app.get("/api/financeiro/pix/status/:txid", async (req, res) => {
+    try {
+        const { txid } = req.params;
+        const charge = pixChargesStore.get(txid);
+
+        if (!charge) {
+            res.status(404).json({ success: false, error: "Cobrança PIX não localizada no servidor." });
+            return;
+        }
+
+        // Se for do provedor Asaas e ainda estiver pendente, faz checagem ao vivo no Asaas
+        if (charge.origem === 'asaas' && charge.status === 'PENDING') {
+            const asaasEnvKey = process.env.ASAAS_API_KEY;
+            if (asaasEnvKey) {
+                try {
+                    const asaasBaseUrl = asaasEnvKey.startsWith("$") ? "https://sandbox.asaas.com/api/v3" : "https://www.asaas.com/api/v3";
+                    const statusResp = await fetch(`${asaasBaseUrl}/payments/${txid}`, {
+                        headers: { "access_token": asaasEnvKey }
+                    });
+                    if (statusResp.ok) {
+                        const statusData: any = await statusResp.json();
+                        if (statusData.status === 'RECEIVED' || statusData.status === 'CONFIRMED') {
+                            charge.status = 'RECEIVED';
+                            charge.paidAt = new Date().toISOString();
+                            charge.comprovante = `COMP-${Date.now()}-${statusData.id || txid}`;
+                            pixChargesStore.set(txid, charge);
+                        }
+                    }
+                } catch (e) {
+                    console.warn("[PIX Status] Erro checando Asaas ao vivo:", e);
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            txid: charge.id,
+            status: charge.status,
+            valor: charge.valor,
+            paidAt: charge.paidAt,
+            comprovante: charge.comprovante,
+            descricao: charge.descricao,
+            categoria: charge.categoria,
+            membroNome: charge.membroNome
+        });
+
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message || "Erro ao consultar status do PIX." });
+    }
+});
+
+// 3. WEBHOOK ASSÍNCRONO PARA RECEBER NOTIFICAÇÕES DE PAGAMENTO REAL (ASAAS / BANCOS)
+app.post("/api/financeiro/pix/webhook", async (req, res) => {
+    try {
+        const eventData = req.body;
+        console.log("[PIX Webhook] Notificação recebida do Gateway de Pagamento:", JSON.stringify(eventData).substring(0, 300));
+
+        const payment = eventData.payment || eventData.data || eventData;
+        const paymentId = payment?.id || eventData.id;
+        const eventType = eventData.event || eventData.type || "";
+
+        if (paymentId && (eventType.includes("PAYMENT_RECEIVED") || eventType.includes("CONFIRMED") || eventType.includes("LIQUIDATED") || !eventType)) {
+            const charge = pixChargesStore.get(paymentId);
+            if (charge) {
+                charge.status = 'RECEIVED';
+                charge.paidAt = new Date().toISOString();
+                charge.comprovante = `WEBHOOK-${Date.now()}-${paymentId}`;
+                pixChargesStore.set(paymentId, charge);
+                console.log(`[PIX Webhook] Sucesso! Cobrança ${paymentId} confirmada e liquidada instantaneamente via Webhook.`);
+            }
+        }
+
+        // Responde com 200 OK para confirmar o recebimento do webhook junto ao gateway
+        res.status(200).json({ received: true, timestamp: new Date().toISOString() });
+    } catch (e: any) {
+        console.error("[PIX Webhook] Erro ao processar webhook bancário:", e);
+        res.status(200).json({ received: false, error: e.message });
+    }
+});
+
+// 4. ROTA DE SIMULAÇÃO DE PAGAMENTO INSTANTÂNEO (HOMOLOGAÇÃO / TESTE DE FLUXO)
+app.post("/api/financeiro/pix/simular-pagamento/:txid", (req, res) => {
+    try {
+        const { txid } = req.params;
+        const charge = pixChargesStore.get(txid);
+
+        if (!charge) {
+            res.status(404).json({ success: false, error: "Cobrança PIX não encontrada." });
+            return;
+        }
+
+        charge.status = 'RECEIVED';
+        charge.paidAt = new Date().toISOString();
+        charge.comprovante = `SIMULA-PIX-BACEN-${Date.now().toString().slice(-6)}`;
+        pixChargesStore.set(txid, charge);
+
+        console.log(`[PIX Sandbox] Simulação de pagamento concluída com sucesso para txid: ${txid}`);
+        res.json({
+            success: true,
+            txid: charge.id,
+            status: charge.status,
+            paidAt: charge.paidAt,
+            comprovante: charge.comprovante,
+            message: "Pagamento instantâneo baixado com sucesso!"
+        });
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message || "Erro ao simular liquidação PIX." });
     }
 });
 

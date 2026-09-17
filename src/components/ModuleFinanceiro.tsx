@@ -43,6 +43,7 @@ import {
 } from '../App';
 import { ModuloRemessasCongregacoes } from './ModuloRemessasCongregacoes';
 import { InformeRendimentosIRPF } from './InformeRendimentosIRPF';
+import { ModalPixDinamico } from './ModalPixDinamico';
 
 const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
     const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -200,6 +201,51 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
     const [localBankApiKey, setLocalBankApiKey] = useState<string>('');
     const [localBankSandbox, setLocalBankSandbox] = useState<boolean>(true);
     const [ddaSavingConfig, setDdaSavingConfig] = useState<boolean>(false);
+
+    // ESTADOS PARA RECEBIMENTO PIX DINÂMICO
+    const [pixCobrarOpen, setPixCobrarOpen] = useState(false);
+    const [pixInputModal, setPixInputModal] = useState(false);
+    const [pixValor, setPixValor] = useState<number>(100);
+    const [pixDescricao, setPixDescricao] = useState<string>("Dízimo / Oferta");
+    const [pixCategoria, setPixCategoria] = useState<'dizimo' | 'oferta' | 'geral'>('dizimo');
+    const [pixMembroId, setPixMembroId] = useState<string>('');
+
+    const handlePixSuccess = async (paymentData: any) => {
+        try {
+            const selectedMembro = (db.membros || []).find((m: any) => m.id === pixMembroId);
+            const novaEntrada = {
+                tipo: 'entrada',
+                descricao: `${pixDescricao} (PIX Instantâneo liquidado)`,
+                categoria: pixCategoria === 'dizimo' ? 'Dízimos' : (pixCategoria === 'oferta' ? 'Ofertas' : 'Outras Entradas'),
+                valor: Number(paymentData.valor),
+                data_competencia: getTodayDate(),
+                data_pagamento: getTodayDate(),
+                status: 'pago',
+                conciliado: true,
+                membro_id: pixMembroId || null,
+                membro_nome: selectedMembro?.nome || 'Contribuinte PIX',
+                congregacao_id: congregacaoFilter === 'todas' ? 'sede' : congregacaoFilter,
+                comprovante: paymentData.comprovante || paymentData.txid,
+                forma_pagamento: 'PIX',
+                historico: [{
+                    usuario_nome: user?.nome || 'Sistema PIX',
+                    usuario_id: user?.id || 'pix-auto',
+                    data: new Date().toISOString(),
+                    descricao: `Liquidado instantaneamente via PIX BACEN (TxID: ${paymentData.txid})`
+                }]
+            };
+
+            const colRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'financeiro');
+            await addDoc(colRef, novaEntrada);
+            logAction('PIX_LIQUIDADO_INSTANTANEO', `Recebeu R$ ${Number(paymentData.valor).toFixed(2)} via PIX (${pixDescricao})`, 'financeiro', paymentData.txid);
+            addToast(`Recebimento PIX de R$ ${Number(paymentData.valor).toFixed(2)} computado no caixa com sucesso!`, 'success');
+            setPixCobrarOpen(false);
+            setPixInputModal(false);
+        } catch (err: any) {
+            console.error("Erro ao registrar entrada PIX:", err);
+            addToast("Falha ao salvar recebimento PIX no banco.", "error");
+        }
+    };
 
     // DDA Interactive Cash Flow Comparison memo
     const ddaChartData = useMemo(() => {
@@ -1251,6 +1297,14 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setPixInputModal(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-teal-500/20 transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                        title="Gerar Cobrança e Receber via PIX Instantâneo"
+                    >
+                        <QrCode size={16} /> Receber via PIX
+                    </button>
                     <select value={congregacaoFilter} onChange={e => setCongregacaoFilter(e.target.value)} className="bg-white p-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-sm flex-1 md:flex-none">
                          <option value="todas">Matriz e Filiais</option>
                          <option value="sede">Sede Principal</option>
@@ -3504,6 +3558,137 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
                 </div>,
                 document.body
             )}
+
+            {/* MODAL CONFIGURAÇÃO DO PIX DINÂMICO */}
+            {pixInputModal && createPortal(
+                <div 
+                    className="fixed inset-0 z-[999998] bg-slate-950/80 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-center"
+                    onClick={(e) => { if (e.target === e.currentTarget) setPixInputModal(false); }}
+                >
+                    <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-auto animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-xl">
+                                    <QrCode size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-800 dark:text-white">Gerar Cobrança PIX</h3>
+                                    <p className="text-xs text-slate-400">QR Code Oficial com Liquidação Instantânea</p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setPixInputModal(false)}
+                                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-1.5">
+                                    Valor a Receber (R$) *
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-sm text-teal-600">R$</span>
+                                    <input 
+                                        type="number"
+                                        step="0.01"
+                                        min="0.50"
+                                        value={pixValor || ''}
+                                        onChange={(e) => setPixValor(parseFloat(e.target.value) || 0)}
+                                        placeholder="0,00"
+                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-black text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
+                                        Finalidade
+                                    </label>
+                                    <select 
+                                        value={pixCategoria}
+                                        onChange={(e: any) => setPixCategoria(e.target.value)}
+                                        className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
+                                    >
+                                        <option value="dizimo">Dízimo</option>
+                                        <option value="oferta">Oferta</option>
+                                        <option value="geral">Outra Contribuição</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
+                                        Vincular a Membro (Opcional)
+                                    </label>
+                                    <select 
+                                        value={pixMembroId}
+                                        onChange={(e) => {
+                                            setPixMembroId(e.target.value);
+                                            const m = (db.membros || []).find((mem: any) => mem.id === e.target.value);
+                                            if (m) setPixDescricao(`${pixCategoria === 'dizimo' ? 'Dízimo' : 'Oferta'} - ${m.nome}`);
+                                        }}
+                                        className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
+                                    >
+                                        <option value="">Anônimo / Visitante</option>
+                                        {(db.membros || []).map((m: any) => (
+                                            <option key={m.id} value={m.id}>{m.nome}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
+                                    Descrição da Operação
+                                </label>
+                                <input 
+                                    type="text"
+                                    value={pixDescricao}
+                                    onChange={(e) => setPixDescricao(e.target.value)}
+                                    placeholder="Ex: Dízimo Mensal, Oferta Especial, etc."
+                                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
+                                />
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="button"
+                                    disabled={!pixValor || pixValor <= 0}
+                                    onClick={() => {
+                                        setPixInputModal(false);
+                                        setPixCobrarOpen(true);
+                                    }}
+                                    className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 text-white font-black text-sm rounded-2xl shadow-lg shadow-teal-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                                >
+                                    <QrCode size={18} />
+                                    Gerar QR Code PIX Instantâneo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL PIX DINÂMICO BACEN COM VERIFICAÇÃO AUTOMÁTICA */}
+            <ModalPixDinamico 
+                isOpen={pixCobrarOpen}
+                onClose={() => setPixCobrarOpen(false)}
+                valor={pixValor}
+                descricao={pixDescricao}
+                categoria={pixCategoria}
+                membroId={pixMembroId}
+                membroNome={(db.membros || []).find((m: any) => m.id === pixMembroId)?.nome}
+                chavePix={db.igreja?.chave_pix || db.igreja?.cnpj || 'financeiro@igreja.org'}
+                beneficiario={db.igreja?.nome || 'Igreja Evangélica Assembleia de Deus'}
+                cidade={db.igreja?.cidade || 'São Paulo'}
+                appId={appId}
+                onSuccess={handlePixSuccess}
+            />
         </div>
     );
 };

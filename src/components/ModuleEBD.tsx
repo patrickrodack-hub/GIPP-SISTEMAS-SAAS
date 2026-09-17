@@ -45,6 +45,7 @@ import {
 import { InteractiveMagazineView } from './InteractiveMagazineView';
 import { InteractiveWindow } from './InteractiveWindow';
 import { EBDClassroomIntegration } from './EBDClassroomIntegration';
+import { GeradorSlidesMultimidia } from './GeradorSlidesMultimidia';
 
 interface ModuleEBDProps {
     isProfessorOnly?: boolean;
@@ -52,8 +53,9 @@ interface ModuleEBDProps {
 
 // Exporting component
 const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
-    const { db, dbFirestore, appId, user, openModal, addToast, deleteItem, isOnline } = useContext(ChurchContext);
+    const { db, dbFirestore, appId, user, openModal, addToast, deleteItem, isOnline, callGeminiAI } = useContext(ChurchContext);
     const [tab, setTab] = useState(isProfessorOnly ? 6 : 1);
+    const [slidesModalOpen, setSlidesModalOpen] = useState(false);
     const [loadingList, setLoadingList] = useState(true);
     const [aiLesson, setAiLesson] = useState<any>(null);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
@@ -1459,6 +1461,14 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setSlidesModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all cursor-pointer whitespace-nowrap active:scale-95 border border-amber-400"
+                            title="Abrir Telão Multimídia com Slides para Sala de Aula ou Culto"
+                        >
+                            <MonitorPlay size={16} /> Projetar Telão
+                        </button>
                         <select value={congregacaoFilter} onChange={e => setCongregacaoFilter(e.target.value)} className="bg-white p-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none shadow-sm">
                             <option value="todas">Filtro: Todas as Filiais</option>
                             <option value="sede">Sede Principal</option>
@@ -4431,6 +4441,14 @@ Gere em formatação simples e amigável.`;
                 </InteractiveWindow>,
                 document.body
             )}
+
+            {/* Telão Multimídia & Gerador de Slides para Aulas de EBD / Cultos */}
+            <GeradorSlidesMultimidia
+                isOpen={slidesModalOpen}
+                onClose={() => setSlidesModalOpen(false)}
+                moduloInicial="teontologia"
+                callGeminiAI={callGeminiAI}
+            />
         </div>
     );
 };
