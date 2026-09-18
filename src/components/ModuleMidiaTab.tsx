@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { 
   Video, UserCircle, UploadCloud, MonitorPlay, Calendar, Activity, Database, X, Plus, Trash2, 
-  Tv, Radio, Music, Users, Shield, Percent, Eye, MessageSquare, PlayCircle, Clock, Cloud, CloudOff
+  Tv, Radio, Music, Users, Shield, Percent, Eye, MessageSquare, PlayCircle, Clock, Cloud, CloudOff, Flame
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -68,7 +68,7 @@ export const ModuleMidiaTab = ({
   mediaEquipamentos, loadingMediaEquipamentos
 }: any) => {
 
-  const { dbFirestore, appId, addToast, db, isOnline } = useContext<any>(ChurchContext);
+  const { dbFirestore, appId, addToast, db, isOnline, setView } = useContext<any>(ChurchContext);
 
   // Modal display toggles
   const [showEquipeModal, setShowEquipeModal] = useState(false);
@@ -351,6 +351,35 @@ export const ModuleMidiaTab = ({
             <Tv size={16} />
             <span>Abrir Telão (2º Monitor)</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const win = holyricsService.openPulpitoWindow();
+              if (win) {
+                addToast('Janela do Púlpito aberta para o 2º Monitor (Stage Display)!', 'success');
+              } else {
+                addToast('Permita pop-ups no navegador para abrir o púlpito no segundo monitor.', 'error');
+              }
+            }}
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            title="Abre a janela do púlpito / cronômetro litúrgico no segundo monitor"
+          >
+            <Flame size={16} />
+            <span>Abrir Púlpito (2º Monitor)</span>
+          </button>
+
+          {setView && (
+            <button
+              type="button"
+              onClick={() => setView('dashboard')}
+              className="px-4 py-2.5 bg-white/10 hover:bg-rose-600 hover:border-rose-600 text-white font-black text-xs rounded-2xl border border-white/20 shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              title="Fechar o módulo e voltar ao Painel Geral"
+            >
+              <X size={16} />
+              <span>Fechar Módulo</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -362,7 +391,7 @@ export const ModuleMidiaTab = ({
             onClick={() => setSubTabMedia(st)}
             className={`px-5 py-2.5 font-black text-xs uppercase tracking-wider rounded-xl transition-all whitespace-nowrap ${subTabMedia === st ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600' : 'text-slate-500 hover:text-teal-600'}`}
           >
-            {st === 'holyrics' && '📡 Telão Holyrics & Projeção'}
+            {st === 'holyrics' && '📡 Holyrics (Telão & Púlpito)'}
             {st === 'equipe' && 'Escala & Equipe'}
             {st === 'eventos' && 'Agenda & Eventos'}
             {st === 'biblioteca' && 'Acervo & Upload'}
@@ -374,7 +403,7 @@ export const ModuleMidiaTab = ({
 
       {subTabMedia === 'holyrics' && (
         <div className="flex-1 overflow-hidden">
-          <ModuleHolyricsStudio />
+          <ModuleHolyricsStudio onClose={() => setSubTabMedia('equipe')} />
         </div>
       )}
 

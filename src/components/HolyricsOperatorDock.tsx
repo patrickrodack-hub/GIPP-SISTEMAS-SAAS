@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { 
   Tv, Radio, Play, Pause, ChevronLeft, ChevronRight, Eye, EyeOff, 
   Maximize2, Bell, BookOpen, Shield, X, Minimize2, Move, AlertTriangle, 
-  Car, Baby, Sliders, ExternalLink, Sparkles, Music, Check, Clock
+  Car, Baby, Sliders, ExternalLink, Sparkles, Music, Check, Clock, Flame
 } from 'lucide-react';
 import { 
   holyricsService, 
@@ -148,6 +148,14 @@ export const HolyricsOperatorDock: React.FC<Props> = ({ onOpenFullStudio }) => {
           title="Expandir Barra do Operador"
         >
           <Maximize2 className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => holyricsService.toggleAtivo(false)}
+          className="p-1 rounded-lg hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 transition-all ml-0.5"
+          title="Fechar Barra de Projeção"
+        >
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
     );
@@ -308,11 +316,28 @@ export const HolyricsOperatorDock: React.FC<Props> = ({ onOpenFullStudio }) => {
             {/* Janela Telão (2º Monitor) */}
             <button
               onClick={handleOpenTelaoWindow}
-              className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-teal-400 border border-teal-500/40 rounded-xl font-bold text-xs flex items-center gap-1 transition-all"
+              className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-teal-400 border border-teal-500/40 rounded-xl font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
               title="Abrir / Focar Janela do Telão no Segundo Monitor"
             >
               <Tv className="w-3.5 h-3.5" />
               <span className="hidden xl:inline">Telão Ext.</span>
+            </button>
+
+            {/* Janela Púlpito (2º Monitor) */}
+            <button
+              onClick={() => {
+                const win = holyricsService.openPulpitoWindow();
+                if (win) {
+                  if (addToast) addToast('Janela do Púlpito aberta para o 2º Monitor!', 'success');
+                } else {
+                  if (addToast) addToast('Permita pop-ups no navegador para abrir o púlpito.', 'error');
+                }
+              }}
+              className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/40 rounded-xl font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+              title="Abrir Janela do Púlpito / Stage Display no Segundo Monitor"
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">Púlpito Ext.</span>
             </button>
 
             {/* Abrir Console Holyrics Completo */}
@@ -329,10 +354,19 @@ export const HolyricsOperatorDock: React.FC<Props> = ({ onOpenFullStudio }) => {
             {/* Minimizar */}
             <button
               onClick={() => setMinimized(true)}
-              className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-all"
+              className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
               title="Minimizar para Pílula Flutuante"
             >
               <Minimize2 className="w-4 h-4" />
+            </button>
+
+            {/* Fechar Dock */}
+            <button
+              onClick={() => holyricsService.toggleAtivo(false)}
+              className="p-1.5 bg-slate-900 hover:bg-rose-600 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+              title="Fechar Barra de Controle do Telão"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

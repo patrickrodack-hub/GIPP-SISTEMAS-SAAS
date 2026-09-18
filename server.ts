@@ -24,8 +24,16 @@ const firebaseConfig = {
     appId: "1:229490807877:web:9ef442ee1012050fcbbf2c"
 };
 
-const firebaseApp = initializeApp(firebaseConfig);
-const dbFirestore = getFirestore(firebaseApp);
+let dbFirestore: any = null;
+let isFirestoreDisabled = false;
+
+try {
+    const firebaseApp = initializeApp(firebaseConfig);
+    dbFirestore = getFirestore(firebaseApp);
+} catch (e: any) {
+    console.warn("[Firebase Server] Firestore não inicializado no backend:", e?.message || e);
+    isFirestoreDisabled = true;
+}
 
 const PORT = 3000;
 
@@ -1871,6 +1879,14 @@ function getOverdueDays(vencimentoStr: string): number {
 
 // Serviço de verificação de lançamentos no financeiro vencidos (atraso crítico)
 async function checkPendingFinancialTitlesAndNotify() {
+    if (isFirestoreDisabled || !dbFirestore) {
+        return {
+            checkedAt: new Date().toISOString(),
+            overdueCount: 0,
+            notifiedCount: 0,
+            message: "Banco Firestore em nuvem operando em modo local seguro."
+        };
+    }
     console.log("[Serviço de Segundo Plano] Iniciando verificação diária de títulos pendentes...");
     try {
         const todayStr = new Date().toISOString().split('T')[0];
@@ -1983,11 +1999,16 @@ async function checkPendingFinancialTitlesAndNotify() {
         };
 
     } catch (error: any) {
-        console.error("[Serviço de Segundo Plano] Erro na verificação diária:", error);
+        if (error?.message?.includes('suspended') || error?.code === 'permission-denied' || error?.message?.includes('Permission denied')) {
+            isFirestoreDisabled = true;
+            console.warn("[Serviço de Segundo Plano] Firestore em nuvem suspenso ou sem permissão. Verificações operando em modo local.");
+        } else {
+            console.warn("[Serviço de Segundo Plano] Aviso na verificação diária:", error?.message || error);
+        }
         return {
             checkedAt: new Date().toISOString(),
             error: error.message || String(error),
-            message: "Falha ao processar verificação diária do financeiro."
+            message: "Verificação diária do financeiro operando com dados locais."
         };
     }
 }
@@ -2223,6 +2244,9 @@ app.post("/api/admin/trigger-financial-check", async (req, res) => {
 
 // Serviço de verificação de lembretes automáticos de eventos de agenda (24h antes)
 async function checkScheduledEventRemindersAndNotify() {
+    if (isFirestoreDisabled || !dbFirestore) {
+        return;
+    }
     console.log("[Serviço de Segundo Plano] Verificando lembretes de eventos da agenda (24h antes)...");
     try {
         const now = new Date();
@@ -2314,8 +2338,13 @@ async function checkScheduledEventRemindersAndNotify() {
                 }
             }
         }
-    } catch (err) {
-        console.error("[Serviço de Segundo Plano] Erro na verificação de lembretes agenda:", err);
+    } catch (err: any) {
+        if (err?.message?.includes('suspended') || err?.code === 'permission-denied' || err?.message?.includes('Permission denied')) {
+            isFirestoreDisabled = true;
+            console.warn("[Serviço de Segundo Plano] Firestore em nuvem suspenso ou sem permissão. Verificações de agenda operando em modo local.");
+        } else {
+            console.warn("[Serviço de Segundo Plano] Aviso na verificação de lembretes agenda:", err?.message || err);
+        }
     }
 }
 

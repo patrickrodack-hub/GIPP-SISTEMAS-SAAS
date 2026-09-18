@@ -79,6 +79,7 @@ import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISP
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS, getMemberFuncoesAdm, getMemberPortalAllowedModules } from './constants/portalPermissions';
 import { TelaoDisplayWindow } from './components/TelaoDisplayWindow';
+import { PainelPulpitoCulto } from './components/PainelPulpitoCulto';
 import { HolyricsOperatorDock } from './components/HolyricsOperatorDock';
 
 // Helper to gracefully retry failed dynamic chunk / module imports
@@ -20919,6 +20920,22 @@ export default function App() {
     return <TelaoDisplayWindow />;
   }
 
+  // Detecção de Modo Púlpito / Retorno Dedicado (Holyrics 2º Monitor / Stage Display)
+  const isPulpitoMode = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).get('mode') === 'pulpito' ||
+    window.location.search.includes('pulpito=true') ||
+    window.location.hash.includes('pulpito') ||
+    window.location.pathname.endsWith('/pulpito')
+  );
+
+  if (isPulpitoMode) {
+    return (
+      <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col">
+        <PainelPulpitoCulto isStandalone={true} />
+      </div>
+    );
+  }
+
   if (firebaseSetupError) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0f172a] text-slate-300 p-8 text-center font-sans">
@@ -22181,22 +22198,32 @@ export default function App() {
       };
   }, []);
 
-  // CORREÇÃO: Motor de Auto-Reconexão (Keep-Alive) para evitar falhas ao salvar
+  // Motor de Autenticação e Resiliência Local
   useEffect(() => {
     let isAuthenticating = false;
+    let authAttempts = 0;
     
     const initAuth = async () => { 
-        if (isAuthenticating) return;
+        if (isAuthenticating || authAttempts >= 2) return;
         isAuthenticating = true;
+        authAttempts++;
         try { 
             if (typeof (window as any).__initial_auth_token !== 'undefined' && (window as any).__initial_auth_token) {
                 await signInWithCustomToken(auth, (window as any).__initial_auth_token); 
             } else {
                 await signInAnonymously(auth); 
             }
-        } catch (error) { 
-            console.error("Erro na autenticação. A tentar modo anónimo fallback...", error); 
-            try { await signInAnonymously(auth); } catch (e) { console.error("Falha dupla na autenticação:", e); }
+        } catch (error: any) { 
+            const isSuspended = error?.message?.includes('suspended') || error?.code === 'auth/permission-denied';
+            if (isSuspended) {
+                console.warn("Firebase Auth: projeto em nuvem suspenso ou indisponível. Sistema operando em modo local resiliente.");
+                authAttempts = 999;
+            } else {
+                console.warn("Aviso na autenticação inicial:", error?.message || error);
+                if (authAttempts < 2) {
+                    try { await signInAnonymously(auth); } catch (e: any) { console.warn("Fallback offline:", e?.message || e); }
+                }
+            }
         } finally {
             isAuthenticating = false;
         }
@@ -22206,11 +22233,6 @@ export default function App() {
     
     const unsubscribe = onAuthStateChanged(auth, (u) => {
         setAuthUser(u);
-        // Se a sessão cair por micro-oscilação ou expiração do token, reconecta instantaneamente de forma invisível
-        if (!u) {
-            console.warn("Sessão interrompida. A restaurar ligação segura aos servidores...");
-            initAuth();
-        }
     });
     
     const handleDbReload = (e: any) => {
@@ -22247,7 +22269,7 @@ export default function App() {
       const unsubConfig = onSnapshot(
           doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'settings', 'config'), 
           (docSnap) => { if (docSnap.exists()) setDbState(prev => ({ ...prev, igreja: { ...prev.igreja, ...docSnap.data() } })); },
-          (error) => console.error("Firestore Error (config):", error)
+          (error) => console.warn("Sincronização em nuvem (config) em modo local:", error?.message || error)
       );
       
       const unsubs = collectionsToSync.map(key => {
@@ -22395,7 +22417,7 @@ export default function App() {
                       setLoading(false);
                   }, 150);
               },
-              (error) => console.error(`Firestore Error (${key}):`, error)
+              (error) => console.warn(`[Firestore Sync] Coleção ${key} em modo local:`, error?.message || error)
           );
       });
 

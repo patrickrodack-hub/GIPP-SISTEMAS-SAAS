@@ -38,6 +38,44 @@ export interface HolyricsTimer {
   rotulo: string;
 }
 
+export interface BlocoLiturgico {
+  id: string;
+  titulo: string;
+  subtitulo?: string;
+  duracaoMinutos: number;
+  responsavel?: string;
+  tipo: 'oracao' | 'louvor' | 'leitura' | 'dizimo' | 'palavra' | 'avisos' | 'apelo' | 'encerramento';
+  leituraBiblica?: string;
+  hinos?: string;
+  concluido: boolean;
+}
+
+export interface AvisoPulpito {
+  id: string;
+  texto: string;
+  tipo: 'urgente' | 'visitante' | 'oracao' | 'geral';
+  autor: string;
+  horario: string;
+  lido: boolean;
+}
+
+export interface PulpitoState {
+  cultoTitulo: string;
+  cultoData: string;
+  dirigenteNome: string;
+  pregadorNome: string;
+  blocos: BlocoLiturgico[];
+  blocoAtivoIndex: number;
+  tempoRestante: number; // em segundos
+  isRunning: boolean;
+  isOvertime: boolean;
+  tempoExcedido: number;
+  avisos: AvisoPulpito[];
+  textoBiblicoDestaque?: string;
+  stageTheme: 'dark' | 'light';
+  tamanhoFonteBiblia: 'normal' | 'grande' | 'extragrande';
+}
+
 export type HolyricsTheme = 'navy' | 'dark' | 'amber' | 'clean' | 'royal' | 'cinema';
 
 export interface HolyricsState {
@@ -61,7 +99,106 @@ export interface HolyricsState {
   igrejaNome: string;
   igrejaLogoUrl?: string;
   ultimaAtualizacao: number;
+  // Estado Integrado da Tela Secundária (Púlpito / Stage Display)
+  pulpito: PulpitoState;
 }
+
+export const DEFAULT_BLOCOS_PULPITO: BlocoLiturgico[] = [
+  {
+    id: 'b1',
+    titulo: '1. Prelúdio Instrumental & Oração Inicial',
+    subtitulo: 'Invocação e Abertura Oficial do Culto',
+    duracaoMinutos: 5,
+    responsavel: 'Dirigente do Culto',
+    tipo: 'oracao',
+    concluido: false
+  },
+  {
+    id: 'b2',
+    titulo: '2. Cânticos da Harpa Cristã & Louvor Congregacional',
+    subtitulo: 'Hinos nº 15, 141 e louvor pelo ministério',
+    duracaoMinutos: 15,
+    responsavel: 'Ministério de Louvor',
+    hinos: 'Harpa 15: Foi na Cruz • Harpa 141: Guia-me, ó Salvador',
+    tipo: 'louvor',
+    concluido: false
+  },
+  {
+    id: 'b3',
+    titulo: '3. Leitura Bíblica Oficial',
+    subtitulo: 'Leitura com a Igreja em pé',
+    duracaoMinutos: 7,
+    responsavel: 'Pastor Presidente',
+    leituraBiblica: 'Salmos 122:1-9 — “Alegrei-me quando me disseram: Vamos à casa do Senhor! Nossos pés estão parados dentro das tuas portas, ó Jerusalém...”',
+    tipo: 'leitura',
+    concluido: false
+  },
+  {
+    id: 'b4',
+    titulo: '4. Oportunidades, Testemunhos & Crianças',
+    subtitulo: 'Apresentação de visitantes e testemunhos de fé',
+    duracaoMinutos: 10,
+    responsavel: 'Dirigente',
+    tipo: 'avisos',
+    concluido: false
+  },
+  {
+    id: 'b5',
+    titulo: '5. Consagração dos Dízimos & Ofertas',
+    subtitulo: 'Gratidão, adoração e oração pelos mantenedores',
+    duracaoMinutos: 8,
+    responsavel: 'Diáconos / Tesoureiro',
+    tipo: 'dizimo',
+    concluido: false
+  },
+  {
+    id: 'b6',
+    titulo: '6. Ministração da Santa Palavra de Deus',
+    subtitulo: 'Sermão bíblico expositivo',
+    duracaoMinutos: 40,
+    responsavel: 'Pregador Escalado',
+    leituraBiblica: '2 Timóteo 4:1-5 — “Prega a palavra, insta a tempo e fora de tempo, redargue, repreende, exorta, com toda a longanimidade e doutrina.”',
+    tipo: 'palavra',
+    concluido: false
+  },
+  {
+    id: 'b7',
+    titulo: '7. Apelo aos Não-Crentes & Oração da Vitória',
+    subtitulo: 'Chamada ao altar e imposição de mãos pelos enfermos',
+    duracaoMinutos: 10,
+    responsavel: 'Pastor / Ministério de Oração',
+    tipo: 'apelo',
+    concluido: false
+  },
+  {
+    id: 'b8',
+    titulo: '8. Avisos Finais & Bênção Apostólica',
+    subtitulo: 'Despedida solene e tríplice bênção bíblica',
+    duracaoMinutos: 5,
+    responsavel: 'Pastor Presidente',
+    tipo: 'encerramento',
+    concluido: false
+  }
+];
+
+export const DEFAULT_AVISOS_PULPITO: AvisoPulpito[] = [
+  {
+    id: 'av_1',
+    texto: 'Veículo Corolla prata placa ABC-1234 com faróis acesos em frente ao portão.',
+    tipo: 'geral',
+    autor: 'Recepção / Estacionamento',
+    horario: '19:40',
+    lido: false
+  },
+  {
+    id: 'av_2',
+    texto: 'Pastor Visitante Pr. Carlos Souza e comitiva da AD Santos presentes no plenário.',
+    tipo: 'visitante',
+    autor: 'Secretaria',
+    horario: '19:45',
+    lido: false
+  }
+];
 
 const STORAGE_KEY = 'gipp_holyrics_projection_state';
 const BROADCAST_CHANNEL_NAME = 'gipp_holyrics_channel';
@@ -197,10 +334,17 @@ class HolyricsService {
   private channel: BroadcastChannel | null = null;
   private listeners: Set<(state: HolyricsState) => void> = new Set();
   private telaoWindowRef: Window | null = null;
+  private pulpitoWindowRef: Window | null = null;
   private timerInterval: any = null;
+  private pulpitoTimerInterval: any = null;
 
   constructor() {
     this.state = this.loadInitialState();
+
+    // Inicializa timer do púlpito se já estava ativo
+    if (this.state.pulpito?.isRunning) {
+      this.ensurePulpitoTimer();
+    }
 
     // Inicializa canal de sincronização entre janelas/abas
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -235,13 +379,47 @@ class HolyricsService {
     }
   }
 
+  private getDefaultPulpitoState(): PulpitoState {
+    const blocoInicial = DEFAULT_BLOCOS_PULPITO[0];
+    return {
+      cultoTitulo: 'Culto de Celebração e Doutrina',
+      cultoData: new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }),
+      dirigenteNome: 'Pr. Presidente',
+      pregadorNome: 'Pr. Convidado',
+      blocos: DEFAULT_BLOCOS_PULPITO,
+      blocoAtivoIndex: 0,
+      tempoRestante: blocoInicial ? blocoInicial.duracaoMinutos * 60 : 300,
+      isRunning: false,
+      isOvertime: false,
+      tempoExcedido: 0,
+      avisos: DEFAULT_AVISOS_PULPITO,
+      textoBiblicoDestaque: 'Salmos 122:1 — “Alegrei-me quando me disseram: Vamos à casa do Senhor!”',
+      stageTheme: 'dark',
+      tamanhoFonteBiblia: 'grande'
+    };
+  }
+
   private loadInitialState(): HolyricsState {
+    const defaultPulpito = this.getDefaultPulpitoState();
+
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && Array.isArray(parsed.slides)) {
+            // Garante que o estado do púlpito exista
+            if (!parsed.pulpito) {
+              parsed.pulpito = defaultPulpito;
+            } else {
+              // Garante propriedades do púlpito
+              parsed.pulpito = {
+                ...defaultPulpito,
+                ...parsed.pulpito,
+                blocos: parsed.pulpito.blocos && parsed.pulpito.blocos.length > 0 ? parsed.pulpito.blocos : defaultPulpito.blocos,
+                avisos: parsed.pulpito.avisos || defaultPulpito.avisos
+              };
+            }
             return parsed;
           }
         }
@@ -274,7 +452,8 @@ class HolyricsService {
         rotulo: 'Horário Oficial'
       },
       igrejaNome: 'ASSEMBLEIA DE DEUS',
-      ultimaAtualizacao: Date.now()
+      ultimaAtualizacao: Date.now(),
+      pulpito: defaultPulpito
     };
   }
 
@@ -304,10 +483,22 @@ class HolyricsService {
       }
     }
 
-    // Se temos a referência da janela filha, podemos enviar postMessage direto
+    // Se temos a referência da janela filha do Telão, enviamos postMessage direto
     if (this.telaoWindowRef && !this.telaoWindowRef.closed) {
       try {
         this.telaoWindowRef.postMessage({
+          type: 'HOLYRICS_STATE_SYNC',
+          payload: this.state
+        }, '*');
+      } catch (e) {
+        // Ignora erro cross-origin se houver
+      }
+    }
+
+    // Se temos a referência da janela filha da Tela Secundária (Púlpito / Stage Display)
+    if (this.pulpitoWindowRef && !this.pulpitoWindowRef.closed) {
+      try {
+        this.pulpitoWindowRef.postMessage({
           type: 'HOLYRICS_STATE_SYNC',
           payload: this.state
         }, '*');
@@ -375,6 +566,229 @@ class HolyricsService {
 
   public isTelaoWindowOpen(): boolean {
     return !!(this.telaoWindowRef && !this.telaoWindowRef.closed);
+  }
+
+  // ==========================================
+  // CONTROLE DA TELA SECUNDÁRIA (PÚLPITO / STAGE DISPLAY)
+  // ==========================================
+
+  // Abre a janela da Tela Secundária (Púlpito / Retorno) em modo pop-out independente
+  public openPulpitoWindow(): Window | null {
+    if (typeof window === 'undefined') return null;
+
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('mode', 'pulpito');
+
+    const targetUrl = currentUrl.toString();
+
+    // Se já estiver aberta e válida, foca nela
+    if (this.pulpitoWindowRef && !this.pulpitoWindowRef.closed) {
+      this.pulpitoWindowRef.focus();
+      this.broadcastState();
+      return this.pulpitoWindowRef;
+    }
+
+    // Configurações de janela destacada sem barras para monitor de púlpito / retorno
+    const features = 'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no';
+    const newWin = window.open(targetUrl, 'GippHolyricsPulpitoStage', features);
+
+    if (newWin) {
+      this.pulpitoWindowRef = newWin;
+      this.saveAndBroadcast();
+      
+      setTimeout(() => {
+        this.broadcastState();
+      }, 500);
+    }
+
+    return newWin;
+  }
+
+  public isPulpitoWindowOpen(): boolean {
+    return !!(this.pulpitoWindowRef && !this.pulpitoWindowRef.closed);
+  }
+
+  // Timer do Púlpito Centralizado
+  private ensurePulpitoTimer(): void {
+    if (this.state.pulpito.isRunning) {
+      if (!this.pulpitoTimerInterval) {
+        this.pulpitoTimerInterval = setInterval(() => {
+          if (!this.state.pulpito.isRunning) {
+            clearInterval(this.pulpitoTimerInterval);
+            this.pulpitoTimerInterval = null;
+            return;
+          }
+
+          if (this.state.pulpito.tempoRestante > 1) {
+            this.state.pulpito.tempoRestante -= 1;
+            this.saveAndBroadcast();
+          } else {
+            this.state.pulpito.tempoRestante = 0;
+            this.state.pulpito.isOvertime = true;
+            this.state.pulpito.tempoExcedido += 1;
+            this.saveAndBroadcast();
+          }
+        }, 1000);
+      }
+    } else {
+      if (this.pulpitoTimerInterval) {
+        clearInterval(this.pulpitoTimerInterval);
+        this.pulpitoTimerInterval = null;
+      }
+    }
+  }
+
+  public startPulpitoTimer(): void {
+    this.state.pulpito.isRunning = true;
+    this.ensurePulpitoTimer();
+    this.saveAndBroadcast();
+  }
+
+  public pausePulpitoTimer(): void {
+    this.state.pulpito.isRunning = false;
+    this.ensurePulpitoTimer();
+    this.saveAndBroadcast();
+  }
+
+  public togglePulpitoTimer(): void {
+    this.state.pulpito.isRunning = !this.state.pulpito.isRunning;
+    this.ensurePulpitoTimer();
+    this.saveAndBroadcast();
+  }
+
+  public resetPulpitoTimer(): void {
+    const blocoAtual = this.state.pulpito.blocos[this.state.pulpito.blocoAtivoIndex];
+    const duracaoSegundos = blocoAtual ? blocoAtual.duracaoMinutos * 60 : 300;
+    this.state.pulpito.tempoRestante = duracaoSegundos;
+    this.state.pulpito.isOvertime = false;
+    this.state.pulpito.tempoExcedido = 0;
+    this.state.pulpito.isRunning = false;
+    this.ensurePulpitoTimer();
+    this.saveAndBroadcast();
+  }
+
+  public addPulpitoMinutes(minutes: number): void {
+    const segundos = minutes * 60;
+    if (this.state.pulpito.isOvertime) {
+      if (this.state.pulpito.tempoExcedido > segundos) {
+        this.state.pulpito.tempoExcedido -= segundos;
+      } else {
+        const sobra = segundos - this.state.pulpito.tempoExcedido;
+        this.state.pulpito.isOvertime = false;
+        this.state.pulpito.tempoExcedido = 0;
+        this.state.pulpito.tempoRestante = sobra;
+      }
+    } else {
+      this.state.pulpito.tempoRestante += segundos;
+    }
+    this.saveAndBroadcast();
+  }
+
+  public selectPulpitoBloco(index: number): void {
+    if (index < 0 || index >= this.state.pulpito.blocos.length) return;
+    this.state.pulpito.blocoAtivoIndex = index;
+    const bloco = this.state.pulpito.blocos[index];
+    this.state.pulpito.tempoRestante = bloco ? bloco.duracaoMinutos * 60 : 300;
+    this.state.pulpito.isOvertime = false;
+    this.state.pulpito.tempoExcedido = 0;
+    this.state.pulpito.isRunning = false;
+
+    // Se o bloco tiver leitura bíblica associada, atualiza o texto sagrado
+    if (bloco.leituraBiblica) {
+      this.state.pulpito.textoBiblicoDestaque = bloco.leituraBiblica;
+    }
+
+    this.ensurePulpitoTimer();
+    this.saveAndBroadcast();
+  }
+
+  public concluirPulpitoBloco(): void {
+    const currentIndex = this.state.pulpito.blocoAtivoIndex;
+    if (this.state.pulpito.blocos[currentIndex]) {
+      this.state.pulpito.blocos[currentIndex].concluido = true;
+    }
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < this.state.pulpito.blocos.length) {
+      this.selectPulpitoBloco(nextIndex);
+    } else {
+      this.state.pulpito.isRunning = false;
+      this.ensurePulpitoTimer();
+      this.saveAndBroadcast();
+    }
+  }
+
+  // Avisos para o Púlpito (ex: sonoplastia, secretaria, estacionamento)
+  public sendPulpitoAviso(
+    texto: string,
+    tipo: 'urgente' | 'visitante' | 'oracao' | 'geral' = 'geral',
+    autor = 'Sonoplastia / Holyrics'
+  ): void {
+    if (!texto.trim()) return;
+    const now = new Date();
+    const horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const novoAviso: AvisoPulpito = {
+      id: `aviso_pulpito_${Date.now()}`,
+      texto: texto.trim(),
+      tipo,
+      autor,
+      horario,
+      lido: false
+    };
+
+    this.state.pulpito.avisos = [novoAviso, ...this.state.pulpito.avisos];
+    this.saveAndBroadcast();
+  }
+
+  public markPulpitoAvisoLido(id: string): void {
+    this.state.pulpito.avisos = this.state.pulpito.avisos.map((av) =>
+      av.id === id ? { ...av, lido: true } : av
+    );
+    this.saveAndBroadcast();
+  }
+
+  public deletePulpitoAviso(id: string): void {
+    this.state.pulpito.avisos = this.state.pulpito.avisos.filter((av) => av.id !== id);
+    this.saveAndBroadcast();
+  }
+
+  public clearPulpitoAvisos(): void {
+    this.state.pulpito.avisos = [];
+    this.saveAndBroadcast();
+  }
+
+  public clearPulpitoAviso(): void {
+    this.clearPulpitoAvisos();
+  }
+
+  public setPulpitoBibliaFonte(tamanho: 'normal' | 'grande' | 'extragrande'): void {
+    this.state.pulpito.tamanhoFonteBiblia = tamanho;
+    this.saveAndBroadcast();
+  }
+
+  public setPulpitoTheme(theme: 'dark' | 'light'): void {
+    this.state.pulpito.stageTheme = theme;
+    this.saveAndBroadcast();
+  }
+
+  public setPulpitoCultoInfo(info: { titulo?: string; dirigente?: string; pregador?: string }): void {
+    if (info.titulo !== undefined) this.state.pulpito.cultoTitulo = info.titulo;
+    if (info.dirigente !== undefined) this.state.pulpito.dirigenteNome = info.dirigente;
+    if (info.pregador !== undefined) this.state.pulpito.pregadorNome = info.pregador;
+    this.saveAndBroadcast();
+  }
+
+  public syncVerseToPulpito(referencia: string, texto: string): void {
+    this.state.pulpito.textoBiblicoDestaque = `${referencia} — “${texto}”`;
+    this.saveAndBroadcast();
+  }
+
+  public updatePulpito(updater: (prev: PulpitoState) => Partial<PulpitoState>): void {
+    const updates = updater(this.state.pulpito);
+    this.state.pulpito = {
+      ...this.state.pulpito,
+      ...updates
+    };
+    this.saveAndBroadcast();
   }
 
   // Controles de Slides
@@ -614,6 +1028,21 @@ class HolyricsService {
   public updateIgrejaInfo(nome: string, logoUrl?: string): void {
     this.state.igrejaNome = nome || 'ASSEMBLEIA DE DEUS';
     if (logoUrl) this.state.igrejaLogoUrl = logoUrl;
+    this.saveAndBroadcast();
+  }
+
+  public setAtivo(ativo: boolean): void {
+    this.state.ativo = ativo;
+    this.saveAndBroadcast();
+  }
+
+  public toggleAtivo(ativo?: boolean): void {
+    this.state.ativo = ativo !== undefined ? ativo : !this.state.ativo;
+    this.saveAndBroadcast();
+  }
+
+  public closeProjection(): void {
+    this.state.ativo = false;
     this.saveAndBroadcast();
   }
 }

@@ -3,41 +3,33 @@ import {
   Play, Pause, RotateCcw, Clock, Volume2, Bell, AlertTriangle, 
   CheckCircle2, ChevronRight, ChevronLeft, Maximize2, Minimize2, 
   Sun, Moon, BookOpen, Music, DollarSign, Users, Sparkles, Send, 
-  Trash2, Plus, Edit3, MessageSquare, Flame, Shield, X, RefreshCw
+  Trash2, Plus, Edit3, MessageSquare, Flame, Shield, X, RefreshCw,
+  Tv, Radio, ExternalLink
 } from 'lucide-react';
 import { ChurchContext } from '../App';
+import { 
+  holyricsService, 
+  PulpitoState, 
+  BlocoLiturgico, 
+  AvisoPulpito,
+  HolyricsState
+} from '../services/holyricsService';
 
-export interface BlocoLiturgico {
-  id: string;
-  titulo: string;
-  subtitulo?: string;
-  duracaoMinutos: number;
-  responsavel?: string;
-  tipo: 'oracao' | 'louvor' | 'leitura' | 'dizimo' | 'palavra' | 'avisos' | 'apelo' | 'encerramento';
-  leituraBiblica?: string;
-  hinos?: string;
-  concluido: boolean;
-}
-
-export interface AvisoPulpito {
-  id: string;
-  texto: string;
-  tipo: 'urgente' | 'visitante' | 'oracao' | 'geral';
-  autor: string;
-  horario: string;
-  lido: boolean;
-}
+export type { BlocoLiturgico, AvisoPulpito };
 
 interface Props {
   initialLiturgiaId?: string;
   onClose?: () => void;
+  isStandalone?: boolean;
 }
 
-export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose }) => {
-  const { db, dbFirestore, appId, setDoc, doc, user, addToast, logAction } = useContext(ChurchContext);
+export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose, isStandalone = false }) => {
+  const { db, dbFirestore, appId, user, addToast, logAction } = useContext(ChurchContext) || {};
 
-  // Tema de exibição do púlpito (Padrão Dark Stage para palco)
-  const [stageTheme, setStageTheme] = useState<'dark' | 'light'>('dark');
+  // Estado sincronizado centralmente via Holyrics
+  const [holyricsState, setHolyricsState] = useState<HolyricsState>(holyricsService.getState());
+  const pulpito = holyricsState.pulpito;
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,129 +40,34 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
     return () => clearInterval(timer);
   }, []);
 
-  // Dados do Culto Atual
-  const [cultoTitulo, setCultoTitulo] = useState('Culto de Celebração e Doutrina');
-  const [cultoData] = useState(new Date().toISOString().split('T')[0]);
-  const [pregadorNome, setPregadorNome] = useState('Pastor Presidente');
-  const [dirigenteNome, setDirigenteNome] = useState('Dirigente do Culto');
-
-  // Liturgia Inicial Padrão Pentecostal
-  const [blocos, setBlocos] = useState<BlocoLiturgico[]>([
-    {
-      id: 'b1',
-      titulo: '1. Prelúdio Instrumental & Oração Inicial',
-      subtitulo: 'Invocação e Abertura Oficial do Culto',
-      duracaoMinutos: 5,
-      responsavel: 'Dirigente do Culto',
-      tipo: 'oracao',
-      concluido: false
-    },
-    {
-      id: 'b2',
-      titulo: '2. Cânticos da Harpa Cristã & Louvor Congregacional',
-      subtitulo: 'Hinos nº 15, 141 e louvor pelo ministério',
-      duracaoMinutos: 15,
-      responsavel: 'Ministério de Louvor',
-      hinos: 'Harpa 15: Foi na Cruz • Harpa 141: Guia-me, ó Salvador',
-      tipo: 'louvor',
-      concluido: false
-    },
-    {
-      id: 'b3',
-      titulo: '3. Leitura Bíblica Oficial',
-      subtitulo: 'Leitura com a Igreja em pé',
-      duracaoMinutos: 7,
-      responsavel: 'Pastor Presidente',
-      leituraBiblica: 'Salmos 122:1-9 — “Alegrei-me quando me disseram: Vamos à casa do Senhor! Nossos pés estão parados dentro das tuas portas, ó Jerusalém...”',
-      tipo: 'leitura',
-      concluido: false
-    },
-    {
-      id: 'b4',
-      titulo: '4. Oportunidades, Testemunhos & Crianças',
-      subtitulo: 'Apresentação de visitantes e testemunhos de fé',
-      duracaoMinutos: 10,
-      responsavel: 'Dirigente',
-      tipo: 'avisos',
-      concluido: false
-    },
-    {
-      id: 'b5',
-      titulo: '5. Consagração dos Dízimos & Ofertas',
-      subtitulo: 'Gratidão, adoração e oração pelos mantenedores',
-      duracaoMinutos: 8,
-      responsavel: 'Diáconos / Tesoureiro',
-      tipo: 'dizimo',
-      concluido: false
-    },
-    {
-      id: 'b6',
-      titulo: '6. Ministração da Santa Palavra de Deus',
-      subtitulo: 'Sermão bíblico expositivo',
-      duracaoMinutos: 40,
-      responsavel: 'Pregador Escalado',
-      leituraBiblica: '2 Timóteo 4:1-5 — “Prega a palavra, insta a tempo e fora de tempo, redargue, repreende, exorta, com toda a longanimidade e doutrina.”',
-      tipo: 'palavra',
-      concluido: false
-    },
-    {
-      id: 'b7',
-      titulo: '7. Apelo aos Não-Crentes & Oração da Vitória',
-      subtitulo: 'Chamada ao altar e imposição de mãos pelos enfermos',
-      duracaoMinutos: 10,
-      responsavel: 'Pastor / Ministério de Oração',
-      tipo: 'apelo',
-      concluido: false
-    },
-    {
-      id: 'b8',
-      titulo: '8. Avisos Finais & Bênção Apostólica',
-      subtitulo: 'Despedida solene e tríplice bênção bíblica',
-      duracaoMinutos: 5,
-      responsavel: 'Pastor Presidente',
-      tipo: 'encerramento',
-      concluido: false
-    }
-  ]);
-
-  // Bloco Atualmente Selecionado
-  const [blocoAtivoIndex, setBlocoAtivoIndex] = useState(0);
-  const blocoAtivo = blocos[blocoAtivoIndex] || blocos[0];
-
-  // Cronômetro do Bloco Ativo (em segundos)
-  const [tempoRestante, setTempoRestante] = useState(blocoAtivo.duracaoMinutos * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isOvertime, setIsOvertime] = useState(false);
-  const [tempoExcedido, setTempoExcedido] = useState(0);
-
-  // Atualiza tempo ao mudar de bloco
+  // Assinatura em tempo real ao serviço central do Holyrics
   useEffect(() => {
-    if (blocoAtivo) {
-      setTempoRestante(blocoAtivo.duracaoMinutos * 60);
-      setIsOvertime(false);
-      setTempoExcedido(0);
-      setIsRunning(false);
-    }
-  }, [blocoAtivoIndex]);
+    const unsubscribe = holyricsService.subscribe((newState) => {
+      setHolyricsState(newState);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  // Tick do Cronômetro
-  useEffect(() => {
-    let interval: any = null;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setTempoRestante(prev => {
-          if (prev > 1) {
-            return prev - 1;
-          } else {
-            setIsOvertime(true);
-            setTempoExcedido(exp => exp + 1);
-            return 0;
-          }
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning]);
+  // Bloco Ativo
+  const blocoAtivoIndex = pulpito.blocoAtivoIndex;
+  const blocos = pulpito.blocos;
+  const blocoAtivo = blocos[blocoAtivoIndex] || blocos[0] || {
+    id: 'b1',
+    titulo: '1. Início do Culto',
+    duracaoMinutos: 5,
+    responsavel: 'Dirigente',
+    tipo: 'oracao',
+    concluido: false
+  };
+
+  const tempoRestante = pulpito.tempoRestante;
+  const isRunning = pulpito.isRunning;
+  const isOvertime = pulpito.isOvertime;
+  const tempoExcedido = pulpito.tempoExcedido;
+  const avisos = pulpito.avisos || [];
+  const stageTheme = pulpito.stageTheme || 'dark';
+  const tamanhoFonteBiblia = pulpito.tamanhoFonteBiblia || 'grande';
+  const textoBiblico = pulpito.textoBiblicoDestaque || blocoAtivo.leituraBiblica || '';
 
   // Formatação de Tempo MM:SS
   const formatTime = (seconds: number) => {
@@ -179,77 +76,37 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Avisos de Púlpito em Tempo Real
-  const [avisos, setAvisos] = useState<AvisoPulpito[]>([
-    {
-      id: 'av_1',
-      texto: 'Veículo Corolla prata placa ABC-1234 com faróis acesos em frente ao portão.',
-      tipo: 'geral',
-      autor: 'Recepção / Estacionamento',
-      horario: '19:40',
-      lido: false
-    },
-    {
-      id: 'av_2',
-      texto: 'Pastor Visitante Pr. Carlos Souza e comitiva da AD Santos presentes no plenário.',
-      tipo: 'visitante',
-      autor: 'Secretaria',
-      horario: '19:45',
-      lido: false
-    }
-  ]);
-
   const [novoAvisoTexto, setNovoAvisoTexto] = useState('');
   const [novoAvisoTipo, setNovoAvisoTipo] = useState<'urgente' | 'visitante' | 'oracao' | 'geral'>('geral');
   const [showAvisoModal, setShowAvisoModal] = useState(false);
-  const [tamanhoFonteBiblia, setTamanhoFonteBiblia] = useState<'normal' | 'grande' | 'extragrande'>('grande');
 
-  // Adicionar Novo Aviso
+  // Adicionar Novo Aviso sincronizado no Holyrics
   const handleEnviarAviso = (e: React.FormEvent) => {
     e.preventDefault();
     if (!novoAvisoTexto.trim()) return;
 
-    const novo: AvisoPulpito = {
-      id: 'av_' + Date.now(),
-      texto: novoAvisoTexto.trim(),
-      tipo: novoAvisoTipo,
-      autor: user?.nome || 'Cabine de Som/Mídia',
-      horario: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      lido: false
-    };
-
-    setAvisos(prev => [novo, ...prev]);
+    const autor = user?.nome || 'Cabine Holyrics / Sonoplastia';
+    holyricsService.sendPulpitoAviso(novoAvisoTexto.trim(), novoAvisoTipo, autor);
     setNovoAvisoTexto('');
     setShowAvisoModal(false);
-    addToast("Aviso transmitido para a tela do púlpito!", "success");
+    if (addToast) addToast("Aviso transmitido e sincronizado no púlpito!", "success");
   };
 
   // Marcar aviso como lido / anunciado
   const handleMarcarAvisoLido = (id: string) => {
-    setAvisos(prev => prev.map(a => a.id === id ? { ...a, lido: true } : a));
+    holyricsService.markPulpitoAvisoLido(id);
+    if (addToast) addToast("Aviso marcado como lido no púlpito.", "info");
   };
 
-  // Avançar Bloco
+  // Avançar Bloco no Holyrics
   const handleConcluirBloco = () => {
-    setBlocos(prev => prev.map((b, i) => i === blocoAtivoIndex ? { ...b, concluido: true } : b));
-    if (blocoAtivoIndex < blocos.length - 1) {
-      setBlocoAtivoIndex(prev => prev + 1);
-      addToast(`Avançando para: ${blocos[blocoAtivoIndex + 1].titulo}`, "info");
-    } else {
-      setIsRunning(false);
-      addToast("Todos os blocos litúrgicos foram concluídos com sucesso!", "success");
-    }
+    holyricsService.concluirPulpitoBloco();
+    if (addToast) addToast("Bloco concluído e avançado no Holyrics!", "info");
   };
 
   // Ajustes Rápidos de Tempo
   const handleAddMinutes = (min: number) => {
-    if (isOvertime) {
-      setIsOvertime(false);
-      setTempoRestante(min * 60);
-      setTempoExcedido(0);
-    } else {
-      setTempoRestante(prev => prev + (min * 60));
-    }
+    holyricsService.addPulpitoMinutes(min);
   };
 
   // Alternar Tela Cheia
@@ -260,6 +117,16 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
     } else {
       document.exitFullscreen().catch(() => {});
       setIsFullscreen(false);
+    }
+  };
+
+  // Abrir em Janela Dedicada do 2º Monitor
+  const handleOpenPulpitoWindow = () => {
+    const win = holyricsService.openPulpitoWindow();
+    if (win) {
+      if (addToast) addToast("Tela Secundária (Púlpito) aberta para o 2º Monitor!", "success");
+    } else {
+      if (addToast) addToast("Permita pop-ups no navegador para abrir o retorno no 2º monitor.", "error");
     }
   };
 
@@ -293,20 +160,23 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
             <Flame size={22} className="animate-pulse" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-black tracking-tight">{cultoTitulo}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-black tracking-tight">{pulpito.cultoTitulo || 'Culto de Celebração e Doutrina'}</h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span> AO VIVO
               </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1" title="Sincronizado em tempo real com o Holyrics">
+                <Radio size={10} className="text-teal-400 animate-pulse" /> Holyrics Projeção
+              </span>
             </div>
-            <p className="text-xs text-slate-400 font-medium">
-              Dirigente: <strong className="text-slate-200">{dirigenteNome}</strong> • Pregador: <strong className="text-slate-200">{pregadorNome}</strong>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">
+              Dirigente: <strong className="text-slate-200">{pulpito.dirigenteNome || 'Pastor Dirigente'}</strong> • Pregador: <strong className="text-slate-200">{pulpito.pregadorNome || 'Pastor Presidente'}</strong>
             </p>
           </div>
         </div>
 
-        {/* RELÓGIO OFICIAL GRANDE */}
-        <div className="flex items-center gap-4">
+        {/* RELÓGIO OFICIAL GRANDE & CONTROLES DE JANELA */}
+        <div className="flex items-center gap-3 flex-wrap">
           <div className={`px-4 py-2 rounded-2xl border text-center font-mono ${
             stageTheme === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-800'
           }`}>
@@ -317,8 +187,20 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
           </div>
 
           <div className="flex items-center gap-1.5">
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={handleOpenPulpitoWindow}
+                className="px-3.5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-teal-900/30"
+                title="Abrir Tela Secundária (Púlpito / Retorno) em janela independente para o 2º Monitor"
+              >
+                <Tv size={15} />
+                <span className="hidden sm:inline">2º Monitor (Púlpito)</span>
+              </button>
+            )}
+
             <button
-              onClick={() => setStageTheme(stageTheme === 'dark' ? 'light' : 'dark')}
+              onClick={() => holyricsService.setPulpitoTheme(stageTheme === 'dark' ? 'light' : 'dark')}
               className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
                 stageTheme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-400' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-600'
               }`}
@@ -412,7 +294,7 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
             {/* CONTROLES DO CRONÔMETRO */}
             <div className="flex flex-wrap items-center justify-center gap-2.5 mt-6 pt-4 border-t border-slate-800/40 w-full">
               <button
-                onClick={() => setIsRunning(!isRunning)}
+                onClick={() => holyricsService.togglePulpitoTimer()}
                 className={`px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 shadow-lg cursor-pointer ${
                   isRunning 
                     ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20' 
@@ -424,12 +306,7 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
               </button>
 
               <button
-                onClick={() => {
-                  setIsRunning(false);
-                  setIsOvertime(false);
-                  setTempoRestante(blocoAtivo.duracaoMinutos * 60);
-                  setTempoExcedido(0);
-                }}
+                onClick={() => holyricsService.resetPulpitoTimer()}
                 className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
                 title="Reiniciar Tempo do Bloco"
               >
@@ -472,19 +349,19 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
 
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setTamanhoFonteBiblia('normal')}
+                  onClick={() => holyricsService.setPulpitoBibliaFonte('normal')}
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold ${tamanhoFonteBiblia === 'normal' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
                 >
                   A
                 </button>
                 <button
-                  onClick={() => setTamanhoFonteBiblia('grande')}
+                  onClick={() => holyricsService.setPulpitoBibliaFonte('grande')}
                   className={`px-2 py-1 rounded-lg text-xs font-bold ${tamanhoFonteBiblia === 'grande' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
                 >
                   A+
                 </button>
                 <button
-                  onClick={() => setTamanhoFonteBiblia('extragrande')}
+                  onClick={() => holyricsService.setPulpitoBibliaFonte('extragrande')}
                   className={`px-2 py-1 rounded-lg text-sm font-bold ${tamanhoFonteBiblia === 'extragrande' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
                 >
                   A++
@@ -493,12 +370,12 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2">
-              {blocoAtivo.leituraBiblica ? (
+              {textoBiblico ? (
                 <p className={`font-serif italic leading-relaxed text-slate-200 ${
                   tamanhoFonteBiblia === 'normal' ? 'text-sm' :
                   tamanhoFonteBiblia === 'grande' ? 'text-lg sm:text-xl' : 'text-2xl sm:text-3xl'
                 }`}>
-                  “{blocoAtivo.leituraBiblica}”
+                  “{textoBiblico}”
                 </p>
               ) : blocoAtivo.hinos ? (
                 <div className="space-y-2">
@@ -544,7 +421,7 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
                 return (
                   <div
                     key={bloco.id}
-                    onClick={() => setBlocoAtivoIndex(idx)}
+                    onClick={() => holyricsService.selectPulpitoBloco(idx)}
                     className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 text-left ${
                       isSelected 
                         ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20' 

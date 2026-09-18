@@ -17,13 +17,21 @@ import {
 } from '../services/holyricsService';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { ChurchContext } from '../App';
+import { PainelPulpitoCulto } from './PainelPulpitoCulto';
 
-export const ModuleHolyricsStudio: React.FC = () => {
-  const { igreja, addToast, callGeminiAI } = useContext(ChurchContext) || {};
+interface ModuleHolyricsStudioProps {
+  onClose?: () => void;
+}
+
+export const ModuleHolyricsStudio: React.FC<ModuleHolyricsStudioProps> = ({ onClose }) => {
+  const { igreja, addToast, callGeminiAI, setView } = useContext(ChurchContext) || {};
   const [state, setState] = useState<HolyricsState>(holyricsService.getState());
   
+  // Visualização Principal: Estúdio de Slides vs Painel Integrado de Púlpito
+  const [mainView, setMainView] = useState<'studio' | 'pulpito'>('studio');
+
   // Abas da Biblioteca Lateral
-  const [libraryTab, setLibraryTab] = useState<'apresentacoes' | 'harpa' | 'biblia' | 'alertas' | 'cronometro' | 'config'>('apresentacoes');
+  const [libraryTab, setLibraryTab] = useState<'apresentacoes' | 'harpa' | 'biblia' | 'alertas' | 'pulpito' | 'cronometro' | 'config'>('apresentacoes');
   
   // Busca na Harpa
   const [harpaSearch, setHarpaSearch] = useState<string>('');
@@ -49,6 +57,10 @@ export const ModuleHolyricsStudio: React.FC = () => {
   const [customAlertText, setCustomAlertText] = useState<string>('');
   const [customAlertType, setCustomAlertType] = useState<'carro' | 'bercario' | 'aviso'>('carro');
 
+  // Aviso Rápido para Púlpito
+  const [pulpitoAvisoTexto, setPulpitoAvisoTexto] = useState<string>('');
+  const [pulpitoAvisoTipo, setPulpitoAvisoTipo] = useState<'urgente' | 'visitante' | 'oracao' | 'geral'>('geral');
+
   // Cronômetro
   const [timerMinutes, setTimerMinutes] = useState<number>(10);
   const [timerLabel, setTimerLabel] = useState<string>('Contagem para Início');
@@ -69,6 +81,23 @@ export const ModuleHolyricsStudio: React.FC = () => {
       if (addToast) addToast('Pop-up bloqueado! Por favor permita pop-ups para abrir o telão no segundo monitor.', 'error');
     } else {
       if (addToast) addToast('Janela do Telão aberta no 2º monitor!', 'success');
+    }
+  };
+
+  const handleOpenPulpitoWindow = () => {
+    const win = holyricsService.openPulpitoWindow();
+    if (!win) {
+      if (addToast) addToast('Pop-up bloqueado! Por favor permita pop-ups para abrir a tela do púlpito no segundo monitor.', 'error');
+    } else {
+      if (addToast) addToast('Janela do Púlpito (Stage Display) aberta no 2º monitor!', 'success');
+    }
+  };
+
+  const handleCloseModule = () => {
+    if (onClose) {
+      onClose();
+    } else if (setView) {
+      setView('dashboard');
     }
   };
 
@@ -230,39 +259,81 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Transmita para o projetor ou TV do templo enquanto opera o sistema livremente no segundo monitor.
+              Controle a projeção do telão e a tela do púlpito centralmente pelo menu Holyrics.
             </p>
           </div>
         </div>
 
-        {/* Ações Globais do Telão */}
-        <div className="flex items-center gap-2">
+        {/* Alternância de Módulo Principal: Projeção Telão vs Púlpito */}
+        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
+            type="button"
+            onClick={() => setMainView('studio')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+              mainView === 'studio' 
+                ? 'bg-teal-600 text-white shadow-sm' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Tv size={14} />
+            <span>Projeção & Slides</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainView('pulpito')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+              mainView === 'pulpito' 
+                ? 'bg-amber-600 text-white shadow-sm' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Flame size={14} />
+            <span>Painel do Púlpito</span>
+          </button>
+        </div>
+
+        {/* Ações Globais de Janelas para 2º Monitor */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
             onClick={handleOpenTelaoWindow}
-            className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black rounded-xl shadow-lg shadow-teal-900/40 flex items-center gap-2 transition-all active:scale-95"
-            title="Abre a janela sem bordas para arrastar para o Projetor / Telão"
+            className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black rounded-xl shadow-lg shadow-teal-900/40 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            title="Abre a tela do projetor no 2º monitor sem bordas"
           >
             <Tv className="w-4 h-4" />
-            <span>Abrir Telão no 2º Monitor (Projetor)</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+            <span>2º Monitor: Telão</span>
+            <ExternalLink className="w-3 h-3 opacity-80" />
           </button>
 
           <button
+            type="button"
+            onClick={handleOpenPulpitoWindow}
+            className="px-3.5 py-2 bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white text-xs font-black rounded-xl shadow-lg shadow-amber-900/40 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            title="Abre a tela do púlpito / retorno no 2º monitor sem bordas"
+          >
+            <Flame className="w-4 h-4" />
+            <span>2º Monitor: Púlpito</span>
+            <ExternalLink className="w-3 h-3 opacity-80" />
+          </button>
+
+          <button
+            type="button"
             onClick={() => holyricsService.toggleStageDisplay()}
-            className={`px-3 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
               state.modoRetornoPalco 
                 ? 'bg-amber-500 text-black border-amber-400 shadow-md' 
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
             }`}
-            title="Alternar Modo Retorno de Palco (Horário, Slide Atual e Próximo para Músicos/Pregador)"
+            title="Alternar Modo Retorno de Palco no Telão"
           >
             <Clock className="w-4 h-4" />
-            <span className="hidden sm:inline">Retorno de Palco</span>
+            <span className="hidden sm:inline">Retorno Palco</span>
           </button>
 
           <button
+            type="button"
             onClick={() => holyricsService.toggleLowerThird()}
-            className={`px-3 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
               state.modoLowerThird 
                 ? 'bg-purple-600 text-white border-purple-400 shadow-md' 
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
@@ -272,10 +343,54 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
             <Radio className="w-4 h-4" />
             <span className="hidden sm:inline">Lower Third (OBS)</span>
           </button>
+
+          <button
+            type="button"
+            onClick={handleCloseModule}
+            className="px-3 py-2 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
+            title="Fechar o módulo Holyrics e retornar"
+          >
+            <X className="w-4 h-4" />
+            <span>Fechar</span>
+          </button>
         </div>
       </header>
 
-      {/* ÁREA DE TRABALHO EM 3 COLUNAS ESTILO HOLYRICS */}
+      {/* ÁREA DE TRABALHO: MODO PÚLPITO INTEGRADO OU ESTÚDIO 3 COLUNAS */}
+      {mainView === 'pulpito' ? (
+        <div className="flex-1 flex flex-col p-4 bg-slate-950 overflow-y-auto space-y-4">
+          <div className="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-4 rounded-2xl flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <Flame size={20} />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-white">Central do Púlpito & Cronômetro Integrado ao Holyrics</h2>
+                <p className="text-xs text-slate-400">Controle o tempo dos blocos, envie avisos instantâneos e transmita para a tela do púlpito centralmente pelo Holyrics.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenPulpitoWindow}
+                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-black flex items-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <Flame size={14} /> Abrir Púlpito no 2º Monitor
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainView('studio')}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer"
+              >
+                Voltar para Projeção & Slides
+              </button>
+            </div>
+          </div>
+          <div className="flex-1">
+            <PainelPulpitoCulto />
+          </div>
+        </div>
+      ) : (
       <div className="flex-1 grid grid-cols-12 overflow-hidden">
         
         {/* COLUNA 1: BIBLIOTECA DE CONTEÚDOS (ESQUERDA - 3 COLUNAS) */}
@@ -284,16 +399,16 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
           <div className="flex border-b border-slate-800 bg-slate-900/80 p-1.5 gap-1 overflow-x-auto text-[11px] font-bold">
             <button
               onClick={() => setLibraryTab('apresentacoes')}
-              className={`flex-1 py-2 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`flex-1 py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                 libraryTab === 'apresentacoes' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               <LayoutTemplate className="w-3.5 h-3.5" />
-              <span>Apresentações</span>
+              <span>Slides</span>
             </button>
             <button
               onClick={() => setLibraryTab('harpa')}
-              className={`flex-1 py-2 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`flex-1 py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                 libraryTab === 'harpa' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -302,7 +417,7 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
             </button>
             <button
               onClick={() => setLibraryTab('biblia')}
-              className={`flex-1 py-2 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`flex-1 py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                 libraryTab === 'biblia' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -311,12 +426,22 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
             </button>
             <button
               onClick={() => setLibraryTab('alertas')}
-              className={`flex-1 py-2 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`flex-1 py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                 libraryTab === 'alertas' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Bell className="w-3.5 h-3.5" />
               <span>Alertas</span>
+            </button>
+            <button
+              onClick={() => setLibraryTab('pulpito')}
+              className={`flex-1 py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
+                libraryTab === 'pulpito' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+              title="Controle em tempo real do Púlpito e Cronômetro Litúrgico"
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>Púlpito</span>
             </button>
           </div>
 
@@ -549,6 +674,214 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
                       </button>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ABA: PÚLPITO & CONTROLE DE CULTO EM TEMPO REAL */}
+            {libraryTab === 'pulpito' && (
+              <div className="space-y-4">
+                {/* Cartão de Bloco Ativo */}
+                <div className="p-3 bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl shadow-md">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                      <Flame className="w-3 h-3" /> Bloco Ativo no Púlpito
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      state.pulpito?.timerRunning 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse' 
+                        : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {state.pulpito?.timerRunning ? 'Tempo Correndo' : 'Pausado'}
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const activeBloco = state.pulpito?.blocos.find(b => b.id === state.pulpito?.blocoAtivoId) || state.pulpito?.blocos[0];
+                    const seg = state.pulpito?.segundosRestantes ?? 0;
+                    const isNegative = seg < 0;
+                    const abs = Math.abs(seg);
+                    const mm = String(Math.floor(abs / 60)).padStart(2, '0');
+                    const ss = String(abs % 60).padStart(2, '0');
+
+                    return (
+                      <div className="space-y-2">
+                        <div>
+                          <h3 className="text-sm font-black text-white truncate">
+                            {activeBloco?.titulo || 'Culto Geral'}
+                          </h3>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {activeBloco?.responsavel || 'Dirigente'} • {activeBloco?.duracaoMinutos || 0} min
+                          </p>
+                        </div>
+
+                        {/* Cronômetro Grande */}
+                        <div className={`py-2 px-3 rounded-xl font-mono text-center text-2xl font-black border ${
+                          isNegative 
+                            ? 'bg-rose-950/60 text-rose-400 border-rose-600 animate-pulse' 
+                            : seg < 120 
+                              ? 'bg-amber-950/50 text-amber-400 border-amber-600' 
+                              : 'bg-slate-950 text-white border-slate-800'
+                        }`}>
+                          {isNegative ? `-${mm}:${ss}` : `${mm}:${ss}`}
+                        </div>
+
+                        {/* Ações Rápidas de Cronômetro */}
+                        <div className="grid grid-cols-4 gap-1 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => holyricsService.togglePulpitoTimer()}
+                            className={`py-1.5 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                              state.pulpito?.timerRunning
+                                ? 'bg-amber-500 hover:bg-amber-400 text-black'
+                                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            }`}
+                            title={state.pulpito?.timerRunning ? 'Pausar' : 'Iniciar'}
+                          >
+                            {state.pulpito?.timerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => holyricsService.resetPulpitoTimer()}
+                            className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
+                            title="Resetar tempo do bloco"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => holyricsService.addPulpitoMinutes(1)}
+                            className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-black transition-all cursor-pointer"
+                            title="Adicionar 1 minuto"
+                          >
+                            +1m
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => holyricsService.addPulpitoMinutes(5)}
+                            className="py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px] font-black transition-all cursor-pointer"
+                            title="Adicionar 5 minutos"
+                          >
+                            +5m
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            holyricsService.concluirPulpitoBloco();
+                            if (addToast) addToast('Bloco concluído e avançado para o próximo!', 'success');
+                          }}
+                          className="w-full py-1.5 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-300 text-xs font-bold rounded-lg border border-slate-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Concluir e Avançar Bloco</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Enviar Aviso Rápido ao Púlpito */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      Aviso Direto ao Púlpito:
+                    </span>
+                    <select
+                      value={pulpitoAvisoTipo}
+                      onChange={(e) => setPulpitoAvisoTipo(e.target.value as any)}
+                      className="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-md px-1.5 py-0.5"
+                    >
+                      <option value="geral">Geral</option>
+                      <option value="urgente">Urgência</option>
+                      <option value="visitante">Visitante</option>
+                      <option value="oracao">Oração</option>
+                    </select>
+                  </div>
+                  <textarea
+                    value={pulpitoAvisoTexto}
+                    onChange={(e) => setPulpitoAvisoTexto(e.target.value)}
+                    placeholder="Ex: Pastor, Pr. Marcos da AD Belém acabou de chegar ao templo..."
+                    rows={2}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!pulpitoAvisoTexto.trim()) return;
+                        holyricsService.sendPulpitoAviso(pulpitoAvisoTexto, pulpitoAvisoTipo);
+                        setPulpitoAvisoTexto('');
+                        if (addToast) addToast('Aviso transmitido para o monitor do púlpito!', 'success');
+                      }}
+                      className="flex-1 py-1.5 bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-black text-xs rounded-xl shadow transition-all cursor-pointer"
+                    >
+                      Transmitir ao Púlpito
+                    </button>
+                    {(state.pulpito?.avisos?.length || 0) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => holyricsService.clearPulpitoAviso()}
+                        className="px-2.5 py-1.5 bg-rose-600/30 text-rose-300 text-xs font-bold rounded-xl cursor-pointer"
+                        title="Remover Aviso"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Alternador de Blocos da Liturgia */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      Blocos da Liturgia:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMainView('pulpito')}
+                      className="text-[10px] text-amber-400 hover:underline font-bold cursor-pointer"
+                    >
+                      Abrir Painel Completo
+                    </button>
+                  </div>
+
+                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                    {(state.pulpito?.blocos || []).map((b) => {
+                      const isActive = b.id === state.pulpito?.blocoAtivoId;
+                      return (
+                        <div
+                          key={b.id}
+                          onClick={() => holyricsService.selectPulpitoBloco(b.id)}
+                          className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                            isActive 
+                              ? 'bg-amber-600/30 border border-amber-500 text-white font-black' 
+                              : b.status === 'concluido'
+                                ? 'bg-slate-900/40 text-slate-500 border border-transparent'
+                                : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800'
+                          }`}
+                        >
+                          <div className="truncate flex-1 mr-2">
+                            <span className="truncate">{b.titulo}</span>
+                            <span className="text-[10px] text-slate-400 ml-1.5 font-normal">({b.responsavel})</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0">{b.duracaoMinutos}m</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleOpenPulpitoWindow}
+                    className="w-full py-2 bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white text-xs font-black rounded-xl shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Flame className="w-4 h-4" />
+                    <span>Lançar Púlpito no 2º Monitor</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -850,6 +1183,7 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
 
         </div>
       </div>
+      )}
 
       {/* MODAL DE GERADOR COM INTELIGÊNCIA ARTIFICIAL */}
       {showAiModal && (
