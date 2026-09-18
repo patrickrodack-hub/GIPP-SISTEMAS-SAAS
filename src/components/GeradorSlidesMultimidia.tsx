@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
+import { holyricsService, HolyricsSlide } from '../services/holyricsService';
+import { Tv, ExternalLink } from 'lucide-react';
 
 export interface SlideItem {
   id: string;
@@ -55,6 +57,13 @@ export const GeradorSlidesMultimidia: React.FC<GeradorSlidesProps> = ({
   const [showAiModal, setShowAiModal] = useState<boolean>(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sincroniza índice do slide com Holyrics quando a projeção estiver ativa
+  useEffect(() => {
+    if (holyricsService.getState().ativo) {
+      holyricsService.goToSlide(currentSlideIndex);
+    }
+  }, [currentSlideIndex]);
 
   // Carrega slides baseados no módulo selecionado caso não tenham vindo prontos
   useEffect(() => {
@@ -386,6 +395,31 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem markdown, sem prefixo) no seguint
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {/* Holyrics Dual-Screen Transmission Button */}
+          <button
+            onClick={() => {
+              const holyricsSlides: HolyricsSlide[] = slides.map((s, idx) => ({
+                id: s.id || `slide-${idx}`,
+                tipo: s.tipo as any,
+                titulo: s.titulo,
+                subtitulo: s.subtitulo,
+                texto: s.conteudo,
+                versiculo: s.versiculo,
+                pontos: s.pontos,
+                notas: s.notasProfessor
+              }));
+              const currentTitle = tituloCustom || (MODULES_TEOLOGIA.find(m => m.id === selectedModuleId)?.title) || 'Apresentação Teológica';
+              holyricsService.loadPresentation(currentTitle, holyricsSlides, 'slides', false);
+              holyricsService.goToSlide(currentSlideIndex);
+              holyricsService.openTelaoWindow();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black rounded-xl shadow-lg cursor-pointer transition-all active:scale-95"
+            title="Transmitir no Telão / 2º Monitor (Estilo Holyrics) de forma independente"
+          >
+            <Tv size={14} className="text-teal-200" />
+            <span className="hidden sm:inline">Transmitir no Telão (Holyrics)</span>
+          </button>
+
           {/* AI Generator Button */}
           {callGeminiAI && (
             <button
@@ -670,16 +704,44 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem markdown, sem prefixo) no seguint
           ))}
         </div>
 
-        {/* Right: Next Button */}
-        <button
-          type="button"
-          disabled={currentSlideIndex === slides.length - 1}
-          onClick={() => setCurrentSlideIndex(prev => Math.min(prev + 1, slides.length - 1))}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 disabled:opacity-30 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-400/20 transition-all cursor-pointer"
-        >
-          <span className="hidden sm:inline">Próximo</span>
-          <ChevronRight size={16} />
-        </button>
+        {/* Right: Next Button and Dual-screen Liberar Sistema */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const holyricsSlides: HolyricsSlide[] = slides.map((s, idx) => ({
+                id: s.id || `slide-${idx}`,
+                tipo: s.tipo as any,
+                titulo: s.titulo,
+                subtitulo: s.subtitulo,
+                texto: s.conteudo,
+                versiculo: s.versiculo,
+                pontos: s.pontos,
+                notas: s.notasProfessor
+              }));
+              const currentTitle = tituloCustom || (MODULES_TEOLOGIA.find(m => m.id === selectedModuleId)?.title) || 'Apresentação Teológica';
+              holyricsService.loadPresentation(currentTitle, holyricsSlides, 'slides', false);
+              holyricsService.goToSlide(currentSlideIndex);
+              holyricsService.openTelaoWindow();
+              onClose();
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-teal-900/40 hover:bg-teal-800/60 border border-teal-500/50 text-teal-300 hover:text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+            title="Abre o telão no 2º monitor e libera o sistema para você usar outras abas (com a barra flutuante de controle)"
+          >
+            <Tv size={14} />
+            <span className="hidden md:inline">Liberar Sistema (Operar pelo Dock)</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={currentSlideIndex === slides.length - 1}
+            onClick={() => setCurrentSlideIndex(prev => Math.min(prev + 1, slides.length - 1))}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 disabled:opacity-30 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-400/20 transition-all cursor-pointer"
+          >
+            <span className="hidden sm:inline">Próximo</span>
+            <ChevronRight size={16} />
+          </button>
+        </div>
 
       </footer>
 

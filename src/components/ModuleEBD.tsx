@@ -46,6 +46,7 @@ import { InteractiveMagazineView } from './InteractiveMagazineView';
 import { InteractiveWindow } from './InteractiveWindow';
 import { EBDClassroomIntegration } from './EBDClassroomIntegration';
 import { GeradorSlidesMultimidia } from './GeradorSlidesMultimidia';
+import { EBDDataVisualization } from './EBDDataVisualization';
 
 interface ModuleEBDProps {
     isProfessorOnly?: boolean;
@@ -1196,7 +1197,17 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
             .slice(0, 5); // sugerir até 5 membros
     }, [db.ebd?.alunos, db.membros, congregacaoFilter]);
 
-    const menuItems = [{id: 1, label: 'Dashboard', icon: LayoutDashboard}, {id: 2, label: 'Turmas & Profs', icon: Users}, {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, {id: 4, label: 'Controle de Lições', icon: BookOpen}, {id: 5, label: 'Mural de Turmas', icon: Layers}, {id: 7, label: 'Escala de Professores', icon: Calendar}, {id: 8, label: 'Google Classroom', icon: Globe}, {id: 6, label: 'Área do Professor', icon: GraduationCap}];
+    const menuItems = [
+        {id: 1, label: 'Dashboard', icon: LayoutDashboard}, 
+        {id: 2, label: 'Turmas & Profs', icon: Users}, 
+        {id: 3, label: 'Matrícula Alunos', icon: UserPlus}, 
+        {id: 4, label: 'Controle de Lições', icon: BookOpen}, 
+        {id: 9, label: 'Evolução Frequência', icon: TrendingUp},
+        {id: 5, label: 'Mural de Turmas', icon: Layers}, 
+        {id: 7, label: 'Escala de Professores', icon: Calendar}, 
+        {id: 8, label: 'Google Classroom', icon: Globe}, 
+        {id: 6, label: 'Área do Professor', icon: GraduationCap}
+    ];
     const TabButton: any = ({ item }) => (
         <button 
             onClick={() => setTab(item.id)} 
@@ -1743,6 +1754,16 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                     </div>
                                 );
                             })()}
+                        </div>
+
+                        {/* Módulo de Visualização de Dados: Evolução da Frequência de Alunos por Turma (Últimos 6 Meses via celulas_relatorios) */}
+                        <div className="mt-8">
+                            <EBDDataVisualization
+                                db={db}
+                                turmasFiltradas={turmasFiltradas}
+                                congregacaoFilter={congregacaoFilter}
+                                onOpenNewRelatorio={() => openModal('celula_relatorio', {})}
+                            />
                         </div>
                     </div>
                 )}
@@ -3749,6 +3770,17 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                             turmas={turmasFiltradas}
                             alunos={alunosFiltrados}
                             licoes={licoesFiltradasTotal}
+                        />
+                    </div>
+                )}
+
+                {tab === 9 && (
+                    <div className="h-full overflow-y-auto custom-scrollbar p-2">
+                        <EBDDataVisualization
+                            db={db}
+                            turmasFiltradas={turmasFiltradas}
+                            congregacaoFilter={congregacaoFilter}
+                            onOpenNewRelatorio={() => openModal('celula_relatorio', {})}
                         />
                     </div>
                 )}

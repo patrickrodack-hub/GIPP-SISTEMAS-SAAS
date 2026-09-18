@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telão & Projetor GIPP Holyrics</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #020617;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #stage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background 0.5s ease;
+      padding: 3rem 4rem;
+    }
+    .theme-navy { background: linear-gradient(135deg, #020617, #0f172a, #1e1b4b); color: #ffffff; }
+    .theme-dark { background: #000000; color: #ffffff; }
+    .theme-amber { background: linear-gradient(135deg, #451a03, #0f172a, #292524); color: #fef3c7; }
+    .theme-clean { background: linear-gradient(135deg, #f8fafc, #ffffff, #f1f5f9); color: #0f172a; }
+    .theme-royal { background: linear-gradient(135deg, #312e81, #0f172a, #581c87); color: #ffffff; }
+
+    #header-pill {
+      align-self: center;
+      padding: 0.5rem 1.5rem;
+      border-radius: 9999px;
+      font-size: 1.25rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      margin-bottom: 2rem;
+      display: none;
+    }
+    #content-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    #slide-title {
+      font-size: 4.5rem;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 4px 16px rgba(0,0,0,0.8);
+    }
+    #slide-text {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.4;
+      white-space: pre-line;
+      max-width: 85vw;
+      text-shadow: 0 4px 14px rgba(0,0,0,0.8);
+    }
+    #verse-ref {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #facc15;
+      margin-top: 2rem;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      display: none;
+    }
+    #blackout-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 999;
+      display: none;
+    }
+    #alert-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #d97706, #f59e0b, #ea580c);
+      color: #000000;
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+      font-weight: 900;
+      display: none;
+      z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    }
+    #footer-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      opacity: 0.5;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body class="theme-navy">
+  <div id="blackout-overlay"></div>
+  <div id="stage">
+    <div id="header-pill"></div>
+    <div id="content-wrap">
+      <h1 id="slide-title"></h1>
+      <p id="slide-text">Conectando ao GIPP Holyrics...</p>
+      <div id="verse-ref"></div>
+    </div>
+    <div id="footer-info">
+      <span id="church-label">ASSEMBLEIA DE DEUS • TELÃO HOLYRICS</span>
+      <span id="slide-counter">Slide 1 / 1</span>
+    </div>
+  </div>
+  <div id="alert-bar"></div>
+
+  <script>
+    const STORAGE_KEY = 'gipp_holyrics_projection_state';
+    const CHANNEL_NAME = 'gipp_holyrics_channel';
+
+    let channel;
+    try {
+      channel = new BroadcastChannel(CHANNEL_NAME);
+      channel.onmessage = (e) => {
+        if (e.data && e.data.type === 'STATE_UPDATE') {
+          renderState(e.data.payload);
+        }
+      };
+      channel.postMessage({ type: 'PING' });
+    } catch(err) {
+      console.warn('BroadcastChannel fallback:', err);
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          renderState(JSON.parse(e.newValue));
+        } catch(err) {}
+      }
+    });
+
+    // Carga inicial do localStorage
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) renderState(JSON.parse(saved));
+    } catch(err) {}
+
+    function renderState(state) {
+      if (!state) return;
+
+      // Blackout
+      const blackoutEl = document.getElementById('blackout-overlay');
+      blackoutEl.style.display = state.blackout ? 'block' : 'none';
+
+      // Tema
+      document.body.className = 'theme-' + (state.tema || 'navy');
+
+      // Slides
+      const currentSlide = state.slides && state.slides[state.indiceAtual] ? state.slides[state.indiceAtual] : null;
+      const titleEl = document.getElementById('slide-title');
+      const textEl = document.getElementById('slide-text');
+      const pillEl = document.getElementById('header-pill');
+      const refEl = document.getElementById('verse-ref');
+      const counterEl = document.getElementById('slide-counter');
+      const churchEl = document.getElementById('church-label');
+
+      churchEl.innerText = (state.igrejaNome || 'ASSEMBLEIA DE DEUS') + ' • TELÃO HOLYRICS';
+
+      if (state.limparTexto) {
+        titleEl.innerText = '';
+        textEl.innerText = '';
+        pillEl.style.display = 'none';
+        refEl.style.display = 'none';
+        return;
+      }
+
+      if (currentSlide) {
+        counterEl.innerText = 'Slide ' + (state.indiceAtual + 1) + ' / ' + state.slides.length;
+
+        if (currentSlide.subtitulo) {
+          pillEl.innerText = currentSlide.subtitulo;
+          pillEl.style.display = 'inline-block';
+        } else {
+          pillEl.style.display = 'none';
+        }
+
+        if (currentSlide.versiculo) {
+          titleEl.innerText = '';
+          textEl.innerText = '"' + currentSlide.versiculo.texto + '"';
+          refEl.innerText = '— ' + currentSlide.versiculo.referencia;
+          refEl.style.display = 'block';
+        } else {
+          refEl.style.display = 'none';
+          if (currentSlide.tipo === 'capa') {
+            titleEl.innerText = currentSlide.titulo;
+            textEl.innerText = currentSlide.texto || '';
+          } else {
+            titleEl.innerText = '';
+            textEl.innerText = currentSlide.texto || (currentSlide.pontos ? currentSlide.pontos.join('\n• ') : currentSlide.titulo);
+          }
+        }
+      }
+
+      // Alerta
+      const alertBar = document.getElementById('alert-bar');
+      if (state.alertaAtivo && !state.blackout) {
+        alertBar.innerText = '⚠️ ' + state.alertaAtivo.texto;
+        alertBar.style.display = 'block';
+      } else {
+        alertBar.style.display = 'none';
+      }
+    }
+
+    // Tela cheia ao duplo clique
+    window.addEventListener('dblclick', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(()=>{});
+      } else {
+        document.exitFullscreen().catch(()=>{});
+      }
+    });
+  </script>
+</body>
+</html>

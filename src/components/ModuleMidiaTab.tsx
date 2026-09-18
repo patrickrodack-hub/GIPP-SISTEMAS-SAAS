@@ -10,6 +10,8 @@ import {
 import { collection, doc, addDoc, deleteDoc } from 'firebase/firestore';
 import { Button, GenericTable, ChurchContext, ConfirmModal } from '../App';
 import { InteractiveWindow } from './InteractiveWindow';
+import { ModuleHolyricsStudio } from './ModuleHolyricsStudio';
+import { holyricsService } from '../services/holyricsService';
 
 const SyncStatusIndicator = ({ isOnline }: { isOnline: boolean }) => {
     const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -328,19 +330,39 @@ export const ModuleMidiaTab = ({
               <h3 className="font-extrabold text-2xl tracking-tight">Ministério de Mídia (Departamento Geral)</h3>
               <SyncStatusIndicator isOnline={isOnline} />
             </div>
-            <p className="text-xs text-teal-100/85 font-medium mt-1 uppercase tracking-widest">Escalas de Transmissão, Conteúdo Digital e Inventário Técnico</p>
+            <p className="text-xs text-teal-100/85 font-medium mt-1 uppercase tracking-widest">Transmissão Holyrics, Escalas de Multimídia e Inventário Técnico</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const win = holyricsService.openTelaoWindow();
+              if (win) {
+                addToast('Janela do Telão aberta para o 2º Monitor (Projetor)!', 'success');
+              } else {
+                addToast('Permita pop-ups no navegador para abrir o telão no segundo monitor.', 'error');
+              }
+            }}
+            className="px-4 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            title="Abre a janela sem bordas no segundo monitor enquanto você continua operando no primeiro monitor"
+          >
+            <Tv size={16} />
+            <span>Abrir Telão (2º Monitor)</span>
+          </button>
         </div>
       </div>
 
       {/* Media Sub tabs switcher */}
-      <div className="flex gap-2 border-b border-slate-200 pb-1">
-        {['equipe', 'eventos', 'biblioteca', 'equipamentos', 'relatorios'].map((st) => (
+      <div className="flex gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
+        {['holyrics', 'equipe', 'eventos', 'biblioteca', 'equipamentos', 'relatorios'].map((st) => (
           <button
             key={st}
             onClick={() => setSubTabMedia(st)}
-            className={`px-5 py-2.5 font-black text-xs uppercase tracking-wider rounded-xl transition-all ${subTabMedia === st ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600' : 'text-slate-500 hover:text-teal-600'}`}
+            className={`px-5 py-2.5 font-black text-xs uppercase tracking-wider rounded-xl transition-all whitespace-nowrap ${subTabMedia === st ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600' : 'text-slate-500 hover:text-teal-600'}`}
           >
+            {st === 'holyrics' && '📡 Telão Holyrics & Projeção'}
             {st === 'equipe' && 'Escala & Equipe'}
             {st === 'eventos' && 'Agenda & Eventos'}
             {st === 'biblioteca' && 'Acervo & Upload'}
@@ -349,6 +371,12 @@ export const ModuleMidiaTab = ({
           </button>
         ))}
       </div>
+
+      {subTabMedia === 'holyrics' && (
+        <div className="flex-1 overflow-hidden">
+          <ModuleHolyricsStudio />
+        </div>
+      )}
 
       {subTabMedia === 'equipe' && (
         <div className="flex-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col space-y-4">

@@ -1,6 +1,6 @@
 {
   "name": "Gestão de Igreja - GIPP",
-  "description": "Sistema de gestão eclesiástica GIPP v13.0.0 com auditoria de aparelhos SaaS em tempo real, telemetria de hardware, louvor com cifras dinâmicas, teologia CGADB/CPAD, loja virtual e Google Workspace.",
+  "description": "Sistema de gestão eclesiástica GIPP v13.0.0 com projeção independente multitelas estilo Holyrics, auditoria de aparelhos SaaS em tempo real, telemetria de hardware, louvor com cifras dinâmicas, teologia CGADB/CPAD, loja virtual e Google Workspace.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

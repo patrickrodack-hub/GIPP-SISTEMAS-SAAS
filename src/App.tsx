@@ -20,7 +20,7 @@ import {
   FileCheck, Paperclip, ExternalLink, FileJson, UploadCloud, AlertTriangle, Check, EyeOff, Eye, Tent, Footprints, Zap, ZapOff, Target, Cloud, CloudRain, CloudSun, CloudLightning,
   TrendingUp, TrendingDown, PenTool, Book, Droplets, ChevronLeft, Sparkles, Cpu, Palette, Loader2, MessageSquare, Music,
   MousePointer2, Move, Type as TypeIcon, ImagePlus, DownloadCloud, GitBranch, History,
-  MonitorPlay, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
+  MonitorPlay, Tv, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car, ShoppingBag,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
@@ -78,6 +78,8 @@ import { ClipperLayout } from './components/ClipperLayout';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS, getMemberFuncoesAdm, getMemberPortalAllowedModules } from './constants/portalPermissions';
+import { TelaoDisplayWindow } from './components/TelaoDisplayWindow';
+import { HolyricsOperatorDock } from './components/HolyricsOperatorDock';
 
 // Helper to gracefully retry failed dynamic chunk / module imports
 const lazyWithRetry = (factory: () => Promise<any>) =>
@@ -11257,6 +11259,7 @@ export const SharedEmailModule = ({ user, isAdmin }) => {
 // Wrapper para Admin
 const Sidebar = ({ view, setView, open, setOpen, user }) => {
     const { handleLogoutRequest, db, hasPermission, addToast } = useContext(ChurchContext); 
+    const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
     
     // --- NOVO: LÓGICA DE VERIFICAÇÃO DE PLANOS (SaaS) ---
     const checkPlan = (moduleId) => {
@@ -11384,6 +11387,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
 
         return (
             <button 
+                id={`sidebar-nav-${id}`}
                 onClick={() => { 
                     if (isMaryDisabled) {
                         addToast("Acesso inativo para o Assistente Virtual Mary.", "warning");
@@ -11392,12 +11396,18 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     playMenuSound(); // Efeito sonoro no clique
                     setView(id); 
                 }} 
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 group relative mb-1 overflow-hidden ${active ? 'text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'} ${isMaryDisabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 group relative mb-1 overflow-hidden active:scale-[0.98] ${active ? 'text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'} ${isMaryDisabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
             >
                 {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 animate-slide-in z-0"></div>}
                 <div className="relative z-10 flex items-center gap-3.5 w-full">
-                    <SystemIcon id={id} icon={Icon} active={active} size={20} />
-                    {open && <span className={`font-semibold text-xs sm:text-xs+ tracking-wide transition-colors duration-300 ${active ? 'text-white font-bold' : ''} ${isMaryDisabled ? 'text-slate-400' : ''}`}>{label}</span>}
+                    <div className="transition-transform duration-200 ease-out group-hover:scale-110 flex items-center justify-center shrink-0">
+                        <SystemIcon id={id} icon={Icon} active={active} size={20} />
+                    </div>
+                    {open && (
+                        <span className={`font-semibold text-xs sm:text-xs+ tracking-wide transition-all duration-200 ease-out group-hover:translate-x-1 ${active ? 'text-white font-bold' : 'group-hover:text-indigo-600 font-medium'} ${isMaryDisabled ? 'text-slate-400' : ''}`}>
+                            {label}
+                        </span>
+                    )}
                     {isMaryDisabled && open && <Lock size={11} className="text-slate-400 ml-auto shrink-0 animate-pulse" />}
                 </div>
             </button>
@@ -11588,10 +11598,40 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     </div>
                     {open && <div className="overflow-hidden flex-1"><p className="text-sm font-bold text-slate-800 truncate">{safeText(user.nome).split(' ')[0]}</p><p className="text-[10px] text-emerald-600 uppercase font-black tracking-widest">Sessão Ativa</p></div>}
                 </div>
-                <button onClick={() => { playMenuSound(); handleLogoutRequest(); }} className={`mt-4 w-full flex items-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white font-bold transition-all shadow-sm border border-transparent hover:border-rose-400 hover:shadow-rose-500/30 ${!open && 'justify-center'}`}>
-                    <LogOut size={20}/>{open && <span>Encerrar Sessão</span>}
+                <button 
+                    id="sidebar-btn-logout"
+                    onClick={() => { 
+                        playMenuSound(); 
+                        setConfirmLogoutOpen(true); 
+                    }} 
+                    className={`mt-4 w-full flex items-center gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white font-bold transition-all duration-200 shadow-sm border border-transparent hover:border-rose-400 hover:shadow-rose-500/30 active:scale-[0.98] group ${!open && 'justify-center'}`}
+                    title="Encerrar Sessão com Confirmação e Backup"
+                >
+                    <div className="transition-transform duration-200 ease-out group-hover:scale-110 group-hover:-rotate-6 flex items-center justify-center">
+                        <LogOut size={20}/>
+                    </div>
+                    {open && (
+                        <span className="transition-transform duration-200 ease-out group-hover:translate-x-1">
+                            Encerrar Sessão
+                        </span>
+                    )}
                 </button>
             </div>
+
+            {/* Confirmação Segura de Logout com Backup Automático */}
+            <ConfirmModal
+                isOpen={confirmLogoutOpen}
+                onClose={() => setConfirmLogoutOpen(false)}
+                onConfirm={() => {
+                    setConfirmLogoutOpen(false);
+                    handleLogoutRequest();
+                }}
+                title="Encerrar Sessão"
+                message="Tem certeza de que deseja encerrar sua sessão? Se o backup automático de segurança estiver ativo no sistema, o banco de dados será sincronizado e salvo antes de finalizar."
+                confirmText="Sim, Sair e Fazer Backup"
+                cancelText="Permanecer Conectado"
+                variant="danger"
+            />
         </aside>
     );
 };
@@ -20867,6 +20907,18 @@ const MobilePushCompatibilityCheck = () => {
 };
 
 export default function App() {
+  // Detecção de Modo Telão Dedicado (Holyrics 2º Monitor / Projetor)
+  const isTelaoMode = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).get('mode') === 'telao' ||
+    window.location.search.includes('telao=true') ||
+    window.location.hash.includes('telao') ||
+    window.location.pathname.endsWith('/telao')
+  );
+
+  if (isTelaoMode) {
+    return <TelaoDisplayWindow />;
+  }
+
   if (firebaseSetupError) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0f172a] text-slate-300 p-8 text-center font-sans">
@@ -21050,6 +21102,8 @@ export default function App() {
       
       const modules = [
           { label: "Visão Geral (Dashboard)", view: "dashboard", category: "Navegação", icon: LayoutDashboard },
+          { label: "Telão Holyrics & Projeção Multitelas", view: "midia", category: "Comunicação & Mídia", icon: Tv },
+          { label: "Ministério de Mídia & Transmissão", view: "midia", category: "Comunicação & Mídia", icon: Video },
           { label: "Bíblia de Estudos Offline", view: "biblia", category: "Navegação", icon: BookOpen },
           { label: "Google Meet Videoconferências", view: "google_meet", category: "Comunicação & Mídia", icon: Video },
           { label: "Google Sheets (Planilhas Integradas)", view: "google_sheets", category: "Escritório & Mídia", icon: FileSpreadsheet },
@@ -24139,6 +24193,9 @@ export default function App() {
           logoUrl={db.igreja?.logo || 'https://cdn-icons-png.flaticon.com/512/3004/3004613.png'}
           initialDeviceType={installDeviceType}
         />
+
+        {/* Holyrics Operator Dock - Controle Não-Bloqueante de Projeção no Telão */}
+        <HolyricsOperatorDock onOpenFullStudio={() => setView('midia')} />
     </ChurchContext.Provider>
   );
 }
