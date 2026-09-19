@@ -242,7 +242,24 @@ const ModuleIgreja = () => {
                     licenca_status: data.licenca_status || db.igreja?.licenca_status || 'ativo',
                     ultimo_atualizacao: new Date().toISOString()
                 }, { merge: true });
-            } catch (err) { console.warn("Sync Master falhou", err); }
+            } catch (err) { console.warn("Sync Master Firestore falhou", err); }
+
+            // --- REGISTRO RESILIENTE NO BACKEND SERVER (IMUNE A QUEDAS DO FIREBASE) ---
+            try {
+                fetch('/api/tenants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: appId,
+                        nome: data.nome || 'Igreja Sem Nome',
+                        pastor: data.pastor || '',
+                        cidade: data.cidade || '',
+                        uf: data.uf || '',
+                        telefone: data.telefone || '',
+                        licenca_status: data.licenca_status || db.igreja?.licenca_status || 'ativo'
+                    })
+                }).catch(() => {});
+            } catch (err) {}
             // -------------------------------------------
 
             addToast("Dados da igreja atualizados!", "success");

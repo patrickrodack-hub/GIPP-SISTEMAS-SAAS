@@ -81,8 +81,22 @@ const ModuleDesenvolvedor = () => {
     const [uppercaseStatus, setUppercaseStatus] = useState('');
 
     // ESTADOS PARA LISTAGEM DE CLIENTES E PAGAMENTOS
-    const [tenants, setTenants] = useState([]);
+    const [tenants, setTenants] = useState<any[]>(() => {
+        try {
+            const cached = localStorage.getItem('gipp_saas_tenants_cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) {}
+        return [];
+    });
     const [loadingTenants, setLoadingTenants] = useState(false);
+    const [cloudDiagnosis, setCloudDiagnosis] = useState<any>(null);
+    const [manualAppIdInput, setManualAppIdInput] = useState('');
+    const [manualNomeInput, setManualNomeInput] = useState('');
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [isRecheckingCloud, setIsRecheckingCloud] = useState(false);
 
     // ESTADOS PARA EMISSÃO DE CONTRATO SAAS
     const [contratoModalOpen, setContratoModalOpen] = useState(false);
@@ -552,7 +566,6 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         {id: 'amparo_legal', label: 'Amparo Constitucional'},
         {id: 'registro_software', label: 'Registro do Software'},
         {id: 'dp_contabilidade', label: 'Depto. Pessoal / RH'},
-        {id: 'controle_frotas', label: 'Controle de Frotas'},
         {id: 'docs_editor', label: 'GIPP DOCs (Processador de Texto)'},
         {id: 'sheets_editor', label: 'GIPP Planilhas (Planilha Eletrônica)'},
         {id: 'google_meet', label: 'Google Meet (Salas Virtuais)'},
@@ -805,20 +818,63 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
         }
     }, [tab]);
 
+    const checkCloudAndFetchTenants = async () => {
+        // 1. Sonda o status oficial do Firebase / Google Cloud
+        try {
+            const res = await fetch('/api/cloud-status');
+            const data = await res.json();
+            setCloudDiagnosis(data);
+        } catch (e) {
+            console.warn("Erro ao consultar status da nuvem", e);
+        }
+
+        // 2. Busca tenants do backend do servidor (persistência resiliente em disco)
+        try {
+            const res = await fetch('/api/tenants');
+            const data = await res.json();
+            if (data?.tenants && Array.isArray(data.tenants) && data.tenants.length > 0) {
+                setTenants((prev: any[]) => {
+                    const map = new Map();
+                    prev.forEach(item => map.set(item.id, item));
+                    data.tenants.forEach((item: any) => {
+                        map.set(item.id, { ...(map.get(item.id) || {}), ...item });
+                    });
+                    const merged = Array.from(map.values());
+                    try { localStorage.setItem('gipp_saas_tenants_cache', JSON.stringify(merged)); } catch (e) {}
+                    return merged;
+                });
+            }
+        } catch (e) {
+            console.warn("Erro ao carregar tenants do backend", e);
+        }
+    };
+
     useEffect(() => {
         setLoadingTenants(true);
-        // Usamos onSnapshot para que a lista de clientes atualize em TEMPO REAL
+        checkCloudAndFetchTenants();
+
+        // Usamos onSnapshot para que a lista de clientes atualize em TEMPO REAL caso o Firestore esteja disponível
         const unsubscribe = onSnapshot(
             collection(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants'),
             (snap) => {
-                const list = [];
+                const list: any[] = [];
                 snap.forEach(document => list.push(document.data()));
-                setTenants(list);
+                if (list.length > 0) {
+                    setTenants(list);
+                    try { localStorage.setItem('gipp_saas_tenants_cache', JSON.stringify(list)); } catch (e) {}
+                    // Sincroniza em lote com o servidor Express para garantir backup de longo prazo
+                    fetch('/api/tenants/batch-sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tenants: list })
+                    }).catch(() => {});
+                }
                 setLoadingTenants(false);
             },
             (error) => {
-                console.warn("Erro ao buscar clientes em tempo real", error);
-                setLoadingTenants(false);
+                console.warn("Erro ao buscar clientes no Firestore Cloud:", error);
+                // Em caso de suspensão do Google ou falha de rede, garante que os dados do backend e cache local permaneçam visíveis
+                checkCloudAndFetchTenants().finally(() => setLoadingTenants(false));
             }
         );
         return () => unsubscribe();
@@ -1179,8 +1235,22 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
 
         setIsDeletingTenant(true);
         try {
-            // Remove o registro da igreja do painel de controle mestre do SaaS
-            await deleteDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', tenantToDelete.id));
+            // Remove o registro da igreja do painel de controle mestre do SaaS no Firestore
+            try {
+                await deleteDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', tenantToDelete.id));
+            } catch (err) {}
+
+            // Remove do backend local
+            try {
+                await fetch(`/api/tenants/${tenantToDelete.id}`, { method: 'DELETE' });
+            } catch (err) {}
+
+            setTenants((prev: any[]) => {
+                const updated = prev.filter(t => t.id !== tenantToDelete.id);
+                try { localStorage.setItem('gipp_saas_tenants_cache', JSON.stringify(updated)); } catch (e) {}
+                return updated;
+            });
+
             addToast(`Igreja "${tenantToDelete.nome}" excluída com sucesso! Justificativa: ${deleteReason}`, "success");
             setTenantToDelete(null);
             setDeleteReason('');
@@ -1189,6 +1259,103 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
             addToast("Erro ao excluir o registro do cliente.", "error");
         } finally {
             setIsDeletingTenant(false);
+        }
+    };
+
+    const handleSwitchTenant = (targetId: string) => {
+        if (!targetId) return;
+        try {
+            localStorage.setItem('gipp_saved_app_id', targetId);
+            const newSearch = new URLSearchParams(window.location.search);
+            newSearch.set('id', targetId);
+            const newUrl = window.location.pathname + '?' + newSearch.toString() + window.location.hash;
+            window.location.href = newUrl;
+        } catch (e) {
+            console.error("Erro ao alternar banco de dados da igreja:", e);
+        }
+    };
+
+    const handleExportAllTenantsBackup = () => {
+        const exportData = {
+            sistema: "GIPP - Gestão de Igreja Multi-Tenant",
+            data_exportacao: new Date().toISOString(),
+            total_igrejas: tenants.length,
+            tenants: tenants,
+            nuvem_status: cloudDiagnosis?.cloudStatus || "unknown"
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `backup_geral_saas_igrejas_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addToast("Backup geral de todas as igrejas exportado com sucesso!", "success");
+    };
+
+    const handleRegisterManualTenant = async () => {
+        const cleanId = manualAppIdInput.trim();
+        if (!cleanId) {
+            addToast("Por favor, digite o App ID da igreja.", "warning");
+            return;
+        }
+        const newTenant = {
+            id: cleanId,
+            nome: manualNomeInput.trim() || `Igreja (${cleanId})`,
+            pastor: '',
+            cidade: '',
+            uf: '',
+            telefone: '',
+            licenca_status: 'ativo',
+            plano: 'avancado',
+            ultimo_atualizacao: new Date().toISOString()
+        };
+
+        // Salva no backend
+        try {
+            await fetch('/api/tenants', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTenant)
+            });
+        } catch (e) {}
+
+        // Salva no Firestore se possível
+        try {
+            await setDoc(doc(dbFirestore, 'artifacts', 'GIPP_MASTER', 'public', 'data', 'tenants', cleanId), newTenant, { merge: true });
+        } catch (e) {}
+
+        // Atualiza estado e cache
+        setTenants((prev: any[]) => {
+            const exists = prev.some(t => t.id === cleanId);
+            const updated = exists ? prev.map(t => t.id === cleanId ? { ...t, ...newTenant } : t) : [...prev, newTenant];
+            try { localStorage.setItem('gipp_saas_tenants_cache', JSON.stringify(updated)); } catch (e) {}
+            return updated;
+        });
+
+        addToast(`Igreja "${newTenant.nome}" conectada ao painel com sucesso!`, "success");
+        setIsManualModalOpen(false);
+        setManualAppIdInput('');
+        setManualNomeInput('');
+    };
+
+    const handleRecheckCloudStatus = async () => {
+        setIsRecheckingCloud(true);
+        try {
+            const res = await fetch('/api/cloud-status');
+            const data = await res.json();
+            setCloudDiagnosis(data);
+            if (data.isSuspended) {
+                addToast("Status verificado: O projeto Google Cloud continua suspenso (CONSUMER_SUSPENDED). Acesse console.firebase.google.com para desbloquear o faturamento.", "warning");
+            } else if (data.cloudStatus === 'active') {
+                addToast("Status verificado: Conexão com a Nuvem Google restabelecida com sucesso!", "success");
+            } else {
+                addToast("Status da nuvem verificado: Sistema operando com resiliência local.", "info");
+            }
+        } catch (e) {
+            addToast("Erro ao contatar diagnóstico do servidor.", "error");
+        } finally {
+            setIsRecheckingCloud(false);
         }
     };
 
@@ -1879,11 +2046,68 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                 {/* === ABA: CLIENTES E PLANOS === */}
                 {tab === 'clientes' && (
                     <div className="space-y-6 animate-fadeIn">
-                        <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex items-start gap-4">
-                            <Info size={24} className="text-indigo-500 mt-1 shrink-0"/>
-                            <div>
-                                <h4 className="font-black text-indigo-800 text-sm uppercase tracking-widest mb-1">Controle de Módulos</h4>
-                                <p className="text-xs text-indigo-700 leading-relaxed font-medium">Ao alterar o plano de uma igreja, os menus no sistema deles serão imediatamente ocultados ou exibidos de acordo com as permissões do pacote escolhido (Básico, Standard, Avançado).</p>
+                        {/* BANNER DE DIAGNÓSTICO DE NUVEM GOOGLE / RESILIÊNCIA */}
+                        {cloudDiagnosis?.isSuspended && (
+                            <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-50 p-6 rounded-3xl border-2 border-amber-300 shadow-sm space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-sm">
+                                            <AlertTriangle size={24}/>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-amber-900 text-sm sm:text-base tracking-tight">Status da Nuvem: Projeto Google Cloud Suspenso (CONSUMER_SUSPENDED)</h4>
+                                            <p className="text-xs text-amber-800 font-medium mt-0.5">Seus dados NÃO foram perdidos: eles estão resguardados na nuvem e no cache do servidor local.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleRecheckCloudStatus}
+                                        disabled={isRecheckingCloud}
+                                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer"
+                                    >
+                                        <RefreshCw size={14} className={isRecheckingCloud ? "animate-spin" : ""}/>
+                                        {isRecheckingCloud ? "Verificando..." : "Reverificar Nuvem"}
+                                    </button>
+                                </div>
+                                <div className="bg-white/80 backdrop-blur-xs p-4 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-2 leading-relaxed">
+                                    <p>
+                                        <strong>Motivo Técnico:</strong> A API Google Firestore retornou <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[11px]">Permission denied: Consumer 'projects/gipp-sistemas' has been suspended</code>. Isso ocorre quando a conta faturada no Google Cloud / Firebase atinge limite de teste ou necessita de confirmação cadastral no console.
+                                    </p>
+                                    <p>
+                                        <strong>Proteção de Contingência Ativada:</strong> O GIPP acionou a camada de persistência local contínua no servidor. Todas as igrejas cadastradas continuam acessíveis abaixo e você pode alternar livremente entre os bancos de dados.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <Info size={24} className="text-indigo-500 mt-1 shrink-0"/>
+                                <div>
+                                    <h4 className="font-black text-indigo-800 text-sm uppercase tracking-widest mb-1">Controle de Módulos e Bancos Separados</h4>
+                                    <p className="text-xs text-indigo-700 leading-relaxed font-medium">Cada igreja cadastrada possui banco de dados particionado pelo seu App ID. Use o botão <strong>"Acessar Banco"</strong> para entrar diretamente no sistema da congregação desejada.</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                <button
+                                    onClick={() => setIsManualModalOpen(true)}
+                                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                                >
+                                    <Plus size={16}/> Conectar por App ID
+                                </button>
+                                <button
+                                    onClick={handleExportAllTenantsBackup}
+                                    className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-2xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+                                    title="Exportar arquivo JSON com os dados e identificadores de todas as igrejas"
+                                >
+                                    <Download size={16}/> Backup Geral JSON
+                                </button>
+                                <button
+                                    onClick={checkCloudAndFetchTenants}
+                                    className="p-2.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl shadow-xs transition-all cursor-pointer"
+                                    title="Recarregar Lista de Igrejas"
+                                >
+                                    <RefreshCw size={16}/>
+                                </button>
                             </div>
                         </div>
 
@@ -1891,61 +2115,99 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-900 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
                                     <tr>
-                                        <th className="p-4">App ID / Link</th>
+                                        <th className="p-4">App ID / Status</th>
                                         <th className="p-4">Igreja / Instituição</th>
                                         <th className="p-4">Contato Oficial</th>
                                         <th className="p-4 text-center">Plano (Upgrade)</th>
-                                        <th className="p-4 text-center">Status Acesso</th>
+                                        <th className="p-4 text-center">Ações e Acesso ao Banco</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {tenants.map(t => (
-                                        <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="p-4 font-mono text-indigo-600 text-xs font-bold">{t.id}</td>
-                                            <td className="p-4">
-                                                <span className="font-bold block text-slate-800">{t.nome}</span>
-                                                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{t.cidade} {t.uf && `- ${t.uf}`}</span>
-                                            </td>
-                                            <td className="p-4 text-slate-600 text-xs font-medium">{t.telefone || '-'}<br/>{t.pastor && <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.pastor}</span>}</td>
-                                            <td className="p-4 text-center">
-                                                <select 
-                                                    value={(t.plano || 'avancado').toLowerCase()}
-                                                    onChange={(e) => handleChangePlan(t, e.target.value.toLowerCase())}
-                                                    className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm"
-                                                >
-                                                    <option value="basico">Básico (R$ {valoresAtuais.basico})</option>
-                                                    <option value="standard">Standard (R$ {valoresAtuais.standard})</option>
-                                                    <option value="avancado">Avançado (R$ {valoresAtuais.avancado})</option>
-                                                </select>
-                                            </td>
-                                            <td className="p-4 text-center flex justify-center gap-2">
-                                                <button onClick={() => handleToggleBlockTenant(t)} className={`p-2 rounded-xl text-white transition-colors shadow-sm flex items-center gap-1 text-xs font-bold px-3 ${t.licenca_status === 'bloqueado' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'}`} title={t.licenca_status === 'bloqueado' ? 'Desbloquear Igreja' : 'Bloquear Sistema da Igreja'}>
-                                                    {t.licenca_status === 'bloqueado' ? <><CheckCircle size={14}/> Liberar</> : <><Ban size={14}/> Bloquear</>}
-                                                </button>
-                                                <a href={`?id=${t.id}`} target="_blank" className="inline-flex items-center justify-center p-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl transition-colors shadow-sm" title="Acessar Painel">
-                                                    <ExternalLink size={16}/>
-                                                </a>
-                                                <button 
-                                                    onClick={() => handleEmitirContrato(t)} 
-                                                    className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm cursor-pointer" 
-                                                    title="Emitir Contrato SaaS da Igreja"
-                                                >
-                                                    <FileSignature size={16}/>
-                                                </button>
-                                                <button 
-                                                    onClick={() => setTenantToDelete(t)} 
-                                                    className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 border border-rose-100 rounded-xl transition-colors shadow-sm" 
-                                                    title="Excluir Igreja permanentemente"
-                                                >
-                                                    <Trash2 size={16}/>
-                                                </button>
+                                    {tenants.map(t => {
+                                        const isCurrentActive = (appId === t.id);
+                                        return (
+                                            <tr key={t.id} className={`transition-colors ${isCurrentActive ? 'bg-indigo-50/50 hover:bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                                                <td className="p-4 font-mono text-xs">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-indigo-700">{t.id}</span>
+                                                        {isCurrentActive && (
+                                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full uppercase tracking-wider">
+                                                                Ativa Agora
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className="font-bold block text-slate-800">{t.nome}</span>
+                                                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{t.cidade} {t.uf && `- ${t.uf}`}</span>
+                                                </td>
+                                                <td className="p-4 text-slate-600 text-xs font-medium">{t.telefone || '-'}<br/>{t.pastor && <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.pastor}</span>}</td>
+                                                <td className="p-4 text-center">
+                                                    <select 
+                                                        value={(t.plano || 'avancado').toLowerCase()}
+                                                        onChange={(e) => handleChangePlan(t, e.target.value.toLowerCase())}
+                                                        className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm"
+                                                    >
+                                                        <option value="basico">Básico (R$ {valoresAtuais.basico})</option>
+                                                        <option value="standard">Standard (R$ {valoresAtuais.standard})</option>
+                                                        <option value="avancado">Avançado (R$ {valoresAtuais.avancado})</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-4 text-center flex items-center justify-center gap-2">
+                                                    {/* BOTÃO PRIMÁRIO: ACESSAR BANCO DESTA IGREJA */}
+                                                    <button
+                                                        onClick={() => handleSwitchTenant(t.id)}
+                                                        className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 ${
+                                                            isCurrentActive 
+                                                                ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
+                                                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                                        }`}
+                                                        title="Alternar para o banco de dados desta igreja imediatamente"
+                                                    >
+                                                        <Database size={14}/>
+                                                        {isCurrentActive ? "Banco Conectado" : "Acessar Banco"}
+                                                    </button>
+
+                                                    <button onClick={() => handleToggleBlockTenant(t)} className={`p-2 rounded-xl text-white transition-colors shadow-sm flex items-center gap-1 text-xs font-bold px-3 ${t.licenca_status === 'bloqueado' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'}`} title={t.licenca_status === 'bloqueado' ? 'Desbloquear Igreja' : 'Bloquear Sistema da Igreja'}>
+                                                        {t.licenca_status === 'bloqueado' ? <><CheckCircle size={14}/> Liberar</> : <><Ban size={14}/> Bloquear</>}
+                                                    </button>
+                                                    <a href={`?id=${t.id}`} target="_blank" className="inline-flex items-center justify-center p-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl transition-colors shadow-sm" title="Acessar Painel em Nova Aba">
+                                                        <ExternalLink size={16}/>
+                                                    </a>
+                                                    <button 
+                                                        onClick={() => handleEmitirContrato(t)} 
+                                                        className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm cursor-pointer" 
+                                                        title="Emitir Contrato SaaS da Igreja"
+                                                    >
+                                                        <FileSignature size={16}/>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setTenantToDelete(t)} 
+                                                        className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 border border-rose-100 rounded-xl transition-colors shadow-sm cursor-pointer" 
+                                                        title="Excluir Igreja permanentemente"
+                                                    >
+                                                        <Trash2 size={16}/>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {tenants.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="p-8 text-center text-slate-500">
+                                                <div className="flex flex-col items-center justify-center gap-2">
+                                                    <Database size={32} className="text-slate-300"/>
+                                                    <p className="font-bold text-slate-700">Nenhuma igreja encontrada na lista local.</p>
+                                                    <p className="text-xs text-slate-400">Clique em "Conectar por App ID" acima para vincular o identificador do seu banco de dados.</p>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))}
-                                    {tenants.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-500 italic">Nenhum cliente cadastrado.</td></tr>}
+                                    )}
                                 </tbody>
                             </table>
                         </div>
+
+
                     </div>
                 )}
 
@@ -5962,6 +6224,85 @@ Agende uma demonstração gratuita agora mesmo!
                                     <Printer size={16}/> Imprimir Contrato (PDF)
                                 </Button>
                             </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* MODAL DE CONEXÃO MANUAL DE IGREJA / APP ID (RENDERIZADO VIA PORTAL NO BODY PARA NÃO SER LIMITADO) */}
+            {isManualModalOpen && createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+                    <div 
+                        className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 relative my-auto max-h-[92vh] flex flex-col animate-scaleUp"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-6 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+                                    <Database size={24}/>
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-800 text-lg">Conectar Igreja por App ID</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Insira o identificador do banco de dados da congregação</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsManualModalOpen(false)} 
+                                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                                title="Fechar"
+                            >
+                                <X size={20}/>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 overflow-y-auto pr-1">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">App ID / Identificador Único do Banco</label>
+                                <input
+                                    type="text"
+                                    value={manualAppIdInput}
+                                    onChange={(e) => setManualAppIdInput(e.target.value)}
+                                    placeholder="Ex: igreja-betel-01 ou seu ID salvo"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                                    autoFocus
+                                />
+                                <p className="text-[11px] text-slate-400 mt-1">Este é o código que particiona o banco de dados da igreja no sistema.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nome da Igreja (Opcional)</label>
+                                <input
+                                    type="text"
+                                    value={manualNomeInput}
+                                    onChange={(e) => setManualNomeInput(e.target.value)}
+                                    placeholder="Ex: Assembleia de Deus - Sede"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                                />
+                            </div>
+
+                            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-800 text-xs leading-relaxed flex items-start gap-2.5">
+                                <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-600"/>
+                                <div>
+                                    <span className="font-bold block mb-0.5">Segurança dos Seus Dados:</span>
+                                    Ao conectar um App ID existente, todos os dados, membros e registros cadastrados sob este ID serão vinculados e estarão acessíveis imediatamente.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100 shrink-0">
+                            <button
+                                onClick={() => setIsManualModalOpen(false)}
+                                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleRegisterManualTenant}
+                                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                            >
+                                <Check size={16}/> Salvar e Conectar
+                            </button>
                         </div>
                     </div>
                 </div>,

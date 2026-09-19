@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { requestAppFullscreen } from '../lib/performanceHelpers';
+import { preloadModule } from '../lib/modulePreloader';
 import { Win11PropertiesModal } from './Win11PropertiesModal';
 import { SYSTEM_DIVISIONS, groupModulesByDivision, getDivisionForModule } from '../constants/systemDivisions';
 import { ChurchContext } from '../context/ChurchContext';
@@ -839,6 +840,8 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
               <div
                 key={s.id}
                 draggable={true}
+                onMouseEnter={() => preloadModule(s.id)}
+                onFocus={() => preloadModule(s.id)}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('text/plain', s.id);
                   e.dataTransfer.effectAllowed = 'copyMove';
@@ -1233,6 +1236,8 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                   <button
                     key={mid}
                     draggable={true}
+                    onMouseEnter={() => preloadModule(mid)}
+                    onFocus={() => preloadModule(mid)}
                     onDragStart={(e) => {
                       e.dataTransfer.setData('text/plain', mid);
                       e.dataTransfer.effectAllowed = 'copyMove';
@@ -1496,6 +1501,8 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                         <button
                           key={m.id}
                           draggable={true}
+                          onMouseEnter={() => preloadModule(m.id)}
+                          onFocus={() => preloadModule(m.id)}
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', m.id);
                             e.dataTransfer.effectAllowed = 'copyMove';
@@ -1603,6 +1610,8 @@ export const Windows11Layout: React.FC<Windows11LayoutProps> = ({
                                   <div
                                     key={m.id}
                                     draggable={true}
+                                    onMouseEnter={() => preloadModule(m.id)}
+                                    onFocus={() => preloadModule(m.id)}
                                     onDragStart={(e) => {
                                       e.dataTransfer.setData('text/plain', m.id);
                                       e.dataTransfer.effectAllowed = 'copyMove';

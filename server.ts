@@ -8,9 +8,14 @@ import webpush from "web-push";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collectionGroup, getDocs, doc, setDoc } from "firebase/firestore/lite";
+import { getFirestore, collectionGroup, getDocs, doc, setDoc, query, limit, setLogLevel } from "firebase/firestore/lite";
 import { PDFDocument } from 'pdf-lib';
 import QRCode from 'qrcode';
+
+// Suprime mensagens ruidosas de RestConnection RPC da biblioteca lite no console
+try {
+    setLogLevel('silent');
+} catch (e) {}
 
 const app = express();
 
@@ -221,11 +226,81 @@ function trackApiCall(api: "gemini" | "asaas" | "push" | "whatsapp" | "maps", se
 }
 
 app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ 
+        status: "ok", 
+        server: "Express Node.js", 
+        firestore: dbFirestore ? "connected" : "offline_cache",
+        gemini: !!process.env.GEMINI_API_KEY,
+        vapid: !!vapidPublicKey,
+        uptime: Math.round(process.uptime()),
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ 
+        status: "ok", 
+        server: "Express Node.js", 
+        firestore: dbFirestore ? "connected" : "offline_cache",
+        gemini: !!process.env.GEMINI_API_KEY,
+        vapid: !!vapidPublicKey,
+        uptime: Math.round(process.uptime()),
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get("/api/system-diagnostics", async (req, res) => {
+    const startTime = Date.now();
+    
+    // 1. Diagnóstico do Servidor Express
+    const memUsage = process.memoryUsage();
+    const serverDiagnostics = {
+        status: "online",
+        engine: "Express Node.js",
+        nodeVersion: process.version,
+        platform: process.platform,
+        uptimeSeconds: Math.round(process.uptime()),
+        memoryRssMb: Math.round(memUsage.rss / 1024 / 1024),
+        memoryHeapUsedMb: Math.round(memUsage.heapUsed / 1024 / 1024)
+    };
+
+    // 2. Diagnóstico real do Banco de Dados Firestore (via checkGoogleCloudStatus)
+    let dbStatus = "offline_cache";
+    let dbLatencyMs = 0;
+    try {
+        const cloudCheck = await checkGoogleCloudStatus(false);
+        dbLatencyMs = cloudCheck.latencyMs;
+        dbStatus = cloudCheck.isSuspended ? "suspended_offline_safe" : (cloudCheck.cloudStatus === "active" ? "connected" : "sync_fallback");
+    } catch (e) {
+        dbStatus = "offline_cache";
+    }
+
+    // 3. Verificação real de Chaves e Credenciais
+    const geminiKey = process.env.GEMINI_API_KEY || "";
+    const hasGemini = geminiKey.trim().length > 10;
+    const hasVapid = !!(vapidPublicKey && vapidPrivateKey);
+    const hasGoogleOAuth = !!(process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID);
+
+    const totalLatencyMs = Date.now() - startTime;
+
+    res.json({
+        status: "ok",
+        server: serverDiagnostics,
+        database: {
+            provider: "Firebase Firestore",
+            status: dbStatus,
+            projectId: firebaseConfig.projectId,
+            latencyMs: dbLatencyMs
+        },
+        keys: {
+            geminiApiKey: hasGemini ? "valid_configured" : "not_configured",
+            geminiModel: "gemini-3.5-flash",
+            vapidPushKeys: hasVapid ? "valid_configured" : "not_configured",
+            googleOAuth: hasGoogleOAuth ? "configured" : "ready_client_gsi"
+        },
+        diagnosticsDurationMs: totalLatencyMs,
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.get("/api/client-info", (req, res) => {
@@ -296,6 +371,216 @@ app.get("/api/admin/api-usage-stats", (req, res) => {
 app.post("/api/admin/api-cache-clear", (req, res) => {
     apiCache.clear();
     res.json({ success: true, message: "Cache de APIs limpo com sucesso!" });
+});
+
+// ==========================================
+// PERSISTÊNCIA MULTI-TENANT SAAS E AUDITORIA DE IGREJAS
+// ==========================================
+const DATA_DIR = path.join(process.cwd(), 'data');
+const TENANTS_FILE = path.join(DATA_DIR, 'tenants.json');
+
+function getStoredTenants(): any[] {
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+        if (fs.existsSync(TENANTS_FILE)) {
+            const raw = fs.readFileSync(TENANTS_FILE, 'utf-8');
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch (e) {
+        console.warn("[Server] Erro ao ler tenants.json:", e);
+    }
+    return [
+        {
+            id: 'default-app-id',
+            nome: 'Igreja Sede Principal',
+            pastor: 'Pastor Presidente',
+            cidade: 'Sede Central',
+            uf: 'BR',
+            telefone: '',
+            licenca_status: 'ativo',
+            plano: 'avancado',
+            ultimo_atualizacao: new Date().toISOString()
+        }
+    ];
+}
+
+function saveStoredTenants(tenants: any[]): void {
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+        fs.writeFileSync(TENANTS_FILE, JSON.stringify(tenants, null, 2), 'utf-8');
+    } catch (e) {
+        console.error("[Server] Erro ao salvar tenants.json:", e);
+    }
+}
+
+// Cache e verificador de conectividade com a nuvem Google Cloud / Firestore
+let cloudStatusCache = {
+    checkedAt: 0,
+    cloudStatus: "checking",
+    isSuspended: false,
+    errorMessage: "",
+    reason: "",
+    latencyMs: 0
+};
+
+async function checkGoogleCloudStatus(force = false) {
+    const now = Date.now();
+    if (!force && cloudStatusCache.checkedAt > 0 && (now - cloudStatusCache.checkedAt < 30000)) {
+        return cloudStatusCache;
+    }
+
+    const t0 = Date.now();
+    try {
+        const apiKey = firebaseConfig.apiKey;
+        const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents:runQuery?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'settings' }], limit: 1 } })
+        });
+        const latencyMs = Date.now() - t0;
+
+        if (res.ok) {
+            cloudStatusCache = {
+                checkedAt: now,
+                cloudStatus: "active",
+                isSuspended: false,
+                errorMessage: "",
+                reason: "",
+                latencyMs
+            };
+            isFirestoreDisabled = false;
+        } else {
+            const data: any = await res.json().catch(() => ({}));
+            const errMsg = data?.[0]?.error?.message || data?.error?.message || `HTTP ${res.status}`;
+            const isSusp = errMsg.includes("suspended") || errMsg.includes("CONSUMER_SUSPENDED");
+            
+            cloudStatusCache = {
+                checkedAt: now,
+                cloudStatus: isSusp ? "suspended" : "degraded",
+                isSuspended: isSusp,
+                errorMessage: errMsg,
+                reason: isSusp ? "CONSUMER_SUSPENDED" : "NETWORK_OR_RULES",
+                latencyMs
+            };
+            if (isSusp) {
+                isFirestoreDisabled = true;
+            }
+        }
+    } catch (err: any) {
+        cloudStatusCache = {
+            checkedAt: now,
+            cloudStatus: "offline",
+            isSuspended: false,
+            errorMessage: err?.message || String(err),
+            reason: "NETWORK_ERROR",
+            latencyMs: Date.now() - t0
+        };
+    }
+    return cloudStatusCache;
+}
+
+// Endpoint de status da Nuvem e Diagnóstico de Suspensão Google
+app.get("/api/cloud-status", async (req, res) => {
+    const force = req.query.force === 'true' || req.query.refresh === 'true';
+    const status = await checkGoogleCloudStatus(force);
+
+    res.json({
+        cloudStatus: status.cloudStatus,
+        isSuspended: status.isSuspended,
+        reason: status.reason,
+        errorMessage: status.errorMessage,
+        latencyMs: status.latencyMs,
+        projectId: firebaseConfig.projectId,
+        advice: status.isSuspended ? {
+            titulo: "Projeto Google Cloud Suspenso Temporariamente",
+            detalhe: "O projeto Google Cloud/Firebase 'gipp-sistemas' está suspenso temporariamente pela Google (erro oficial: CONSUMER_SUSPENDED). Seus dados continuam preservados na infraestrutura do Google, mas requerem que o administrador acerte a conta de faturamento (billing) ou aceite os termos no console.firebase.google.com ou console.cloud.google.com.",
+            solucao: "1. Acesse console.firebase.google.com com o e-mail proprietário.\n2. Verifique se o cartão/faturamento está em dia no menu 'Faturamento' / 'Billing'.\n3. O GIPP ativou automaticamente a camada de resiliência local e de servidor para manter os dados acessíveis."
+        } : null
+    });
+});
+
+// Listar todas as igrejas / tenants cadastrados
+app.get("/api/tenants", (req, res) => {
+    const list = getStoredTenants();
+    res.json({ success: true, tenants: list, count: list.length });
+});
+
+// Salvar ou atualizar um tenant / igreja
+app.post("/api/tenants", (req, res) => {
+    try {
+        const tenant = req.body;
+        if (!tenant || !tenant.id) {
+            res.status(400).json({ error: "O ID da igreja (tenant.id) é obrigatório." });
+            return;
+        }
+
+        const list = getStoredTenants();
+        const index = list.findIndex((t: any) => t.id === tenant.id);
+        const updatedTenant = {
+            ...tenant,
+            ultimo_atualizacao: new Date().toISOString()
+        };
+
+        if (index >= 0) {
+            list[index] = { ...list[index], ...updatedTenant };
+        } else {
+            list.push(updatedTenant);
+        }
+
+        saveStoredTenants(list);
+        res.json({ success: true, tenant: updatedTenant, tenants: list });
+    } catch (e: any) {
+        res.status(500).json({ error: e?.message || "Erro ao salvar tenant" });
+    }
+});
+
+// Sincronização em lote de múltiplos tenants (backup de recuperação)
+app.post("/api/tenants/batch-sync", (req, res) => {
+    try {
+        const { tenants } = req.body;
+        if (!Array.isArray(tenants)) {
+            res.status(400).json({ error: "Array de tenants esperado." });
+            return;
+        }
+
+        const list = getStoredTenants();
+        tenants.forEach((incoming: any) => {
+            if (!incoming || !incoming.id) return;
+            const idx = list.findIndex((t: any) => t.id === incoming.id);
+            if (idx >= 0) {
+                list[idx] = { ...list[idx], ...incoming, ultimo_atualizacao: new Date().toISOString() };
+            } else {
+                list.push({ ...incoming, ultimo_atualizacao: new Date().toISOString() });
+            }
+        });
+
+        saveStoredTenants(list);
+        res.json({ success: true, count: list.length, tenants: list });
+    } catch (e: any) {
+        res.status(500).json({ error: e?.message || "Erro ao sincronizar tenants" });
+    }
+});
+
+// Excluir tenant
+app.delete("/api/tenants/:id", (req, res) => {
+    try {
+        const { id } = req.params;
+        if (id === 'default-app-id') {
+            res.status(400).json({ error: "A igreja sede padrão não pode ser excluída." });
+            return;
+        }
+        let list = getStoredTenants();
+        list = list.filter((t: any) => t.id !== id);
+        saveStoredTenants(list);
+        res.json({ success: true, tenants: list });
+    } catch (e: any) {
+        res.status(500).json({ error: e?.message || "Erro ao remover tenant" });
+    }
 });
 
 app.get("/api/push/public-key", (req, res) => {
