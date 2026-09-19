@@ -75,17 +75,102 @@ if (vapidPublicKey && vapidPrivateKey) {
     );
 }
 
-// CORS configuration for APIs
-app.use("/api", (req, res, next) => {
+// --- SISTEMA DE PROTEÇÃO CONTRA ABUSO & SEGURANÇA (GOOGLE CLOUD / GEMINI COMPLIANCE) ---
+interface ClientRateRecord {
+    count: number;
+    resetTime: number;
+}
+const ipRequestCounts = new Map<string, ClientRateRecord>();
+const ipAiRequestCounts = new Map<string, ClientRateRecord>();
+
+// Limpeza periódica de memória de IPs inativos (a cada 5 minutos)
+setInterval(() => {
+    const now = Date.now();
+    ipRequestCounts.forEach((record, ip) => {
+        if (now > record.resetTime) ipRequestCounts.delete(ip);
+    });
+    ipAiRequestCounts.forEach((record, ip) => {
+        if (now > record.resetTime) ipAiRequestCounts.delete(ip);
+    });
+}, 5 * 60 * 1000);
+
+// Rate Limiter Geral (120 req/minuto por IP para tráfego de API)
+function generalRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ip = String(rawIp).split(',')[0].trim();
+    const now = Date.now();
+    const windowMs = 60 * 1000;
+    const maxRequests = 120;
+
+    let record = ipRequestCounts.get(ip);
+    if (!record || now > record.resetTime) {
+        record = { count: 1, resetTime: now + windowMs };
+        ipRequestCounts.set(ip, record);
+    } else {
+        record.count++;
+    }
+
+    if (record.count > maxRequests) {
+        res.setHeader('Retry-After', '60');
+        res.status(429).json({
+            error: "Limite de requisições por minuto atingido (Proteção contra abuso e conformidade Google Cloud). Aguarde 60 segundos.",
+            code: "RATE_LIMIT_EXCEEDED"
+        });
+        return;
+    }
+    next();
+}
+
+// Rate Limiter Estrito para APIs de IA / Gemini (25 chamadas/minuto por IP)
+function aiRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ip = String(rawIp).split(',')[0].trim();
+    const now = Date.now();
+    const windowMs = 60 * 1000;
+    const maxRequests = 25;
+
+    let record = ipAiRequestCounts.get(ip);
+    if (!record || now > record.resetTime) {
+        record = { count: 1, resetTime: now + windowMs };
+        ipAiRequestCounts.set(ip, record);
+    } else {
+        record.count++;
+    }
+
+    if (record.count > maxRequests) {
+        res.setHeader('Retry-After', '60');
+        res.status(429).json({
+            error: "Limite de requisições de Inteligência Artificial atingido temporariamente. Proteção ativa contra suspensão de cotas Google Gemini. Aguarde 60 segundos.",
+            code: "AI_RATE_LIMIT_EXCEEDED"
+        });
+        return;
+    }
+    next();
+}
+
+// Cabeçalhos Globais de Segurança (Security Headers & Proteção contra Sniffing)
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
+
+// CORS configuration for APIs com Rate Limiting
+app.use("/api", generalRateLimiter, (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
     next();
 });
+
+// Proteção específica contra abuso em rotas de IA
+app.use("/api/gemini", aiRateLimiter);
+app.use("/api/financeiro/analisar-extrato", aiRateLimiter);
 
 // API Routes
 // --- SISTEMA DE LOGS E CACHE DE CONSUMO DE APIS (MÓDULO DE DIAGNÓSTICO) ---

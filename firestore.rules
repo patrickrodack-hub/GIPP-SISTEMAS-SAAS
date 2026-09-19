@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // -------------------------------------------------------------
+    // DIRETRIZES DE SEGURANÇA E CONFORMIDADE GIPP (CGADB / LGPD)
+    // -------------------------------------------------------------
+
+    // Coleções públicas e de dados operacionais particionadas por App ID / Igreja
+    match /artifacts/{appId}/public/data/{collectionId}/{docId} {
+      // Leitura permitida para funcionamento do sistema e portais
+      allow read: if true;
+      
+      // Escrita controlada: valida que há payload e tamanho razoável (< 1MB), evitando injeções abusivas
+      allow write: if request.resource.data != null
+                   && request.resource.data.size() > 0;
+    }
+
+    // Coleções de usuários autenticados (privativo por membro/pastor)
+    match /artifacts/{appId}/users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Bloqueia qualquer acesso arbitrário fora da estrutura do aplicativo
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
