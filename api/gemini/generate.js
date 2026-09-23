@@ -46,6 +46,17 @@ export default async function handler(req, res) {
     return res.status(200).json({ text: response.text });
   } catch (error) {
     console.error("Gemini API serverless error:", error);
-    return res.status(500).json({ error: String(error) });
+    const errStr = String(error?.message || error || "");
+    if (errStr.includes("API_KEY_SERVICE_BLOCKED") || errStr.includes("generativelanguage.googleapis.com")) {
+      return res.status(403).json({ 
+        error: "A chave de API configurada não tem permissão para a Generative Language API (Google Gemini). Acesse o Google Cloud Console > APIs e Serviços > Ative a Generative Language API e inclua-a nas restrições da sua chave, ou utilize uma chave gerada no Google AI Studio (aistudio.google.com)." 
+      });
+    }
+    if (errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("prepayment credits are depleted") || errStr.includes("429")) {
+      return res.status(429).json({ 
+        error: "Limite de cota ou créditos da chave de API do Gemini atingido. Aguarde alguns instantes ou atualize sua cota no Google AI Studio." 
+      });
+    }
+    return res.status(500).json({ error: errStr });
   }
 }

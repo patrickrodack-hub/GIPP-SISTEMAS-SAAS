@@ -4071,6 +4071,11 @@ Data: \${new Date().toLocaleDateString('pt-BR')}
                                                     </div>
 
                                                     <div className="space-y-2">
+                                                        {isGemini && (
+                                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-2.5 leading-relaxed">
+                                                                <span className="font-bold text-indigo-700 dark:text-indigo-400">💡 Dica de Configuração:</span> Para a IA funcionar sem bloqueios de permissão, utilize uma chave dedicada gerada em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">aistudio.google.com</a>. Se usar a chave do Google Cloud (Firebase), certifique-se de que a <strong>Generative Language API</strong> esteja ativada nas restrições de API do seu projeto.
+                                                            </div>
+                                                        )}
                                                         <div className="flex gap-2 relative">
                                                             <input 
                                                                 type={visibleKeys[api.keyName] ? "text" : "password"}

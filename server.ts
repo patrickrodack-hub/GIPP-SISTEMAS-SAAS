@@ -710,13 +710,79 @@ app.post("/api/push/send", async (req, res) => {
     }
 });
 
+// ==================== HELPER RESILIENTE PARA CHAMADAS AO GOOGLE GEMINI ====================
+function formatGeminiUserError(error: any): string {
+    const errStr = String(error?.message || error || "");
+    if (errStr.includes("API_KEY_SERVICE_BLOCKED") || errStr.includes("generativelanguage.googleapis.com")) {
+        return "⚠️ A chave de API do Google Cloud utilizada está com restrição de serviço e não permite a 'Generative Language API'. Acesse o Google Cloud Console > APIs e Serviços > Ative a Generative Language API e inclua-a nas restrições da chave, ou gere uma chave dedicada no Google AI Studio (aistudio.google.com/app/apikey).";
+    }
+    if (errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("prepayment credits are depleted") || errStr.includes("429")) {
+        return "⚠️ Os créditos ou limites de requisição da sua chave do Gemini foram atingidos temporariamente. Verifique suas cotas em https://aistudio.google.com/projects.";
+    }
+    try {
+        if (errStr.trim().startsWith('{') || errStr.trim().startsWith('[')) {
+            const parsed = JSON.parse(errStr);
+            const msg = parsed?.error?.message || parsed?.message;
+            if (msg) return `⚠️ ${msg}`;
+        }
+    } catch (_) {}
+    return `⚠️ ${errStr}`;
+}
+
+async function callGeminiWithFallback(params: {
+    prompt: string | any[];
+    customKey?: string;
+    model?: string;
+    config?: any;
+}): Promise<string> {
+    const { prompt, customKey, model = "gemini-3.7-flash", config } = params;
+    const primaryKey = (customKey && customKey.trim() !== "MY_GEMINI_API_KEY")
+        ? customKey.trim()
+        : (process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '');
+    const platformBackupKey = process.env.GEMINI_API_KEY || '';
+
+    if (!primaryKey || primaryKey === "MY_GEMINI_API_KEY" || primaryKey.trim() === "") {
+        throw new Error("A chave de API do Gemini não foi configurada nas variáveis de ambiente.");
+    }
+
+    try {
+        const ai = new GoogleGenAI({
+            apiKey: primaryKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+        });
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt as any,
+            config: config
+        });
+        return response.text || "";
+    } catch (err: any) {
+        const errStr = String(err?.message || err || "");
+        // Se a chave primária falhou por restrição de serviço no Google Cloud e temos uma chave de plataforma diferente, recupera automaticamente
+        if (errStr.includes("API_KEY_SERVICE_BLOCKED") && platformBackupKey && platformBackupKey !== primaryKey) {
+            console.warn("[Gemini API] Chave primária falhou por API_KEY_SERVICE_BLOCKED. Recuperando automaticamente com a chave nativa do Google AI Studio...");
+            const fallbackAi = new GoogleGenAI({
+                apiKey: platformBackupKey,
+                httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+            });
+            const response = await fallbackAi.models.generateContent({
+                model: model,
+                contents: prompt as any,
+                config: config
+            });
+            return response.text || "";
+        }
+        throw err;
+    }
+}
+
 app.post("/api/gemini/generate", async (req, res) => {
     const start = Date.now();
     try {
-        const { prompt } = req.body;
-        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+        const { prompt, key } = req.body;
+        const candidateKey = key || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
-        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+        if (!candidateKey || candidateKey === "MY_GEMINI_API_KEY" || candidateKey.trim() === "") {
             res.json({
                 text: "⚠️ A chave de API do Gemini não foi configurada nas variáveis de ambiente. Por favor, acesse as Configurações do Sistema para ativá-la."
             });
@@ -733,15 +799,6 @@ app.post("/api/gemini/generate", async (req, res) => {
             return;
         }
 
-        const ai = new GoogleGenAI({
-            apiKey: apiKey,
-            httpOptions: {
-                headers: {
-                    'User-Agent': 'aistudio-build-server',
-                }
-            }
-        });
-
         const isSearchQuery = /jusbrasil|diario oficial|consulta|pesquisa|notica|clima|tempo|processo|cpad|ebd|lições|revista/i.test(prompt || '');
         const config: any = {
             systemInstruction: "Você é um assistente especialista, teológico e administrativo.",
@@ -750,13 +807,12 @@ app.post("/api/gemini/generate", async (req, res) => {
             config.tools = [{ googleSearch: {} }];
         }
 
-        const response = await ai.models.generateContent({
+        const responseText = await callGeminiWithFallback({
+            prompt: String(prompt || ''),
+            customKey: key,
             model: "gemini-3.7-flash",
-            contents: String(prompt || ''),
-            config: config
+            config
         });
-
-        const responseText = response.text || "";
 
         // Save to cache
         apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
@@ -770,35 +826,11 @@ app.post("/api/gemini/generate", async (req, res) => {
 
         res.json({ text: responseText });
     } catch (error: any) {
-        const errStr = String(error.message || error || "");
-        trackApiCall("gemini", "Assistente Pastoral IA", "error", Date.now() - start, 0, `Erro: ${errStr}`);
-        let parsedError = null;
-        try {
-            if (errStr.trim().startsWith('{') || errStr.trim().startsWith('[')) {
-                parsedError = JSON.parse(errStr);
-            }
-        } catch (e) {}
-
-        const msg = parsedError?.error?.message || parsedError?.message || errStr;
-        const code = parsedError?.error?.code || parsedError?.code;
-        const status = parsedError?.error?.status || parsedError?.status;
-
-        if (
-            msg.includes("prepayment credits are depleted") ||
-            msg.includes("RESOURCE_EXHAUSTED") ||
-            status === "RESOURCE_EXHAUSTED" ||
-            code === 429
-        ) {
-            console.warn("[Gemini API] Quota/Credits Exhausted (429):", msg);
-            res.json({
-                text: "⚠️ Os créditos pré-pagos da sua chave de API do Gemini no Google AI Studio acabaram. Por favor, adicione fundos em https://aistudio.google.com/projects para continuar usando os recursos de Inteligência Artificial do GIPP.",
-                isQuotaExhausted: true
-            });
-            return;
-        }
-        
-        console.warn("[Gemini API] General API error, handled gracefully:", msg);
-        res.json({ text: `⚠️ Ocorreu um erro ao processar com a IA: ${msg}` });
+        const latency = Date.now() - start;
+        const friendlyMsg = formatGeminiUserError(error);
+        trackApiCall("gemini", "Assistente Pastoral IA", "error", latency, 0, `Erro: ${friendlyMsg}`);
+        console.warn("[Gemini API] Erro tratado com elegância:", friendlyMsg);
+        res.json({ text: friendlyMsg });
     }
 });
 
@@ -883,21 +915,15 @@ ATENÇÃO: Retorne APENAS um JSON válido no formato abaixo, sem delimitadores m
   ]
 }`;
 
-        const ai = new GoogleGenAI({
-            apiKey: apiKey,
-            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
-        });
-
-        const response = await ai.models.generateContent({
+        const responseText = await callGeminiWithFallback({
+            prompt: prompt,
+            customKey: apiKey,
             model: "gemini-3.7-flash",
-            contents: prompt,
             config: {
                 systemInstruction: "Você é um Professor e Doutor de Teologia Pentecostal Clássica, especialista na Declaração de Fé da CGADB/CPAD. Responda exclusivamente em formato JSON válido e parseável.",
                 temperature: 0.2
             }
         });
-
-        const responseText = response.text || "";
         let cleanJSON = responseText.trim();
         if (cleanJSON.startsWith('```json')) cleanJSON = cleanJSON.substring(7);
         else if (cleanJSON.startsWith('```')) cleanJSON = cleanJSON.substring(3);
@@ -930,7 +956,7 @@ ATENÇÃO: Retorne APENAS um JSON válido no formato abaixo, sem delimitadores m
         });
     } catch (error: any) {
         console.error("[Gemini API] Erro ao gerar grau teológico:", error);
-        res.status(500).json({ success: false, error: error.message || String(error) });
+        res.status(500).json({ success: false, error: formatGeminiUserError(error) });
     }
 });
 
@@ -977,21 +1003,15 @@ Retorne em formato JSON estruturado:
   "pontosChaveExpandidos": ["Ponto 1", "Ponto 2", "Ponto 3", "Ponto 4"]
 }`;
 
-        const ai = new GoogleGenAI({
-            apiKey: apiKey,
-            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
-        });
-
-        const response = await ai.models.generateContent({
+        const responseText = await callGeminiWithFallback({
+            prompt: prompt,
+            customKey: apiKey,
             model: "gemini-3.7-flash",
-            contents: prompt,
             config: {
                 systemInstruction: "Você é um Professor Doutor em Teologia Bíblica e Sistemática da CGADB. Retorne exclusivamente JSON estruturado e válido.",
                 temperature: 0.2
             }
         });
-
-        const responseText = response.text || "";
         let cleanJSON = responseText.trim();
         if (cleanJSON.startsWith('```json')) cleanJSON = cleanJSON.substring(7);
         else if (cleanJSON.startsWith('```')) cleanJSON = cleanJSON.substring(3);
@@ -1022,7 +1042,7 @@ Retorne em formato JSON estruturado:
         });
     } catch (error: any) {
         console.error("[Gemini API] Erro ao expandir teologia:", error);
-        res.status(500).json({ success: false, error: error.message || String(error) });
+        res.status(500).json({ success: false, error: formatGeminiUserError(error) });
     }
 });
 
@@ -1134,21 +1154,16 @@ O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com s
             });
         }
 
-        const ai = new GoogleGenAI({
-            apiKey: apiKey,
-            httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
-        });
-
-        const response = await ai.models.generateContent({
+        const responseText = await callGeminiWithFallback({
+            prompt: prompt,
+            customKey: apiKey,
             model: "gemini-3.7-flash",
-            contents: prompt,
             config: {
                 systemInstruction: "Você é um Comentarista Oficial das Lições Bíblicas CPAD e Professor de Teologia da CGADB. Gere o material didático completo com a máxima erudição e fidelidade dogmática.",
                 tools: [{ googleSearch: {} }]
             }
         });
 
-        const responseText = response.text || "";
         apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
 
         const latency = Date.now() - start;
@@ -1163,7 +1178,7 @@ O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com s
         });
     } catch (error: any) {
         console.error("[Gemini API] Erro ao gerar revista EBD:", error);
-        res.status(500).json({ success: false, error: error.message || String(error) });
+        res.status(500).json({ success: false, error: formatGeminiUserError(error) });
     }
 });
 
@@ -1282,16 +1297,39 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
             contents.push({ text: modifiedPrompt });
         }
 
-        const response = await ai.models.generateContent({
-            model: "gemini-3.7-flash",
-            contents: contents,
-            config: {
-                systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
-                responseMimeType: "application/json"
+        let responseText = "";
+        try {
+            const response = await ai.models.generateContent({
+                model: "gemini-3.7-flash",
+                contents: contents,
+                config: {
+                    systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
+                    responseMimeType: "application/json"
+                }
+            });
+            responseText = response.text || "";
+        } catch (callErr: any) {
+            const callErrStr = String(callErr?.message || callErr || "");
+            const platformKey = process.env.GEMINI_API_KEY || "";
+            if (callErrStr.includes("API_KEY_SERVICE_BLOCKED") && platformKey && platformKey !== apiKey) {
+                console.warn("[Gemini EBD API] Chave primária falhou por API_KEY_SERVICE_BLOCKED. Recuperando automaticamente com a chave nativa do Google AI Studio...");
+                const fallbackAi = new GoogleGenAI({
+                    apiKey: platformKey,
+                    httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+                });
+                const response = await fallbackAi.models.generateContent({
+                    model: "gemini-3.7-flash",
+                    contents: contents,
+                    config: {
+                        systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
+                        responseMimeType: "application/json"
+                    }
+                });
+                responseText = response.text || "";
+            } else {
+                throw callErr;
             }
-        });
-
-        const responseText = response.text || "";
+        }
 
         // Save to cache
         apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
@@ -2592,10 +2630,19 @@ app.post("/api/admin/test-api-connection", async (req, res) => {
         }
     } catch (error: any) {
         const latency = Date.now() - start;
-        trackApiCall(api as any || "gemini", "Teste de Conexão", "error", latency, 0, `Falha: ${error.message || String(error)}`);
+        const errStr = String(error.message || error || "");
+        let friendlyMessage = `Falha na conexão: ${errStr}`;
+
+        if (errStr.includes("API_KEY_SERVICE_BLOCKED") || errStr.includes("generativelanguage.googleapis.com")) {
+            friendlyMessage = "A chave de API informada possui restrição de serviços no Google Cloud Console e não incluiu a 'Generative Language API'. Acesse o Google Cloud Console > APIs e Serviços > Ative a 'Generative Language API' e marque-a nas restrições da chave, ou gere uma chave dedicada em https://aistudio.google.com/app/apikey.";
+        } else if (errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429")) {
+            friendlyMessage = "Limite de requisições ou créditos da chave de API do Gemini atingido temporariamente. Acesse https://aistudio.google.com/projects.";
+        }
+
+        trackApiCall(api as any || "gemini", "Teste de Conexão", "error", latency, 0, `Falha: ${friendlyMessage}`);
         return res.json({
             success: false,
-            message: `Falha na conexão: ${error.message || String(error)}`,
+            message: friendlyMessage,
             latency
         });
     }

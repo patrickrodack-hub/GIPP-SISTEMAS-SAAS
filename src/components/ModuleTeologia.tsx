@@ -5,12 +5,26 @@ import {
     BookOpen, GraduationCap, ChevronRight, ChevronLeft, CheckCircle, Lock, Award, ArrowLeft, 
     Shield, Printer, Sparkles, Brain, Trash2, Download, Plus, Search, 
     BookOpenText, FileText, RotateCcw, Check, HelpCircle, Loader2, ClipboardList,
-    Play, Pause, Volume2, X, Monitor
+    Play, Pause, Volume2, X, Monitor, Wifi, WifiOff, HardDrive, Eye, RefreshCw, Layers
 } from 'lucide-react';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { jsPDF } from 'jspdf';
 import { BibleReferenceModal } from './BibleReferenceModal';
 import { GeradorSlidesMultimidia } from './GeradorSlidesMultimidia';
+import { 
+    downloadTheologyModule, 
+    removeDownloadedTheologyModule, 
+    getAllDownloadedTheologyModules, 
+    getTheologyStorageUsage, 
+    clearAllTheologyDownloads, 
+    downloadAllTheologyModules,
+    subscribeTheologyOfflineEvents,
+    getTheologicalModuleIllustrations,
+    DownloadedTheologyModule,
+    TheologyStorageStats,
+    TheologyDownloadProgress,
+    OfflineTheologyImage
+} from '../lib/indexedDbService';
 
 export default function ModuleTeologia() {
     const { db, user, addToast, setPrintMode, setPrintData, setPreviewOpen, setConfirmDialog, callGeminiAI } = useContext(ChurchContext);
@@ -79,6 +93,129 @@ export default function ModuleTeologia() {
 
     // E-Reader Specific States (Moved up to prevent hoisting errors)
     const [currentPage, setCurrentPage] = useState<number>(0);
+
+    // Offline Storage & IndexedDB States
+    const [downloadedModules, setDownloadedModules] = useState<Record<string, DownloadedTheologyModule>>({});
+    const [downloadProgress, setDownloadProgress] = useState<Record<string, TheologyDownloadProgress>>({});
+    const [storageStats, setStorageStats] = useState<TheologyStorageStats | null>(null);
+    const [offlineModalOpen, setOfflineModalOpen] = useState(false);
+    const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+    const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+    const [selectedOfflineDiagram, setSelectedOfflineDiagram] = useState<OfflineTheologyImage | null>(null);
+
+    // Monitoramento da Conectividade e Cache Offline do IndexedDB
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        const refreshOfflineData = async () => {
+            try {
+                const list = await getAllDownloadedTheologyModules();
+                const map: Record<string, DownloadedTheologyModule> = {};
+                list.forEach(m => { map[m.id] = m; });
+                setDownloadedModules(map);
+                const stats = await getTheologyStorageUsage();
+                setStorageStats(stats);
+            } catch (e) {
+                console.error("Erro ao sincronizar dados offline:", e);
+            }
+        };
+
+        refreshOfflineData();
+
+        const unsubscribe = subscribeTheologyOfflineEvents((event) => {
+            if (event.action === 'progress' && event.progress && event.moduleId) {
+                setDownloadProgress(prev => ({ ...prev, [event.moduleId!]: event.progress! }));
+            } else {
+                refreshOfflineData();
+            }
+        });
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            unsubscribe();
+        };
+    }, []);
+
+    const handleDownloadModule = async (mod: any, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        playMenuSound();
+        try {
+            addToast(`Iniciando download do módulo "${mod.title}"...`, 'info');
+            await downloadTheologyModule(mod, (prog) => {
+                setDownloadProgress(prev => ({ ...prev, [mod.id]: prog }));
+            });
+            playNotificationSound();
+            addToast(`Módulo "${mod.title}" salvo para leitura offline com sucesso!`, 'success');
+            setDownloadProgress(prev => {
+                const updated = { ...prev };
+                delete updated[mod.id];
+                return updated;
+            });
+        } catch (err: any) {
+            addToast(`Erro ao baixar módulo: ${err.message || err}`, 'error');
+        }
+    };
+
+    const handleRemoveDownloadedModule = async (moduleId: string, title: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        playMenuSound();
+        setConfirmDialog({
+            title: "Remover Módulo Offline?",
+            message: `Deseja liberar o espaço em disco ocupado pelas aulas e diagramas do módulo "${title}"?`,
+            confirmText: "Sim, Liberar Espaço",
+            cancelText: "Cancelar",
+            onConfirm: async () => {
+                try {
+                    await removeDownloadedTheologyModule(moduleId);
+                    addToast(`Módulo "${title}" removido do cache offline.`, 'info');
+                } catch (err) {
+                    addToast("Erro ao remover do cache offline.", 'error');
+                }
+            }
+        });
+    };
+
+    const handleDownloadAll = async () => {
+        playMenuSound();
+        setIsBatchDownloading(true);
+        addToast("Iniciando download de toda a Universidade Teológica...", 'info');
+        try {
+            const result = await downloadAllTheologyModules(MODULES_TEOLOGIA, (prog) => {
+                if (prog.moduleId) {
+                    setDownloadProgress(prev => ({ ...prev, [prog.moduleId]: prog }));
+                }
+            });
+            playNotificationSound();
+            addToast(`Concluído! ${result.success} módulos salvos com sucesso no dispositivo.`, 'success');
+        } catch (e: any) {
+            addToast(`Erro no download em lote: ${e.message || e}`, 'error');
+        } finally {
+            setIsBatchDownloading(false);
+            setDownloadProgress({});
+        }
+    };
+
+    const handleClearAllStorage = () => {
+        playMenuSound();
+        setConfirmDialog({
+            title: "Limpar Todo o Cache de Teologia?",
+            message: "Isso removerá todos os módulos e diagramas baixados para leitura sem internet. Você poderá baixá-los novamente quando quiser.",
+            confirmText: "Sim, Limpar Tudo",
+            cancelText: "Cancelar",
+            onConfirm: async () => {
+                try {
+                    await clearAllTheologyDownloads();
+                    addToast("Cache offline de teologia limpo com sucesso!", 'success');
+                } catch (err) {
+                    addToast("Erro ao limpar cache.", 'error');
+                }
+            }
+        });
+    };
 
     // Audio Speach Synthesis Controller
     useEffect(() => {
@@ -623,6 +760,21 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                 </div>
                                 <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">{currentPage + 1} / {totalPages} Pág.</span>
                             </div>
+
+                            {downloadedModules[course.id] ? (
+                                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                                    <CheckCircle size={14} className="text-emerald-600"/> Offline Ativo
+                                </span>
+                            ) : (
+                                <button
+                                    onClick={(e) => handleDownloadModule(course, e)}
+                                    className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer"
+                                    title="Baixar este módulo para ter acesso sem internet"
+                                >
+                                    <Download size={13}/> Salvar Offline
+                                </button>
+                            )}
+
                             <Button
                                 onClick={() => { playMenuSound(); setIsReadingMode(true); }}
                                 variant="ghost"
@@ -683,6 +835,46 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                     );
                                 })}
                             </div>
+
+                            {/* Diagramas e Infográficos Teológicos Salvos no IndexedDB */}
+                            {(() => {
+                                const illustrations = downloadedModules[course.id]?.images || getTheologicalModuleIllustrations(course.id, course.title);
+                                if (!illustrations || illustrations.length === 0) return null;
+                                return (
+                                    <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                                                <Layers size={13} className="text-indigo-600"/> Diagramas Salvos
+                                            </span>
+                                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                                Offline
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {illustrations.map((diag) => (
+                                                <div 
+                                                    key={diag.id}
+                                                    onClick={() => { playMenuSound(); setSelectedOfflineDiagram(diag); }}
+                                                    className="group flex items-center gap-2 p-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all cursor-pointer"
+                                                >
+                                                    <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-slate-900 border border-slate-200 flex items-center justify-center">
+                                                        {diag.dataBase64 ? (
+                                                            <img src={diag.dataBase64} alt={diag.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                        ) : (
+                                                            <Layers size={14} className="text-indigo-400"/>
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <h5 className="text-[11px] font-bold text-slate-800 truncate group-hover:text-indigo-600">{diag.title}</h5>
+                                                        <span className="text-[9px] text-slate-400 capitalize">{diag.type || 'diagrama'}</span>
+                                                    </div>
+                                                    <Eye size={13} className="text-slate-400 group-hover:text-indigo-600 shrink-0"/>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Column 2 & 3: Interactive Book Container */}
@@ -2440,14 +2632,51 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                 <div className="absolute top-0 right-0 p-8 opacity-10">
                     <BookOpen size={200} />
                 </div>
-                <div className="relative z-10">
-                    <h1 className="text-3xl md:text-5xl font-black flex items-center gap-4 tracking-tight">
-                        <GraduationCap className="text-indigo-400 animate-bounce" size={48} />
-                        Estudo de Teologia Básico GIPP
-                    </h1>
-                    <p className="text-indigo-200 font-medium mt-4 text-xs sm:text-lg max-w-2xl leading-relaxed">
-                        Formação teológica sólida e profissionalizante. Mergulhe nas profundezas da Palavra de Deus com material didático premium gerado exclusivamente para nossos alunos, preparado para a jornada pastoral.
-                    </p>
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div>
+                        <h1 className="text-3xl md:text-5xl font-black flex items-center gap-4 tracking-tight">
+                            <GraduationCap className="text-indigo-400 animate-bounce" size={48} />
+                            Estudo de Teologia Básico GIPP
+                        </h1>
+                        <p className="text-indigo-200 font-medium mt-4 text-xs sm:text-lg max-w-2xl leading-relaxed">
+                            Formação teológica sólida e profissionalizante. Mergulhe nas profundezas da Palavra de Deus com material didático premium gerado exclusivamente para nossos alunos, preparado para a jornada pastoral.
+                        </p>
+                    </div>
+
+                    {/* Central de Acesso e Cache Offline */}
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 shrink-0 flex flex-col gap-3 min-w-[260px]">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs font-bold">
+                                {isOnline ? (
+                                    <span className="flex items-center gap-1.5 text-emerald-400">
+                                        <Wifi size={14} className="text-emerald-400"/> Online
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1.5 text-amber-300">
+                                        <WifiOff size={14} className="text-amber-300 animate-pulse"/> Modo Offline Ativo
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-[11px] font-black text-indigo-200 bg-white/10 px-2 py-0.5 rounded-md">
+                                {storageStats?.formattedSize || '0 B'} em Disco
+                            </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-indigo-100">
+                            <span>Módulos Salvos:</span>
+                            <span className="font-extrabold text-white">
+                                {Object.keys(downloadedModules).length} de {MODULES_TEOLOGIA.length}
+                            </span>
+                        </div>
+
+                        <button
+                            onClick={() => { playMenuSound(); setOfflineModalOpen(true); }}
+                            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                        >
+                            <HardDrive size={14}/>
+                            <span>Gerenciar Cache Offline</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -2598,15 +2827,30 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                     {MODULES_TEOLOGIA.map((mod) => {
                         const progress = courseProgress[mod.id] || 0;
                         const percent = Math.round((progress / mod.lessons.length) * 100);
+                        const downloaded = downloadedModules[mod.id];
+                        const prog = downloadProgress[mod.id];
+
                         return (
                             <div 
                                 key={mod.id} 
                                 className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full bg-gradient-to-b from-white to-slate-50"
                                 onClick={() => handleOpenCourse(mod.id)}
                             >
-                                <div className={`w-16 h-16 rounded-2xl bg-${mod.color}-100 text-${mod.color}-600 flex items-center justify-center mb-6 group-hover:-translate-y-1 transition-transform shadow-inner`}>
-                                    <mod.icon size={32} />
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className={`w-16 h-16 rounded-2xl bg-${mod.color}-100 text-${mod.color}-600 flex items-center justify-center group-hover:-translate-y-1 transition-transform shadow-inner`}>
+                                        <mod.icon size={32} />
+                                    </div>
+                                    {downloaded ? (
+                                        <span className="flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full shadow-2xs">
+                                            <CheckCircle size={12} className="text-emerald-600"/> Offline Pronto
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                            Online
+                                        </span>
+                                    )}
                                 </div>
+
                                 <h3 className="text-xl font-black text-slate-800 mb-2 leading-tight">{mod.title}</h3>
                                 <p className="text-xs text-slate-600 mb-6 flex-grow leading-relaxed font-semibold">{mod.description}</p>
                                 
@@ -2617,6 +2861,55 @@ REGRA CRÍTICA DE FORMATO DE RESPOSTA (SINTAXE JSON):
                                     </div>
                                     <div className="w-full bg-slate-200 rounded-full h-1.5">
                                         <div className="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${percent}%` }}></div>
+                                    </div>
+
+                                    {/* Bloco de Download e Gestão Offline do Módulo */}
+                                    <div className="pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                                        {prog ? (
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between text-[11px] font-bold text-indigo-700">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Loader2 size={12} className="animate-spin text-indigo-600"/> Baixando...
+                                                    </span>
+                                                    <span>{prog.percentage}%</span>
+                                                </div>
+                                                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                                    <div className="bg-indigo-600 h-1.5 transition-all duration-300" style={{ width: `${prog.percentage}%` }}></div>
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 truncate">{prog.message}</p>
+                                            </div>
+                                        ) : downloaded ? (
+                                            <div className="flex items-center justify-between bg-emerald-50/80 border border-emerald-200/90 rounded-xl px-3 py-2">
+                                                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                                                    <CheckCircle size={14} className="text-emerald-600"/>
+                                                    <span>Salvo ({downloaded.formattedSize})</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button 
+                                                        onClick={(e) => handleDownloadModule(mod, e)}
+                                                        title="Atualizar / Re-baixar"
+                                                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        <RefreshCw size={13}/>
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => handleRemoveDownloadedModule(mod.id, mod.title, e)} 
+                                                        title="Remover do Cache Offline"
+                                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        <Trash2 size={13}/>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={(e) => handleDownloadModule(mod, e)}
+                                                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-indigo-200/80 bg-indigo-50/80 hover:bg-indigo-100/90 text-indigo-700 text-xs font-bold transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer"
+                                            >
+                                                <Download size={13}/>
+                                                <span>Baixar Módulo Offline</span>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -3816,6 +4109,200 @@ ${generatedLessonPlan.perguntasDebate.map((q: string, i: number) => `${i + 1}. $
                 moduloInicial={slidesModuleId}
                 callGeminiAI={callGeminiAI}
             />
+
+            {/* Modal de Gestão da Biblioteca e Cache Offline (IndexedDB) */}
+            {offlineModalOpen && (
+                <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col space-y-6 animate-scaleUp">
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                    <HardDrive size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800">Biblioteca Teológica Offline</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Armazenamento local persistente via IndexedDB</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { playMenuSound(); setOfflineModalOpen(false); }}
+                                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Status Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Módulos Salvos</span>
+                                <span className="text-xl font-black text-indigo-700">
+                                    {Object.keys(downloadedModules).length} <span className="text-xs font-semibold text-slate-500">/ {MODULES_TEOLOGIA.length}</span>
+                                </span>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Espaço em Disco</span>
+                                <span className="text-xl font-black text-slate-800">
+                                    {storageStats?.formattedSize || '0 B'}
+                                </span>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Conexão Atual</span>
+                                <span className="text-sm font-black flex items-center gap-1.5 mt-1">
+                                    {isOnline ? (
+                                        <span className="text-emerald-600 flex items-center gap-1">
+                                            <Wifi size={14}/> Online (Conectado)
+                                        </span>
+                                    ) : (
+                                        <span className="text-amber-600 flex items-center gap-1">
+                                            <WifiOff size={14}/> Offline (Sem Rede)
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Global Actions */}
+                        <div className="flex flex-col sm:flex-row gap-2.5">
+                            <button
+                                onClick={handleDownloadAll}
+                                disabled={isBatchDownloading}
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                            >
+                                {isBatchDownloading ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        <span>Baixando Universidade...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download size={16} />
+                                        <span>Baixar Todos os {MODULES_TEOLOGIA.length} Módulos</span>
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={handleClearAllStorage}
+                                disabled={Object.keys(downloadedModules).length === 0}
+                                className="flex items-center justify-center gap-1.5 py-3 px-4 bg-rose-50 hover:bg-rose-100 disabled:opacity-40 disabled:pointer-events-none text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                            >
+                                <Trash2 size={15} />
+                                <span>Limpar Cache</span>
+                            </button>
+                        </div>
+
+                        {/* List of Modules */}
+                        <div className="space-y-2.5 overflow-y-auto max-h-[340px] pr-1">
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Status Individual dos Módulos</span>
+                            {MODULES_TEOLOGIA.map((mod) => {
+                                const downloaded = downloadedModules[mod.id];
+                                const prog = downloadProgress[mod.id];
+
+                                return (
+                                    <div key={mod.id} className="p-3 rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className={`w-10 h-10 rounded-xl bg-${mod.color}-100 text-${mod.color}-600 flex items-center justify-center shrink-0`}>
+                                                <mod.icon size={20} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="text-xs font-black text-slate-800 truncate">{mod.title}</h4>
+                                                <span className="text-[10px] text-slate-500">
+                                                    {mod.lessons.length} capítulos • {mod.quiz.length} perguntas de fixação
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {prog ? (
+                                                <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200">
+                                                    <Loader2 size={13} className="animate-spin"/>
+                                                    <span>{prog.percentage}%</span>
+                                                </div>
+                                            ) : downloaded ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
+                                                        <CheckCircle size={12} className="text-emerald-600"/>
+                                                        <span>{downloaded.formattedSize}</span>
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => handleRemoveDownloadedModule(mod.id, mod.title, e)}
+                                                        title="Remover do Cache"
+                                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        <Trash2 size={14}/>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => handleDownloadModule(mod, e)}
+                                                    className="flex items-center gap-1.5 py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                                >
+                                                    <Download size={13}/>
+                                                    <span>Baixar</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Exibição de Diagrama e Infográfico em Alta Resolução */}
+            {selectedOfflineDiagram && (
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-slate-900 rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-800 max-h-[95vh] flex flex-col space-y-4 animate-scaleUp text-white">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div>
+                                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                                    <Layers className="text-indigo-400" size={20}/>
+                                    {selectedOfflineDiagram.title}
+                                </h3>
+                                {selectedOfflineDiagram.caption && (
+                                    <p className="text-xs text-slate-400 mt-0.5">{selectedOfflineDiagram.caption}</p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setSelectedOfflineDiagram(null)}
+                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto rounded-2xl bg-slate-950 p-2 border border-slate-800/80 flex items-center justify-center min-h-[300px]">
+                            {selectedOfflineDiagram.dataBase64 ? (
+                                <img 
+                                    src={selectedOfflineDiagram.dataBase64} 
+                                    alt={selectedOfflineDiagram.title} 
+                                    className="max-w-full max-h-[60vh] object-contain rounded-xl"
+                                />
+                            ) : (
+                                <div className="text-center text-slate-500 py-12">
+                                    <Layers size={48} className="mx-auto mb-2 opacity-40"/>
+                                    <p>Ilustração não disponível em cache.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs text-slate-400 pt-1">
+                            <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                                <CheckCircle size={14}/> Carregado do Banco IndexedDB Local
+                            </span>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setSelectedOfflineDiagram(null)}
+                                className="text-slate-300 hover:text-white"
+                            >
+                                Fechar Visualizador
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
