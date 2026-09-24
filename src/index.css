@@ -380,6 +380,86 @@
   padding: 0.875rem 1rem;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.gipp-table th.sorted-asc {
+  background-color: #f0fdf4 !important;
+  color: #166534 !important;
+  border-bottom: 2px solid #22c55e !important;
+}
+
+.gipp-table th.sorted-desc {
+  background-color: #faf5ff !important;
+  color: #6b21a8 !important;
+  border-bottom: 2px solid #a855f7 !important;
+}
+
+/* Sorting signaling icons styling inside .gipp-table th */
+.gipp-table th .sort-signal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s ease, background-color 0.15s ease;
+  vertical-align: middle;
+}
+
+.gipp-table th .sort-signal-icon.active-asc {
+  color: #16a34a !important;
+  transform: translateY(-1px) scale(1.05);
+}
+
+.gipp-table th .sort-signal-icon.active-desc {
+  color: #9333ea !important;
+  transform: translateY(1px) scale(1.05);
+}
+
+/* Explanatory Tooltip Popover for .gipp-table th */
+.gipp-table th .th-tooltip-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 290px;
+  background-color: #0f172a;
+  color: #f8fafc;
+  padding: 0.875rem;
+  border-radius: 1rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  line-height: 1.45;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  z-index: 70;
+  backdrop-filter: blur(12px);
+  animation: gippTooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes gippTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.gipp-table th .th-tooltip-popover::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 20px;
+  width: 12px;
+  height: 12px;
+  background-color: #0f172a;
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  transform: rotate(45deg);
 }
 
 .gipp-table td {

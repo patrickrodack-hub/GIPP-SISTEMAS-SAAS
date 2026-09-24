@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import http from "http";
 import path from "path";
 import fs from "fs";
 import webpush from "web-push";
@@ -2778,6 +2779,8 @@ app.post("/api/admin/trigger-agenda-reminders", async (req, res) => {
 let viteMiddleware: any = null;
 
 async function start() {
+    const httpServer = http.createServer(app);
+
     if (process.env.NODE_ENV === "production") {
         const distPath = path.join(process.cwd(), "dist");
         app.use(express.static(distPath));
@@ -2795,7 +2798,10 @@ async function start() {
         try {
             console.log("[Vite] Inicializando servidor de desenvolvimento...");
             const vite = await createViteServer({
-                server: { middlewareMode: true },
+                server: { 
+                    middlewareMode: true,
+                    hmr: process.env.DISABLE_HMR === 'true' ? false : { server: httpServer }
+                },
                 appType: "spa",
             });
             app.use(vite.middlewares);
@@ -2805,8 +2811,16 @@ async function start() {
         }
     }
 
+    httpServer.on("error", (err: any) => {
+        if (err.code === "EADDRINUSE") {
+            console.error(`[Server] Porta ${PORT} já em uso:`, err);
+        } else {
+            console.error("[Server] Erro no servidor HTTP:", err);
+        }
+    });
+
     // 1. Iniciamos a escuta da porta com o servidor completamente pronto
-    app.listen(PORT, "0.0.0.0", () => {
+    httpServer.listen(PORT, "0.0.0.0", () => {
         console.log(`Server running on http://localhost:${PORT}`);
 
         // 3. Iniciar serviços de segundo plano de forma assíncrona com tempos seguros

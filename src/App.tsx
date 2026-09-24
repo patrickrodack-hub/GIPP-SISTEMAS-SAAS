@@ -23,7 +23,8 @@ import {
   MonitorPlay, Tv, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car, ShoppingBag,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -2488,6 +2489,8 @@ export const GenericTable = ({
   const { openModal, deleteItem, user } = useContext(ChurchContext); 
   const [searchTerm, setSearchTerm] = useState(''); 
   const [colFilters, setColFilters] = useState<Record<string, any>>({});
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [activeTooltipCol, setActiveTooltipCol] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -2497,13 +2500,17 @@ export const GenericTable = ({
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (activeFilterCol && !(e.target as HTMLElement).closest('.filter-popup-container')) {
+      const target = e.target as HTMLElement;
+      if (activeFilterCol && !target.closest('.filter-popup-container')) {
         setActiveFilterCol(null);
+      }
+      if (activeTooltipCol && !target.closest('.filter-popup-container') && !target.closest('.th-tooltip-popover')) {
+        setActiveTooltipCol(null);
       }
     };
     document.addEventListener('click', handleOutsideClick);
     return () => document.removeEventListener('click', handleOutsideClick);
-  }, [activeFilterCol]);
+  }, [activeFilterCol, activeTooltipCol]);
 
   const getUniqueColumnValues = (colKey: string, colSpec: any) => {
       const vals = new Set<string>();
@@ -2880,17 +2887,115 @@ export const GenericTable = ({
   
   useEffect(() => { setCurrentPage(1); }, [searchTerm, colFilters]);
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = useMemo(() => { return filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage); }, [filteredData, currentPage, itemsPerPage]);
+  const handleToggleSort = (colKey: string) => {
+    try { playMenuSound(); } catch (e) {}
+    setSortConfig(current => {
+      if (!current || current.key !== colKey) {
+        return { key: colKey, direction: 'asc' };
+      }
+      if (current.direction === 'asc') {
+        return { key: colKey, direction: 'desc' };
+      }
+      return null;
+    });
+  };
+
+  const getColumnTooltipInfo = (colKey: string, header: string, tableType: string) => {
+    const lowerKey = (colKey || '').toLowerCase();
+    const lowerHeader = (header || '').toLowerCase();
+
+    let descricao = `Coluna oficial de "${header}" vinculada aos cadastros operacionais do módulo ${tableType || 'do sistema'}.`;
+
+    if (lowerKey.includes('nome') || lowerHeader.includes('nome')) {
+      descricao = 'Identificação nominal do registro (membro, visitante, fornecedor ou bem patrimonial). Fundamental para buscas, localização rápida e emissão de certificados oficiais.';
+    } else if (lowerKey.includes('cargo') || lowerHeader.includes('cargo') || lowerKey.includes('funcao') || lowerHeader.includes('função')) {
+      descricao = 'Cargo ministerial ou função eclesiástica (ex: Pastor, Evangelista, Presbítero, Diácono, Cooperador ou Membro).';
+    } else if (lowerKey.includes('status') || lowerHeader.includes('status') || lowerKey.includes('situacao') || lowerHeader.includes('situação')) {
+      descricao = 'Estado cadastral no sistema (Ativo, Em Observação, Inativo, Transferido ou Em Análise).';
+    } else if (lowerKey.includes('data') || lowerHeader.includes('data') || lowerKey.includes('nascimento') || lowerHeader.includes('vencimento')) {
+      descricao = 'Data cronológica de competência, aniversário, ordenação, vencimento de termo ou evento eclesiástico.';
+    } else if (lowerKey.includes('telefone') || lowerHeader.includes('telefone') || lowerKey.includes('contato') || lowerKey.includes('whatsapp')) {
+      descricao = 'Número telefônico ou WhatsApp com DDD para contato direto e disparo de avisos pastorais.';
+    } else if (lowerKey.includes('valor') || lowerHeader.includes('valor') || lowerKey.includes('total') || lowerHeader.includes('preço')) {
+      descricao = 'Valor monetário em reais (R$) registrado na tesouraria ou departamento contábil da igreja.';
+    } else if (lowerKey.includes('congregacao') || lowerHeader.includes('congregação') || lowerKey.includes('filial')) {
+      descricao = 'Congregação filial ou congregação sede onde o registro está alocado no ministério.';
+    } else if (lowerKey.includes('email') || lowerHeader.includes('email') || lowerHeader.includes('e-mail')) {
+      descricao = 'Endereço de e-mail cadastrado para envio de notificações, relatórios e credenciais digitais.';
+    } else if (lowerKey.includes('categoria') || lowerHeader.includes('categoria') || lowerKey.includes('tipo')) {
+      descricao = 'Classificação estruturada do registro para relatórios, agrupamentos e filtros analíticos.';
+    } else if (lowerKey.includes('cidade') || lowerHeader.includes('cidade') || lowerKey.includes('endereco') || lowerHeader.includes('endereço')) {
+      descricao = 'Localização residencial ou endereço cadastrado para mapeamento de membros e visitas pastorais.';
+    } else if (lowerKey.includes('foto') || lowerHeader.includes('foto')) {
+      descricao = 'Foto oficial do perfil para identificação facial em credenciais digitais e mural da igreja.';
+    }
+
+    return {
+      descricao,
+      impactoFiltro: 'Filtro em tempo real: digite no campo rápido ou clique no funil para operadores avançados (contém, igual, antes/depois, faixas de valor). A ordenação pelas setas ▲/▼ reorganiza todos os registros filtrados de forma ascendente ou descendente.'
+    };
+  };
+
+  const sortedData = useMemo(() => {
+    if (!sortConfig) return filteredData;
+    const { key: sortKey, direction } = sortConfig;
+    const col = columns.find((c: any) => (c.key === sortKey || c.header === sortKey));
+    if (!col) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      let valA = a[col.key];
+      let valB = b[col.key];
+
+      if (col.render) {
+        try {
+          const rA = col.render(a);
+          const rB = col.render(b);
+          if (typeof rA === 'string' || typeof rA === 'number') valA = rA;
+          if (typeof rB === 'string' || typeof rB === 'number') valB = rB;
+        } catch (e) {}
+      }
+
+      // Compara Datas
+      const dateA = parseFlexibleDate(String(valA ?? ''));
+      const dateB = parseFlexibleDate(String(valB ?? ''));
+      if (dateA && dateB && !isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+        return direction === 'asc' 
+          ? dateA.getTime() - dateB.getTime() 
+          : dateB.getTime() - dateA.getTime();
+      }
+
+      // Compara Números e Moeda
+      const strA = String(valA ?? '').trim();
+      const strB = String(valB ?? '').trim();
+      const cleanA = strA.replace(/[^\d.,-]/g, '').replace(',', '.');
+      const cleanB = strB.replace(/[^\d.,-]/g, '').replace(',', '.');
+      const numA = parseFloat(cleanA);
+      const numB = parseFloat(cleanB);
+      if (!isNaN(numA) && !isNaN(numB) && strA.match(/\d/) && strB.match(/\d/)) {
+        return direction === 'asc' ? numA - numB : numB - numA;
+      }
+
+      // Compara Texto
+      const textA = safeText(valA).toLowerCase();
+      const textB = safeText(valB).toLowerCase();
+      const comp = textA.localeCompare(textB, 'pt-BR', { numeric: true, sensitivity: 'base' });
+      return direction === 'asc' ? comp : -comp;
+    });
+  }, [filteredData, sortConfig, columns]);
+
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const paginatedData = useMemo(() => { 
+    return sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage); 
+  }, [sortedData, currentPage, itemsPerPage]);
 
   const handleDelete = (e, id) => { e.stopPropagation(); if (onDeleteOverride) onDeleteOverride(id); else deleteItem(type, id); }; 
   const handleSelect = (id) => { const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id]; setSelectedIds(newSelection); if(onSelectionChange) onSelectionChange(newSelection); };
   const toggleSelectAll = () => { if(selectedIds.length === paginatedData.length) { setSelectedIds([]); if(onSelectionChange) onSelectionChange([]); } else { const all = paginatedData.map(d=>d.id); setSelectedIds(all); if(onSelectionChange) onSelectionChange(all); } };
 
   const exportToCSV = () => {
-      if (filteredData.length === 0) return;
+      if (sortedData.length === 0) return;
       const headers = columns.map(c => c.header).join(',');
-      const rows = filteredData.map(item => {
+      const rows = sortedData.map(item => {
           return columns.map(c => {
               let val = item[c.key];
               if (val === null || val === undefined) val = '';
@@ -2915,10 +3020,26 @@ export const GenericTable = ({
                 <div className="h-10 w-1 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
                 <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight text-gradient">{title}</h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
                 <div className="bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-2 text-xs font-bold uppercase tracking-wider shadow-sm">
-                    {filteredData.length} registros
+                    {sortedData.length} registros
                 </div>
+                {sortConfig && (
+                    <div className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-200 flex items-center gap-1.5 text-xs font-bold shadow-xs">
+                        <span>Ordenado: <strong>{columns.find((c: any) => (c.key === sortConfig.key || c.header === sortConfig.key))?.header || sortConfig.key}</strong></span>
+                        <span className="text-[10px] uppercase bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-black">
+                            {sortConfig.direction === 'asc' ? '▲ A-Z / Crescente' : '▼ Z-A / Decrescente'}
+                        </span>
+                        <button 
+                            type="button"
+                            onClick={() => setSortConfig(null)}
+                            className="ml-1 text-indigo-400 hover:text-indigo-800"
+                            title="Remover ordenação"
+                        >
+                            <X size={12}/>
+                        </button>
+                    </div>
+                )}
             </div>
             </div>
             <div className="flex gap-4 w-full md:w-auto items-center">
@@ -2933,7 +3054,7 @@ export const GenericTable = ({
       )}
 
       <div className="overflow-x-auto flex-1 bg-white/20 relative z-10 custom-scrollbar flex flex-col justify-between">
-        <table className="min-w-full divide-y divide-white/40">
+        <table className="gipp-table min-w-full divide-y divide-white/40">
           <thead className="bg-white/60 backdrop-blur-md sticky top-0 z-20 shadow-sm">
             <tr>
                 {onSelectionChange && <th className="px-4 py-5 w-10"><input type="checkbox" onChange={toggleSelectAll} checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"/></th>}
@@ -2946,22 +3067,133 @@ export const GenericTable = ({
                       ? filterVal !== '' 
                       : (filterVal.value !== '' || (filterVal.selectedValues && filterVal.selectedValues.length > 0))
                   );
+                  const isSorted = sortConfig?.key === colKey;
+                  const sortDir = isSorted ? sortConfig?.direction : null;
+                  const tooltipInfo = getColumnTooltipInfo(colKey, c.header, type);
+                  const isTooltipOpen = activeTooltipCol === colKey;
 
                   return (
-                    <th key={i} className="px-8 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] relative">
+                    <th 
+                      key={i} 
+                      className={`px-6 py-3 text-left text-[11px] font-bold uppercase tracking-[0.15em] relative select-none transition-colors ${
+                        isSorted 
+                          ? sortDir === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
                       <div className="flex flex-col gap-1.5 min-w-[140px] relative filter-popup-container">
+                        {/* Header bar: Column Title, Sort Arrow Signal, Help Tooltip & Filter */}
                         <div className="flex items-center justify-between gap-1 w-full">
-                          <span className="truncate">{c.header}</span>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveFilterCol(activeFilterCol === colKey ? null : colKey);
-                            }}
-                            className={`p-1 rounded-md hover:bg-slate-200/50 transition-colors flex items-center justify-center ${isFiltered ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' : 'text-slate-400'}`}
-                            title="Opções de filtragem avançada"
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSort(colKey)}
+                            className="flex items-center gap-1.5 truncate text-left group/sort focus:outline-none cursor-pointer py-0.5 rounded transition-all flex-1 min-w-0"
+                            title={
+                              sortDir === 'asc'
+                                ? `Ordenado: Ascendente (A-Z ou 0-9). Clique para inverter para Descendente.`
+                                : sortDir === 'desc'
+                                  ? `Ordenado: Descendente (Z-A ou 9-0). Clique para remover ordenação.`
+                                  : `Clique para ordenar por ${c.header} (Ascendente)`
+                            }
                           >
-                            <Filter size={12} className={isFiltered ? "fill-indigo-600 text-indigo-600" : "text-slate-400"} />
+                            <span className={`truncate font-extrabold transition-colors ${isSorted ? 'text-indigo-600' : 'group-hover/sort:text-indigo-600 text-slate-700'}`}>
+                              {c.header}
+                            </span>
+                            
+                            {/* Visual Signaling Icon (Setas de Ordenação) */}
+                            <span 
+                              className={`sort-signal-icon shrink-0 inline-flex items-center justify-center p-1 rounded-md transition-all ${
+                                isSorted
+                                  ? sortDir === 'asc'
+                                    ? 'text-emerald-700 bg-emerald-100 ring-1 ring-emerald-300 active-asc'
+                                    : 'text-purple-700 bg-purple-100 ring-1 ring-purple-300 active-desc'
+                                  : 'text-slate-400 group-hover/sort:text-slate-600 opacity-60 group-hover/sort:opacity-100 bg-slate-100/50'
+                              }`}
+                            >
+                              {sortDir === 'asc' ? (
+                                <ArrowUp size={13} className="stroke-[2.5]" />
+                              ) : sortDir === 'desc' ? (
+                                <ArrowDown size={13} className="stroke-[2.5]" />
+                              ) : (
+                                <ArrowUpDown size={12} className="stroke-[2]" />
+                              )}
+                            </span>
                           </button>
+
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            {/* Explanatory Tooltip trigger */}
+                            <div className="relative group/tooltip">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveTooltipCol(isTooltipOpen ? null : colKey);
+                                }}
+                                className={`p-1 rounded-md transition-colors flex items-center justify-center cursor-help ${
+                                  isTooltipOpen ? 'text-indigo-600 bg-indigo-50 ring-1 ring-indigo-200' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100'
+                                }`}
+                                title="Tooltip explicativo: Saiba o que esta coluna representa e o impacto dos filtros"
+                              >
+                                <HelpCircle size={12} />
+                              </button>
+
+                              {/* Tooltip Content Popover */}
+                              <div 
+                                className={`th-tooltip-popover ${
+                                  isTooltipOpen 
+                                    ? 'block opacity-100 visible' 
+                                    : 'hidden group-hover/tooltip:block opacity-0 group-hover/tooltip:opacity-100 invisible group-hover/tooltip:visible delay-150'
+                                }`}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-700">
+                                  <div className="flex items-center gap-1.5 font-bold text-indigo-300 text-xs uppercase tracking-wider">
+                                    <Info size={13} className="text-indigo-400 shrink-0" />
+                                    <span>Coluna: {c.header}</span>
+                                  </div>
+                                  {isSorted && (
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                      sortDir === 'asc' 
+                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30' 
+                                        : 'bg-purple-500/20 text-purple-300 border-purple-400/30'
+                                    }`}>
+                                      {sortDir === 'asc' ? '▲ Crescente' : '▼ Decrescente'}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-slate-200 text-[11px] leading-relaxed mb-2.5 normal-case tracking-normal">
+                                  {tooltipInfo.descricao}
+                                </p>
+                                <div className="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/80 text-[10px] text-slate-300 leading-normal normal-case tracking-normal">
+                                  <span className="font-bold text-amber-300 block mb-1 flex items-center gap-1">
+                                    <SlidersHorizontal size={11} className="text-amber-400 shrink-0"/> Impacto dos Filtros & Ordenação:
+                                  </span>
+                                  {tooltipInfo.impactoFiltro}
+                                </div>
+                                {isTooltipOpen && (
+                                  <button 
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(null); }}
+                                    className="mt-2.5 w-full py-1 text-center text-[10px] font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors uppercase"
+                                  >
+                                    Fechar Dica
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Advanced Filter Button */}
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveFilterCol(activeFilterCol === colKey ? null : colKey);
+                              }}
+                              className={`p-1 rounded-md hover:bg-slate-200/50 transition-colors flex items-center justify-center ${isFiltered ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 ring-1 ring-indigo-200' : 'text-slate-400'}`}
+                              title="Opções de filtragem avançada"
+                            >
+                              <Filter size={12} className={isFiltered ? "fill-indigo-600 text-indigo-600" : "text-slate-400"} />
+                            </button>
+                          </div>
                         </div>
                         
                         <input 

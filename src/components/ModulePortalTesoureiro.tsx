@@ -600,7 +600,7 @@ const ModulePortalTesoureiro = () => {
 
                     {recentFinances.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
+                            <table className="gipp-table w-full text-left text-xs border-collapse">
                                 <thead>
                                     <tr className="text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100 pb-3 block md:table-row">
                                         <th className="pb-3 font-extrabold pr-4 text-left">Data</th>

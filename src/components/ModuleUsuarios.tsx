@@ -472,13 +472,18 @@ const ModuleUsuarios = memo(() => {
             <p className="text-xs text-slate-400 mt-2">Experimente ajustar seus termos de busca ou filtros.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto gipp-table-container">
+            <table className="w-full text-left border-collapse gipp-table">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  <th 
+                    className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500"
+                    data-tooltip="Nome do Operador e login: Identificação cadastral e credencial de acesso ao painel do sistema."
+                  >
                     <div className="flex flex-col gap-1.5">
-                      <span>Nome do Operador / Login</span>
+                      <div className="flex items-center gap-1.5">
+                        <span>Nome do Operador / Login</span>
+                      </div>
                       <input 
                         type="text" 
                         placeholder="Filtrar..." 
@@ -488,7 +493,10 @@ const ModuleUsuarios = memo(() => {
                       />
                     </div>
                   </th>
-                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  <th 
+                    className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500"
+                    data-tooltip="Nível de Acesso: Define a autoridade do operador (Master, Administrador, Operador, etc.)."
+                  >
                     <div className="flex flex-col gap-1.5">
                       <span>Nível</span>
                       <input 
@@ -500,7 +508,10 @@ const ModuleUsuarios = memo(() => {
                       />
                     </div>
                   </th>
-                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  <th 
+                    className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500"
+                    data-tooltip="Filial / Congregação: Vinculação territorial deste operador à sede principal ou filial."
+                  >
                     <div className="flex flex-col gap-1.5">
                       <span>Filial / Congregação</span>
                       <input 
@@ -512,7 +523,10 @@ const ModuleUsuarios = memo(() => {
                       />
                     </div>
                   </th>
-                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  <th 
+                    className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500"
+                    data-tooltip="Permissões Habilitadas: Filtre pelo nome de módulos específicos para auditar operadores autorizados."
+                  >
                     <div className="flex flex-col gap-1.5">
                       <span>Permissões Habilitadas</span>
                       <input 
@@ -524,7 +538,12 @@ const ModuleUsuarios = memo(() => {
                       />
                     </div>
                   </th>
-                  <th className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500 text-right align-top pt-4">Ações</th>
+                  <th 
+                    className="p-3 text-xs font-extrabold uppercase tracking-wider text-slate-500 text-right align-top pt-4 gipp-col-actions"
+                    data-tooltip="Ações Operacionais: Edição e desativação de operadores. Coluna fixa à direita."
+                  >
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -584,7 +603,7 @@ const ModuleUsuarios = memo(() => {
                           </span>
                         )}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right gipp-col-actions">
                         <div className="inline-flex gap-2">
                           <button 
                             onClick={() => handleOpenEdit(operator)}

@@ -23,7 +23,7 @@ import {
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
-  ArrowRightLeft, ShieldAlert
+  ArrowRightLeft, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown, HelpCircle, SlidersHorizontal
 } from 'lucide-react';
 
 import { 
@@ -103,6 +103,58 @@ const ModuleSecretariaIntegrada = () => {
         contato: '',
         cidade: ''
     });
+
+    const [contatosSortConfig, setContatosSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+    const [activeTooltipCol, setActiveTooltipCol] = useState<string | null>(null);
+
+    const handleToggleSort = (key: string) => {
+        try { playMenuSound(); } catch (e) {}
+        setContatosSortConfig(curr => {
+            if (!curr || curr.key !== key) return { key, direction: 'asc' };
+            if (curr.direction === 'asc') return { key, direction: 'desc' };
+            return null;
+        });
+    };
+
+    const getContatoTooltipInfo = (col: string) => {
+        switch (col) {
+            case 'tipo':
+                return {
+                    desc: 'Tipo de contato eclesiástico ou parceiro (Pessoa Física ou Pessoa Jurídica).',
+                    impacto: 'Filtre por tipo ou ordene pelas setas (▲/▼) para separar rapidamente empresas de membros e obreiros.'
+                };
+            case 'nome':
+                return {
+                    desc: 'Nome civil do membro/obreiro ou Razão Social / Nome Fantasia da instituição cadastrada.',
+                    impacto: 'Filtre por trechos do nome. A ordenação alfabética (A-Z ou Z-A) organiza a agenda da secretaria.'
+                };
+            case 'categoria':
+                return {
+                    desc: 'Classificação setorial da secretaria (ex: Membro, Obreiro/Líder, Igreja Parceira, Fornecedor, Prestador de Serviços).',
+                    impacto: 'Permite filtrar apenas categorias específicas. A ordenação agrupa os contatos por área de atuação.'
+                };
+            case 'cargo':
+                return {
+                    desc: 'Cargo ou função ministerial (Pastor, Evangelista, Diácono) ou Representante Legal / Presidente da entidade.',
+                    impacto: 'Filtre por função para convocações ministeriais. A ordenação alfabética padroniza listas e atas.'
+                };
+            case 'contato':
+                return {
+                    desc: 'Canais oficiais de comunicação rápida: telefone celular com DDD, WhatsApp e e-mail.',
+                    impacto: 'Filtre por operadora, prefixo de DDD ou domínio de e-mail para envio de circulares pastorais.'
+                };
+            case 'cidade':
+                return {
+                    desc: 'Município e Estado (UF) onde o contato ou entidade reside/está sediada.',
+                    impacto: 'Permite localizar contatos por localidade geográfica ou ordenar de A-Z para caravanas e eventos regionais.'
+                };
+            default:
+                return {
+                    desc: 'Dados cadastrais da secretaria integrada.',
+                    impacto: 'Use os filtros rápidos para restringir dados em tempo real.'
+                };
+        }
+    };
 
     const myContatos = db.secretaria_contatos || [];
 
@@ -250,12 +302,45 @@ const ModuleSecretariaIntegrada = () => {
                matchesColTipo && matchesColNome && matchesColCategoria && matchesColCargo && matchesColContato && matchesColCidade;
     });
 
+    const sortedContatosList = useMemo(() => {
+        if (!contatosSortConfig) return filteredContatosList;
+        const { key, direction } = contatosSortConfig;
+
+        return [...filteredContatosList].sort((a, b) => {
+            let valA = '';
+            let valB = '';
+
+            if (key === 'tipo') {
+                valA = a.tipo_contato || '';
+                valB = b.tipo_contato || '';
+            } else if (key === 'nome') {
+                valA = a.nome || a.razao_social || '';
+                valB = b.nome || b.razao_social || '';
+            } else if (key === 'categoria') {
+                valA = a.categoria || '';
+                valB = b.categoria || '';
+            } else if (key === 'cargo') {
+                valA = a.cargo_eclesiastico || a.presidente || '';
+                valB = b.cargo_eclesiastico || b.presidente || '';
+            } else if (key === 'contato') {
+                valA = a.telefone || a.email || '';
+                valB = b.telefone || b.email || '';
+            } else if (key === 'cidade') {
+                valA = `${a.cidade || ''} ${a.uf || ''}`;
+                valB = `${b.cidade || ''} ${b.uf || ''}`;
+            }
+
+            const comp = valA.toLowerCase().localeCompare(valB.toLowerCase(), 'pt-BR');
+            return direction === 'asc' ? comp : -comp;
+        });
+    }, [filteredContatosList, contatosSortConfig]);
+
     const handlePrintCustomReport = () => {
-        if (filteredContatosList.length === 0) {
+        if (sortedContatosList.length === 0) {
             addToast("Nenhum contato na lista para gerar relatório.", "warning");
             return;
         }
-        setPrintData({ contatos: filteredContatosList, colunasSelecionadas: selectedReportColumns });
+        setPrintData({ contatos: sortedContatosList, colunasSelecionadas: selectedReportColumns });
         setPrintMode('rel_secretaria_contatos');
         setPreviewOpen(true);
         setShowReportSelector(false);
@@ -921,78 +1006,335 @@ const ModuleSecretariaIntegrada = () => {
                         {/* Contacts Table Container */}
                         <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-entrance">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse min-w-[800px] text-slate-700">
+                                <table className="gipp-table w-full text-left border-collapse min-w-[800px] text-slate-700">
                                     <thead>
                                         <tr className="bg-slate-50/75 border-b border-slate-100">
-                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[120px]">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span>Tipo</span>
+                                            {/* Coluna: Tipo */}
+                                            <th className={`py-3 px-6 text-[10px] font-black uppercase tracking-wider relative select-none w-[120px] transition-colors ${
+                                                contatosSortConfig?.key === 'tipo' 
+                                                    ? contatosSortConfig.direction === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                                                    : 'text-slate-500'
+                                            }`}>
+                                                <div className="flex flex-col gap-1.5 relative">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleSort('tipo')}
+                                                            className="flex items-center gap-1 group/sort cursor-pointer text-left flex-1"
+                                                            title="Ordenar por Tipo (Pessoa Física / PJ)"
+                                                        >
+                                                            <span className="font-extrabold">Tipo</span>
+                                                            <span className={`sort-signal-icon inline-flex items-center justify-center p-0.5 rounded ${
+                                                                contatosSortConfig?.key === 'tipo' 
+                                                                    ? contatosSortConfig.direction === 'asc' ? 'active-asc text-emerald-700 bg-emerald-100' : 'active-desc text-purple-700 bg-purple-100'
+                                                                    : 'text-slate-400 group-hover/sort:text-slate-600'
+                                                            }`}>
+                                                                {contatosSortConfig?.key === 'tipo' ? (
+                                                                    contatosSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>
+                                                                ) : <ArrowUpDown size={11}/>}
+                                                            </span>
+                                                        </button>
+                                                        <div className="relative group/tooltip">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(activeTooltipCol === 'tipo' ? null : 'tipo'); }}
+                                                                className="text-slate-400 hover:text-indigo-600 p-0.5"
+                                                            >
+                                                                <HelpCircle size={12}/>
+                                                            </button>
+                                                            <div className={`th-tooltip-popover ${activeTooltipCol === 'tipo' ? 'block' : 'hidden group-hover/tooltip:block'}`}>
+                                                                <div className="font-bold text-indigo-300 text-xs mb-1 flex items-center gap-1">
+                                                                    <Info size={12}/> Coluna: Tipo
+                                                                </div>
+                                                                <p className="text-slate-200 text-[11px] mb-2">{getContatoTooltipInfo('tipo').desc}</p>
+                                                                <div className="bg-slate-800 rounded p-1.5 text-[10px] text-slate-300">
+                                                                    <span className="text-amber-400 font-bold block mb-0.5">Impacto:</span>
+                                                                    {getContatoTooltipInfo('tipo').impacto}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <input 
                                                         type="text" 
                                                         placeholder="Filtrar..." 
                                                         value={contactColFilters.tipo} 
                                                         onChange={e => setContactColFilters({...contactColFilters, tipo: e.target.value})}
-                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span>Nome / Razão Social</span>
+
+                                            {/* Coluna: Nome / Razão Social */}
+                                            <th className={`py-3 px-6 text-[10px] font-black uppercase tracking-wider relative select-none transition-colors ${
+                                                contatosSortConfig?.key === 'nome' 
+                                                    ? contatosSortConfig.direction === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                                                    : 'text-slate-500'
+                                            }`}>
+                                                <div className="flex flex-col gap-1.5 relative">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleSort('nome')}
+                                                            className="flex items-center gap-1 group/sort cursor-pointer text-left flex-1"
+                                                            title="Ordenar por Nome / Razão Social"
+                                                        >
+                                                            <span className="font-extrabold truncate">Nome / Razão Social</span>
+                                                            <span className={`sort-signal-icon shrink-0 inline-flex items-center justify-center p-0.5 rounded ${
+                                                                contatosSortConfig?.key === 'nome' 
+                                                                    ? contatosSortConfig.direction === 'asc' ? 'active-asc text-emerald-700 bg-emerald-100' : 'active-desc text-purple-700 bg-purple-100'
+                                                                    : 'text-slate-400 group-hover/sort:text-slate-600'
+                                                            }`}>
+                                                                {contatosSortConfig?.key === 'nome' ? (
+                                                                    contatosSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>
+                                                                ) : <ArrowUpDown size={11}/>}
+                                                            </span>
+                                                        </button>
+                                                        <div className="relative group/tooltip">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(activeTooltipCol === 'nome' ? null : 'nome'); }}
+                                                                className="text-slate-400 hover:text-indigo-600 p-0.5"
+                                                            >
+                                                                <HelpCircle size={12}/>
+                                                            </button>
+                                                            <div className={`th-tooltip-popover ${activeTooltipCol === 'nome' ? 'block' : 'hidden group-hover/tooltip:block'}`}>
+                                                                <div className="font-bold text-indigo-300 text-xs mb-1 flex items-center gap-1">
+                                                                    <Info size={12}/> Coluna: Nome / Razão Social
+                                                                </div>
+                                                                <p className="text-slate-200 text-[11px] mb-2">{getContatoTooltipInfo('nome').desc}</p>
+                                                                <div className="bg-slate-800 rounded p-1.5 text-[10px] text-slate-300">
+                                                                    <span className="text-amber-400 font-bold block mb-0.5">Impacto:</span>
+                                                                    {getContatoTooltipInfo('nome').impacto}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <input 
                                                         type="text" 
                                                         placeholder="Filtrar..." 
                                                         value={contactColFilters.nome} 
                                                         onChange={e => setContactColFilters({...contactColFilters, nome: e.target.value})}
-                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400 w-[160px]">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span>Categoria</span>
+
+                                            {/* Coluna: Categoria */}
+                                            <th className={`py-3 px-6 text-[10px] font-black uppercase tracking-wider relative select-none w-[160px] transition-colors ${
+                                                contatosSortConfig?.key === 'categoria' 
+                                                    ? contatosSortConfig.direction === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                                                    : 'text-slate-500'
+                                            }`}>
+                                                <div className="flex flex-col gap-1.5 relative">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleSort('categoria')}
+                                                            className="flex items-center gap-1 group/sort cursor-pointer text-left flex-1"
+                                                            title="Ordenar por Categoria"
+                                                        >
+                                                            <span className="font-extrabold truncate">Categoria</span>
+                                                            <span className={`sort-signal-icon shrink-0 inline-flex items-center justify-center p-0.5 rounded ${
+                                                                contatosSortConfig?.key === 'categoria' 
+                                                                    ? contatosSortConfig.direction === 'asc' ? 'active-asc text-emerald-700 bg-emerald-100' : 'active-desc text-purple-700 bg-purple-100'
+                                                                    : 'text-slate-400 group-hover/sort:text-slate-600'
+                                                            }`}>
+                                                                {contatosSortConfig?.key === 'categoria' ? (
+                                                                    contatosSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>
+                                                                ) : <ArrowUpDown size={11}/>}
+                                                            </span>
+                                                        </button>
+                                                        <div className="relative group/tooltip">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(activeTooltipCol === 'categoria' ? null : 'categoria'); }}
+                                                                className="text-slate-400 hover:text-indigo-600 p-0.5"
+                                                            >
+                                                                <HelpCircle size={12}/>
+                                                            </button>
+                                                            <div className={`th-tooltip-popover ${activeTooltipCol === 'categoria' ? 'block' : 'hidden group-hover/tooltip:block'}`}>
+                                                                <div className="font-bold text-indigo-300 text-xs mb-1 flex items-center gap-1">
+                                                                    <Info size={12}/> Coluna: Categoria
+                                                                </div>
+                                                                <p className="text-slate-200 text-[11px] mb-2">{getContatoTooltipInfo('categoria').desc}</p>
+                                                                <div className="bg-slate-800 rounded p-1.5 text-[10px] text-slate-300">
+                                                                    <span className="text-amber-400 font-bold block mb-0.5">Impacto:</span>
+                                                                    {getContatoTooltipInfo('categoria').impacto}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <input 
                                                         type="text" 
                                                         placeholder="Filtrar..." 
                                                         value={contactColFilters.categoria} 
                                                         onChange={e => setContactColFilters({...contactColFilters, categoria: e.target.value})}
-                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span>Cargo / Presidente</span>
+
+                                            {/* Coluna: Cargo / Presidente */}
+                                            <th className={`py-3 px-6 text-[10px] font-black uppercase tracking-wider relative select-none transition-colors ${
+                                                contatosSortConfig?.key === 'cargo' 
+                                                    ? contatosSortConfig.direction === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                                                    : 'text-slate-500'
+                                            }`}>
+                                                <div className="flex flex-col gap-1.5 relative">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleSort('cargo')}
+                                                            className="flex items-center gap-1 group/sort cursor-pointer text-left flex-1"
+                                                            title="Ordenar por Cargo / Presidente"
+                                                        >
+                                                            <span className="font-extrabold truncate">Cargo / Presidente</span>
+                                                            <span className={`sort-signal-icon shrink-0 inline-flex items-center justify-center p-0.5 rounded ${
+                                                                contatosSortConfig?.key === 'cargo' 
+                                                                    ? contatosSortConfig.direction === 'asc' ? 'active-asc text-emerald-700 bg-emerald-100' : 'active-desc text-purple-700 bg-purple-100'
+                                                                    : 'text-slate-400 group-hover/sort:text-slate-600'
+                                                            }`}>
+                                                                {contatosSortConfig?.key === 'cargo' ? (
+                                                                    contatosSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>
+                                                                ) : <ArrowUpDown size={11}/>}
+                                                            </span>
+                                                        </button>
+                                                        <div className="relative group/tooltip">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(activeTooltipCol === 'cargo' ? null : 'cargo'); }}
+                                                                className="text-slate-400 hover:text-indigo-600 p-0.5"
+                                                            >
+                                                                <HelpCircle size={12}/>
+                                                            </button>
+                                                            <div className={`th-tooltip-popover ${activeTooltipCol === 'cargo' ? 'block' : 'hidden group-hover/tooltip:block'}`}>
+                                                                <div className="font-bold text-indigo-300 text-xs mb-1 flex items-center gap-1">
+                                                                    <Info size={12}/> Coluna: Cargo / Presidente
+                                                                </div>
+                                                                <p className="text-slate-200 text-[11px] mb-2">{getContatoTooltipInfo('cargo').desc}</p>
+                                                                <div className="bg-slate-800 rounded p-1.5 text-[10px] text-slate-300">
+                                                                    <span className="text-amber-400 font-bold block mb-0.5">Impacto:</span>
+                                                                    {getContatoTooltipInfo('cargo').impacto}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <input 
                                                         type="text" 
                                                         placeholder="Filtrar..." 
                                                         value={contactColFilters.cargo} 
                                                         onChange={e => setContactColFilters({...contactColFilters, cargo: e.target.value})}
-                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span>Contato</span>
+
+                                            {/* Coluna: Contato */}
+                                            <th className={`py-3 px-6 text-[10px] font-black uppercase tracking-wider relative select-none transition-colors ${
+                                                contatosSortConfig?.key === 'contato' 
+                                                    ? contatosSortConfig.direction === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                                                    : 'text-slate-500'
+                                            }`}>
+                                                <div className="flex flex-col gap-1.5 relative">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleSort('contato')}
+                                                            className="flex items-center gap-1 group/sort cursor-pointer text-left flex-1"
+                                                            title="Ordenar por Telefone / Contato"
+                                                        >
+                                                            <span className="font-extrabold truncate">Contato</span>
+                                                            <span className={`sort-signal-icon shrink-0 inline-flex items-center justify-center p-0.5 rounded ${
+                                                                contatosSortConfig?.key === 'contato' 
+                                                                    ? contatosSortConfig.direction === 'asc' ? 'active-asc text-emerald-700 bg-emerald-100' : 'active-desc text-purple-700 bg-purple-100'
+                                                                    : 'text-slate-400 group-hover/sort:text-slate-600'
+                                                            }`}>
+                                                                {contatosSortConfig?.key === 'contato' ? (
+                                                                    contatosSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>
+                                                                ) : <ArrowUpDown size={11}/>}
+                                                            </span>
+                                                        </button>
+                                                        <div className="relative group/tooltip">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(activeTooltipCol === 'contato' ? null : 'contato'); }}
+                                                                className="text-slate-400 hover:text-indigo-600 p-0.5"
+                                                            >
+                                                                <HelpCircle size={12}/>
+                                                            </button>
+                                                            <div className={`th-tooltip-popover ${activeTooltipCol === 'contato' ? 'block' : 'hidden group-hover/tooltip:block'}`}>
+                                                                <div className="font-bold text-indigo-300 text-xs mb-1 flex items-center gap-1">
+                                                                    <Info size={12}/> Coluna: Contato
+                                                                </div>
+                                                                <p className="text-slate-200 text-[11px] mb-2">{getContatoTooltipInfo('contato').desc}</p>
+                                                                <div className="bg-slate-800 rounded p-1.5 text-[10px] text-slate-300">
+                                                                    <span className="text-amber-400 font-bold block mb-0.5">Impacto:</span>
+                                                                    {getContatoTooltipInfo('contato').impacto}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <input 
                                                         type="text" 
                                                         placeholder="Filtrar..." 
                                                         value={contactColFilters.contato} 
                                                         onChange={e => setContactColFilters({...contactColFilters, contato: e.target.value})}
-                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="py-3 px-6 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span>Cidade / UF</span>
+
+                                            {/* Coluna: Cidade / UF */}
+                                            <th className={`py-3 px-6 text-[10px] font-black uppercase tracking-wider relative select-none transition-colors ${
+                                                contatosSortConfig?.key === 'cidade' 
+                                                    ? contatosSortConfig.direction === 'asc' ? 'sorted-asc text-emerald-800' : 'sorted-desc text-purple-800'
+                                                    : 'text-slate-500'
+                                            }`}>
+                                                <div className="flex flex-col gap-1.5 relative">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleSort('cidade')}
+                                                            className="flex items-center gap-1 group/sort cursor-pointer text-left flex-1"
+                                                            title="Ordenar por Cidade / UF"
+                                                        >
+                                                            <span className="font-extrabold truncate">Cidade / UF</span>
+                                                            <span className={`sort-signal-icon shrink-0 inline-flex items-center justify-center p-0.5 rounded ${
+                                                                contatosSortConfig?.key === 'cidade' 
+                                                                    ? contatosSortConfig.direction === 'asc' ? 'active-asc text-emerald-700 bg-emerald-100' : 'active-desc text-purple-700 bg-purple-100'
+                                                                    : 'text-slate-400 group-hover/sort:text-slate-600'
+                                                            }`}>
+                                                                {contatosSortConfig?.key === 'cidade' ? (
+                                                                    contatosSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>
+                                                                ) : <ArrowUpDown size={11}/>}
+                                                            </span>
+                                                        </button>
+                                                        <div className="relative group/tooltip">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setActiveTooltipCol(activeTooltipCol === 'cidade' ? null : 'cidade'); }}
+                                                                className="text-slate-400 hover:text-indigo-600 p-0.5"
+                                                            >
+                                                                <HelpCircle size={12}/>
+                                                            </button>
+                                                            <div className={`th-tooltip-popover ${activeTooltipCol === 'cidade' ? 'block' : 'hidden group-hover/tooltip:block'}`}>
+                                                                <div className="font-bold text-indigo-300 text-xs mb-1 flex items-center gap-1">
+                                                                    <Info size={12}/> Coluna: Cidade / UF
+                                                                </div>
+                                                                <p className="text-slate-200 text-[11px] mb-2">{getContatoTooltipInfo('cidade').desc}</p>
+                                                                <div className="bg-slate-800 rounded p-1.5 text-[10px] text-slate-300">
+                                                                    <span className="text-amber-400 font-bold block mb-0.5">Impacto:</span>
+                                                                    {getContatoTooltipInfo('cidade').impacto}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <input 
                                                         type="text" 
                                                         placeholder="Filtrar..." 
                                                         value={contactColFilters.cidade} 
                                                         onChange={e => setContactColFilters({...contactColFilters, cidade: e.target.value})}
-                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full"
+                                                        className="px-2 py-1 text-[10px] font-bold border border-slate-200/60 rounded bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full tracking-normal normal-case"
                                                     />
                                                 </div>
                                             </th>
@@ -1000,8 +1342,8 @@ const ModuleSecretariaIntegrada = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {filteredContatosList.length > 0 ? (
-                                            filteredContatosList.map((item, index) => {
+                                        {sortedContatosList.length > 0 ? (
+                                            sortedContatosList.map((item, index) => {
                                                 const cat = item.categoria || 'Membro';
                                                 let catStyle = 'bg-emerald-50 text-emerald-700 border-emerald-100';
                                                 if (cat === 'Obreiro / Líder') catStyle = 'bg-indigo-50 text-indigo-700 border-indigo-100';
