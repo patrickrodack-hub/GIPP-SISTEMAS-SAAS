@@ -2682,8 +2682,10 @@ export const Windows81Layout: React.FC<Windows81LayoutProps> = ({
                       </div>
                     </div>
                     <div className="space-y-2 text-white/80">
-                      <p><strong className="text-white">Versão:</strong> 8.1 Update 1 Pro</p>
-                      <p><strong className="text-white">Ambiente:</strong> React 18 + Tailwind CSS + Framer Motion</p>
+                      <p><strong className="text-white">Versão:</strong> 8.1 Update 1 Pro (GIPP Core Titanium)</p>
+                      <p><strong className="text-white">Ambiente:</strong> React 19 + TypeScript 5.8 + Vite 6 + Tailwind CSS 4</p>
+                      <p><strong className="text-white">Bancos de Dados:</strong> Google Cloud Firestore NoSQL + IndexedDB HD Media Storage</p>
+                      <p><strong className="text-white">Motores:</strong> Google Gemini API + Recharts BI + jsPDF Spooler + Harmonic Audio Engine</p>
                       <p><strong className="text-white">Doutrina:</strong> 24 Capítulos da Declaração de Fé CGADB / CPAD</p>
                       <p><strong className="text-white">Design:</strong> Metro Modern UI com Live Tiles e Charms Bar</p>
                     </div>
