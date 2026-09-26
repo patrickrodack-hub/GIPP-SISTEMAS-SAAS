@@ -1,6 +1,6 @@
 // Constantes de Mapeamento do Portal de Membros por Função Administrativa
 export const DEFAULT_PORTAL_PERMISSIONS: Record<string, string[]> = {
-    'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_candidato', 'portal_frequencia', 'portal_carteirinha'],
+    'NENHUMA': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_agenda', 'portal_candidato', 'portal_frequencia', 'portal_carteirinha', 'portal_inscricoes'],
     'PASTOR PRESIDENTE': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_candidato', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_repertorio'],
     'PASTOR AUXILIAR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_financas', 'portal_ebd', 'portal_cursos', 'portal_candidato', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha', 'portal_pastor', 'portal_repertorio'],
     'COORDENADOR': ['portal_home', 'portal_mural', 'portal_informativo', 'portal_biblia', 'portal_email', 'portal_agenda', 'portal_tarefas', 'portal_cursos', 'portal_candidato', 'portal_frequencia', 'portal_salinha_kids', 'portal_carteirinha'],

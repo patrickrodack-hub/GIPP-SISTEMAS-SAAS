@@ -75,7 +75,7 @@ export const SYSTEM_DIVISIONS: SystemDivisionDef[] = [
     icon: ClipboardList,
     color: '#fbbf24',
     badgeBg: 'rgba(251, 191, 36, 0.15)',
-    modules: ['secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'relatorios', 'boletim', 'biblia', 'email_interno']
+    modules: ['secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'relatorios', 'boletim', 'biblia', 'email_interno', 'inscricoes_eventos']
   },
   {
     id: 'ministerios',

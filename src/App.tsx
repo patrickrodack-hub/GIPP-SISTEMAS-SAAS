@@ -23,7 +23,7 @@ import {
   MonitorPlay, Tv, Palette as PaletteIcon, Hash, Printer as PrintIcon, Wallet, Landmark, Scale, FileInput, RotateCcw as RestoreIcon, FileSignature, CheckCircle2,
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge, Car, ShoppingBag,
-  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin,
+  Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders, CalendarClock, CalendarDays, ArrowRight, Gamepad2, Terminal, Grid, HardDrive, Rocket, SlidersHorizontal, Pin,
   ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 
@@ -168,6 +168,7 @@ const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSof
 const ModuleMensagensLote = lazy(() => import('./components/ModuleMensagensLote'));
 const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin'));
 const ModuleLojaVirtualAdmin = lazy(() => import('./components/ModuleLojaVirtualAdmin'));
+const ModuleInscricoesEventos = lazy(() => import('./components/ModuleInscricoesEventos'));
 const PortalLojaMembro = lazy(() => import('./components/PortalLojaMembro'));
 const PortalRepertorio = lazy(() => import('./components/PortalRepertorio'));
 import { checkIsMusicoOuLouvor } from './data/repertorioData';
@@ -11741,6 +11742,7 @@ const Sidebar = ({ view, setView, open, setOpen, user }) => {
                     {checkPlan('biblia') && <MenuItem id="biblia" icon={Book} label="Bíblia de Estudo" />}
                     {hasPermission('access_email') && checkPlan('email_interno') && <MenuItem id="email_interno" icon={Mail} label="Webmail Direto" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_integrada') && <MenuItem id="secretaria_integrada" icon={ClipboardList} label="Secretaria & Tarefas" />}
+                    {hasPermission('access_sec_agenda') && checkPlan('inscricoes_eventos') && <MenuItem id="inscricoes_eventos" icon={CalendarDays} label="Inscrições & Eventos" />}
                     {hasPermission('access_sec_agenda') && checkPlan('secretaria_livro_atas') && <MenuItem id="secretaria_livro_atas" icon={BookOpen} label="Livro Digital de Atas" />}
                     {hasPermission('access_sec_certificados') && checkPlan('secretaria_certificados') && <MenuItem id="secretaria_certificados" icon={Award} label="Certificados" />}
                     {hasPermission('access_sec_relatorios') && checkPlan('relatorios') && <MenuItem id="relatorios" icon={FileText} label="Relatórios PDF" />}
@@ -18134,6 +18136,7 @@ const MemberPortalLayout = () => {
         { id: 'portal_frequencia', icon: UserCheck, label: 'Minhas Presenças', hoverColor: 'group-hover:text-teal-500' },
         { id: 'portal_salinha_kids', icon: Baby, label: 'Salinha Kids', hoverColor: 'group-hover:text-rose-450' },
         { id: 'portal_carteirinha', icon: QrCode, label: 'Cartão', hoverColor: 'group-hover:text-pink-500' },
+        { id: 'portal_inscricoes', icon: CalendarDays, label: 'Inscrições & Eventos', hoverColor: 'group-hover:text-violet-600' },
         { id: 'portal_repertorio', icon: Music, label: 'Repertório & Cifras', hoverColor: 'group-hover:text-violet-500' },
         { id: 'portal_loja', icon: ShoppingBag, label: 'Loja Virtual', hoverColor: 'group-hover:text-amber-500' },
         { id: 'portal_interativo', icon: Gamepad2, label: 'Interatividade', hoverColor: 'group-hover:text-indigo-400' },
@@ -18151,7 +18154,7 @@ const MemberPortalLayout = () => {
     ];
 
     const filteredBaseNavItems = baseNavItems.filter(item => {
-        if (item.id === 'portal_home' || item.id === 'portal_interativo' || item.id === 'portal_loja') return true;
+        if (item.id === 'portal_home' || item.id === 'portal_interativo' || item.id === 'portal_loja' || item.id === 'portal_inscricoes') return true;
         if (item.id === 'portal_professor_ebd') {
             return isProfessor;
         }
@@ -18240,12 +18243,17 @@ const MemberPortalLayout = () => {
                     <PortalRepertorio user={user} db={db} setView={setView} onClose={() => setView('portal_home')} />
                 </Suspense>
             );
+            case 'portal_inscricoes': return (
+                <Suspense fallback={<div className="p-8 text-center"><Loader2 className="animate-spin text-violet-600 mx-auto" size={32}/></div>}>
+                    <ModuleInscricoesEventos initialMode="portal" portalOnly={true} onClose={() => setView('portal_home')} />
+                </Suspense>
+            );
             case 'portal_interativo': return <ModuleInterativo onClose={() => setView('portal_home')} />;
             default: return <PortalHome user={user} db={db} setView={setView} />;
         }
     };
 
-    const isInterativoMode = view === 'portal_interativo' || view === 'portal_loja' || view === 'portal_repertorio';
+    const isInterativoMode = view === 'portal_interativo' || view === 'portal_loja' || view === 'portal_repertorio' || view === 'portal_inscricoes';
 
     return (
         <div className="flex flex-col md:flex-row w-full overflow-hidden relative font-sans text-slate-900" style={{ height: '100dvh' }}>
@@ -19240,6 +19248,7 @@ const AppLayout = () => {
         { id: 'cad_patrimonio', icon: Package, label: "Patrimônio & Inventário", color: 'text-teal-500', bg: 'bg-teal-500/10' },
         { id: 'controle_frotas', icon: Car, label: "Controle de Frotas", color: 'text-blue-600', bg: 'bg-blue-600/10' },
         { id: 'loja_virtual', icon: ShoppingBag, label: "Loja Virtual (Comercial)", color: 'text-amber-600', bg: 'bg-amber-600/10' },
+        { id: 'inscricoes_eventos', icon: CalendarDays, label: "Inscrições Online & Eventos", color: 'text-violet-600', bg: 'bg-violet-600/10' },
         { id: 'cad_celula', icon: Share2, label: "Células e Grupos", color: 'text-purple-500', bg: 'bg-purple-500/10' },
         { id: 'cad_departamento', icon: Briefcase, label: "Ministérios", color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'ministerio_louvor', icon: Music, label: "Ministério de Louvor", color: 'text-violet-500', bg: 'bg-violet-500/10' },
@@ -19306,9 +19315,9 @@ const AppLayout = () => {
         const plano = (db.igreja?.plano || 'avancado').toLowerCase();
 
         const defaultPlanos: Record<string, string[]> = {
-            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual'],
-            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual'],
-            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual']
+            basico: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual', 'inscricoes_eventos'],
+            standard: ['dashboard', 'cad_igreja', 'cad_membro', 'visitantes', 'cad_usuario', 'acessos_portal', 'secretaria_integrada', 'secretaria_livro_atas', 'sobre', 'changelog', 'assistente_ai', 'cad_celula', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_carnes', 'fin_utilitarios', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'relatorios', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'controle_frotas', 'curso_teologia', 'formacao_obreiros', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual', 'inscricoes_eventos'],
+            avancado: ['dashboard', 'changelog', 'sobre', 'cad_membro', 'visitantes', 'cad_igreja', 'cad_patrimonio', 'controle_frotas', 'cad_celula', 'cad_usuario', 'acessos_portal', 'cad_departamento', 'fin_entrada', 'fin_saida', 'fin_dre', 'fin_conciliacao', 'fin_carnes', 'fin_utilitarios', 'boletim', 'biblia', 'assistente_ai', 'email_interno', 'secretaria_integrada', 'secretaria_livro_atas', 'secretaria_certificados', 'carteirinha_studio', 'grid', 'credencial_lote', 'secretaria_ebd', 'gestao_cursos', 'curso_teologia', 'formacao_obreiros', 'missoes_painel', 'rede_social', 'relatorios', 'config_backup', 'auditoria', 'lixeira', 'salinha_kids', 'config_visual', 'config_sistema', 'manual', 'amparo_legal', 'registro_software', 'dp_contabilidade', 'ministerio_familia', 'access_interativo', 'docs_editor', 'sheets_editor', 'google_meet', 'google_sheets', 'google_docs', 'google_tasks', 'google_calendar', 'gmail_oficial', 'google_forms', 'google_classroom', 'loja_virtual', 'inscricoes_eventos']
         };
 
         const PLAN_MODULES = { ...defaultPlanos };
@@ -19889,6 +19898,7 @@ const AppLayout = () => {
         'cad_patrimonio': { component: ModulePatrimonio, access: 'access_patrimonio' },
         'controle_frotas': { component: ModuleFrotas, access: 'access_frotas' },
         'loja_virtual': { component: ModuleLojaVirtualAdmin, access: 'access_loja_virtual' },
+        'inscricoes_eventos': { component: ModuleInscricoesEventos, access: 'access_sec_agenda' },
         'cad_membro': { component: ModuleMembros, access: 'access_membros' },
         'cad_celula': { component: ModuleCelulas, access: 'access_celulas' },
         'visitantes': { component: ModuleVisitantes, access: 'access_visitantes' },
@@ -21704,6 +21714,7 @@ export default function App() {
           { label: "Escola Bíblica Dominical (EBD)", view: "secretaria_ebd", category: "Navegação", icon: BookOpenText },
           { label: "Células e Pequenos Grupos", view: "cad_celula", category: "Navegação", icon: Home },
           { label: "Secretaria Integrada & Agenda", view: "secretaria_integrada", category: "Navegação", icon: FileText },
+          { label: "Inscrições Online & Gestão de Eventos", view: "inscricoes_eventos", category: "Secretaria Eclesiástica", icon: CalendarDays },
           { label: "Assistente Pastoral IA", view: "assistente_ai", category: "Navegação", icon: Sparkles },
           { label: "D.P. & Contabilidade eSocial", view: "dp_contabilidade", category: "Navegação", icon: Briefcase },
           { label: "Configurações do Sistema", view: "config_sistema", category: "Navegação", icon: Settings },

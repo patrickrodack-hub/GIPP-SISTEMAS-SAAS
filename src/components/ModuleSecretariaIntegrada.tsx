@@ -23,7 +23,8 @@ import {
   LayoutTemplate, MousePointerClick, Image, Baby, HardHat, ShieldCheck, QrCode, UserCircle, Maximize, Minimize,
   Sun, Moon, Package, Flame, Minus, Newspaper, BookOpenText, IdCard, Badge,
   Inbox, Send as SendIcon, Reply, Forward, MoreHorizontal, Key, Headset, Server, Sliders,
-  ArrowRightLeft, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown, HelpCircle, SlidersHorizontal
+  ArrowRightLeft, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown, HelpCircle, SlidersHorizontal,
+  CalendarDays
 } from 'lucide-react';
 
 import { 
@@ -48,6 +49,7 @@ import { CartaTransferenciaEclesiastica } from './CartaTransferenciaEclesiastica
 import { PainelPulpitoCulto } from './PainelPulpitoCulto';
 import { GestaoVisitasPastorais } from './GestaoVisitasPastorais';
 import { TermoCautelaManager } from './TermoCautelaPatrimonio';
+import ModuleInscricoesEventos from './ModuleInscricoesEventos';
 
 // Exporting component
 const ModuleSecretariaIntegrada = () => {
@@ -668,6 +670,12 @@ const ModuleSecretariaIntegrada = () => {
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='pulpito' ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
                     <Flame size={15} /> Painel de Púlpito (Ao Vivo)
+                </button>
+                <button 
+                    onClick={()=>setTab('inscricoes')} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='inscricoes' ? 'bg-violet-600 text-white border-violet-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                    <CalendarDays size={15} /> Inscrições & Eventos
                 </button>
             </div>
             
@@ -1473,6 +1481,12 @@ const ModuleSecretariaIntegrada = () => {
                 {tab === 'pulpito' && (
                     <div className="space-y-6">
                         <PainelPulpitoCulto />
+                    </div>
+                )}
+
+                {tab === 'inscricoes' && (
+                    <div className="h-full overflow-y-auto custom-scrollbar">
+                        <ModuleInscricoesEventos initialMode="admin" />
                     </div>
                 )}
             </div>
