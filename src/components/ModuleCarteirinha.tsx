@@ -1269,10 +1269,10 @@ const ModuleCarteirinha = () => {
             
             <div className="p-6 space-y-4">
               <div>
-                <FormInput id="em_to" label="Destinatário" type="email" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} required />
+                <FormInput id="em_to" label="Destinatário" type="email" value={emailTo} onChange={(val: any) => setEmailTo(typeof val === 'string' ? val : (val?.target?.value ?? ''))} required />
               </div>
               <div>
-                <FormInput id="em_sub" label="Assunto do Email" type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} required />
+                <FormInput id="em_sub" label="Assunto do Email" type="text" value={emailSubject} onChange={(val: any) => setEmailSubject(typeof val === 'string' ? val : (val?.target?.value ?? ''))} required />
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Mensagem do corpo</label>
@@ -1316,7 +1316,7 @@ const ModuleCarteirinha = () => {
 
             <div className="p-6 space-y-4">
               <div>
-                <FormInput id="ps_title" label="Título de Destaque" type="text" value={pushTitle} onChange={(e) => setPushTitle(e.target.value)} required />
+                <FormInput id="ps_title" label="Título de Destaque" type="text" value={pushTitle} onChange={(val: any) => setPushTitle(typeof val === 'string' ? val : (val?.target?.value ?? ''))} required />
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Conteúdo do Aviso</label>

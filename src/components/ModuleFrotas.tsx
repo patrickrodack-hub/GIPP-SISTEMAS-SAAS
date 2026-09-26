@@ -1266,7 +1266,7 @@ const ModuleFrotas = () => {
                               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                               {item.name}
                             </span>
-                            <span className="text-slate-850">R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-slate-850">R$ {(item?.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                           </div>
                         ))}
                       </div>

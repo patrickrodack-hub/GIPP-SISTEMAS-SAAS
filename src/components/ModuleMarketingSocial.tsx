@@ -643,10 +643,10 @@ const ModuleMarketingSocial: React.FC = () => {
     const handleAddSchedule = (e: React.FormEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
-        const dateInput = form.elements.namedItem('scheduleDate') as HTMLInputElement;
-        const timeInput = form.elements.namedItem('scheduleTime') as HTMLInputElement;
+        const dateInput = form.elements?.namedItem('scheduleDate') as HTMLInputElement | null;
+        const timeInput = form.elements?.namedItem('scheduleTime') as HTMLInputElement | null;
 
-        if (!dateInput.value || !timeInput.value) {
+        if (!dateInput?.value || !timeInput?.value) {
             addToast("Defina a data e o horário da postagem!", "error");
             return;
         }

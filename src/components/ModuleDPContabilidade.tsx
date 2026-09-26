@@ -5694,17 +5694,17 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
 
                     <button 
                       onClick={() => {
-                        const colSelect = document.getElementById('ponto_atestado_colab') as HTMLSelectElement;
-                        const dataVal = document.getElementById('ponto_atestado_data') as HTMLInputElement;
-                        const motivoVal = document.getElementById('ponto_atestado_motivo') as HTMLInputElement;
-                        const fileVal = document.getElementById('ponto_atestado_file') as HTMLInputElement;
+                        const colSelect = document.getElementById('ponto_atestado_colab') as HTMLSelectElement | null;
+                        const dataVal = document.getElementById('ponto_atestado_data') as HTMLInputElement | null;
+                        const motivoVal = document.getElementById('ponto_atestado_motivo') as HTMLInputElement | null;
+                        const fileVal = document.getElementById('ponto_atestado_file') as HTMLInputElement | null;
 
-                        if (!colSelect.value || !motivoVal.value) {
+                        if (!colSelect?.value || !motivoVal?.value) {
                           addToast('Preencha os campos de colaborador e motivo do atestado.', 'error');
                           return;
                         }
 
-                        const selectedName = colSelect.options[colSelect.selectedIndex].text;
+                        const selectedName = colSelect.options[colSelect.selectedIndex]?.text || '';
                         const fileName = fileVal?.files?.[0]?.name || 'atestado_simulado.pdf';
 
                         const novoAt = {
@@ -5712,7 +5712,7 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                           colaborador_id: colSelect.value,
                           colaborador: selectedName,
                           data_envio: getTodayDate(),
-                          data_ausencia: dataVal.value,
+                          data_ausencia: dataVal?.value || getTodayDate(),
                           motivo: motivoVal.value,
                           arquivo: fileName,
                           status: 'Pendente',
@@ -5728,7 +5728,7 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                             id: punchId,
                             colaborador_id: colSelect.value,
                             colaborador: selectedName,
-                            data: dataVal.value,
+                            data: dataVal?.value || getTodayDate(),
                             entrada: '',
                             alm_saida: '',
                             alm_retorno: '',
@@ -5746,7 +5746,7 @@ Não exponha informações ultraconfidenciais. Responda em formato Markdown, des
                         addToast('Atestado enviado com sucesso! Aguarde validação do RH.', 'success');
                         
                         // Reset simple inputs
-                        motivoVal.value = '';
+                        if (motivoVal) motivoVal.value = '';
                         if (fileVal) fileVal.value = '';
                       }}
                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer mt-2"

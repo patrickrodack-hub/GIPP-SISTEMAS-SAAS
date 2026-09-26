@@ -1990,8 +1990,8 @@ export const safeRender = (val) => {
     if (isValidElement(val)) return val;
     if (typeof val === 'string' || typeof val === 'number') return val;
     if (typeof val === 'boolean') return val ? 'Sim' : 'Não';
-    if (typeof val === 'object') {
-        if (val.label) return val.label; if (val.nome) return val.nome; if (val.titulo) return val.titulo; if (val.descricao) return val.descricao; if (val.value) return val.value;
+    if (typeof val === 'object' && val !== null) {
+        if (val?.label) return val.label; if (val?.nome) return val.nome; if (val?.titulo) return val.titulo; if (val?.descricao) return val.descricao; if (val?.value !== undefined) return val.value;
         if (val.seconds !== undefined && val.nanoseconds !== undefined) return new Date(val.seconds * 1000).toLocaleDateString('pt-BR');
         if (val.toDate && typeof val.toDate === 'function') { try { return val.toDate().toLocaleDateString('pt-BR'); } catch(e) { return ''; } }
         if (Array.isArray(val)) return `[${val.length} items]`;
@@ -2002,7 +2002,7 @@ export const safeRender = (val) => {
 
 export const safeText = (val) => {
     if (val === null || val === undefined) return '';
-    if (typeof val === 'object') return val.nome || val.label || val.value || '';
+    if (typeof val === 'object' && val !== null) return val?.nome || val?.label || (val?.value !== undefined ? String(val.value) : '');
     return String(val);
 };
 
@@ -2819,14 +2819,14 @@ export const GenericTable = ({
                       return false;
                   }
               } else {
-                  const { operator, value, selectedValues } = filterVal as any;
+                  const { operator, value, selectedValues } = (filterVal || {}) as any;
                   
                   if (operator === 'in') {
                       if (selectedValues && selectedValues.length > 0) {
                           const match = selectedValues.some((v: string) => textToCompare.toLowerCase() === v.toLowerCase());
                           if (!match) return false;
                       }
-                  } else if (value !== undefined && value !== '') {
+                  } else if (value !== undefined && value !== null && String(value).trim() !== '') {
                       const valStr = String(value).toLowerCase();
                       const compStr = textToCompare.toLowerCase();
                       
@@ -3061,11 +3061,13 @@ export const GenericTable = ({
                 {columns.map((c, i) => {
                   const colKey = c.key || c.header;
                   const filterVal = colFilters[colKey];
-                  const textValue = typeof filterVal === 'object' ? (filterVal?.value || '') : (filterVal || '');
-                  const isFiltered = filterVal && (
+                  const textValue = (typeof filterVal === 'object' && filterVal !== null) ? (filterVal?.value || '') : (filterVal || '');
+                  const isFiltered = Boolean(
+                    filterVal && (
                       typeof filterVal === 'string' 
-                      ? filterVal !== '' 
-                      : (filterVal.value !== '' || (filterVal.selectedValues && filterVal.selectedValues.length > 0))
+                        ? filterVal.trim() !== '' 
+                        : (Boolean(filterVal?.value && String(filterVal.value).trim() !== '') || Boolean(filterVal?.selectedValues && filterVal.selectedValues.length > 0))
+                    )
                   );
                   const isSorted = sortConfig?.key === colKey;
                   const sortDir = isSorted ? sortConfig?.direction : null;
@@ -3204,7 +3206,7 @@ export const GenericTable = ({
                             const val = e.target.value;
                             setColFilters({
                               ...colFilters,
-                              [colKey]: typeof filterVal === 'object' 
+                              [colKey]: (typeof filterVal === 'object' && filterVal !== null)
                                 ? { ...filterVal, value: val } 
                                 : val
                             });

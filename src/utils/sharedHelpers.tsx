@@ -244,7 +244,7 @@ export const FormInput = ({
     helperText?: string;
     [key: string]: any; 
 }) => {
-    const safeVal = (typeof value === 'object' && value !== null) ? (value.value || value.label || '') : (value || '');
+    const safeVal = (typeof value === 'object' && value !== null) ? (value?.value || value?.label || '') : (value || '');
     return ( 
         <div className={`mb-4 group ${className}`}>
             {label && (
@@ -261,7 +261,15 @@ export const FormInput = ({
                     if (!preserveCase && (type === 'text' || type === 'search' || !type)) {
                         val = typeof val === 'string' ? val.toUpperCase() : val;
                     }
-                    onChange(val);
+                    if (typeof onChange === 'function') {
+                        const targetObj = { value: val, name: props.name || props.id || '' };
+                        const hybridVal = Object.assign(new String(val), {
+                            target: targetObj,
+                            currentTarget: targetObj,
+                            value: val
+                        });
+                        onChange(hybridVal);
+                    }
                 }} 
                 required={required} 
                 placeholder={placeholder} 
@@ -281,7 +289,7 @@ export const FormSelect = ({
     value, 
     onChange, 
     options, 
-    required = false,
+    required = false, 
     className = "", 
     error = "",
     helperText = "",
@@ -297,7 +305,7 @@ export const FormSelect = ({
     helperText?: string;
     [key: string]: any; 
 }) => {
-    const safeVal = (typeof value === 'object' && value !== null) ? (value.value || '') : (value || '');
+    const safeVal = (typeof value === 'object' && value !== null) ? (value?.value || '') : (value || '');
     return ( 
         <div className={`mb-4 group ${className}`}>
             {label && (
@@ -309,15 +317,26 @@ export const FormSelect = ({
                 <select 
                     className={`w-full bg-slate-50 dark:bg-slate-800/80 border ${error ? 'border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-600 focus:ring-indigo-500/20'} rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 transition-all duration-150 appearance-none cursor-pointer pr-10`} 
                     value={safeVal} 
-                    onChange={e => onChange(e.target.value)} 
+                    onChange={e => {
+                        const val = e.target.value;
+                        if (typeof onChange === 'function') {
+                            const targetObj = { value: val, name: props.name || props.id || '' };
+                            const hybridVal = Object.assign(new String(val), {
+                                target: targetObj,
+                                currentTarget: targetObj,
+                                value: val
+                            });
+                            onChange(hybridVal);
+                        }
+                    }} 
                     required={required}
                     {...props}
                 >
                     <option value="">Selecione...</option>
                     {(options || []).map((opt, idx) => {
                         const isObj = typeof opt === 'object' && opt !== null;
-                        const val = isObj ? (opt.value !== undefined ? opt.value : opt) : opt;
-                        let lab = isObj ? (opt.label || opt.nome || opt.titulo || opt.value) : opt;
+                        const val = isObj ? (opt?.value !== undefined ? opt.value : opt) : opt;
+                        let lab = isObj ? (opt?.label || opt?.nome || opt?.titulo || opt?.value) : opt;
                         if (typeof lab === 'object') lab = JSON.stringify(lab);
                         return <option key={idx} value={val}>{lab}</option>;
                     })}

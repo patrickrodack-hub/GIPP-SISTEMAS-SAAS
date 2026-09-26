@@ -3960,21 +3960,21 @@ Gere em formatação simples e amigável.`;
                                     label="Data da Aula"
                                     type="date"
                                     value={chamadaDate}
-                                    onChange={(e: any) => setChamadaDate(e.target.value)}
+                                    onChange={(val: any) => setChamadaDate(typeof val === 'string' ? val : (val?.target?.value ?? ''))}
                                     required
                                 />
                                 <FormInput
                                     label="Revista / Tema Central"
                                     placeholder="Ex: Fruto do Espírito"
                                     value={chamadaRevista}
-                                    onChange={(e: any) => setChamadaRevista(e.target.value)}
+                                    onChange={(val: any) => setChamadaRevista(typeof val === 'string' ? val : (val?.target?.value ?? ''))}
                                     required
                                 />
                                 <FormInput
                                     label="Lição Número"
                                     placeholder="Ex: Lição 10"
                                     value={chamadaLicaoNum}
-                                    onChange={(e: any) => setChamadaLicaoNum(e.target.value)}
+                                    onChange={(val: any) => setChamadaLicaoNum(typeof val === 'string' ? val : (val?.target?.value ?? ''))}
                                     required
                                 />
                             </div>

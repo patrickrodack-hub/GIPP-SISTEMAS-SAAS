@@ -3413,9 +3413,10 @@ const ModuleFinanceiro = ({ initialTab = 1 }) => {
 
                                     <form onSubmit={(e) => { 
                                         e.preventDefault(); 
-                                        const formInput = (e.currentTarget.elements.namedItem('boletoRawText') as HTMLTextAreaElement).value; 
-                                        handleParseBoletoWithAi(formInput); 
-                                        (e.currentTarget.elements.namedItem('boletoRawText') as HTMLTextAreaElement).value = '';
+                                        const formEl = e.currentTarget.elements?.namedItem('boletoRawText') as HTMLTextAreaElement | null; 
+                                        const formInput = formEl?.value || '';
+                                        if (formInput) handleParseBoletoWithAi(formInput); 
+                                        if (formEl) formEl.value = '';
                                     }} className="space-y-4">
                                         <textarea 
                                             name="boletoRawText"
