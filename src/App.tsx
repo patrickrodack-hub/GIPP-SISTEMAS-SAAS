@@ -15820,29 +15820,237 @@ const PortalTarefas = ({ user, db }) => {
         return dateStr === todayStr;
     };
 
-    const minhasTarefas = (db.tarefas || []).filter(t => 
-        (t.equipe || []).some(m => m.id === user.id || m.nome === user.nome)
-    ).sort((a, b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
+    // Estado e sincronização em tempo real com o Firestore
+    const [firestoreTarefas, setFirestoreTarefas] = useState<any[]>(() => {
+        return Array.isArray(db?.tarefas) ? db.tarefas : [];
+    });
+    const [isSyncingFirestore, setIsSyncingFirestore] = useState<boolean>(false);
+    const [firestoreActive, setFirestoreActive] = useState<boolean>(false);
+    const [lastSyncTime, setLastSyncTime] = useState<string>('');
+    const [filtroEstatistica, setFiltroEstatistica] = useState<'todas' | 'mes_todas' | 'concluidas' | 'confirmadas' | 'recusadas'>('todas');
+
+    // Listener em tempo real do Firestore para a coleção de tarefas e escalas
+    useEffect(() => {
+        if (!dbFirestore || !appId) {
+            if (Array.isArray(db?.tarefas)) {
+                setFirestoreTarefas(db.tarefas);
+            }
+            return;
+        }
+
+        setIsSyncingFirestore(true);
+        const tarefasColRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas');
+
+        const unsubscribe = onSnapshot(tarefasColRef, (snapshot) => {
+            const list: any[] = [];
+            snapshot.forEach((d) => {
+                list.push({ id: d.id, ...d.data() });
+            });
+            setFirestoreTarefas(list);
+            setFirestoreActive(true);
+            setIsSyncingFirestore(false);
+            setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }, (error) => {
+            console.error("Erro ao sincronizar tarefas do Firestore:", error);
+            setIsSyncingFirestore(false);
+            if (Array.isArray(db?.tarefas)) {
+                setFirestoreTarefas(db.tarefas);
+            }
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, [dbFirestore, appId, db?.tarefas]);
+
+    const handleRefreshFirestore = async () => {
+        if (!dbFirestore || !appId) {
+            addToast("Firestore não conectado. Usando dados locais.", "info");
+            return;
+        }
+        try {
+            setIsSyncingFirestore(true);
+            const tarefasColRef = collection(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas');
+            const snap = await getDocs(tarefasColRef);
+            const list: any[] = [];
+            snap.forEach((d) => {
+                list.push({ id: d.id, ...d.data() });
+            });
+            setFirestoreTarefas(list);
+            setFirestoreActive(true);
+            setIsSyncingFirestore(false);
+            setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            addToast("Estatísticas de escalas atualizadas do Firestore!", "success");
+        } catch (e) {
+            console.error("Erro ao recarregar Firestore:", e);
+            setIsSyncingFirestore(false);
+            addToast("Erro ao sincronizar com o Firestore.", "error");
+        }
+    };
+
+    // Identificação do membro nas tarefas
+    const isMemberInTask = useCallback((t: any) => {
+        if (!t || !Array.isArray(t.equipe)) return false;
+        const uId = user?.id;
+        const uMembroId = user?.membro_id;
+        const uName = (user?.nome || user?.name || '').toLowerCase().trim();
+        return t.equipe.some((m: any) => {
+            if (!m) return false;
+            if (uId && (m.id === uId || m.membro_id === uId)) return true;
+            if (uMembroId && (m.id === uMembroId || m.membro_id === uMembroId)) return true;
+            if (m.nome && uName && m.nome.toLowerCase().trim() === uName) return true;
+            return false;
+        });
+    }, [user]);
+
+    const getMemberInfo = useCallback((t: any) => {
+        if (!t || !Array.isArray(t.equipe)) return null;
+        const uId = user?.id;
+        const uMembroId = user?.membro_id;
+        const uName = (user?.nome || user?.name || '').toLowerCase().trim();
+        return t.equipe.find((m: any) => {
+            if (!m) return false;
+            if (uId && (m.id === uId || m.membro_id === uId)) return true;
+            if (uMembroId && (m.id === uMembroId || m.membro_id === uMembroId)) return true;
+            if (m.nome && uName && m.nome.toLowerCase().trim() === uName) return true;
+            return false;
+        });
+    }, [user]);
+
+    // Data atual e Mês Vigente
+    const currentDateObj = useMemo(() => new Date(), []);
+    const currentYear = currentDateObj.getFullYear();
+    const currentMonth = currentDateObj.getMonth();
+    const nomeMesAtual = useMemo(() => {
+        const m = currentDateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        return m.charAt(0).toUpperCase() + m.slice(1);
+    }, [currentDateObj]);
+
+    const isTaskInCurrentMonth = useCallback((t: any) => {
+        if (!t) return false;
+        let d: Date | null = null;
+        if (t.data) {
+            const parts = String(t.data).split('T')[0].split('-');
+            if (parts.length === 3) {
+                d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            } else {
+                d = new Date(t.data);
+            }
+        } else if (t.created_at || t.createdAt) {
+            d = new Date(t.created_at || t.createdAt);
+        }
+        if (d && !isNaN(d.getTime())) {
+            return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        }
+        return false;
+    }, [currentYear, currentMonth]);
+
+    // Fonte de dados consolidada (Firestore prioritário, com fallback no db local)
+    const baseTarefasList = useMemo(() => {
+        if (firestoreTarefas && firestoreTarefas.length > 0) return firestoreTarefas;
+        if (Array.isArray(db?.tarefas)) return db.tarefas;
+        return [];
+    }, [firestoreTarefas, db?.tarefas]);
+
+    // Todas as tarefas do membro
+    const memberTasksAll = useMemo(() => {
+        return baseTarefasList
+            .filter(t => isMemberInTask(t))
+            .sort((a, b) => new Date(a.data || '9999-12-31').getTime() - new Date(b.data || '9999-12-31').getTime());
+    }, [baseTarefasList, isMemberInTask]);
+
+    // Tarefas do membro no mês atual
+    const memberTasksMonth = useMemo(() => {
+        return memberTasksAll.filter(t => isTaskInCurrentMonth(t));
+    }, [memberTasksAll, isTaskInCurrentMonth]);
+
+    // 1. Escalas Concluídas no mês atual
+    const statsConcluidas = useMemo(() => {
+        return memberTasksMonth.filter(t => {
+            const mInfo = getMemberInfo(t);
+            const isTaskDone = t.status === 'Concluido' || t.status === 'Concluída' || t.status === 'Finalizado' || 
+                               t.concluido === true || t.concluida === true || 
+                               (typeof t.progresso === 'number' && t.progresso >= 100) ||
+                               (typeof t.percentual === 'number' && t.percentual >= 100);
+            const isMemberDone = mInfo?.status_presenca === 'concluido' || mInfo?.status === 'concluido' || mInfo?.concluido === true;
+            return isTaskDone || isMemberDone;
+        });
+    }, [memberTasksMonth, getMemberInfo]);
+
+    // 2. Escalas Confirmadas no mês atual
+    const statsConfirmadas = useMemo(() => {
+        return memberTasksMonth.filter(t => {
+            const mInfo = getMemberInfo(t);
+            return mInfo?.status_presenca === 'confirmado' || mInfo?.status === 'confirmado' || mInfo?.confirmado === true;
+        });
+    }, [memberTasksMonth, getMemberInfo]);
+
+    // 3. Escalas Recusadas no mês atual
+    const statsRecusadas = useMemo(() => {
+        return memberTasksMonth.filter(t => {
+            const mInfo = getMemberInfo(t);
+            return mInfo?.status_presenca === 'recusado' || mInfo?.status === 'recusado' || 
+                   mInfo?.status_presenca === 'indisponivel' || mInfo?.status === 'indisponivel' || 
+                   mInfo?.recusado === true;
+        });
+    }, [memberTasksMonth, getMemberInfo]);
+
+    // 4. Escalas Pendentes de resposta no mês atual
+    const statsPendentes = useMemo(() => {
+        return memberTasksMonth.filter(t => {
+            const mInfo = getMemberInfo(t);
+            const isConf = mInfo?.status_presenca === 'confirmado' || mInfo?.status === 'confirmado' || mInfo?.confirmado === true;
+            const isRec = mInfo?.status_presenca === 'recusado' || mInfo?.status === 'recusado' || 
+                          mInfo?.status_presenca === 'indisponivel' || mInfo?.status === 'indisponivel' || 
+                          mInfo?.recusado === true;
+            return !isConf && !isRec;
+        });
+    }, [memberTasksMonth, getMemberInfo]);
+
+    const totalMes = memberTasksMonth.length;
+    const taxaAproveitamento = totalMes > 0 ? Math.round((statsConfirmadas.length / totalMes) * 100) : 0;
+
+    // Tarefas filtradas para exibição na tabela
+    const minhasTarefas = useMemo(() => {
+        if (filtroEstatistica === 'concluidas') return statsConcluidas;
+        if (filtroEstatistica === 'confirmadas') return statsConfirmadas;
+        if (filtroEstatistica === 'recusadas') return statsRecusadas;
+        if (filtroEstatistica === 'mes_todas') return memberTasksMonth;
+        return memberTasksAll;
+    }, [filtroEstatistica, statsConcluidas, statsConfirmadas, statsRecusadas, memberTasksMonth, memberTasksAll]);
 
     const handleRSVP = async (taskId, status) => {
-        const task = db.tarefas.find(t => t.id === taskId);
+        const task = baseTarefasList.find(t => t.id === taskId);
         if (!task) return;
         
-        const novaEquipe = task.equipe.map(m => 
-            (m.id === user.id || m.nome === user.nome) ? { ...m, status_presenca: status } : m
-        );
+        const uId = user.id;
+        const uMembroId = user.membro_id;
+        const uName = (user.nome || user.name || '').toLowerCase().trim();
+
+        const novaEquipe = (task.equipe || []).map((m: any) => {
+            const match = (uId && (m.id === uId || m.membro_id === uId)) ||
+                          (uMembroId && (m.id === uMembroId || m.membro_id === uMembroId)) ||
+                          (m.nome && uName && m.nome.toLowerCase().trim() === uName);
+            return match ? { ...m, status_presenca: status } : m;
+        });
         
         try {
-            await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas', taskId), { equipe: novaEquipe }, { merge: true });
+            if (dbFirestore && appId) {
+                await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'tarefas', taskId), { equipe: novaEquipe }, { merge: true });
+            }
+            // Atualização imediata no estado local
+            setFirestoreTarefas(prev => prev.map(t => t.id === taskId ? { ...t, equipe: novaEquipe } : t));
+
             if (status === 'confirmado') {
                 setRecentlyConfirmedTaskId(taskId);
                 setTimeout(() => {
                     setRecentlyConfirmedTaskId((curr) => (curr === taskId ? null : curr));
                 }, 1200);
             }
-            addToast(status === 'confirmado' ? "Presença confirmada na escala!" : "Ausência na escala informada.", "success");
+            addToast(status === 'confirmado' ? "Presença confirmada na escala (Firestore sincronizado)!" : "Ausência informada na escala (Firestore sincronizado).", "success");
         } catch (e) {
-            addToast("Erro ao atualizar a confirmation.", "error");
+            console.error("Erro ao atualizar no Firestore:", e);
+            addToast("Erro ao atualizar confirmação no Firestore.", "error");
         }
     };
 
@@ -16142,6 +16350,220 @@ const PortalTarefas = ({ user, db }) => {
                         </a>
                     )}
                 </div>
+            </div>
+
+            {/* PAINEL DE ESTATÍSTICAS NO MÓDULO DE TAREFAS (DADOS DO FIRESTORE) */}
+            <div className="bg-gradient-to-br from-white/95 via-slate-50/90 to-white/95 dark:from-slate-900/90 dark:via-slate-800/80 dark:to-slate-900/90 rounded-3xl p-5 md:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm backdrop-blur-md">
+                {/* Cabeçalho do Painel */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200/60 dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-gradient-to-tr from-indigo-500 to-violet-600 text-white rounded-2xl shadow-sm shadow-indigo-500/20">
+                            <Sparkles size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-base md:text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                                    Painel de Estatísticas de Escalas
+                                </h3>
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shadow-xs">
+                                    {nomeMesAtual}
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                Estatísticas mensais de confirmações, presenças e conclusão sincronizadas via Firestore
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Status de Sincronização Firestore & Ações */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
+                            <span className={`w-2 h-2 rounded-full ${firestoreActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                            <span className="text-[11px] font-bold">
+                                {firestoreActive ? 'Firestore Online' : 'Dados Locais'}
+                            </span>
+                            {lastSyncTime && (
+                                <span className="text-[10px] text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-1.5 font-normal">
+                                    {lastSyncTime}
+                                </span>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleRefreshFirestore}
+                            disabled={isSyncingFirestore}
+                            className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+                            title="Atualizar dados do Firestore"
+                        >
+                            <RefreshCw size={14} className={isSyncingFirestore ? "animate-spin text-indigo-600" : ""} />
+                        </button>
+
+                        {filtroEstatistica !== 'todas' && (
+                            <button
+                                type="button"
+                                onClick={() => setFiltroEstatistica('todas')}
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                                <X size={12} />
+                                Limpar Filtro
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Cards de Métricas (Concluídas, Confirmadas, Recusadas, Total/Assiduidade) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    {/* Card 1: Escalas Concluídas */}
+                    <div 
+                        onClick={() => setFiltroEstatistica(filtroEstatistica === 'concluidas' ? 'todas' : 'concluidas')}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                            filtroEstatistica === 'concluidas' 
+                                ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/20 shadow-md' 
+                                : 'bg-emerald-50/60 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 border-emerald-200/70 dark:border-emerald-800/40'
+                        }`}
+                        title="Clique para filtrar por escalas concluídas"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                                Escalas Concluídas
+                            </span>
+                            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 group-hover:scale-110 transition-transform">
+                                <CheckCircle2 size={18} />
+                            </div>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-black text-emerald-900 dark:text-emerald-100 tracking-tight">
+                                {statsConcluidas.length}
+                            </span>
+                            <span className="text-xs font-bold text-emerald-700/80 dark:text-emerald-400">
+                                no mês atual
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-600/90 dark:text-emerald-400/80 mt-1 font-medium">
+                            Atividades ministerialmente finalizadas
+                        </p>
+                    </div>
+
+                    {/* Card 2: Escalas Confirmadas */}
+                    <div 
+                        onClick={() => setFiltroEstatistica(filtroEstatistica === 'confirmadas' ? 'todas' : 'confirmadas')}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                            filtroEstatistica === 'confirmadas' 
+                                ? 'bg-indigo-500/15 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md' 
+                                : 'bg-indigo-50/60 hover:bg-indigo-50 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 border-indigo-200/70 dark:border-indigo-800/40'
+                        }`}
+                        title="Clique para filtrar por escalas confirmadas"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                                Escalas Confirmadas
+                            </span>
+                            <div className="p-2 rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 group-hover:scale-110 transition-transform">
+                                <CheckSquare size={18} />
+                            </div>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-black text-indigo-900 dark:text-indigo-100 tracking-tight">
+                                {statsConfirmadas.length}
+                            </span>
+                            <span className="text-xs font-bold text-indigo-700/80 dark:text-indigo-400">
+                                presenças
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-indigo-600/90 dark:text-indigo-400/80 mt-1 font-medium">
+                            Presença garantida para o serviço
+                        </p>
+                    </div>
+
+                    {/* Card 3: Escalas Recusadas */}
+                    <div 
+                        onClick={() => setFiltroEstatistica(filtroEstatistica === 'recusadas' ? 'todas' : 'recusadas')}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                            filtroEstatistica === 'recusadas' 
+                                ? 'bg-rose-500/15 border-rose-500 ring-2 ring-rose-500/20 shadow-md' 
+                                : 'bg-rose-50/60 hover:bg-rose-50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 border-rose-200/70 dark:border-rose-800/40'
+                        }`}
+                        title="Clique para filtrar por escalas recusadas"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                                Escalas Recusadas
+                            </span>
+                            <div className="p-2 rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300 group-hover:scale-110 transition-transform">
+                                <Ban size={18} />
+                            </div>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-black text-rose-900 dark:text-rose-100 tracking-tight">
+                                {statsRecusadas.length}
+                            </span>
+                            <span className="text-xs font-bold text-rose-700/80 dark:text-rose-400">
+                                ausências
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-rose-600/90 dark:text-rose-400/80 mt-1 font-medium">
+                            Indisponibilidade comunicada à liderança
+                        </p>
+                    </div>
+
+                    {/* Card 4: Total Atribuído & Taxa de Confirmação */}
+                    <div 
+                        onClick={() => setFiltroEstatistica(filtroEstatistica === 'mes_todas' ? 'todas' : 'mes_todas')}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                            filtroEstatistica === 'mes_todas' 
+                                ? 'bg-violet-500/15 border-violet-500 ring-2 ring-violet-500/20 shadow-md' 
+                                : 'bg-violet-50/60 hover:bg-violet-50 dark:bg-violet-950/20 dark:hover:bg-violet-950/30 border-violet-200/70 dark:border-violet-800/40'
+                        }`}
+                        title="Clique para ver todas as escalas deste mês"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-violet-700 dark:text-violet-400">
+                                Total Atribuído
+                            </span>
+                            <div className="p-2 rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300 group-hover:scale-110 transition-transform">
+                                <TrendingUp size={18} />
+                            </div>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-black text-violet-900 dark:text-violet-100 tracking-tight">
+                                {totalMes}
+                            </span>
+                            <span className="text-xs font-bold text-violet-700/80 dark:text-violet-400">
+                                {taxaAproveitamento}% confirmadas
+                            </span>
+                        </div>
+                        <div className="w-full bg-violet-200/50 dark:bg-violet-900/40 h-1.5 rounded-full overflow-hidden mt-2">
+                            <div 
+                                className="h-full bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full transition-all duration-500"
+                                style={{ width: `${taxaAproveitamento}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Feedback de filtro ativo */}
+                {filtroEstatistica !== 'todas' && (
+                    <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <span className="font-semibold flex items-center gap-1.5">
+                            Filtrando tabela por: 
+                            <strong className="text-indigo-600 dark:text-indigo-400 uppercase font-black">
+                                {filtroEstatistica === 'concluidas' && 'Escalas Concluídas no Mês'}
+                                {filtroEstatistica === 'confirmadas' && 'Escalas Confirmadas no Mês'}
+                                {filtroEstatistica === 'recusadas' && 'Escalas Recusadas no Mês'}
+                                {filtroEstatistica === 'mes_todas' && 'Todas as Escalas do Mês Atual'}
+                            </strong>
+                            ({minhasTarefas.length} {minhasTarefas.length === 1 ? 'escala' : 'escalas'})
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setFiltroEstatistica('todas')}
+                            className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer text-left sm:text-right"
+                        >
+                            Ver todas as tarefas gerais
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* List of active scheduled local alarms */}
@@ -16577,8 +16999,23 @@ const PortalTarefas = ({ user, db }) => {
                 ) : (
                     <div className="text-center p-10 flex flex-col items-center border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
                         <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4 border border-indigo-100"><CheckSquare size={32} className="text-indigo-400"/></div>
-                        <p className="font-bold text-slate-700 text-lg mb-1">Agenda Livre!</p>
-                        <p className="text-sm text-slate-500">Não possui escalas ou tarefas pendentes no momento.</p>
+                        <p className="font-bold text-slate-700 text-lg mb-1">
+                            {filtroEstatistica !== 'todas' ? 'Nenhuma Escala Neste Filtro' : 'Agenda Livre!'}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                            {filtroEstatistica !== 'todas' 
+                                ? 'Nenhuma escala ou tarefa encontrada para a seleção ativa no mês atual.' 
+                                : 'Não possui escalas ou tarefas pendentes no momento.'}
+                        </p>
+                        {filtroEstatistica !== 'todas' && (
+                            <button
+                                type="button"
+                                onClick={() => setFiltroEstatistica('todas')}
+                                className="mt-3.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+                            >
+                                Ver Todas as Escalas
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

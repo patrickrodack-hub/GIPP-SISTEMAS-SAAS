@@ -1,0 +1,26 @@
+{
+  "entities": {
+    "Tarefa": {
+      "title": "Tarefa & Escala",
+      "description": "Registro de tarefa e escala ministerial de membros da igreja",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Identificador único da tarefa" },
+        "descricao": { "type": "string", "description": "Descrição detalhada da tarefa ou escala" },
+        "categoria": { "type": "string", "description": "Departamento ou categoria ministerial" },
+        "data": { "type": "string", "description": "Data agendada da tarefa no formato YYYY-MM-DD" },
+        "hora": { "type": "string", "description": "Horário previsto" },
+        "status": { "type": "string", "description": "Status de execução da tarefa" },
+        "progresso": { "type": "number", "description": "Percentual de conclusão da tarefa" },
+        "equipe": { "type": "array", "description": "Lista de membros escalados com status de presença" }
+      },
+      "required": ["descricao", "categoria"]
+    }
+  },
+  "firestore": {
+    "/artifacts/{appId}/public/data/tarefas/{tarefaId}": {
+      "schema": "Tarefa",
+      "description": "Escalas e tarefas operacionais da congregação"
+    }
+  }
+}
