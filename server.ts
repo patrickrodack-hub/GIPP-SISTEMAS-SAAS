@@ -41,10 +41,25 @@ try {
     isFirestoreDisabled = true;
 }
 
-const portArgIdx = process.argv.indexOf("--port");
-const PORT = (portArgIdx !== -1 && process.argv[portArgIdx + 1])
-    ? parseInt(process.argv[portArgIdx + 1], 10)
-    : 3000;
+function getPort(): number {
+    if (process.env.PORT) {
+        const p = parseInt(process.env.PORT, 10);
+        if (!isNaN(p)) return p;
+    }
+    for (let i = 0; i < process.argv.length; i++) {
+        const arg = process.argv[i];
+        if (arg === '--port' && process.argv[i + 1]) {
+            const p = parseInt(process.argv[i + 1], 10);
+            if (!isNaN(p)) return p;
+        }
+        if (arg.startsWith('--port=')) {
+            const p = parseInt(arg.split('=')[1], 10);
+            if (!isNaN(p)) return p;
+        }
+    }
+    return 3000;
+}
+const PORT = getPort();
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -2783,32 +2798,38 @@ app.post("/api/admin/trigger-agenda-reminders", async (req, res) => {
     }
 });
 
-let viteDevMiddleware: any = null;
-
-// Middleware de desenvolvimento Vite com fallback assíncrono seguro
-app.use(async (req, res, next) => {
-    if (viteDevMiddleware) {
-        return viteDevMiddleware(req, res, next);
-    }
-    // Deixar requisições de API, health checks e favicon passarem diretamente para o Express
-    if (req.path.startsWith("/api") || req.path === "/health" || req.path === "/favicon.ico") {
-        return next();
-    }
-    if (process.env.NODE_ENV === "production") {
-        return next();
-    }
-    // Em modo dev, aguarda a inicialização do Vite (até 8 segundos)
-    const startWait = Date.now();
-    while (!viteDevMiddleware && Date.now() - startWait < 8000) {
-        await new Promise((r) => setTimeout(r, 80));
-    }
-    if (viteDevMiddleware) {
-        return viteDevMiddleware(req, res, next);
-    }
-    next();
-});
-
 async function start() {
+    if (process.env.NODE_ENV !== "production") {
+        console.log("[Vite] Inicializando servidor de desenvolvimento...");
+        try {
+            const vite = await createViteServer({
+                server: { 
+                    middlewareMode: true,
+                    hmr: false,
+                    watch: process.env.DISABLE_HMR === 'true' ? null : {}
+                },
+                appType: "spa",
+            });
+            app.use(vite.middlewares);
+            console.log("[Vite] Servidor de desenvolvimento carregado com sucesso!");
+        } catch (err) {
+            console.error("[Vite] Falha crítica ao inicializar o Vite:", err);
+        }
+    } else {
+        const distPath = path.join(process.cwd(), "dist");
+        app.use(express.static(distPath));
+        app.get("*", (req, res, next) => {
+            if (req.path.startsWith("/api")) return next();
+            const indexPath = path.join(distPath, "index.html");
+            if (fs.existsSync(indexPath)) {
+                res.sendFile(indexPath);
+            } else {
+                res.status(404).send("Build artifact index.html not found. Please run npm run build.");
+            }
+        });
+        console.log("[Server] Arquivos estáticos de produção configurados com sucesso.");
+    }
+
     const httpServer = http.createServer(app);
 
     httpServer.on("error", (err: any) => {
@@ -2830,46 +2851,13 @@ async function start() {
     process.on("SIGTERM", onExit);
     process.on("SIGINT", onExit);
 
-    if (process.env.NODE_ENV === "production") {
-        const distPath = path.join(process.cwd(), "dist");
-        app.use(express.static(distPath));
-        app.get("*", (req, res, next) => {
-            if (req.path.startsWith("/api")) return next();
-            const indexPath = path.join(distPath, "index.html");
-            if (fs.existsSync(indexPath)) {
-                res.sendFile(indexPath);
-            } else {
-                res.status(404).send("Build artifact index.html not found. Please run npm run build.");
-            }
-        });
-        console.log("[Server] Arquivos estáticos de produção configurados com sucesso.");
-    }
-
-    // 1. Iniciamos a escuta da porta imediatamente para liberar o proxy do Nginx e o health check
+    // Iniciamos a escuta da porta com Vite já inicializado e montado
     httpServer.listen(PORT, "0.0.0.0", () => {
         console.log(`Server running on http://localhost:${PORT}`);
         console.log(`  ➜  Local:   http://localhost:${PORT}/`);
         console.log(`  ➜  Network: http://0.0.0.0:${PORT}/`);
 
-        if (process.env.NODE_ENV !== "production") {
-            console.log("[Vite] Inicializando servidor de desenvolvimento...");
-            createViteServer({
-                server: { 
-                    middlewareMode: true,
-                    hmr: false,
-                    watch: process.env.DISABLE_HMR === 'true' ? null : {}
-                },
-                appType: "spa",
-            }).then((vite) => {
-                viteDevMiddleware = vite.middlewares;
-                console.log("[Vite] Servidor de desenvolvimento carregado com sucesso!");
-                console.log(`  VITE ready in dev mode on port ${PORT}`);
-            }).catch((err) => {
-                console.error("[Vite] Falha crítica ao inicializar o Vite:", err);
-            });
-        }
-
-        // 3. Iniciar serviços de segundo plano de forma assíncrona com tempos seguros
+        // Iniciar serviços de segundo plano de forma assíncrona com tempos seguros
         setTimeout(async () => {
             try {
                 await checkPendingFinancialTitlesAndNotify();
