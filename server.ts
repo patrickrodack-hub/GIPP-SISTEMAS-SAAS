@@ -64,6 +64,35 @@ const PORT = getPort();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// --- BLINDAGEM DE PROCESSO & RESILIÊNCIA CONTRA FALHAS NÃO CAPTURADAS ---
+process.on("uncaughtException", (err) => {
+    console.error("[Backend Uncaught Exception]:", err?.stack || err);
+});
+process.on("unhandledRejection", (reason, _promise) => {
+    console.warn("[Backend Unhandled Rejection]:", reason);
+});
+
+// Headers de segurança e controle de cache inteligente para rotas de API
+app.use("/api", (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    next();
+});
+
+// Endpoint de Diagnóstico e Saúde do Backend
+app.get("/api/system/health-stats", (_req, res) => {
+    res.json({
+        status: "healthy",
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+        memoryUsage: process.memoryUsage(),
+        firestoreConfigured: !isFirestoreDisabled
+    });
+});
+
 // Load or generate VAPID keys
 let vapidPublicKey = (process.env.VAPID_PUBLIC_KEY || "").trim().replace(/^['"]|['"]$/g, "");
 let vapidPrivateKey = (process.env.VAPID_PRIVATE_KEY || "").trim().replace(/^['"]|['"]$/g, "");
@@ -2796,6 +2825,19 @@ app.post("/api/admin/trigger-agenda-reminders", async (req, res) => {
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message || String(error) });
     }
+});
+
+// Middleware global para captura e padronização de erros nas rotas de API
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) {
+        return next(err);
+    }
+    console.error("[Backend API Error]:", err?.stack || err?.message || err);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || "Erro interno do servidor backend",
+        timestamp: new Date().toISOString()
+    });
 });
 
 async function start() {
