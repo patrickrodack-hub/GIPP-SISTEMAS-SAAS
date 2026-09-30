@@ -6,11 +6,13 @@ import {
   CheckSquare, Clock, Calendar, CheckCircle2, AlertCircle, Ban, 
   TrendingUp, Sparkles, RefreshCw, X, Award, Activity, Printer, 
   Download, Bell, User, Filter, Search, ArrowRight, CheckCheck, 
-  CalendarCheck, SlidersHorizontal, Check, AlertTriangle, HelpCircle, CheckCircle, Minimize, Maximize
+  CalendarCheck, SlidersHorizontal, Check, AlertTriangle, HelpCircle, CheckCircle, Minimize, Maximize,
+  History
 } from "lucide-react";
 import { collection, doc, onSnapshot, getDocs, query, setDoc } from "firebase/firestore";
 import { ChurchContext } from "../context/ChurchContext";
 import { Button, formatDateLocal, getTodayDate, playNotificationSound } from "../utils/sharedHelpers";
+import { showSafeNotification } from "../utils/safeNotification";
 
 const PortalTarefas = ({ user, db }) => {
     const { setDoc, doc, dbFirestore, appId, addToast, setPrintMode, setPrintData, setPreviewOpen } = useContext(ChurchContext);
@@ -458,10 +460,10 @@ const PortalTarefas = ({ user, db }) => {
             }
             
             if (permission === 'granted') {
-                new Notification(`GIPP: Notificações Desktop Ativas`, {
+                showSafeNotification(`GIPP: Notificações Desktop Ativas`, {
                     body: `Você receberá avisos sobre a tarefa de hoje: "${task.descricao}"`,
                     icon: db.igreja?.logo || undefined
-                });
+                }).catch(() => {});
                 
                 await handleAddAlarm(task, 'today_desktop');
                 addToast("Notificações Desktop autorizadas e ativas para esta tarefa!", "success");

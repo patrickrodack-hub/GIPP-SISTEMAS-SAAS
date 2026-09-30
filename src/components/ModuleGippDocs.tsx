@@ -514,7 +514,17 @@ function TextEditor({ initialFile }: TextEditorProps) {
         if (!editorRef.current) return;
         
         try {
-            const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
+            const docxModule = await import('docx');
+            const DocxDocument = docxModule.Document || (docxModule as any).default?.Document;
+            const DocxPacker = docxModule.Packer || (docxModule as any).default?.Packer;
+            const DocxParagraph = docxModule.Paragraph || (docxModule as any).default?.Paragraph;
+            const DocxTextRun = docxModule.TextRun || (docxModule as any).default?.TextRun;
+            const DocxHeadingLevel = docxModule.HeadingLevel || (docxModule as any).default?.HeadingLevel;
+            const DocxAlignmentType = docxModule.AlignmentType || (docxModule as any).default?.AlignmentType;
+
+            if (!DocxDocument || !DocxPacker) {
+                throw new Error("Biblioteca docx não pôde ser instanciada.");
+            }
             
             const parseNode = (node: ChildNode): any => {
                 if (node.nodeName === 'P' || node.nodeName === 'DIV' || node.nodeName === 'H1' || node.nodeName === 'H2' || node.nodeName === 'H3' || node.nodeName === 'H4' || node.nodeName === 'H5' || node.nodeName === 'H6' || node.nodeName === 'LI') {
@@ -523,7 +533,7 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     const extractText = (currNode: ChildNode, isBold = false, isItalic = false, isUnderline = false) => {
                         if (currNode.nodeType === Node.TEXT_NODE) {
                             if (currNode.textContent && currNode.textContent.trim()) {
-                                textRuns.push(new TextRun({
+                                textRuns.push(new DocxTextRun({
                                     text: currNode.textContent,
                                     bold: isBold,
                                     italics: isItalic,
@@ -543,21 +553,21 @@ function TextEditor({ initialFile }: TextEditorProps) {
                     extractText(node);
                     
                     let heading = undefined;
-                    if (node.nodeName === 'H1') heading = HeadingLevel.HEADING_1;
-                    if (node.nodeName === 'H2') heading = HeadingLevel.HEADING_2;
-                    if (node.nodeName === 'H3') heading = HeadingLevel.HEADING_3;
-                    if (node.nodeName === 'H4') heading = HeadingLevel.HEADING_4;
-                    if (node.nodeName === 'H5') heading = HeadingLevel.HEADING_5;
-                    if (node.nodeName === 'H6') heading = HeadingLevel.HEADING_6;
+                    if (node.nodeName === 'H1') heading = DocxHeadingLevel.HEADING_1;
+                    if (node.nodeName === 'H2') heading = DocxHeadingLevel.HEADING_2;
+                    if (node.nodeName === 'H3') heading = DocxHeadingLevel.HEADING_3;
+                    if (node.nodeName === 'H4') heading = DocxHeadingLevel.HEADING_4;
+                    if (node.nodeName === 'H5') heading = DocxHeadingLevel.HEADING_5;
+                    if (node.nodeName === 'H6') heading = DocxHeadingLevel.HEADING_6;
                     
-                    let alignment: any = AlignmentType.LEFT;
+                    let alignment: any = DocxAlignmentType.LEFT;
                     const style = (node as HTMLElement).style;
-                    if (style?.textAlign === 'center') alignment = AlignmentType.CENTER;
-                    if (style?.textAlign === 'right') alignment = AlignmentType.RIGHT;
-                    if (style?.textAlign === 'justify') alignment = AlignmentType.JUSTIFIED;
+                    if (style?.textAlign === 'center') alignment = DocxAlignmentType.CENTER;
+                    if (style?.textAlign === 'right') alignment = DocxAlignmentType.RIGHT;
+                    if (style?.textAlign === 'justify') alignment = DocxAlignmentType.JUSTIFIED;
 
                     if (textRuns.length > 0) {
-                        return new Paragraph({
+                        return new DocxParagraph({
                             children: textRuns,
                             heading: heading,
                             alignment: alignment,
@@ -575,7 +585,7 @@ function TextEditor({ initialFile }: TextEditorProps) {
 
             const mmToTwips = (mm: number) => Math.round(mm * 56.7);
 
-            const doc = new Document({
+            const doc = new DocxDocument({
                 sections: [{
                     properties: {
                         page: {
@@ -587,11 +597,11 @@ function TextEditor({ initialFile }: TextEditorProps) {
                             },
                         },
                     },
-                    children: paragraphs.length > 0 ? paragraphs : [new Paragraph("Documento vazio")],
+                    children: paragraphs.length > 0 ? paragraphs : [new DocxParagraph("Documento vazio")],
                 }]
             });
 
-            const blob = await Packer.toBlob(doc);
+            const blob = await DocxPacker.toBlob(doc);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;

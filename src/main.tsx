@@ -3,6 +3,59 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Proteção global contra "Uncaught TypeError: Illegal constructor"
+// O Chromium proíbe invocação de new Notification() dentro de iframes (como o ambiente de preview) e no Android
+if (typeof window !== 'undefined' && 'Notification' in window) {
+  try {
+    const NativeNotification = window.Notification;
+    const SafeNotification = function (this: any, title: string, options?: NotificationOptions) {
+      try {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+          navigator.serviceWorker.ready
+            .then(reg => {
+              if (reg && typeof reg.showNotification === 'function') {
+                reg.showNotification(title, options);
+              }
+            })
+            .catch(() => {});
+        }
+        return new (NativeNotification as any)(title, options);
+      } catch (err) {
+        console.warn('[GIPP Notification Shield] Invocação de Notification contida com segurança:', err);
+        return {
+          close: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+          onclick: null,
+          onclose: null,
+          onerror: null,
+          onshow: null,
+        } as any;
+      }
+    } as any;
+
+    try {
+      Object.setPrototypeOf(SafeNotification, NativeNotification);
+      SafeNotification.prototype = NativeNotification.prototype;
+      Object.defineProperty(SafeNotification, 'permission', {
+        get: () => {
+          try {
+            return NativeNotification.permission;
+          } catch (_) {
+            return 'default';
+          }
+        },
+        configurable: true,
+      });
+      SafeNotification.requestPermission = NativeNotification.requestPermission 
+        ? NativeNotification.requestPermission.bind(NativeNotification) 
+        : async () => 'denied';
+      window.Notification = SafeNotification;
+    } catch (_) {}
+  } catch (_) {}
+}
+
 // Patch getComputedStyle globally to support parsing oklch colors in external libraries like html2canvas
 const originalGetComputedStyle = window.getComputedStyle;
 window.getComputedStyle = function (element: Element, pseudoElt?: string | null): CSSStyleDeclaration {

@@ -79,6 +79,7 @@ const GippCppLayout = lazy(() => import('./components/GippCppLayout').then(m => 
 const ClipperLayout = lazy(() => import('./components/ClipperLayout').then(m => ({ default: m.ClipperLayout })));
 import { LayoutLoadingFallback, ModernEmptyState, CardSkeleton, TableSkeleton } from './components/UIStateComponents';
 import { useDebounce } from './hooks/useDebounce';
+import { showSafeNotification } from './utils/safeNotification';
 import { COURSES as IMPORTED_COURSES, CURSOS_DISPONIVEIS as IMPORTED_CURSOS_DISPONIVEIS } from './components/ModuleCoursesData';
 import DashboardModule from './components/DashboardModule';
 import { DEFAULT_PORTAL_PERMISSIONS, getMemberFuncoesAdm, getMemberPortalAllowedModules } from './constants/portalPermissions';
@@ -12738,189 +12739,6 @@ const NotificationCenter = () => {
     );
 };
 
-const ChurchQuickSwitcher = () => {
-    const { db, appId, addToast } = useContext(ChurchContext);
-    const [isOpen, setIsOpen] = useState(false);
-    const [tenantsList, setTenantsList] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [manualId, setManualId] = useState('');
-    const dropdownRef = useRef<HTMLDivElement | null>(null);
-
-    const loadTenants = async () => {
-        setLoading(true);
-        let list: any[] = [];
-        // 1. Cache local
-        try {
-            const cached = localStorage.getItem('gipp_saas_tenants_cache');
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed)) list = parsed;
-            }
-        } catch (e) {}
-
-        // 2. Servidor backend /api/tenants
-        try {
-            const res = await fetch('/api/tenants');
-            const data = await res.json();
-            if (data?.tenants && Array.isArray(data.tenants)) {
-                const map = new Map();
-                list.forEach(item => map.set(item.id, item));
-                data.tenants.forEach((item: any) => map.set(item.id, { ...(map.get(item.id) || {}), ...item }));
-                list = Array.from(map.values());
-            }
-        } catch (e) {}
-
-        // Garante que o appId ativo conste na lista
-        if (appId && !list.some(t => t.id === appId)) {
-            list.unshift({
-                id: appId,
-                nome: db.igreja?.nome || 'Igreja Atual',
-                cidade: db.igreja?.cidade || '',
-                uf: db.igreja?.uf || ''
-            });
-        }
-
-        setTenantsList(list);
-        setLoading(false);
-    };
-
-    useEffect(() => {
-        if (isOpen) {
-            loadTenants();
-        }
-    }, [isOpen]);
-
-    // Fechar ao clicar fora
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [isOpen]);
-
-    const handleSwitch = (targetId: string) => {
-        if (!targetId || targetId === appId) {
-            setIsOpen(false);
-            return;
-        }
-        localStorage.setItem('gipp_saved_app_id', targetId);
-        const newSearch = new URLSearchParams(window.location.search);
-        newSearch.set('id', targetId);
-        window.location.href = window.location.pathname + '?' + newSearch.toString() + window.location.hash;
-    };
-
-    const handleConnectManual = (e: React.FormEvent) => {
-        e.preventDefault();
-        const clean = manualId.trim();
-        if (!clean) {
-            addToast("Digite o App ID da igreja.", "warning");
-            return;
-        }
-        handleSwitch(clean);
-    };
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer"
-                title="Alternar entre Igrejas / Bancos de Dados Particionados"
-            >
-                <Building2 size={15} className="text-emerald-500 shrink-0" />
-                <span className="max-w-[120px] sm:max-w-[160px] truncate">{db.igreja?.nome || 'Igreja'}</span>
-                <span className="hidden sm:inline-block px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-mono text-[9px] rounded font-black">
-                    ID: {appId.length > 12 ? `${appId.slice(0, 10)}...` : appId}
-                </span>
-                <ChevronDown size={13} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 z-50 animate-fadeIn space-y-3">
-                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center gap-2">
-                            <Database size={16} className="text-indigo-600 dark:text-indigo-400" />
-                            <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                                Bancos de Dados / Igrejas
-                            </span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-semibold">
-                            {tenantsList.length} cadastradas
-                        </span>
-                    </div>
-
-                    {/* Lista de Igrejas */}
-                    <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-                        {loading && (
-                            <div className="py-4 text-center text-xs text-slate-400">Carregando bancos...</div>
-                        )}
-                        {!loading && tenantsList.map((t) => {
-                            const isCurrent = t.id === appId;
-                            return (
-                                <div
-                                    key={t.id}
-                                    onClick={() => handleSwitch(t.id)}
-                                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                                        isCurrent
-                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 shadow-2xs'
-                                            : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
-                                    }`}
-                                >
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-bold text-slate-800 dark:text-white truncate block">
-                                                {t.nome || t.id}
-                                            </span>
-                                            {isCurrent && (
-                                                <span className="px-1.5 py-0.2 bg-emerald-500 text-white text-[8px] font-black rounded-full uppercase shrink-0">
-                                                    Ativo
-                                                </span>
-                                            )}
-                                        </div>
-                                        <span className="text-[10px] font-mono text-slate-400 block truncate">
-                                            ID: {t.id}
-                                        </span>
-                                    </div>
-                                    <div className="shrink-0">
-                                        {isCurrent ? (
-                                            <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" />
-                                        ) : (
-                                            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
-                                                Acessar
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Conectar Manualmente por App ID */}
-                    <form onSubmit={handleConnectManual} className="pt-2 border-t border-slate-100 dark:border-slate-800 flex gap-2">
-                        <input
-                            type="text"
-                            value={manualId}
-                            onChange={(e) => setManualId(e.target.value)}
-                            placeholder="Digitar outro App ID..."
-                            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                        />
-                        <button
-                            type="submit"
-                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
-                        >
-                            Conectar
-                        </button>
-                    </form>
-                </div>
-            )}
-        </div>
-    );
-};
-
 // --- OS PORTAIS DO MEMBRO FORAM MODULARIZADOS EM src/components/ (PortalPerfil, PortalHome, PortalFinanceiro, PortalAgenda, PortalTarefas, PortalEBD, PortalCursos, PortalMural) ---
 
 const WebPushNotificationTrigger = () => {
@@ -12945,7 +12763,7 @@ const WebPushNotificationTrigger = () => {
             if (permission === 'granted') {
                 addToast("🔔 Notificações ativadas com sucesso! Você receberá avisos na barra do seu celular/sistema.", "success");
                 playNotificationSound();
-                new Notification("GIPP Conectado!", {
+                showSafeNotification("GIPP Conectado!", {
                     body: "Você ativou com sucesso as notificações do Portal de Membros no seu dispositivo.",
                     icon: "https://cdn-icons-png.flaticon.com/512/3223/3223605.png"
                 });
@@ -13460,8 +13278,6 @@ const MemberPortalLayout = () => {
                                 </div>
                             )}
                             <div className="flex items-center gap-2.5">
-                                <ChurchQuickSwitcher />
-                                <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-0.5" />
                                 <WebPushNotificationTrigger />
                                 <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/60 mx-1" />
                                 <OsThemeToggle />
@@ -17484,42 +17300,15 @@ export default function App() {
       const iconeOficial = db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png";
       notifications.forEach((notif: any) => {
         if (!notifiedIdsRef.current.includes(notif.id)) {
-          try {
-            // Tenta enviar via Service Worker (ideal para mobile, Android, iOS em homescreen, Windows PWA)
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.ready.then((registration) => {
-                registration.showNotification(notif.title, {
-                  body: notif.desc,
-                  icon: iconeOficial,
-                  badge: iconeOficial,
-                  vibrate: [150, 80, 150],
-                  tag: notif.id,
-                  data: {
-                    url: notif.actionUrl ? `/${notif.actionUrl}` : '/'
-                  }
-                } as any);
-              }).catch(() => {
-                // Fallback standard se o SW não estiver totalmente pronto
-                new Notification(notif.title, {
-                  body: notif.desc,
-                  icon: iconeOficial,
-                  badge: iconeOficial
-                });
-              });
-            } else {
-              // Fallback se SW não for suportado no browser
-              new Notification(notif.title, {
-                body: notif.desc,
-                icon: iconeOficial,
-                badge: iconeOficial
-              });
-            }
+          showSafeNotification(notif.title, {
+            body: notif.desc,
+            icon: iconeOficial,
+            badge: iconeOficial,
+            tag: notif.id,
+          }).catch(() => {});
 
-            notifiedIdsRef.current.push(notif.id);
-            playNotificationSound();
-          } catch (err) {
-            console.warn("Could not display native browser notification: ", err);
-          }
+          notifiedIdsRef.current.push(notif.id);
+          playNotificationSound();
         }
       });
     }

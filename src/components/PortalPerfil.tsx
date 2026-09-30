@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import { User, Mail, Phone, Calendar, Lock, Bell, Save, Check, RefreshCw, Send, Smartphone, Loader2, Sparkles, UserCheck, ChevronLeft } from "lucide-react";
 import { ChurchContext } from "../context/ChurchContext";
 import { Button, FormInput, formatDateLocal, playNotificationSound } from "../utils/sharedHelpers";
+import { showSafeNotification } from "../utils/safeNotification";
 
 const PortalPerfil = ({ user, db, setView }) => {
     const { setDoc, doc, dbFirestore, appId, addToast, logAction } = useContext(ChurchContext);
@@ -33,29 +34,12 @@ const PortalPerfil = ({ user, db, setView }) => {
             addToast("🔔 Disparando teste de Notificação Local & segundo plano! Verifique sua barra de status.", "success");
             playNotificationSound();
             
-            // Tenta disparar via Service Worker registrado (segundo plano nativo)
-            if ('serviceWorker' in navigator) {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    reg.showNotification("🔔 Teste Push Conectado!", {
-                        body: "Este é um teste oficial de alertas em tempo real do GIPP. Se você está vendo isso, o seu smartphone/computador está pronto!",
-                        icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
-                        badge: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
-                        vibrate: [200, 100, 200],
-                        data: { url: "/#portal_more" }
-                    } as any);
-                } catch (swErr) {
-                    new Notification("🔔 Teste Alerta GIPP", {
-                        body: "Seu navegador está configurado para receber notificações nos portais do GIPP!",
-                        icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
-                    });
-                }
-            } else {
-                new Notification("🔔 Teste Alerta GIPP", {
-                    body: "Seu navegador está configurado para receber notificações nos portais do GIPP!",
-                    icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png"
-                });
-            }
+            // Tenta disparar via utilitário seguro de notificações
+            showSafeNotification("🔔 Teste Alerta GIPP", {
+                body: "Seu navegador está configurado para receber notificações nos portais do GIPP!",
+                icon: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+                badge: db.igreja?.icone_sistema || "https://cdn-icons-png.flaticon.com/512/3004/3004613.png",
+            }).catch(() => {});
         } else {
             addToast("As notificações foram bloqueadas/negadas. Por favor reative-as nas configurações do site no seu navegador.", "error");
         }
