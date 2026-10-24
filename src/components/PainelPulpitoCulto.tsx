@@ -4,7 +4,7 @@ import {
   CheckCircle2, ChevronRight, ChevronLeft, Maximize2, Minimize2, 
   Sun, Moon, BookOpen, Music, DollarSign, Users, Sparkles, Send, 
   Trash2, Plus, Edit3, MessageSquare, Flame, Shield, X, RefreshCw,
-  Tv, Radio, ExternalLink
+  Tv, Radio, ExternalLink, Image as ImageIcon, Check
 } from 'lucide-react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
@@ -12,8 +12,11 @@ import {
   PulpitoState, 
   BlocoLiturgico, 
   AvisoPulpito,
-  HolyricsState
+  HolyricsState,
+  HolyricsSlide
 } from '../services/holyricsService';
+import { BibliaProjecaoModal } from './BibliaProjecaoModal';
+import { MidiaProjecaoModal } from './MidiaProjecaoModal';
 
 export type { BlocoLiturgico, AvisoPulpito };
 
@@ -79,6 +82,72 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
   const [novoAvisoTexto, setNovoAvisoTexto] = useState('');
   const [novoAvisoTipo, setNovoAvisoTipo] = useState<'urgente' | 'visitante' | 'oracao' | 'geral'>('geral');
   const [showAvisoModal, setShowAvisoModal] = useState(false);
+
+  // Modais de vinculação para a liturgia
+  const [showBibleModal, setShowBibleModal] = useState(false);
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [targetBlocoIndex, setTargetBlocoIndex] = useState<number>(0);
+
+  // Projetar Bloco Litúrgico diretamente no Telão
+  const handleProjetarBloco = (idx: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const b = blocos[idx];
+    if (!b) return;
+
+    // 1. Se tiver imagem vinculada, projeta a imagem
+    if (b.imagemUrl) {
+      holyricsService.projectMediaImage(b.midiaTitulo || b.titulo, b.imagemUrl, {
+        subtitulo: b.subtitulo || b.responsavel,
+        ajuste: 'contain'
+      });
+      if (addToast) addToast(`Mídia "${b.midiaTitulo || b.titulo}" projetada no Telão!`, 'success');
+      return;
+    }
+
+    // 2. Se tiver leitura bíblica, projeta o versículo sagrado
+    if (b.leituraBiblica) {
+      const parts = b.leituraBiblica.split(/—|–/);
+      const ref = parts[0]?.trim() || 'Leitura Bíblica';
+      const txt = parts[1]?.replace(/[“”"]/g, '').trim() || b.leituraBiblica;
+      holyricsService.projectBibleVerse(ref, txt);
+      if (addToast) addToast(`Texto bíblico projetado no Telão!`, 'success');
+      return;
+    }
+
+    // 3. Se tiver texto livre de projeção
+    if (b.textoProjecao) {
+      holyricsService.projectCustomText(b.titulo, b.textoProjecao, {
+        subtitulo: b.responsavel || b.subtitulo
+      });
+      if (addToast) addToast(`Texto da etapa projetado no Telão!`, 'success');
+      return;
+    }
+
+    // 4. Slide de tópico da liturgia
+    const slideBloco: HolyricsSlide = {
+      id: `slide-bloco-${b.id}-${Date.now()}`,
+      tipo: 'topico',
+      titulo: b.titulo,
+      subtitulo: b.responsavel ? `Responsável: ${b.responsavel}` : b.subtitulo,
+      texto: b.hinos ? `Cânticos Escalados:\n${b.hinos}` : b.subtitulo || ''
+    };
+    holyricsService.loadPresentation(b.titulo, [slideBloco], 'liturgia', true);
+    if (addToast) addToast(`Etapa "${b.titulo}" projetada no Telão!`, 'success');
+  };
+
+  // Vincular Mídia da Galeria ao Bloco
+  const handleOpenAttachMedia = (idx: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setTargetBlocoIndex(idx);
+    setShowMediaModal(true);
+  };
+
+  // Vincular Versículo da Bíblia ao Bloco
+  const handleOpenAttachBible = (idx: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setTargetBlocoIndex(idx);
+    setShowBibleModal(true);
+  };
 
   // Adicionar Novo Aviso sincronizado no Holyrics
   const handleEnviarAviso = (e: React.FormEvent) => {
@@ -439,7 +508,7 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
                   <div
                     key={bloco.id}
                     onClick={() => holyricsService.selectPulpitoBloco(idx)}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 text-left ${
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 text-left group ${
                       isSelected 
                         ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20' 
                         : bloco.concluido
@@ -447,30 +516,96 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
                         : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    <div className="mt-0.5 shrink-0">
-                      {bloco.concluido ? (
-                        <CheckCircle2 size={16} className={isSelected ? 'text-white' : 'text-emerald-500'} />
-                      ) : isSelected ? (
-                        <span className="w-2.5 h-2.5 rounded-full bg-white block animate-ping"></span>
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center text-[9px] font-mono">
-                          {idx + 1}
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0">
+                        {bloco.concluido ? (
+                          <CheckCircle2 size={16} className={isSelected ? 'text-white' : 'text-emerald-500'} />
+                        ) : isSelected ? (
+                          <span className="w-2.5 h-2.5 rounded-full bg-white block animate-ping"></span>
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center text-[9px] font-mono">
+                            {idx + 1}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={`text-xs font-black line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+                            {bloco.titulo}
+                          </span>
+                          <span className={`text-[10px] font-mono shrink-0 ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
+                            {bloco.duracaoMinutos}m
+                          </span>
                         </div>
-                      )}
+                        <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
+                          {bloco.responsavel || bloco.subtitulo}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className={`text-xs font-black line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-200'}`}>
-                          {bloco.titulo}
-                        </span>
-                        <span className={`text-[10px] font-mono shrink-0 ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
-                          {bloco.duracaoMinutos}m
-                        </span>
+                    {/* BADGES DE ANEXO: MÍDIA, VERSÍCULO OU TEXTO LIVRE */}
+                    {(bloco.imagemUrl || bloco.leituraBiblica || bloco.textoProjecao) && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-white/10 text-[10px]">
+                        {bloco.imagemUrl && (
+                          <span className="px-2 py-0.5 rounded-md bg-black/30 border border-white/15 flex items-center gap-1 text-amber-300 font-bold truncate max-w-[190px]">
+                            <ImageIcon size={10} className="shrink-0" />
+                            <span className="truncate">{bloco.midiaTitulo || 'Imagem Anexada'}</span>
+                          </span>
+                        )}
+                        {bloco.leituraBiblica && (
+                          <span className="px-2 py-0.5 rounded-md bg-black/30 border border-white/15 flex items-center gap-1 text-sky-300 font-bold truncate max-w-[190px]">
+                            <BookOpen size={10} className="shrink-0" />
+                            <span className="truncate">Bíblia vinculada</span>
+                          </span>
+                        )}
+                        {bloco.textoProjecao && (
+                          <span className="px-2 py-0.5 rounded-md bg-black/30 border border-white/15 flex items-center gap-1 text-emerald-300 font-bold truncate max-w-[190px]">
+                            <Edit3 size={10} className="shrink-0" />
+                            <span className="truncate">Texto Livre</span>
+                          </span>
+                        )}
                       </div>
-                      <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
-                        {bloco.responsavel || bloco.subtitulo}
-                      </p>
+                    )}
+
+                    {/* BOTÕES RÁPIDOS DE CONTROLE LITÚRGICO: PROJETAR NO TELÃO / VINCULAR MÍDIA */}
+                    <div className="flex items-center justify-between gap-1 pt-1 border-t border-white/10">
+                      <button
+                        onClick={(e) => handleProjetarBloco(idx, e)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer shadow-sm ${
+                          isSelected
+                            ? 'bg-white text-indigo-950 hover:bg-slate-100'
+                            : 'bg-teal-600/90 hover:bg-teal-500 text-white'
+                        }`}
+                        title="Projetar esta etapa imediatamente no Telão para a congregação"
+                      >
+                        <Tv size={11} /> Projetar no Telão
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => handleOpenAttachBible(idx, e)}
+                          className={`p-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'bg-indigo-700 hover:bg-indigo-800 text-white' 
+                              : 'bg-slate-800/80 hover:bg-slate-700 text-sky-400 border border-slate-700'
+                          }`}
+                          title="Vincular Versículo Bíblico a este bloco"
+                        >
+                          <BookOpen size={12} />
+                        </button>
+                        <button
+                          onClick={(e) => handleOpenAttachMedia(idx, e)}
+                          className={`p-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'bg-indigo-700 hover:bg-indigo-800 text-white' 
+                              : 'bg-slate-800/80 hover:bg-slate-700 text-indigo-400 border border-slate-700'
+                          }`}
+                          title="Vincular Imagem / Banner a este bloco"
+                        >
+                          <ImageIcon size={12} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -592,6 +727,28 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
           </div>
         </div>
       )}
+
+      {/* MODAL DE SELEÇÃO BÍBLICA PARA A LITURGIA */}
+      <BibliaProjecaoModal
+        isOpen={showBibleModal}
+        onClose={() => setShowBibleModal(false)}
+        onSelectForLiturgy={(ref, txt) => {
+          holyricsService.attachVerseToPulpitoBloco(targetBlocoIndex, ref, txt);
+          if (addToast) addToast(`Leitura Bíblica anexada à etapa "${blocos[targetBlocoIndex]?.titulo}"!`, 'success');
+          setShowBibleModal(false);
+        }}
+      />
+
+      {/* MODAL DE MÍDIA / IMAGEM PARA A LITURGIA */}
+      <MidiaProjecaoModal
+        isOpen={showMediaModal}
+        onClose={() => setShowMediaModal(false)}
+        onAttachToLiturgy={(imgUrl, midiaTit) => {
+          holyricsService.attachMediaToPulpitoBloco(targetBlocoIndex, imgUrl, midiaTit);
+          if (addToast) addToast(`Mídia vinculada à etapa "${blocos[targetBlocoIndex]?.titulo}"!`, 'success');
+          setShowMediaModal(false);
+        }}
+      />
     </div>
   );
 };

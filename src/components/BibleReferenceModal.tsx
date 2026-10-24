@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
     BookOpen, X, Volume2, VolumeX, Copy, Check, Search, 
-    Sparkles, ShieldCheck, Bookmark, Compass, Heart, Share2, Award
+    Sparkles, ShieldCheck, Bookmark, Compass, Heart, Share2, Award, Tv
 } from 'lucide-react';
 import { BibleReferenceDetail, CANONICAL_BIBLE_REFERENCES, findBibleReference } from '../data/bibleReferencesData';
+import { holyricsService } from '../services/holyricsService';
 
 interface BibleReferenceModalProps {
     isOpen: boolean;
@@ -19,6 +20,7 @@ export const BibleReferenceModal: React.FC<BibleReferenceModalProps> = ({
     const [currentRef, setCurrentRef] = useState<BibleReferenceDetail | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [copied, setCopied] = useState(false);
+    const [projected, setProjected] = useState(false);
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
     useEffect(() => {
@@ -80,6 +82,17 @@ export const BibleReferenceModal: React.FC<BibleReferenceModalProps> = ({
         } catch (err) {
             console.error("Erro ao copiar texto:", err);
         }
+    };
+
+    const handleProjectToTelao = () => {
+        if (!currentRef) return;
+        holyricsService.projectBibleVerse(
+            currentRef.reference,
+            currentRef.text,
+            'Almeida Revista e Corrigida (ARC)'
+        );
+        setProjected(true);
+        setTimeout(() => setProjected(false), 2500);
     };
 
     const handleSearchSubmit = (e: React.FormEvent) => {
@@ -268,15 +281,32 @@ export const BibleReferenceModal: React.FC<BibleReferenceModalProps> = ({
                 </div>
 
                 {/* Footer Controls */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                         {copied && (
                             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                                 <Check size={14} /> Versículo e explicação copiados!
                             </span>
                         )}
+                        {projected && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 animate-pulse">
+                                <Tv size={14} /> Versículo transmitido ao Telão (2º monitor)!
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleProjectToTelao}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                                projected
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                            }`}
+                            title="Projetar versículo no Telão / 2º monitor"
+                        >
+                            <Tv size={14} />
+                            <span>{projected ? "Transmitido no Telão!" : "Projetar no Telão"}</span>
+                        </button>
                         <button
                             onClick={handleCopy}
                             className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"

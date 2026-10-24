@@ -730,7 +730,68 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
             )}
 
             {/* Conteúdo Específico por Tipo */}
-            {currentSlide?.versiculo ? (
+            {currentSlide?.tipo === 'midia_imagem' || currentSlide?.imagemUrl ? (
+              /* Mídia / Imagem de Alta Resolução */
+              <div className="w-full flex-1 flex flex-col items-center justify-center relative my-auto py-2">
+                <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center bg-black">
+                  <img
+                    src={currentSlide.imagemUrl}
+                    alt={currentSlide.titulo || 'Mídia Projetada'}
+                    className={`w-full h-full ${
+                      currentSlide.ajusteImagem === 'cover' ? 'object-cover' : 'object-contain'
+                    }`}
+                  />
+                  {currentSlide.titulo && currentSlide.titulo !== 'Mídia' && (
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 sm:p-6 text-center">
+                      <h2 className="text-xl sm:text-3xl md:text-4xl font-black text-white drop-shadow-lg">
+                        {currentSlide.titulo}
+                      </h2>
+                      {currentSlide.subtitulo && (
+                        <p className="text-xs sm:text-base text-amber-300 drop-shadow-md mt-1 font-bold">
+                          {currentSlide.subtitulo}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : currentSlide?.tipo === 'texto_livre' ? (
+              /* Texto Livre com Formatação Dinâmica */
+              <div className={`my-auto max-w-5xl w-full ${
+                currentSlide.estiloTexto?.align === 'left' ? 'text-left' :
+                currentSlide.estiloTexto?.align === 'right' ? 'text-right' : 'text-center'
+              }`}>
+                {currentSlide.titulo && (
+                  <h2 className={`font-black tracking-tight mb-6 drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] ${
+                    currentSlide.estiloTexto?.colorTheme === 'cyan' ? 'text-cyan-300' :
+                    currentSlide.estiloTexto?.colorTheme === 'emerald' ? 'text-emerald-300' :
+                    currentSlide.estiloTexto?.colorTheme === 'amber' ? 'text-orange-400' :
+                    currentSlide.estiloTexto?.colorTheme === 'rose' ? 'text-rose-400' :
+                    currentSlide.estiloTexto?.colorTheme === 'white' ? 'text-white' : 'text-amber-400'
+                  } ${
+                    currentSlide.estiloTexto?.fontSize === '3xl' ? 'text-4xl md:text-6xl' : 'text-3xl md:text-5xl'
+                  }`}>
+                    {currentSlide.estiloTexto?.uppercase ? currentSlide.titulo.toUpperCase() : currentSlide.titulo}
+                  </h2>
+                )}
+
+                <p className={`whitespace-pre-line leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] ${
+                  currentSlide.estiloTexto?.bold ? 'font-black' : 'font-normal'
+                } ${currentSlide.estiloTexto?.italic ? 'italic font-serif' : ''} ${
+                  currentSlide.estiloTexto?.fontSize === 'sm' ? 'text-2xl md:text-3xl' :
+                  currentSlide.estiloTexto?.fontSize === 'base' ? 'text-3xl md:text-4xl' :
+                  currentSlide.estiloTexto?.fontSize === '2xl' ? 'text-4xl md:text-6xl' : 'text-5xl md:text-7xl'
+                } ${
+                  currentSlide.estiloTexto?.colorTheme === 'cyan' ? 'text-cyan-200' :
+                  currentSlide.estiloTexto?.colorTheme === 'emerald' ? 'text-emerald-200' :
+                  currentSlide.estiloTexto?.colorTheme === 'amber' ? 'text-orange-300' :
+                  currentSlide.estiloTexto?.colorTheme === 'rose' ? 'text-rose-300' :
+                  currentSlide.estiloTexto?.colorTheme === 'white' ? 'text-white' : 'text-slate-100'
+                }`}>
+                  {currentSlide.estiloTexto?.uppercase ? (currentSlide.texto || '').toUpperCase() : currentSlide.texto}
+                </p>
+              </div>
+            ) : currentSlide?.versiculo ? (
               /* Versículo Bíblico */
               <div className="my-auto">
                 <blockquote className="text-3xl md:text-5xl lg:text-6xl font-black leading-tight text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.8)] font-serif italic max-w-5xl">

@@ -8,7 +8,7 @@
 
 export interface HolyricsSlide {
   id: string;
-  tipo: 'capa' | 'versiculo' | 'letra' | 'refrao' | 'topico' | 'doutrina' | 'aplicacao' | 'quiz' | 'conclusao' | 'aviso';
+  tipo: 'capa' | 'versiculo' | 'letra' | 'refrao' | 'topico' | 'doutrina' | 'aplicacao' | 'quiz' | 'conclusao' | 'aviso' | 'texto_livre' | 'midia_imagem';
   titulo: string;
   subtitulo?: string;
   texto?: string;
@@ -16,6 +16,16 @@ export interface HolyricsSlide {
   pontos?: string[];
   notas?: string;
   imagemFundo?: string;
+  imagemUrl?: string;
+  ajusteImagem?: 'contain' | 'cover';
+  estiloTexto?: {
+    fontSize?: 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl';
+    align?: 'left' | 'center' | 'right';
+    bold?: boolean;
+    italic?: boolean;
+    uppercase?: boolean;
+    colorTheme?: 'gold' | 'white' | 'cyan' | 'emerald' | 'amber' | 'rose';
+  };
   corDestaque?: string;
   numeroOrdem?: number;
 }
@@ -47,6 +57,9 @@ export interface BlocoLiturgico {
   tipo: 'oracao' | 'louvor' | 'leitura' | 'dizimo' | 'palavra' | 'avisos' | 'apelo' | 'encerramento';
   leituraBiblica?: string;
   hinos?: string;
+  imagemUrl?: string;
+  midiaTitulo?: string;
+  textoProjecao?: string;
   concluido: boolean;
 }
 
@@ -649,6 +662,16 @@ class HolyricsService {
           this.projectBibleVerse(args.ref, args.texto, args.versao);
         }
         break;
+      case 'projectCustomText':
+        if (args?.texto) {
+          this.projectCustomText(args.titulo || 'Comunicado', args.texto, args.opcoes);
+        }
+        break;
+      case 'projectMediaImage':
+        if (args?.imagemUrl) {
+          this.projectMediaImage(args.titulo || 'Mídia', args.imagemUrl, args.opcoes);
+        }
+        break;
       case 'sendAlert':
         if (args?.texto) {
           this.sendAlert(args.texto, args.tipo, args.subtexto, args.duracaoSegundos);
@@ -1134,6 +1157,108 @@ class HolyricsService {
     this.state.exibirLogo = false;
     this.state.ativo = true;
     this.saveAndBroadcast();
+  }
+
+  public projectVersicle(referencia: string, texto: string, versao?: string): void {
+    this.projectBibleVerse(referencia, texto, versao);
+  }
+
+  // Projetar Texto Livre com Formatação Personalizada
+  public projectCustomText(
+    titulo: string,
+    texto: string,
+    opcoes?: {
+      subtitulo?: string;
+      fontSize?: 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl';
+      align?: 'left' | 'center' | 'right';
+      bold?: boolean;
+      italic?: boolean;
+      uppercase?: boolean;
+      colorTheme?: 'gold' | 'white' | 'cyan' | 'emerald' | 'amber' | 'rose';
+    }
+  ): void {
+    const slideTexto: HolyricsSlide = {
+      id: `texto-livre-${Date.now()}`,
+      tipo: 'texto_livre',
+      titulo: titulo.trim() || 'Aviso da Igreja',
+      subtitulo: opcoes?.subtitulo,
+      texto: texto.trim(),
+      estiloTexto: {
+        fontSize: opcoes?.fontSize || '2xl',
+        align: opcoes?.align || 'center',
+        bold: opcoes?.bold !== undefined ? opcoes.bold : true,
+        italic: Boolean(opcoes?.italic),
+        uppercase: Boolean(opcoes?.uppercase),
+        colorTheme: opcoes?.colorTheme || 'gold'
+      },
+      notas: `Texto Livre: ${titulo}`
+    };
+
+    this.state.tituloApresentacao = titulo || 'Texto Livre';
+    this.state.categoria = 'custom';
+    this.state.slides = [slideTexto];
+    this.state.indiceAtual = 0;
+    this.state.blackout = false;
+    this.state.limparTexto = false;
+    this.state.exibirLogo = false;
+    this.state.ativo = true;
+    this.saveAndBroadcast();
+  }
+
+  // Projetar Imagem de Mídia (Cartaz de Conferência, Congresso, Santa Ceia, Anúncio)
+  public projectMediaImage(
+    titulo: string,
+    imagemUrl: string,
+    opcoes?: {
+      subtitulo?: string;
+      ajuste?: 'contain' | 'cover';
+    }
+  ): void {
+    const slideMidia: HolyricsSlide = {
+      id: `midia-img-${Date.now()}`,
+      tipo: 'midia_imagem',
+      titulo: titulo.trim() || 'Projeção de Imagem',
+      subtitulo: opcoes?.subtitulo || 'Mídia Oficial do Culto',
+      imagemUrl: imagemUrl,
+      ajusteImagem: opcoes?.ajuste || 'contain',
+      notas: `Imagem: ${titulo}`
+    };
+
+    this.state.tituloApresentacao = `Mídia: ${titulo}`;
+    this.state.categoria = 'slides';
+    this.state.slides = [slideMidia];
+    this.state.indiceAtual = 0;
+    this.state.blackout = false;
+    this.state.limparTexto = false;
+    this.state.exibirLogo = false;
+    this.state.ativo = true;
+    this.saveAndBroadcast();
+  }
+
+  // Anexar Mídia ou Versículo a um Bloco Litúrgico específico
+  public attachMediaToPulpitoBloco(blocoIndex: number, imagemUrl: string, midiaTitulo: string): void {
+    if (this.state.pulpito.blocos[blocoIndex]) {
+      this.state.pulpito.blocos[blocoIndex].imagemUrl = imagemUrl;
+      this.state.pulpito.blocos[blocoIndex].midiaTitulo = midiaTitulo;
+      this.saveAndBroadcast();
+    }
+  }
+
+  public attachVerseToPulpitoBloco(blocoIndex: number, referencia: string, texto: string): void {
+    if (this.state.pulpito.blocos[blocoIndex]) {
+      this.state.pulpito.blocos[blocoIndex].leituraBiblica = `${referencia} — “${texto}”`;
+      if (this.state.pulpito.blocoAtivoIndex === blocoIndex) {
+        this.state.pulpito.textoBiblicoDestaque = `${referencia} — “${texto}”`;
+      }
+      this.saveAndBroadcast();
+    }
+  }
+
+  public attachTextToPulpitoBloco(blocoIndex: number, texto: string): void {
+    if (this.state.pulpito.blocos[blocoIndex]) {
+      this.state.pulpito.blocos[blocoIndex].textoProjecao = texto;
+      this.saveAndBroadcast();
+    }
   }
 
   // Projetar Letra de Música / Hino Instantâneo

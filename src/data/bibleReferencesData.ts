@@ -1,5 +1,5 @@
-// Base de Dados Canônica & Exegética de Referências Bíblicas (CGADB / CPAD)
-// Utilizada para exibir o texto bíblico integral (ARC - Almeida Revista e Corrigida) e sua explicação teológica oficial.
+import { parseBiblicalReference } from './bibliaOfflineData';
+import { bibleDatabaseService } from '../services/bibleDatabaseService';
 
 export interface BibleReferenceDetail {
     reference: string;
@@ -317,7 +317,30 @@ export const findBibleReference = (query: string): BibleReferenceDetail => {
         }
     }
 
-    // 3. Fallback inteligente construído com base teológica sólida
+    // 3. Fallback dinâmico consultando a Base Bíblica Completa Offline
+    const parsed = parseBiblicalReference(query);
+    if (parsed) {
+      const verses = bibleDatabaseService.getChapterVerses(parsed.book.name, parsed.chapter);
+      const targetVerseNum = parsed.verse || 1;
+      const verseObj = verses.find(v => v.verse === targetVerseNum) || verses[0];
+      const verseText = verseObj ? verseObj.text : `Porque a palavra do Senhor é reta, e todas as suas obras são fiéis.`;
+
+      return {
+        reference: `${parsed.book.name} ${parsed.chapter}:${targetVerseNum}`,
+        book: parsed.book.name,
+        chapter: parsed.chapter,
+        verses: String(targetVerseNum),
+        testament: parsed.book.testament,
+        text: verseText,
+        explanation: `Passagem do livro de ${parsed.book.name}, inserido na divisão dos ${parsed.book.division} do ${parsed.book.testament === 'VT' ? 'Antigo Testamento' : 'Novo Testamento'}. Harmoniza-se integralmente com a Declaração de Fé da CGADB/CPAD.`,
+        dogmaticTheme: `${parsed.book.division} & Sã Doutrina (ARC)`,
+        cgadbChapter: `Declaração de Fé da CGADB - Cap. 1 (As Sagradas Escrituras)`,
+        pastoralApplication: `Medite nesta passagem bíblica sagrada e aplique seus preceitos na oração, na vida diária, no testemunho cristão e no ministério eclesiástico.`,
+        keywords: [parsed.book.name.toLowerCase(), "bíblia", "arc", "palavra de deus"]
+      };
+    }
+
+    // 4. Fallback padrão se não for identificada a referência
     return {
         reference: query,
         book: query.split(' ')[0] || "Escrituras Sagradas",
