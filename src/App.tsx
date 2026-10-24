@@ -178,8 +178,8 @@ const ModuleInterativo = lazy(() => import('./components/ModuleInterativo'));
 const ModuleManualUsuario = lazy(() => import('./components/ModuleManualUsuario'));
 const ModuleAmparoLegal = lazy(() => import('./components/ModuleAmparoLegal'));
 const ModuleRegistroSoftware = lazy(() => import('./components/ModuleRegistroSoftware'));
-const ModuleMensagensLote = lazy(() => import('./components/ModuleMensagensLote'));
-const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin'));
+const ModuleMensagensLote = lazy(() => import('./components/ModuleMensagensLote').then(m => ({ default: m.default || m.ModuleMensagensLote })));
+const ModuleQrCheckin = lazy(() => import('./components/ModuleQrCheckin').then(m => ({ default: m.default || m.ModuleQrCheckin })));
 const ModuleLojaVirtualAdmin = lazy(() => import('./components/ModuleLojaVirtualAdmin'));
 const ModuleInscricoesEventos = lazy(() => import('./components/ModuleInscricoesEventos'));
 const PortalLojaMembro = lazy(() => import('./components/PortalLojaMembro'));
@@ -6659,15 +6659,17 @@ export const PrintSystem = ({
             </div>
         );
 
+        const certDataExtenso = data.extra?.data_extenso || (data.extra?.data_evento ? new Date(data.extra.data_evento + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }) : hojeExtenso);
+
         const Assinaturas = ({ showQR = true }: { showQR?: boolean }) => {
-            const hash = data.extra?.docHash || (data.membro?.id ? `GIPP-${data.membro.id.substring(0,6).toUpperCase()}-${new Date().getFullYear()}` : `GIPP-DOC-${Math.random().toString(36).substring(2,8).toUpperCase()}`);
+            const hash = data.extra?.docHash || (data.membro?.id ? `GIPP-${String(data.membro.id).substring(0,6).toUpperCase()}-${new Date().getFullYear()}` : `GIPP-DOC-${Math.random().toString(36).substring(2,8).toUpperCase()}`);
             const validUrl = `https://gipp.app/validar?doc=${hash}&org=${encodeURIComponent(data.igreja?.nome || 'GIPP')}`;
 
             return (
                 <div className="mt-auto w-full flex justify-between items-end px-8 pt-4 gap-6 relative z-20">
                     <div className="text-center flex-1">
                         <div className="border-b border-black mb-1 mx-auto w-full"></div>
-                        <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
+                        <p className="text-xs font-bold uppercase text-slate-900">{data.extra?.pastor || data.igreja?.pastor || "Pastor Presidente"}</p>
                         <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Pastor Presidente</p>
                     </div>
 
@@ -6685,7 +6687,7 @@ export const PrintSystem = ({
 
                     <div className="text-center flex-1">
                         <div className="border-b border-black mb-1 mx-auto w-full"></div>
-                        <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.secretario1 || "Secretário(a) Geral"}</p>
+                        <p className="text-xs font-bold uppercase text-slate-900">{data.extra?.secretario || data.igreja?.secretario1 || "Secretário(a) Geral"}</p>
                         <p className="text-[9px] text-slate-600 font-serif uppercase tracking-widest">Secretaria Eclesiástica</p>
                     </div>
                 </div>
@@ -6701,6 +6703,7 @@ export const PrintSystem = ({
         );
 
         if (mode === 'cert_batismo') {
+            const titularNome = data.membro?.nome || data.extra?.titular || 'NOME DO MEMBRO';
             return (
                 <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[12px] border-double border-blue-900 p-2 relative flex flex-col justify-between">
@@ -6714,11 +6717,17 @@ export const PrintSystem = ({
                             <h2 className="font-script text-[4.5rem] text-blue-900 leading-none drop-shadow-sm my-2">Certificado de Batismo</h2>
                             
                             <p className="font-serif text-lg leading-relaxed text-slate-800 max-w-3xl text-justify indent-12 my-2 z-10">
-                                Certificamos para os devidos fins espirituais e eclesiásticos que <strong className="uppercase text-blue-950">{data.membro?.nome || 'NOME DO MEMBRO'}</strong>, tendo confessado publicamente a sua fé em Jesus Cristo como seu único e suficiente Salvador, desceu às águas batismais nesta congregação em cumprimento à grande comissão (Mateus 28:19).
+                                Certificamos para os devidos fins espirituais e eclesiásticos que <strong className="uppercase text-blue-950">{titularNome}</strong>, tendo confessado publicamente a sua fé em Jesus Cristo como seu único e suficiente Salvador, desceu às águas batismais nesta congregação em cumprimento à grande comissão (Mateus 28:19).
                             </p>
                             
+                            {data.extra?.livro && (
+                                <p className="text-[11px] font-mono text-slate-500 uppercase tracking-widest my-0.5 z-10">
+                                    Livro de Batismos: {data.extra.livro}{data.extra.folha ? ` • Fls. ${data.extra.folha}` : ''}{data.extra.termo ? ` • Termo Nº ${data.extra.termo}` : ''}
+                                </p>
+                            )}
+
                             <p className="text-slate-700 font-classic text-sm uppercase tracking-widest my-2 z-10">
-                                {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                                {data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.
                             </p>
                             <Seal color="#1e3a8a" />
                             <Assinaturas />
@@ -6729,6 +6738,7 @@ export const PrintSystem = ({
         }
 
         if (mode === 'cert_consagracao') {
+            const titularNome = data.membro?.nome || data.extra?.titular || 'NOME DO MEMBRO';
             return (
                 <CertificatePage className="bg-[#faf8f5]">
                     <div className="w-full h-full border-[16px] border-solid border-rose-900 outline outline-4 outline-offset-4 outline-rose-800 p-6 flex flex-col justify-between text-center relative z-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
@@ -6746,11 +6756,11 @@ export const PrintSystem = ({
                         <h2 className="font-classic text-3xl text-rose-900 font-black tracking-widest uppercase my-2 z-10">Credencial de Consagração</h2>
                         
                         <p className="font-serif text-lg leading-relaxed text-slate-900 max-w-3xl text-justify indent-12 my-2 z-10">
-                            O Ministério desta Igreja, sob a direção do Espírito Santo, atesta e confere o presente documento declarando que <strong className="uppercase">{data.membro?.nome || 'NOME DO MEMBRO'}</strong> foi examinado(a), aprovado(a) e, nesta data solene, mediante a imposição de mãos, separado(a) para o Santo Ministério no ofício de <strong className="uppercase text-rose-800 border-b-2 border-rose-800">{data.extra?.cargo || 'OBREIRO(A)'}</strong>.
+                            O Ministério desta Igreja, sob a direção do Espírito Santo, atesta e confere o presente documento declarando que <strong className="uppercase">{titularNome}</strong> foi examinado(a), aprovado(a) e, nesta data solene, mediante a imposição de mãos, separado(a) para o Santo Ministério no ofício de <strong className="uppercase text-rose-800 border-b-2 border-rose-800">{data.extra?.cargo || 'OBREIRO(A)'}</strong>.
                         </p>
                         
                         <p className="text-rose-900 font-classic text-xs font-bold uppercase tracking-widest my-1 z-10">
-                            {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                            {data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.
                         </p>
                         <Seal color="#881337" />
                         <Assinaturas />
@@ -6760,6 +6770,7 @@ export const PrintSystem = ({
         }
 
         if (mode === 'cert_crianca') {
+            const criancaNome = data.extra?.nome_crianca || data.membro?.nome || data.extra?.titular || 'NOME DA CRIANÇA';
             return (
                 <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[6px] border-solid border-amber-400 rounded-[3rem] p-3 flex flex-col justify-between">
@@ -6774,7 +6785,7 @@ export const PrintSystem = ({
                             <h2 className="font-script text-[4rem] text-amber-700 leading-none my-1">Apresentação ao Senhor</h2>
                             
                             <p className="font-serif text-lg leading-relaxed text-slate-700 max-w-3xl text-center z-10">
-                                Certificamos com júbilo que a criança <strong className="uppercase text-amber-900">{data.extra?.nome_crianca || 'NOME DA CRIANÇA'}</strong>{data.extra?.data_nasc && <span>, nascida em {formatDateLocal(data.extra.data_nasc)}</span>}, filha de <strong className="uppercase text-slate-900">{data.extra?.nome_pai || 'NOME DO PAI'}</strong> e <strong className="uppercase text-slate-900">{data.extra?.nome_mae || 'NOME DA MÃE'}</strong>, foi trazida ao templo sagrado e apresentada a Deus conforme o rito bíblico, rogando aos céus a sua proteção e graça divina.
+                                Certificamos com júbilo que a criança <strong className="uppercase text-amber-900">{criancaNome}</strong>{data.extra?.data_nasc && <span>, nascida em {formatDateLocal(data.extra.data_nasc)}</span>}, filha de <strong className="uppercase text-slate-900">{data.extra?.nome_pai || 'NOME DO PAI'}</strong> e <strong className="uppercase text-slate-900">{data.extra?.nome_mae || 'NOME DA MÃE'}</strong>, foi trazida ao templo sagrado e apresentada a Deus conforme o rito bíblico, rogando aos céus a sua proteção e graça divina.
                             </p>
                             
                             <p className="text-slate-500 font-serif text-sm italic my-1 z-10">
@@ -6782,8 +6793,8 @@ export const PrintSystem = ({
                             </p>
                             
                             <div className="w-full max-w-lg mx-auto border-t border-slate-800 pt-1 relative z-20">
-                                <p className="text-sm font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
-                                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.</p>
+                                <p className="text-sm font-bold uppercase text-slate-900">{data.extra?.pastor || data.igreja?.pastor || "Pastor Presidente"}</p>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.</p>
                             </div>
                         </div>
                     </div>
@@ -6810,7 +6821,7 @@ export const PrintSystem = ({
                             </p>
                             
                             <p className="text-slate-800 font-classic text-xs uppercase tracking-widest my-1 z-10">
-                                {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                                {data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.
                             </p>
                             <Seal color="#475569" />
                             <Assinaturas />
@@ -6821,6 +6832,7 @@ export const PrintSystem = ({
         }
 
         if (mode === 'cert_curso') {
+            const alunoNome = data.membro?.nome || data.extra?.titular || 'NOME DO ALUNO';
             return (
                 <CertificatePage className="bg-slate-50">
                     <div className="w-full h-full border-[10px] border-indigo-900 p-1 relative shadow-inner flex flex-col justify-between">
@@ -6838,11 +6850,11 @@ export const PrintSystem = ({
                             <h2 className="font-classic text-3xl text-indigo-800 font-black tracking-widest uppercase border-y-4 border-indigo-100 py-1.5 w-full my-2">Diploma de Conclusão</h2>
                             
                             <p className="font-serif text-lg leading-relaxed text-slate-800 max-w-3xl text-justify indent-12 my-2 z-10">
-                                Conferimos o presente certificado a <strong className="uppercase text-indigo-900 font-black">{data.membro?.nome || 'NOME DO ALUNO'}</strong>, em virtude de ter cumprido todos os requisitos curriculares e concluído com pleno aproveitamento o <strong className="uppercase">{data.extra?.curso || data.extra?.nome_curso || 'CURSO DE TEOLOGIA'}</strong>, estando apto(a) a aplicar os conhecimentos adquiridos na obra do Mestre.
+                                Conferimos o presente certificado a <strong className="uppercase text-indigo-900 font-black">{alunoNome}</strong>, em virtude de ter cumprido todos os requisitos curriculares e concluído com pleno aproveitamento o <strong className="uppercase">{data.extra?.curso || data.extra?.nome_curso || 'CURSO DE TEOLOGIA'}</strong>{data.extra?.carga_horaria ? ` com carga horária de ${data.extra.carga_horaria}` : ''}, estando apto(a) a aplicar os conhecimentos adquiridos na obra do Mestre.
                             </p>
                             
                             <p className="text-indigo-900 font-classic text-xs font-bold uppercase tracking-widest my-1 z-10">
-                                Registado em: {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                                Registrado em: {data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.
                             </p>
                             <Assinaturas />
                         </div>
@@ -6852,6 +6864,7 @@ export const PrintSystem = ({
         }
 
         if (mode === 'cert_evento') {
+            const participanteNome = data.membro?.nome || data.extra?.titular || 'NOME DO PARTICIPANTE';
             return (
                 <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[12px] border-double border-slate-100 flex relative z-10">
@@ -6867,11 +6880,11 @@ export const PrintSystem = ({
                             <h2 className="font-script text-[4rem] text-emerald-700 leading-none my-1">Certificado de Participação</h2>
                             
                             <p className="font-serif text-lg leading-relaxed text-slate-700 max-w-3xl text-justify indent-12 my-2 z-10">
-                                Certificamos que <strong className="uppercase text-emerald-900">{data.membro?.nome || 'NOME DO PARTICIPANTE'}</strong>, participou ativamente do evento <strong className="uppercase border-b border-emerald-500">{data.extra?.evento || 'CONGRESSO OFICIAL'}</strong>, realizado nas dependências desta instituição, demonstrando dedicação, comunhão e interesse no crescimento espiritual do Corpo de Cristo.
+                                Certificamos que <strong className="uppercase text-emerald-900">{participanteNome}</strong>, participou ativamente do evento <strong className="uppercase border-b border-emerald-500">{data.extra?.evento || 'CONGRESSO OFICIAL'}</strong>{data.extra?.tema ? ` com o tema "${data.extra.tema}"` : ''}{data.extra?.carga_horaria ? ` (Carga Horária: ${data.extra.carga_horaria})` : ''}, realizado nas dependências desta instituição, demonstrando dedicação, comunhão e interesse no crescimento espiritual do Corpo de Cristo.
                             </p>
                             
                             <p className="text-emerald-900 font-classic text-xs uppercase tracking-widest my-1 z-10">
-                                {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                                {data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.
                             </p>
                             <Seal color="#047857" />
                             <Assinaturas />
@@ -6882,6 +6895,7 @@ export const PrintSystem = ({
         }
 
         if (mode === 'cert_ebd') {
+            const alunoNome = data.membro?.nome || data.extra?.titular || 'NOME DO ALUNO';
             return (
                 <CertificatePage className="bg-white">
                     <div className="w-full h-full border-[8px] border-purple-900 p-1 relative flex flex-col justify-between">
@@ -6896,7 +6910,7 @@ export const PrintSystem = ({
                             <h2 className="font-script text-[4rem] text-purple-800 leading-none my-1">Honra ao Mérito</h2>
                             
                             <p className="font-serif text-lg leading-relaxed text-slate-850 max-w-3xl text-justify indent-12 my-2 z-10">
-                                O Departamento de Ensino confere o presente certificado a <strong className="uppercase text-purple-900">{data.membro?.nome || 'NOME DO ALUNO'}</strong>, por ter concluído com zelo e dedicação o ciclo de estudos da EBD, integrando a <strong className="uppercase">{data.extra?.turma || 'TURMA DE ENSINO'}</strong> sob a instrução dedicada de seus professores.
+                                O Departamento de Ensino confere o presente certificado a <strong className="uppercase text-purple-900">{alunoNome}</strong>, por ter concluído com zelo e dedicação o ciclo de estudos da EBD{data.extra?.trimestre ? ` (${data.extra.trimestre})` : ''}, integrando a <strong className="uppercase">{data.extra?.turma || 'TURMA DE ENSINO'}</strong> sob a instrução dedicada de seus professores.
                             </p>
                             
                             <p className="text-slate-500 font-serif text-sm italic my-1 z-10">
@@ -6904,13 +6918,13 @@ export const PrintSystem = ({
                             </p>
                             
                             <p className="text-purple-900 font-classic text-xs uppercase tracking-widest my-1 z-10">
-                                {data.igreja?.cidade || 'Cidade'}, {hojeExtenso}.
+                                {data.igreja?.cidade || 'Cidade'}, {certDataExtenso}.
                             </p>
                             
                             <div className="w-full flex justify-between px-10 pt-2 gap-16 relative z-20">
                                 <div className="text-center flex-1">
                                     <div className="border-b border-black mb-1 mx-auto w-full"></div>
-                                    <p className="text-xs font-bold uppercase text-slate-900">{data.igreja?.pastor || "Pastor Presidente"}</p>
+                                    <p className="text-xs font-bold uppercase text-slate-900">{data.extra?.pastor || data.igreja?.pastor || "Pastor Presidente"}</p>
                                 </div>
                                 <div className="text-center flex-1">
                                     <div className="border-b border-black mb-1 mx-auto w-full"></div>

@@ -365,3 +365,6 @@ export const ModuleQrCheckin: React.FC = () => {
     </div>
   );
 };
+
+export default ModuleQrCheckin;
+

@@ -56,6 +56,33 @@ if (typeof window !== 'undefined' && 'Notification' in window) {
   } catch (_) {}
 }
 
+// Proteção contra "TypeError: Cannot convert object to primitive value" em interceptores do iframe
+const patchConsoleMethod = (method: 'error' | 'warn') => {
+  const original = console[method];
+  if (typeof original === 'function') {
+    console[method] = function (...args: any[]) {
+      const sanitizedArgs = args.map(arg => {
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            String(arg);
+            return arg;
+          } catch (_) {
+            try {
+              return JSON.stringify(arg);
+            } catch {
+              return Object.prototype.toString.call(arg);
+            }
+          }
+        }
+        return arg;
+      });
+      return original.apply(console, sanitizedArgs);
+    };
+  }
+};
+patchConsoleMethod('error');
+patchConsoleMethod('warn');
+
 // Patch getComputedStyle globally to support parsing oklch colors in external libraries like html2canvas
 const originalGetComputedStyle = window.getComputedStyle;
 window.getComputedStyle = function (element: Element, pseudoElt?: string | null): CSSStyleDeclaration {

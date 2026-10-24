@@ -262,13 +262,7 @@ export const FormInput = ({
                         val = typeof val === 'string' ? val.toUpperCase() : val;
                     }
                     if (typeof onChange === 'function') {
-                        const targetObj = { value: val, name: props.name || props.id || '' };
-                        const hybridVal = Object.assign(new String(val), {
-                            target: targetObj,
-                            currentTarget: targetObj,
-                            value: val
-                        });
-                        onChange(hybridVal);
+                        onChange(val);
                     }
                 }} 
                 required={required} 
@@ -320,13 +314,7 @@ export const FormSelect = ({
                     onChange={e => {
                         const val = e.target.value;
                         if (typeof onChange === 'function') {
-                            const targetObj = { value: val, name: props.name || props.id || '' };
-                            const hybridVal = Object.assign(new String(val), {
-                                target: targetObj,
-                                currentTarget: targetObj,
-                                value: val
-                            });
-                            onChange(hybridVal);
+                            onChange(val);
                         }
                     }} 
                     required={required}

@@ -323,3 +323,6 @@ export const ModuleMensagensLote: React.FC = () => {
     </div>
   );
 };
+
+export default ModuleMensagensLote;
+
