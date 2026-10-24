@@ -6,7 +6,7 @@ import {
   Trash2, Plus, Edit3, MessageSquare, Flame, Shield, X, RefreshCw,
   Tv, Radio, ExternalLink
 } from 'lucide-react';
-import { ChurchContext } from '../App';
+import { ChurchContext } from '../context/ChurchContext';
 import { 
   holyricsService, 
   PulpitoState, 
@@ -342,30 +342,47 @@ export const PainelPulpitoCulto: React.FC<Props> = ({ initialLiturgiaId, onClose
           <div className={`p-6 rounded-3xl border flex-1 flex flex-col justify-between space-y-4 ${
             stageTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
+            <div className="flex flex-wrap items-center justify-between border-b border-slate-800/40 pb-3 gap-2">
               <span className="text-xs font-black uppercase tracking-wider text-indigo-400 flex items-center gap-2">
                 <BookOpen size={16} /> Texto Sagrado em Destaque (Púlpito)
               </span>
 
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => holyricsService.setPulpitoBibliaFonte('normal')}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold ${tamanhoFonteBiblia === 'normal' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-                >
-                  A
-                </button>
-                <button
-                  onClick={() => holyricsService.setPulpitoBibliaFonte('grande')}
-                  className={`px-2 py-1 rounded-lg text-xs font-bold ${tamanhoFonteBiblia === 'grande' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-                >
-                  A+
-                </button>
-                <button
-                  onClick={() => holyricsService.setPulpitoBibliaFonte('extragrande')}
-                  className={`px-2 py-1 rounded-lg text-sm font-bold ${tamanhoFonteBiblia === 'extragrande' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-                >
-                  A++
-                </button>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {textoBiblico && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      holyricsService.projectBibleVerse(blocoAtivo.leituraBiblica ? 'Leitura Bíblica' : 'Texto do Culto', textoBiblico);
+                      if (addToast) addToast("Texto bíblico projetado no Telão com sucesso!", "success");
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-teal-600/30 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/40 text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer mr-1"
+                    title="Projetar este texto imediatamente no Telão da Congregação"
+                  >
+                    <Tv size={12} />
+                    <span>Projetar no Telão</span>
+                  </button>
+                )}
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => holyricsService.setPulpitoBibliaFonte('normal')}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer ${tamanhoFonteBiblia === 'normal' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+                  >
+                    A
+                  </button>
+                  <button
+                    onClick={() => holyricsService.setPulpitoBibliaFonte('grande')}
+                    className={`px-2 py-1 rounded-lg text-xs font-bold cursor-pointer ${tamanhoFonteBiblia === 'grande' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+                  >
+                    A+
+                  </button>
+                  <button
+                    onClick={() => holyricsService.setPulpitoBibliaFonte('extragrande')}
+                    className={`px-2 py-1 rounded-lg text-sm font-bold cursor-pointer ${tamanhoFonteBiblia === 'extragrande' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+                  >
+                    A++
+                  </button>
+                </div>
               </div>
             </div>
 

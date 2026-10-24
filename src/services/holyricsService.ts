@@ -335,6 +335,7 @@ class HolyricsService {
   private listeners: Set<(state: HolyricsState) => void> = new Set();
   private telaoWindowRef: Window | null = null;
   private pulpitoWindowRef: Window | null = null;
+  private clientWindows: Set<MessageEventSource> = new Set();
   private timerInterval: any = null;
   private pulpitoTimerInterval: any = null;
 
@@ -351,11 +352,17 @@ class HolyricsService {
       try {
         this.channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
         this.channel.onmessage = (event) => {
-          if (event.data && event.data.type === 'STATE_UPDATE') {
-            this.state = event.data.payload;
-            this.notifyListeners();
-          } else if (event.data && event.data.type === 'PING') {
-            this.broadcastState();
+          if (event.data) {
+            if (event.data.type === 'STATE_UPDATE' && event.data.payload) {
+              if (event.data.payload.ultimaAtualizacao >= (this.state.ultimaAtualizacao || 0)) {
+                this.state = event.data.payload;
+                this.notifyListeners();
+              }
+            } else if (event.data.type === 'PING' || event.data.type === 'REQUEST_STATE') {
+              this.broadcastState();
+            } else if (event.data.type === 'HOLYRICS_COMMAND') {
+              this.executeCommand(event.data.command, event.data.args);
+            }
           }
         };
       } catch (e) {
@@ -363,14 +370,52 @@ class HolyricsService {
       }
     }
 
-    // Fallback para escutar eventos de storage
+    // Escuta eventos de postMessage entre janelas (opener, popups, telas secundárias, iframes)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('message', (event) => {
+        if (!event.data) return;
+
+        // Registra janelas filhas/conectadas para envio direto
+        if (event.source) {
+          this.clientWindows.add(event.source);
+        }
+
+        if (event.data.type === 'HOLYRICS_CLIENT_HELLO' || event.data.type === 'PING' || event.data.type === 'REQUEST_STATE') {
+          // Responde imediatamente com o estado atualizado
+          this.broadcastState();
+          if (event.source) {
+            try {
+              (event.source as Window).postMessage({
+                type: 'HOLYRICS_STATE_SYNC',
+                payload: { ...this.state }
+              }, '*');
+            } catch (e) {}
+          }
+        } else if (event.data.type === 'HOLYRICS_COMMAND') {
+          this.executeCommand(event.data.command, event.data.args);
+        } else if (event.data.type === 'HOLYRICS_STATE_SYNC' || event.data.type === 'STATE_UPDATE') {
+          if (event.data.payload) {
+            const incomingUpdate = event.data.payload.ultimaAtualizacao || 0;
+            const currentUpdate = this.state.ultimaAtualizacao || 0;
+            if (incomingUpdate >= currentUpdate || !this.state.slides || this.state.slides.length === 0) {
+              this.state = event.data.payload;
+              this.notifyListeners();
+            }
+          }
+        }
+      });
+    }
+
+    // Escuta eventos de storage do navegador
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (e) => {
         if (e.key === STORAGE_KEY && e.newValue) {
           try {
             const parsed = JSON.parse(e.newValue);
-            this.state = parsed;
-            this.notifyListeners();
+            if (parsed && (!this.state.ultimaAtualizacao || (parsed.ultimaAtualizacao || 0) >= this.state.ultimaAtualizacao)) {
+              this.state = parsed;
+              this.notifyListeners();
+            }
           } catch (err) {
             console.error('Erro ao processar storage event:', err);
           }
@@ -472,39 +517,184 @@ class HolyricsService {
   }
 
   private broadcastState() {
+    const payload = { ...this.state };
+
+    // 1. Canal BroadcastChannel (para abas e janelas do mesmo contexto)
     if (this.channel) {
       try {
         this.channel.postMessage({
           type: 'STATE_UPDATE',
-          payload: this.state
+          payload
         });
       } catch (e) {
         console.warn('Erro no broadcast channel:', e);
       }
     }
 
-    // Se temos a referência da janela filha do Telão, enviamos postMessage direto
+    // 2. Janelas registradas ativas (popups secundários, janelas de 2º monitor conectadas)
+    this.clientWindows.forEach((win) => {
+      try {
+        (win as Window).postMessage({
+          type: 'HOLYRICS_STATE_SYNC',
+          payload
+        }, '*');
+      } catch (e) {
+        this.clientWindows.delete(win);
+      }
+    });
+
+    // 3. Referência direta da janela do Telão
     if (this.telaoWindowRef && !this.telaoWindowRef.closed) {
       try {
         this.telaoWindowRef.postMessage({
           type: 'HOLYRICS_STATE_SYNC',
-          payload: this.state
+          payload
         }, '*');
-      } catch (e) {
-        // Ignora erro cross-origin se houver
-      }
+      } catch (e) {}
     }
 
-    // Se temos a referência da janela filha da Tela Secundária (Púlpito / Stage Display)
+    // 4. Referência direta da janela do Púlpito
     if (this.pulpitoWindowRef && !this.pulpitoWindowRef.closed) {
       try {
         this.pulpitoWindowRef.postMessage({
           type: 'HOLYRICS_STATE_SYNC',
-          payload: this.state
+          payload
         }, '*');
-      } catch (e) {
-        // Ignora erro cross-origin se houver
+      } catch (e) {}
+    }
+
+    // 5. Se estivermos num popup ou iframe, notifica window.opener e window.parent
+    if (typeof window !== 'undefined') {
+      if (window.opener && !window.opener.closed) {
+        try {
+          window.opener.postMessage({
+            type: 'HOLYRICS_STATE_SYNC',
+            payload
+          }, '*');
+        } catch (e) {}
       }
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({
+            type: 'HOLYRICS_STATE_SYNC',
+            payload
+          }, '*');
+        } catch (e) {}
+      }
+    }
+  }
+
+  // Sincronização direta de alta performance a partir do localStorage
+  public syncFromStorageIfNewer(): boolean {
+    if (typeof window === 'undefined') return false;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.ultimaAtualizacao === 'number') {
+        const currentStamp = this.state.ultimaAtualizacao || 0;
+        if (parsed.ultimaAtualizacao > currentStamp) {
+          this.state = parsed;
+          this.notifyListeners();
+          return true;
+        }
+      }
+    } catch (e) {
+      // Ignora falhas temporárias de parse
+    }
+    return false;
+  }
+
+  // Executa comandos remotos disparados pelo painel principal ou teclas de atalho
+  public executeCommand(command: string, args?: any): void {
+    switch (command) {
+      case 'nextSlide':
+        this.nextSlide();
+        break;
+      case 'prevSlide':
+        this.prevSlide();
+        break;
+      case 'goToSlide':
+        if (typeof args === 'number') this.goToSlide(args);
+        break;
+      case 'toggleBlackout':
+        this.toggleBlackout();
+        break;
+      case 'setBlackout':
+        this.setBlackout(Boolean(args));
+        break;
+      case 'toggleClearText':
+        this.toggleClearText();
+        break;
+      case 'setClearText':
+        this.setClearText(Boolean(args));
+        break;
+      case 'toggleShowLogo':
+        this.toggleShowLogo();
+        break;
+      case 'setShowLogo':
+        this.setShowLogo(Boolean(args));
+        break;
+      case 'setTheme':
+        if (args) this.setTheme(args);
+        break;
+      case 'setFontSizeRatio':
+        if (typeof args === 'number') this.setFontSizeRatio(args);
+        break;
+      case 'setTextAlignment':
+        if (args === 'center' || args === 'left') this.setTextAlignment(args);
+        break;
+      case 'projectBibleVerse':
+        if (args?.ref && args?.texto) {
+          this.projectBibleVerse(args.ref, args.texto, args.versao);
+        }
+        break;
+      case 'sendAlert':
+        if (args?.texto) {
+          this.sendAlert(args.texto, args.tipo, args.subtexto, args.duracaoSegundos);
+        }
+        break;
+      case 'clearAlert':
+        this.clearAlert();
+        break;
+      case 'toggleStageDisplay':
+        this.toggleStageDisplay();
+        break;
+      case 'toggleLowerThird':
+        this.toggleLowerThird();
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Despacha comando remoto para todas as instâncias e janelas filhas
+  public dispatchRemoteCommand(command: string, args?: any): void {
+    this.executeCommand(command, args);
+    const cmdMsg = { type: 'HOLYRICS_COMMAND', command, args, timestamp: Date.now() };
+
+    if (this.channel) {
+      try {
+        this.channel.postMessage(cmdMsg);
+      } catch (e) {}
+    }
+
+    this.clientWindows.forEach((win) => {
+      try {
+        (win as Window).postMessage(cmdMsg, '*');
+      } catch (e) {}
+    });
+
+    if (this.telaoWindowRef && !this.telaoWindowRef.closed) {
+      try {
+        this.telaoWindowRef.postMessage(cmdMsg, '*');
+      } catch (e) {}
+    }
+
+    if (this.pulpitoWindowRef && !this.pulpitoWindowRef.closed) {
+      try {
+        this.pulpitoWindowRef.postMessage(cmdMsg, '*');
+      } catch (e) {}
     }
   }
 
@@ -795,7 +985,7 @@ class HolyricsService {
   public nextSlide(): void {
     if (this.state.slides.length === 0) return;
     const nextIdx = Math.min(this.state.indiceAtual + 1, this.state.slides.length - 1);
-    if (nextIdx !== this.state.indiceAtual) {
+    if (nextIdx !== this.state.indiceAtual || this.state.blackout || this.state.limparTexto) {
       this.state.indiceAtual = nextIdx;
       this.state.blackout = false;
       this.state.limparTexto = false;
@@ -806,7 +996,7 @@ class HolyricsService {
   public prevSlide(): void {
     if (this.state.slides.length === 0) return;
     const prevIdx = Math.max(this.state.indiceAtual - 1, 0);
-    if (prevIdx !== this.state.indiceAtual) {
+    if (prevIdx !== this.state.indiceAtual || this.state.blackout || this.state.limparTexto) {
       this.state.indiceAtual = prevIdx;
       this.state.blackout = false;
       this.state.limparTexto = false;
@@ -834,21 +1024,36 @@ class HolyricsService {
     this.saveAndBroadcast();
   }
 
-  // Toggle de Limpar Texto (Clear)
+  // Toggle e Set de Limpar Texto (Clear)
   public toggleClearText(): void {
     this.state.limparTexto = !this.state.limparTexto;
     this.saveAndBroadcast();
   }
 
-  // Toggle de Logo da Igreja no Telão
+  public setClearText(val: boolean): void {
+    this.state.limparTexto = val;
+    this.saveAndBroadcast();
+  }
+
+  // Toggle e Set de Logo da Igreja no Telão
   public toggleShowLogo(): void {
     this.state.exibirLogo = !this.state.exibirLogo;
+    this.saveAndBroadcast();
+  }
+
+  public setShowLogo(val: boolean): void {
+    this.state.exibirLogo = val;
     this.saveAndBroadcast();
   }
 
   // Toggle Retorno de Palco (Stage Display)
   public toggleStageDisplay(): void {
     this.state.modoRetornoPalco = !this.state.modoRetornoPalco;
+    this.saveAndBroadcast();
+  }
+
+  public setModoRetornoPalco(val: boolean): void {
+    this.state.modoRetornoPalco = val;
     this.saveAndBroadcast();
   }
 

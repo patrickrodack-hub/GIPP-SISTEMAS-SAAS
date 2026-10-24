@@ -16416,7 +16416,7 @@ export default function App() {
   );
 
   if (isTelaoMode) {
-    return <TelaoDisplayWindow />;
+    return <TelaoDisplayWindow initialMode="telao" />;
   }
 
   // Detecção de Modo Púlpito / Retorno Dedicado (Holyrics 2º Monitor / Stage Display)
@@ -16428,11 +16428,7 @@ export default function App() {
   );
 
   if (isPulpitoMode) {
-    return (
-      <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col">
-        <PainelPulpitoCulto isStandalone={true} />
-      </div>
-    );
+    return <TelaoDisplayWindow initialMode="pulpito" />;
   }
 
   if (firebaseSetupError) {

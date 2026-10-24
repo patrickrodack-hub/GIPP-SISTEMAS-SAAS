@@ -1,33 +1,140 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Maximize, Minimize, Bell, Clock, Shield, Flame, 
-  Volume2, Eye, EyeOff, Radio, Tv, Sparkles, ChevronRight, AlertTriangle, Car, Baby
+  Volume2, Eye, EyeOff, Radio, Tv, Sparkles, ChevronRight, AlertTriangle, Car, Baby,
+  BookOpen, Music, CheckCircle2, MessageSquare, Monitor, RefreshCw, UserCheck, Check
 } from 'lucide-react';
 import { 
   holyricsService, 
   HolyricsState, 
   HolyricsSlide, 
   HolyricsAlert,
-  HolyricsTheme 
+  HolyricsTheme,
+  DEFAULT_HOLYRICS_SLIDES
 } from '../services/holyricsService';
 
-export const TelaoDisplayWindow: React.FC = () => {
-  const [state, setState] = useState<HolyricsState>(holyricsService.getState());
+interface TelaoDisplayWindowProps {
+  initialMode?: 'telao' | 'pulpito';
+}
+
+export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialMode }) => {
+  const [state, setState] = useState<HolyricsState>(() => {
+    const s = holyricsService.getState();
+    // Garante que haja slides para nunca ficar em branco
+    if (!s.slides || s.slides.length === 0) {
+      s.slides = DEFAULT_HOLYRICS_SLIDES;
+    }
+    return s;
+  });
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [showHud, setShowHud] = useState(false);
+  const [showHud, setShowHud] = useState(true);
   const hudTimeoutRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sincronização em tempo real com o motor Holyrics
+  // Determina modo inicial de visualização (Púlpito / Stage Display vs Telão Completo)
+  const isPulpitoDefault = useMemo(() => {
+    if (initialMode === 'pulpito') return true;
+    if (initialMode === 'telao') return false;
+    if (typeof window !== 'undefined') {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      return (
+        search.includes('mode=pulpito') || 
+        search.includes('pulpito=true') || 
+        hash.includes('pulpito') ||
+        window.location.pathname.endsWith('/pulpito')
+      );
+    }
+    return false;
+  }, [initialMode]);
+
+  const isTelaoExplicit = useMemo(() => {
+    if (initialMode === 'telao') return true;
+    if (initialMode === 'pulpito') return false;
+    if (typeof window !== 'undefined') {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      return (
+        search.includes('mode=telao') || 
+        search.includes('telao=true') || 
+        hash.includes('telao') ||
+        window.location.pathname.endsWith('/telao')
+      );
+    }
+    return false;
+  }, [initialMode]);
+
+  const [viewMode, setViewMode] = useState<'pulpito' | 'telao'>(() => {
+    if (isTelaoExplicit) return 'telao';
+    if (isPulpitoDefault) return 'pulpito';
+    return state.modoRetornoPalco ? 'pulpito' : 'telao';
+  });
+
+  // Sincronização em tempo real bidirecional com o motor Holyrics
   useEffect(() => {
     const unsubscribe = holyricsService.subscribe((newState) => {
       setState(newState);
+      // Se não for telão explícito e o painel solicitar retorno de palco, acompanha
+      if (!isTelaoExplicit && !initialMode && newState.modoRetornoPalco && viewMode !== 'pulpito') {
+        setViewMode('pulpito');
+      }
     });
-    return () => unsubscribe();
-  }, []);
 
-  // Relógio do Telão
+    // Envia handshake e ping para a janela principal (window.opener / window.parent)
+    const sendHandshake = () => {
+      try {
+        const msg = { 
+          type: 'HOLYRICS_CLIENT_HELLO', 
+          role: viewMode, 
+          url: typeof window !== 'undefined' ? window.location.href : '',
+          timestamp: Date.now() 
+        };
+        if (typeof window !== 'undefined') {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(msg, '*');
+            window.opener.postMessage({ type: 'PING' }, '*');
+          }
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(msg, '*');
+            window.parent.postMessage({ type: 'PING' }, '*');
+          }
+        }
+      } catch (e) {
+        // Ignora erros cross-origin
+      }
+    };
+
+    // Handshake imediato e periódico
+    sendHandshake();
+    const handshakeInterval = setInterval(sendHandshake, 1500);
+
+    // Polling ativo ultrarrápido (200ms) para detectar mudanças no localStorage instantaneamente
+    const pollInterval = setInterval(() => {
+      holyricsService.syncFromStorageIfNewer();
+    }, 200);
+
+    // Listener direto para postMessage de comandos e sincronização
+    const handleDirectMessage = (event: MessageEvent) => {
+      if (!event.data) return;
+      if (event.data.type === 'HOLYRICS_STATE_SYNC' || event.data.type === 'STATE_UPDATE') {
+        if (event.data.payload) {
+          setState(event.data.payload);
+        }
+      }
+    };
+    window.addEventListener('message', handleDirectMessage);
+
+    return () => {
+      unsubscribe();
+      clearInterval(handshakeInterval);
+      clearInterval(pollInterval);
+      window.removeEventListener('message', handleDirectMessage);
+    };
+  }, [initialMode, viewMode, isTelaoExplicit]);
+
+  // Relógio oficial do Templo / Púlpito
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -39,10 +146,10 @@ export const TelaoDisplayWindow: React.FC = () => {
     if (hudTimeoutRef.current) clearTimeout(hudTimeoutRef.current);
     hudTimeoutRef.current = setTimeout(() => {
       setShowHud(false);
-    }, 3500);
+    }, 4000);
   };
 
-  // Atalhos de teclado no Telão
+  // Atalhos de teclado no 2º monitor (Projeção / Púlpito)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
@@ -62,6 +169,9 @@ export const TelaoDisplayWindow: React.FC = () => {
         holyricsService.toggleShowLogo();
       } else if (e.key === 'c' || e.key === 'C') {
         holyricsService.toggleClearText();
+      } else if (e.key === 'p' || e.key === 'P') {
+        // Atalho rápido 'P' para alternar modo Púlpito / Telão
+        setViewMode(prev => prev === 'pulpito' ? 'telao' : 'pulpito');
       }
     };
 
@@ -86,10 +196,30 @@ export const TelaoDisplayWindow: React.FC = () => {
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
 
-  const currentSlide: HolyricsSlide | undefined = state.slides[state.indiceAtual] || state.slides[0];
-  const nextSlide: HolyricsSlide | undefined = state.slides[state.indiceAtual + 1];
+  // Slides seguros com fallback
+  const slides = (state.slides && state.slides.length > 0) ? state.slides : DEFAULT_HOLYRICS_SLIDES;
+  const currentIdx = Math.max(0, Math.min(state.indiceAtual || 0, slides.length - 1));
+  const currentSlide: HolyricsSlide = slides[currentIdx] || slides[0];
+  const nextSlide: HolyricsSlide | undefined = slides[currentIdx + 1];
 
-  // Temas Visuais para Telão
+  // Informações do Púlpito e Liturgia
+  const pulpito = state.pulpito || (holyricsService as any).getDefaultPulpitoState();
+  const blocoAtivo = pulpito.blocos?.[pulpito.blocoAtivoIndex] || pulpito.blocos?.[0];
+  const proximoBloco = pulpito.blocos?.[pulpito.blocoAtivoIndex + 1];
+
+  // Avisos pendentes para o Púlpito
+  const avisosPulpito = pulpito.avisos || [];
+  const avisoUrgente = avisosPulpito.find(a => !a.lido);
+
+  // Formatação de Tempo (mm:ss)
+  const formatTimer = (seconds: number) => {
+    const sAbs = Math.abs(seconds);
+    const m = Math.floor(sAbs / 60);
+    const s = sAbs % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  // Cores do Tema para o Telão
   const getThemeStyles = (theme: HolyricsTheme) => {
     switch (theme) {
       case 'dark':
@@ -152,150 +282,286 @@ export const TelaoDisplayWindow: React.FC = () => {
 
   const currentTheme = getThemeStyles(state.tema);
 
-  // Formatação de Tempo
-  const formatTimer = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  // Renderização do Modo Retorno de Palco (Stage Display para Pregador / Louvor)
-  if (state.modoRetornoPalco) {
+  // =========================================================================
+  // RENDERIZAÇÃO: MODO RETORNO DE PÚLPITO (STAGE DISPLAY / 2º MONITOR)
+  // =========================================================================
+  if (viewMode === 'pulpito') {
     return (
       <div 
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onDoubleClick={toggleFullscreen}
-        className="fixed inset-0 bg-black text-white font-sans select-none flex flex-col p-6 overflow-hidden"
+        className="fixed inset-0 bg-[#090d16] text-slate-100 font-sans select-none flex flex-col p-4 sm:p-6 overflow-hidden"
       >
-        {/* Topo do Retorno: Relógio e Cronômetro */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        {/* BARRA SUPERIOR HUD DO RETORNO DE PÚLPITO */}
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-3">
+          {/* Identificação da Transmissão */}
           <div className="flex items-center gap-3">
-            <span className="inline-block w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-black tracking-widest uppercase text-zinc-400">RETORNO DE PALCO • GIPP HOLYRICS</span>
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span> AO VIVO
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black tracking-widest uppercase text-slate-300 flex items-center gap-1.5">
+                <Tv className="w-4 h-4 text-teal-400" />
+                2º MONITOR • HOLYRICS PROJEÇÃO (PÚLPITO)
+              </span>
+              <span className="hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-300 border border-teal-500/20">
+                Sincronizado
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-8">
-            {state.cronometro.ativo && (
-              <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/30 px-5 py-2 rounded-2xl">
-                <Clock className="w-5 h-5 text-rose-400 animate-pulse" />
+          {/* Bloco Litúrgico Atual / Pregador */}
+          <div className="hidden lg:flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-4 py-1.5 rounded-xl border border-slate-800">
+            <span className="font-bold text-amber-400">{blocoAtivo?.titulo || pulpito.cultoTitulo}</span>
+            {pulpito.pregadorNome && (
+              <>
+                <span className="text-slate-600">•</span>
+                <span>Preletor: <strong className="text-slate-200">{pulpito.pregadorNome}</strong></span>
+              </>
+            )}
+          </div>
+
+          {/* Relógio do Templo, Cronômetro e Controles de Exibição */}
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* Cronômetro do Púlpito / Liturgia */}
+            {pulpito.isRunning || pulpito.tempoRestante > 0 || state.cronometro?.ativo ? (
+              <div className={`flex items-center gap-2.5 px-4 py-1.5 rounded-2xl border ${
+                pulpito.isOvertime 
+                  ? 'bg-rose-500/20 border-rose-500/50 text-rose-400 animate-pulse' 
+                  : pulpito.tempoRestante <= 300 
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' 
+                    : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+              }`}>
+                <Clock className="w-4 h-4 shrink-0" />
                 <div>
-                  <div className="text-[10px] uppercase font-bold text-rose-300">{state.cronometro.rotulo}</div>
-                  <div className="text-3xl font-black font-mono text-rose-400">
-                    {formatTimer(state.cronometro.tempoRestanteSegundos)}
+                  <div className="text-[9px] uppercase font-black tracking-wider opacity-80">
+                    {pulpito.isOvertime ? 'TEMPO EXCEDIDO' : 'TEMPO DO BLOCO'}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black font-mono leading-none">
+                    {pulpito.isOvertime ? `+${formatTimer(pulpito.tempoExcedido)}` : formatTimer(pulpito.tempoRestante)}
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
+            {/* Relógio Oficial com Segundos */}
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wider text-zinc-500">Horário Oficial</div>
-              <div className="text-4xl font-black font-mono text-amber-400">
+              <div className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">HORÁRIO OFICIAL</div>
+              <div className="text-2xl sm:text-3xl font-black font-mono text-amber-400 tracking-tight leading-none">
                 {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
+            </div>
+
+            {/* Alternadores rápidos de Modo e Tela Cheia (aparecem no HUD) */}
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={() => setViewMode('telao')}
+                title="Mudar para visualização do Telão (congregação)"
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1 cursor-pointer"
+              >
+                <Monitor className="w-3.5 h-3.5 text-teal-400" />
+                <span className="hidden sm:inline">Projeção Telão</span>
+              </button>
+
+              <button 
+                onClick={toggleFullscreen}
+                title="Alternar Tela Cheia (F11)"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all border border-slate-700 cursor-pointer"
+              >
+                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Centro do Retorno: Slide Atual em Destaque Gigante */}
-        <div className="flex-1 grid grid-cols-12 gap-6 my-6 overflow-hidden">
-          <div className="col-span-8 flex flex-col justify-center bg-zinc-950/80 border border-zinc-800 rounded-3xl p-8 overflow-y-auto">
-            <div className="text-xs font-black tracking-widest text-amber-400 uppercase mb-3">
-              [ NO TELÃO AGORA • SLIDE {state.indiceAtual + 1} DE {state.slides.length} ]
-            </div>
-            
-            {state.blackout ? (
-              <div className="text-3xl font-black text-rose-500 bg-rose-950/20 p-6 rounded-2xl border border-rose-900/40">
-                ⚠️ BLACKOUT ATIVO NO TELÃO (TELA PRETA)
-              </div>
-            ) : state.limparTexto ? (
-              <div className="text-2xl font-bold text-zinc-500">
-                [ TEXTO LIMPO NO TELÃO — FUNDO / LOGO ATIVO ]
-              </div>
-            ) : (
-              <div>
-                <h1 className="text-3xl font-black text-zinc-300 mb-4">{currentSlide?.titulo}</h1>
-                {currentSlide?.subtitulo && (
-                  <h2 className="text-xl font-bold text-amber-400/90 mb-4">{currentSlide.subtitulo}</h2>
+        {/* ÁREA CENTRAL DO RETORNO: SLIDE ATUAL + PRÓXIMO SLIDE */}
+        <div className="flex-1 grid grid-cols-12 gap-4 sm:gap-6 my-4 overflow-hidden min-h-0">
+          {/* COLUNA ESQUERDA (8 COLUNAS): SLIDE PROJETADO NO TELÃO AGORA */}
+          <div className="col-span-12 lg:col-span-8 flex flex-col justify-between bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 overflow-y-auto shadow-2xl relative">
+            <div>
+              {/* Badge do Status do Telão */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
+                <span className="text-xs font-black tracking-widest text-amber-400 uppercase flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
+                  [ PROJETADO NO TELÃO AGORA • SLIDE {currentIdx + 1} DE {slides.length} ]
+                </span>
+                {currentSlide?.tipo && (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                    {currentSlide.tipo === 'versiculo' ? '📖 Versículo Bíblico' : 
+                     currentSlide.tipo === 'letra' || currentSlide.tipo === 'refrao' ? '🎵 Harpa / Louvor' :
+                     currentSlide.tipo === 'topico' ? '📝 Tópico da Mensagem' :
+                     currentSlide.tipo === 'capa' ? '🏛️ Abertura do Culto' : 'Aviso do Culto'}
+                  </span>
                 )}
+              </div>
+
+              {/* Se houver Blackout ativo no Telão */}
+              {state.blackout ? (
+                <div className="bg-rose-950/30 border-2 border-rose-500/50 text-rose-300 p-8 rounded-2xl text-center my-6">
+                  <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-3 animate-bounce" />
+                  <h3 className="text-2xl font-black mb-1">BLACKOUT ATIVO NO TELÃO</h3>
+                  <p className="text-sm text-rose-300/80">A tela está preta para a congregação no momento. O conteúdo abaixo voltará ao desativar o blackout.</p>
+                </div>
+              ) : state.limparTexto ? (
+                <div className="bg-amber-950/20 border-2 border-amber-500/40 text-amber-300 p-6 rounded-2xl text-center my-6">
+                  <EyeOff className="w-10 h-10 text-amber-400 mx-auto mb-2" />
+                  <h3 className="text-xl font-black">TEXTO LIMPO NO TELÃO</h3>
+                  <p className="text-xs text-amber-200/80">Apenas o fundo ou logotipo da igreja está sendo exibido ao público.</p>
+                </div>
+              ) : null}
+
+              {/* Título e Subtítulo do Slide */}
+              <div className="mb-4">
+                <h2 className="text-2xl sm:text-4xl font-black text-slate-100 tracking-tight mb-2">
+                  {currentSlide?.titulo}
+                </h2>
+                {currentSlide?.subtitulo && (
+                  <h3 className="text-base sm:text-xl font-bold text-amber-400 tracking-wide">
+                    {currentSlide.subtitulo}
+                  </h3>
+                )}
+              </div>
+
+              {/* Conteúdo Principal do Slide */}
+              <div className="my-auto py-2">
                 {currentSlide?.versiculo ? (
-                  <div className="text-3xl font-bold text-white leading-relaxed">
-                    "{currentSlide.versiculo.texto}"
-                    <div className="text-xl text-amber-400 mt-3">— {currentSlide.versiculo.referencia}</div>
+                  <div className="bg-slate-950/70 p-6 sm:p-8 rounded-2xl border border-slate-800">
+                    <blockquote className="text-2xl sm:text-4xl font-bold text-white leading-relaxed font-serif italic">
+                      "{currentSlide.versiculo.texto}"
+                    </blockquote>
+                    <div className="text-xl sm:text-2xl font-black text-amber-400 mt-4 text-right">
+                      — {currentSlide.versiculo.referencia}
+                    </div>
                   </div>
                 ) : currentSlide?.texto ? (
-                  <p className="text-3xl font-bold text-white whitespace-pre-line leading-relaxed">
-                    {currentSlide.texto}
-                  </p>
-                ) : currentSlide?.pontos ? (
-                  <ul className="space-y-3">
-                    {currentSlide.pontos.map((pt, idx) => (
-                      <li key={idx} className="text-2xl font-bold text-white flex items-start gap-3">
-                        <span className="text-amber-400">•</span>
-                        <span>{pt}</span>
-                      </li>
+                  <div className="bg-slate-950/60 p-6 sm:p-8 rounded-2xl border border-slate-800">
+                    <p className={`text-2xl sm:text-4xl font-bold whitespace-pre-line leading-relaxed ${
+                      currentSlide.tipo === 'refrao' ? 'text-amber-300' : 'text-slate-100'
+                    }`}>
+                      {currentSlide.texto}
+                    </p>
+                  </div>
+                ) : currentSlide?.pontos && currentSlide.pontos.length > 0 ? (
+                  <div className="space-y-4 bg-slate-950/60 p-6 rounded-2xl border border-slate-800">
+                    {currentSlide.pontos.map((ponto, pIdx) => (
+                      <div key={pIdx} className="flex items-start gap-4">
+                        <span className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center shrink-0 mt-1">
+                          {pIdx + 1}
+                        </span>
+                        <span className="text-xl sm:text-3xl font-bold text-white leading-snug">
+                          {ponto}
+                        </span>
+                      </div>
                     ))}
-                  </ul>
-                ) : null}
+                  </div>
+                ) : (
+                  <div className="text-slate-400 italic text-lg py-8 text-center">
+                    [ Nenhum texto adicional para este slide ]
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
+            {/* NOTAS E ORIENTAÇÕES DO PRELETOR (SE HOUVER) */}
             {currentSlide?.notas && (
-              <div className="mt-6 pt-4 border-t border-zinc-800/80">
-                <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-md">
-                  Notas do Preletor:
+              <div className="mt-6 pt-4 border-t border-slate-800 bg-amber-500/10 -mx-6 -mb-6 p-6 rounded-b-3xl border-t-amber-500/30">
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-md inline-block mb-1">
+                  Notas de Púlpito:
                 </span>
-                <p className="text-sm text-zinc-400 mt-2 italic">{currentSlide.notas}</p>
+                <p className="text-sm sm:text-base text-amber-100/90 font-medium leading-relaxed">
+                  {currentSlide.notas}
+                </p>
               </div>
             )}
           </div>
 
-          {/* Lateral do Retorno: Próximo Slide */}
-          <div className="col-span-4 flex flex-col justify-between bg-zinc-900/40 border border-zinc-800 rounded-3xl p-6">
-            <div>
-              <div className="text-[11px] font-black tracking-widest text-zinc-400 uppercase mb-3 flex items-center gap-2">
+          {/* COLUNA DIREITA (4 COLUNAS): A SEGUIR (PRÓXIMO SLIDE) & LITURGIA */}
+          <div className="col-span-12 lg:col-span-4 flex flex-col justify-between gap-4">
+            {/* PRÓXIMO SLIDE (CARD) */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex-1 flex flex-col overflow-hidden shadow-xl">
+              <div className="text-[11px] font-black tracking-widest text-slate-400 uppercase mb-3 flex items-center gap-2">
                 <ChevronRight className="w-4 h-4 text-emerald-400" />
-                A SEGUIR (PRÓXIMO SLIDE):
+                A SEGUIR NO TELÃO (PRÓXIMO SLIDE):
               </div>
+
               {nextSlide ? (
-                <div className="bg-black/60 p-5 rounded-2xl border border-zinc-800">
-                  <div className="text-sm font-bold text-zinc-400 mb-1">{nextSlide.titulo}</div>
-                  {nextSlide.subtitulo && (
-                    <div className="text-xs text-amber-400/80 mb-2">{nextSlide.subtitulo}</div>
-                  )}
-                  <p className="text-base text-zinc-200 line-clamp-6 whitespace-pre-line leading-relaxed">
-                    {nextSlide.versiculo ? nextSlide.versiculo.texto : nextSlide.texto || nextSlide.pontos?.join('\n')}
-                  </p>
+                <div className="bg-slate-950/80 p-5 rounded-2xl border border-slate-800/80 flex-1 flex flex-col justify-between overflow-y-auto">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block mb-1">{nextSlide.titulo}</span>
+                    {nextSlide.subtitulo && (
+                      <span className="text-xs text-amber-400 font-semibold block mb-2">{nextSlide.subtitulo}</span>
+                    )}
+                    <p className="text-base sm:text-lg text-slate-200 line-clamp-6 leading-relaxed font-medium">
+                      {nextSlide.versiculo ? `"${nextSlide.versiculo.texto}"` : nextSlide.texto || nextSlide.pontos?.join(' • ')}
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-800/60 text-xs text-emerald-400 font-bold flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Pronto para transição
+                  </div>
                 </div>
               ) : (
-                <div className="p-8 text-center text-zinc-600 font-bold text-sm">
-                  [ Fim da Apresentação ]
+                <div className="p-8 text-center text-slate-500 font-bold text-sm bg-slate-950/40 rounded-2xl border border-slate-800/40">
+                  [ Fim da Apresentação Atual ]
                 </div>
               )}
             </div>
 
-            <div className="text-xs text-zinc-500 pt-4 border-t border-zinc-800 flex justify-between">
-              <span>{state.tituloApresentacao}</span>
-              <span>Modo Retorno</span>
+            {/* BLOCO LITÚRGICO SEGUINTE */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-lg">
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                LITURGIA • ETAPA ATUAL DO CULTO
+              </div>
+              <div className="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-bold text-slate-200">{blocoAtivo?.titulo || 'Culto em Andamento'}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {proximoBloco ? `A seguir: ${proximoBloco.titulo}` : 'Última etapa do culto'}
+                  </div>
+                </div>
+                <div className="px-2.5 py-1 rounded-xl bg-slate-800 text-amber-400 text-xs font-black">
+                  {blocoAtivo?.duracaoMinutos || 15} min
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Rodapé Retorno com Alerta */}
-        {state.alertaAtivo && (
-          <div className="bg-amber-500 text-black px-6 py-2.5 rounded-2xl flex items-center justify-between font-black text-sm">
+        {/* RODAPÉ DO RETORNO: AVISO URGENTE DA SONOPLASTIA / ALERTA DO TELÃO */}
+        {avisoUrgente ? (
+          <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-amber-600 text-white px-6 py-3 rounded-2xl flex items-center justify-between font-black text-sm shadow-2xl animate-pulse">
+            <div className="flex items-center gap-3">
+              <Bell className="w-5 h-5 animate-bounce shrink-0" />
+              <div>
+                <span className="text-[10px] uppercase tracking-widest bg-black/30 px-2 py-0.5 rounded mr-2">
+                  AVISO PARA O PÚLPITO ({avisoUrgente.autor} • {avisoUrgente.horario})
+                </span>
+                <span className="text-base">{avisoUrgente.texto}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => holyricsService.markPulpitoAvisoLido(avisoUrgente.id)}
+              className="px-3 py-1 bg-white text-slate-900 rounded-xl text-xs font-black hover:bg-slate-100 transition-all cursor-pointer shadow-md"
+            >
+              Ciente (Marcar Lido)
+            </button>
+          </div>
+        ) : state.alertaAtivo ? (
+          <div className="bg-amber-500 text-slate-950 px-6 py-2.5 rounded-2xl flex items-center justify-between font-black text-sm shadow-xl">
             <span className="flex items-center gap-2">
               <Bell className="w-4 h-4 animate-bounce" />
-              ALERTA NO TELÃO: {state.alertaAtivo.texto}
+              ALERTA PROJETADO NO TELÃO: {state.alertaAtivo.texto}
             </span>
-            <span className="text-xs uppercase bg-black/20 px-2 py-0.5 rounded">Ativo</span>
+            <span className="text-xs uppercase bg-black/20 px-2 py-0.5 rounded font-bold">Ao Vivo</span>
           </div>
-        )}
+        ) : null}
       </div>
     );
   }
 
-  // Renderização Principal do Telão / Projetor
+  // =========================================================================
+  // RENDERIZAÇÃO: MODO PROJEÇÃO PRINCIPAL (TELÃO / DATASHOW / CONGREGAÇÃO)
+  // =========================================================================
   return (
     <div 
       ref={containerRef}
@@ -308,27 +574,75 @@ export const TelaoDisplayWindow: React.FC = () => {
         backgroundPosition: 'center'
       }}
     >
-      {/* HUD de Controle Rápido (Auto-hide ao ficar ocioso) */}
+      {/* HUD DE CONTROLE RÁPIDO DO TELÃO (Auto-hide ao ficar ocioso) */}
       <div 
-        className={`absolute top-4 right-4 z-50 flex items-center gap-2 transition-opacity duration-300 ${showHud ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute top-4 inset-x-4 z-50 flex items-center justify-between transition-opacity duration-300 pointer-events-auto ${
+          showHud ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
       >
-        <button 
-          onClick={() => holyricsService.toggleStageDisplay()}
-          title="Alternar Modo Retorno de Palco"
-          className="bg-black/60 hover:bg-black/90 text-white text-xs px-3 py-2 rounded-xl backdrop-blur-md border border-white/20 flex items-center gap-1.5 transition-all"
-        >
-          <Tv className="w-3.5 h-3.5 text-amber-400" />
-          Retorno
-        </button>
+        {/* Status de Sincronização em Tempo Real */}
+        <div className="flex items-center gap-2 bg-black/80 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 shadow-2xl">
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> TELÃO AO VIVO
+          </span>
+          <span className="text-[11px] font-black uppercase tracking-widest text-white hidden sm:inline">
+            Holyrics Projeção
+          </span>
+          <span className="text-[10px] font-mono font-bold text-amber-300 bg-black/50 px-2 py-0.5 rounded-md border border-white/10">
+            Slide {currentIdx + 1}/{slides.length}
+          </span>
+        </div>
 
-        <button 
-          onClick={toggleFullscreen}
-          title="Alternar Tela Cheia (F11)"
-          className="bg-black/60 hover:bg-black/90 text-white text-xs px-3 py-2 rounded-xl backdrop-blur-md border border-white/20 flex items-center gap-1.5 transition-all"
-        >
-          {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-          {isFullscreen ? 'Sair' : 'Tela Cheia'}
-        </button>
+        {/* Controles de Disparo e Modo */}
+        <div className="flex items-center gap-1.5 bg-black/80 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 shadow-2xl">
+          <button 
+            onClick={() => holyricsService.prevSlide()}
+            title="Slide Anterior (Seta Esquerda)"
+            className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer"
+          >
+            ◄
+          </button>
+          <button 
+            onClick={() => holyricsService.nextSlide()}
+            title="Próximo Slide (Seta Direita / Espaço)"
+            className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black transition-all cursor-pointer shadow-sm"
+          >
+            Próximo ►
+          </button>
+          <button 
+            onClick={() => holyricsService.toggleBlackout()}
+            title="Blackout (Tecla B)"
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+              state.blackout ? 'bg-rose-600 text-white shadow-md' : 'bg-white/10 hover:bg-white/20 text-slate-300'
+            }`}
+          >
+            B
+          </button>
+          <button 
+            onClick={() => holyricsService.toggleClearText()}
+            title="Limpar Texto (Tecla C)"
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+              state.limparTexto ? 'bg-amber-500 text-black shadow-md' : 'bg-white/10 hover:bg-white/20 text-slate-300'
+            }`}
+          >
+            C
+          </button>
+          <button 
+            onClick={() => setViewMode('pulpito')}
+            title="Alternar para Modo Retorno de Púlpito (Stage Display)"
+            className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Tv className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">Retorno Púlpito</span>
+          </button>
+          <button 
+            onClick={toggleFullscreen}
+            title="Alternar Tela Cheia (F11 / F)"
+            className="bg-white/10 hover:bg-white/20 text-white text-xs p-1.5 rounded-xl border border-white/10 transition-all cursor-pointer"
+          >
+            {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
 
       {/* ESTADO 1: BLACKOUT (Tela Totalmente Preta) */}
@@ -354,7 +668,7 @@ export const TelaoDisplayWindow: React.FC = () => {
             )}
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-wider uppercase text-white drop-shadow-lg">
-            {state.igrejaNome}
+            {state.igrejaNome || 'ASSEMBLEIA DE DEUS'}
           </h1>
           <p className="text-lg md:text-2xl text-amber-400/90 font-medium tracking-widest mt-3 uppercase">
             Comunhão • Palavra • Louvor • Adoração
@@ -364,7 +678,11 @@ export const TelaoDisplayWindow: React.FC = () => {
 
       {/* ESTADO 3: CONTEÚDO DO SLIDE REGULAR (OU MODO LIMPO) */}
       <div 
-        className={`flex-1 flex flex-col ${state.modoLowerThird ? 'justify-end pb-12 px-12' : 'justify-center items-center px-12 md:px-24'} z-10 transition-all duration-300 ${state.limparTexto || state.exibirLogo ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`flex-1 flex flex-col ${
+          state.modoLowerThird ? 'justify-end pb-12 px-12' : 'justify-center items-center px-8 sm:px-16 md:px-24'
+        } z-10 transition-all duration-300 ${
+          state.limparTexto || state.exibirLogo ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
       >
         {state.modoLowerThird ? (
           /* Modo Lower Third para OBS e Live Streaming */
@@ -389,10 +707,13 @@ export const TelaoDisplayWindow: React.FC = () => {
         ) : (
           /* Modo Telão Padrão de Igreja / Datashow */
           <div 
-            className={`w-full max-w-6xl mx-auto ${state.alinhamentoTexto === 'left' ? 'text-left' : 'text-center'} flex flex-col items-center justify-center`}
-            style={{ transform: `scale(${state.tamanhoFonteRatio})`, transformOrigin: 'center center' }}
+            key={`${currentSlide?.id || currentIdx}-${state.ultimaAtualizacao}`}
+            className={`w-full max-w-6xl mx-auto ${
+              state.alinhamentoTexto === 'left' ? 'text-left' : 'text-center'
+            } flex flex-col items-center justify-center animate-in fade-in duration-200`}
+            style={{ transform: `scale(${state.tamanhoFonteRatio || 1})`, transformOrigin: 'center center' }}
           >
-            {/* Header / Identificador de Categoria */}
+            {/* Header / Subtítulo */}
             {currentSlide?.subtitulo && (
               <div className="mb-4">
                 <span className={`inline-block px-4 py-1.5 rounded-full text-sm md:text-base font-black tracking-wider uppercase border ${currentTheme.badgeBg} drop-shadow-sm`}>
@@ -423,7 +744,9 @@ export const TelaoDisplayWindow: React.FC = () => {
               /* Letra de Louvor / Texto Principal */
               <div className="my-auto max-w-5xl">
                 <p 
-                  className={`text-3xl md:text-5xl lg:text-6xl font-black whitespace-pre-line leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] ${currentSlide.tipo === 'refrao' ? 'text-amber-300' : 'text-white'}`}
+                  className={`text-3xl md:text-5xl lg:text-6xl font-black whitespace-pre-line leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] ${
+                    currentSlide.tipo === 'refrao' ? 'text-amber-300' : 'text-white'
+                  }`}
                 >
                   {currentSlide.texto}
                 </p>
@@ -459,6 +782,18 @@ export const TelaoDisplayWindow: React.FC = () => {
         )}
       </div>
 
+      {/* CRONÔMETRO REGRESSIVO DO TELÃO (Se ativado pelo painel principal) */}
+      {state.cronometro?.ativo && !state.blackout && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-black/85 backdrop-blur-md px-8 py-4 rounded-3xl border border-amber-400/50 text-center shadow-2xl animate-in zoom-in-95">
+          <div className="text-xs uppercase font-black tracking-widest text-amber-400 mb-1">
+            {state.cronometro.rotulo || 'Contagem Regressiva'}
+          </div>
+          <div className="text-4xl md:text-6xl font-black font-mono text-white tracking-wider">
+            {formatTimer(state.cronometro.tempoRestanteSegundos)}
+          </div>
+        </div>
+      )}
+
       {/* RODAPÉ DO TELÃO: ALERTA RÁPIDO AO VIVO (Ticker Animado) */}
       {state.alertaAtivo && !state.blackout && (
         <div className="relative z-40 bg-gradient-to-r from-amber-600 via-amber-500 to-orange-600 text-black px-8 py-3.5 shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom duration-300">
@@ -482,11 +817,13 @@ export const TelaoDisplayWindow: React.FC = () => {
         </div>
       )}
 
-      {/* Discreto Indicador de Rodapé */}
+      {/* Indicador de Rodapé Discreto */}
       <div className="relative z-10 px-8 py-3 flex items-center justify-between text-xs text-slate-500/70 font-mono select-none">
-        <span>{state.igrejaNome} • Telão Holyrics</span>
-        <span>Slide {state.indiceAtual + 1} / {state.slides.length}</span>
+        <span>{state.igrejaNome || 'ASSEMBLEIA DE DEUS'} • Holyrics Projeção</span>
+        <span>Slide {currentIdx + 1} / {slides.length}</span>
       </div>
     </div>
   );
 };
+
+export default TelaoDisplayWindow;
