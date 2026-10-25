@@ -787,7 +787,7 @@ async function callGeminiWithFallback(params: {
     model?: string;
     config?: any;
 }): Promise<string> {
-    const { prompt, customKey, model = "gemini-3.7-flash", config } = params;
+    const { prompt, customKey, model = "gemini-3.8-flash", config } = params;
     const primaryKey = (customKey && customKey.trim() !== "MY_GEMINI_API_KEY")
         ? customKey.trim()
         : (process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '');
@@ -823,6 +823,23 @@ async function callGeminiWithFallback(params: {
                 config: config
             });
             return response.text || "";
+        }
+        // Se atingiu limite de cota (429 / RESOURCE_EXHAUSTED), tenta modelo leve gemini-3.1-flash-lite sem search tool
+        if (errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED")) {
+            try {
+                const liteAi = new GoogleGenAI({
+                    apiKey: platformBackupKey || primaryKey,
+                    httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
+                });
+                const liteConfig = config ? { ...config } : undefined;
+                if (liteConfig && liteConfig.tools) delete liteConfig.tools;
+                const liteResp = await liteAi.models.generateContent({
+                    model: "gemini-3.1-flash-lite",
+                    contents: prompt as any,
+                    config: liteConfig
+                });
+                if (liteResp.text) return liteResp.text;
+            } catch (_) {}
         }
         throw err;
     }
@@ -1150,9 +1167,7 @@ ${!capaExistente ? '3. No final da resposta, sugira uma URL de capa oficial no f
 
 Retorne o texto formatado em Markdown com alta elegância, reverência teológica e profundidade didática.`;
 
-        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
-            // Fallback canônico e estruturado
-            const fallbackText = `# 1. ${resolvedRevista} - Lição ${resolvedLicaoNum}: ${resolvedTema || 'Fundamentos da Fé e Prática Cristã'}
+        const buildFallbackLessonText = () => `# 1. ${resolvedRevista} - Lição ${resolvedLicaoNum}: ${resolvedTema || 'Fundamentos da Fé e Prática Cristã'}
 
 # 2. Introdução
 O estudo sistemático da Palavra de Deus na Escola Bíblica Dominical constitui o alicerce pedagógico e doutrinário que molda a vida cristã e sustenta a igreja local na sã doutrina.
@@ -1196,6 +1211,43 @@ O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com s
 **Questão 2:** Como a Verdade Bíblica deve refletir-se no testemunho da família cristã?
 *Gabarito Comentado:* Reflete-se mediante a submissão a Cristo, o amor sacrificial no lar, a instrução dos filhos no temor do Senhor e a retidão moral diante da sociedade.`;
 
+        if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+            return res.json({
+                success: true,
+                text: buildFallbackLessonText(),
+                revista: resolvedRevista,
+                licao: resolvedLicaoNum,
+                fromCache: false,
+                isFallback: true
+            });
+        }
+
+        try {
+            const responseText = await callGeminiWithFallback({
+                prompt: prompt,
+                customKey: apiKey,
+                model: "gemini-3.8-flash",
+                config: {
+                    systemInstruction: "Você é um Comentarista Oficial das Lições Bíblicas CPAD e Professor de Teologia da CGADB. Gere o material didático completo com a máxima erudição e fidelidade dogmática.",
+                    tools: [{ googleSearch: {} }]
+                }
+            });
+
+            apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
+
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Gerador Inteligente EBD CPAD", "success", latency, 0.0008, `Revista: ${resolvedRevista}, Lição: ${resolvedLicaoNum}`);
+
+            return res.json({
+                success: true,
+                text: responseText,
+                revista: resolvedRevista,
+                licao: resolvedLicaoNum,
+                fromCache: false
+            });
+        } catch (aiErr: any) {
+            console.warn("[Gemini API] Cota atingida ou indisponibilidade temporária ao gerar revista EBD; servindo apostila canônica offline CPAD:", formatGeminiUserError(aiErr));
+            const fallbackText = buildFallbackLessonText();
             return res.json({
                 success: true,
                 text: fallbackText,
@@ -1205,32 +1257,9 @@ O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com s
                 isFallback: true
             });
         }
-
-        const responseText = await callGeminiWithFallback({
-            prompt: prompt,
-            customKey: apiKey,
-            model: "gemini-3.7-flash",
-            config: {
-                systemInstruction: "Você é um Comentarista Oficial das Lições Bíblicas CPAD e Professor de Teologia da CGADB. Gere o material didático completo com a máxima erudição e fidelidade dogmática.",
-                tools: [{ googleSearch: {} }]
-            }
-        });
-
-        apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
-
-        const latency = Date.now() - start;
-        trackApiCall("gemini", "Gerador Inteligente EBD CPAD", "success", latency, 0.0008, `Revista: ${resolvedRevista}, Lição: ${resolvedLicaoNum}`);
-
-        res.json({
-            success: true,
-            text: responseText,
-            revista: resolvedRevista,
-            licao: resolvedLicaoNum,
-            fromCache: false
-        });
     } catch (error: any) {
-        console.error("[Gemini API] Erro ao gerar revista EBD:", error);
-        res.status(500).json({ success: false, error: formatGeminiUserError(error) });
+        console.warn("[Gemini API] Aviso ao processar revista EBD:", formatGeminiUserError(error));
+        res.status(200).json({ success: false, error: formatGeminiUserError(error) });
     }
 });
 

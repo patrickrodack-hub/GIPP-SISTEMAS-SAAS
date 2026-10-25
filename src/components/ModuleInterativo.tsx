@@ -8,6 +8,7 @@ import {
   Key, Lock, Unlock, Zap, Compass, BookOpen, Volume2, VolumeX, Smile, Disc, Clock, Lightbulb, Sparkle, PartyPopper,
   Layers, Sun, Heart, Shield
 } from 'lucide-react';
+import SonicCristaoGame from './SonicCristaoGame';
 
 // ==========================================
 // BANCO DE QUESTÕES - SHOW DO CRISTÃO
@@ -297,10 +298,11 @@ interface ModuleInterativoProps {
 }
 
 export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}) {
-  const [activeGame, setActiveGame] = useState<'none' | 'tetris' | 'show' | 'passa' | 'escape' | 'roda'>('none');
+  const [activeGame, setActiveGame] = useState<'none' | 'sonic' | 'tetris' | 'show' | 'passa' | 'escape' | 'roda'>('none');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isHubMaximized, setIsHubMaximized] = useState(false);
   const [scores, setScores] = useState({
+    sonic: 0,
     tetris: 0,
     show: 0,
     passa: 0,
@@ -309,11 +311,13 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
   });
 
   useEffect(() => {
+    const savedSonic = localStorage.getItem('gipp_game_sonic_score');
     const savedTetris = localStorage.getItem('gipp_game_tetris_score');
     const savedShow = localStorage.getItem('gipp_game_show_score');
     const savedPassa = localStorage.getItem('gipp_game_passa_score');
     const savedEscape = localStorage.getItem('gipp_game_escape_score');
     const savedRoda = localStorage.getItem('gipp_game_roda_score');
+    if (savedSonic) setScores(prev => ({ ...prev, sonic: parseInt(savedSonic) }));
     if (savedTetris) setScores(prev => ({ ...prev, tetris: parseInt(savedTetris) }));
     if (savedShow) setScores(prev => ({ ...prev, show: parseInt(savedShow) }));
     if (savedPassa) setScores(prev => ({ ...prev, passa: parseInt(savedPassa) }));
@@ -321,7 +325,7 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
     if (savedRoda) setScores(prev => ({ ...prev, roda: parseInt(savedRoda) }));
   }, []);
 
-  const updateHighScore = (game: 'tetris' | 'show' | 'passa' | 'escape' | 'roda', val: number) => {
+  const updateHighScore = (game: 'sonic' | 'tetris' | 'show' | 'passa' | 'escape' | 'roda', val: number) => {
     setScores(prev => {
       if (val > prev[game]) {
         const next = { ...prev, [game]: val };
@@ -410,8 +414,43 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
             </p>
           </div>
 
-          {/* GRID DE CARTÕES DE GAMES (5 JOGOS) */}
+          {/* GRID DE CARTÕES DE GAMES (6 JOGOS) */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
+
+            {/* CARD EM DESTAQUE: CORRIDA DA SALVAÇÃO (ESTILO SONIC 2 - TELA HORIZONTAL) */}
+            <div className="group relative bg-gradient-to-br from-slate-900/90 via-indigo-950/60 to-slate-900/90 border border-amber-500/40 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-amber-400 transition-all hover:scale-[1.01] duration-300">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all"></div>
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="w-12 h-12 bg-amber-500/15 border border-amber-400/30 text-amber-400 rounded-2xl flex items-center justify-center shadow-inner">
+                    <Zap size={24} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                    Tela Horizontal · 16:9
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-white mb-2">
+                  Corrida da Salvação
+                </h3>
+                <p className="text-slate-300 text-xs leading-relaxed mb-6">
+                  Plataforma de alta velocidade inspirado em <strong>Sonic 2</strong>! Controle o avatar inspirado em Jesus Cristo, execute o <em>Spin Dash de Luz</em>, resgate <strong>pessoas pelo caminho</strong> no lugar de argolas e enfrente os <strong>chefes demônios</strong> ao final de cada fase.
+                </p>
+              </div>
+
+              <div className="border-t border-slate-800/80 pt-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Recorde</p>
+                  <p className="text-lg font-black text-amber-400">{scores.sonic.toLocaleString('pt-BR')} Pts</p>
+                </div>
+                <button 
+                  onClick={() => { setActiveGame('sonic'); setIsFullscreen(true); }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Play size={14} fill="currentColor" />
+                  Jogar (Horizontal)
+                </button>
+              </div>
+            </div>
             
             {/* CARD 1: TETRIS CLÁSSICO */}
             <div className="group relative bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl backdrop-blur-xl hover:border-indigo-500/30 transition-all hover:scale-[1.01] duration-300">
@@ -588,12 +627,14 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
             <div className="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between select-none shrink-0">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  activeGame === 'sonic' ? 'bg-amber-500/15 text-amber-400' :
                   activeGame === 'tetris' ? 'bg-indigo-500/10 text-indigo-400' :
                   activeGame === 'show' ? 'bg-amber-500/10 text-amber-400' :
                   activeGame === 'passa' ? 'bg-rose-500/10 text-rose-400' :
                   activeGame === 'escape' ? 'bg-emerald-500/10 text-emerald-400' :
                   'bg-cyan-500/10 text-cyan-400'
                 }`}>
+                  {activeGame === 'sonic' && <Zap size={16} />}
                   {activeGame === 'tetris' && <Gamepad2 size={16} />}
                   {activeGame === 'show' && <Trophy size={16} />}
                   {activeGame === 'passa' && <Flame size={16} />}
@@ -602,6 +643,7 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-white tracking-wide uppercase">
+                    {activeGame === 'sonic' && 'CORRIDA DA SALVAÇÃO · RESGATE DAS ALMAS (ESTILO SONIC 2 · HORIZONTAL)'}
                     {activeGame === 'tetris' && 'TETRIS TRADICIONAL GIPP'}
                     {activeGame === 'show' && 'SHOW DO CRISTÃO GIPP'}
                     {activeGame === 'passa' && 'PASSA OU REPASSA TEOLÓGICO'}
@@ -609,7 +651,7 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
                     {activeGame === 'roda' && 'RODA DA TEOLOGIA GIPP'}
                   </h3>
                   <p className="text-[10px] text-slate-450 uppercase tracking-wider font-semibold leading-none mt-1">
-                    {isFullscreen ? 'Modo Full HD / Tela Inteira' : 'Janela HD'}
+                    {isFullscreen ? 'Modo Full HD / Tela Horizontal Inteira' : 'Janela HD Widescreen'}
                   </p>
                 </div>
               </div>
@@ -634,6 +676,9 @@ export default function ModuleInterativo({ onClose }: ModuleInterativoProps = {}
 
             {/* CONTEÚDO DINÂMICO DO GAME */}
             <div className="flex-1 overflow-y-auto bg-slate-950 flex flex-col relative">
+              {activeGame === 'sonic' && (
+                <SonicCristaoGame onGameOver={(score) => updateHighScore('sonic', score)} highScore={scores.sonic} />
+              )}
               {activeGame === 'tetris' && (
                 <TetrisGame onGameOver={(score) => updateHighScore('tetris', score)} highScore={scores.tetris} />
               )}
